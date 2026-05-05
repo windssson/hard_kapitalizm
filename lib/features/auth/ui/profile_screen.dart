@@ -71,6 +71,69 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  void _showAvatarSelectionSheet(BuildContext context, PlayerModel player) {
+    final avatars = ['ae1.webp', 'ae2.webp', 'ae3.webp', 'ak1.webp', 'ak2.webp', 'ak3.webp'];
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Avatar Seç', style: AppTextStyles.h2),
+              SizedBox(height: 16.h),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 16.w,
+                  mainAxisSpacing: 16.w,
+                ),
+                itemCount: avatars.length,
+                itemBuilder: (context, index) {
+                  final avatar = avatars[index];
+                  final isSelected = player.avatarId == avatar;
+                  return GestureDetector(
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await Supabase.instance.client
+                          .from('players')
+                          .update({'avatar_id': avatar})
+                          .eq('id', player.id);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? AppColors.green : AppColors.border,
+                          width: isSelected ? 3.w : 1.w,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: CachedAssetImage(
+                          fileName: avatar,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              SizedBox(height: 16.h),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildProfileContent(PlayerModel player) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,21 +157,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Row(
             children: [
               // Avatar
-              Container(
-                width: 80.w,
-                height: 80.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.cardBgLight,
-                  border: Border.all(color: AppColors.gold, width: 2.w),
-                ),
-                child: ClipOval(
-                  child: CachedAssetImage(
-                    fileName: player.avatarId,
-                    fit: BoxFit.cover,
-                    placeholder: Icon(Icons.person, color: AppColors.gold, size: 40.sp),
-                    errorWidget: Icon(Icons.person, color: AppColors.gold, size: 40.sp),
-                  ),
+              GestureDetector(
+                onTap: () => _showAvatarSelectionSheet(context, player),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 80.w,
+                      height: 80.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.cardBgLight,
+                        border: Border.all(color: AppColors.gold, width: 2.w),
+                      ),
+                      child: ClipOval(
+                        child: CachedAssetImage(
+                          fileName: player.avatarId,
+                          fit: BoxFit.cover,
+                          placeholder: Icon(Icons.person, color: AppColors.gold, size: 40.sp),
+                          errorWidget: Icon(Icons.person, color: AppColors.gold, size: 40.sp),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: EdgeInsets.all(4.w),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardBg,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.gold, width: 1.w),
+                        ),
+                        child: Icon(Icons.edit, color: AppColors.gold, size: 12.sp),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(width: 16.w),

@@ -75,215 +75,274 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final player = playerAsyncValue.value;
 
         return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.borderGold),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Kart Başlığı
-          Container(
-            padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
-            child: Text('ŞİRKET ÖZETİ', style: AppTextStyles.titleGold),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: AppColors.borderGold),
           ),
-          // İçerik (Görsel ve İstatistikler)
-          Padding(
-            padding: EdgeInsets.fromLTRB(12, 0, 12, 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Sol: Avatar ve Seviye Çerçevesi
-                Expanded(
-                  flex: 10,
-                  child: SizedBox(
-                    height: 180.h,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Avatar Çerçevesi ve Rozet
-                        Stack(
-                          alignment: Alignment.bottomCenter,
-                          clipBehavior: Clip.none,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Kart Başlığı
+              Container(
+                padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+                child: Text('ŞİRKET ÖZETİ', style: AppTextStyles.titleGold),
+              ),
+              // İçerik (Görsel ve İstatistikler)
+              Padding(
+                padding: EdgeInsets.fromLTRB(12, 0, 12, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Sol: Avatar ve Seviye Çerçevesi
+                    Expanded(
+                      flex: 10,
+                      child: SizedBox(
+                        height: 180.h,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Dış Çerçeve (Level'a göre renk/stil alacak, örn: Altın)
-                            Container(
-                              margin: EdgeInsets.only(bottom: 10.h), // Rozet için yer
-                              width: 100.w,
-                              height: 100.w,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.cardBgLight,
-                                border: Border.all(
-                                  color: AppColors.gold,
-                                  width: 3.w,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.gold.withValues(alpha: 0.2),
-                                    blurRadius: 12.r,
-                                    spreadRadius: 2.r,
+                            // Avatar Çerçevesi ve Rozet
+                            Stack(
+                              alignment: Alignment.bottomCenter,
+                              clipBehavior: Clip.none,
+                              children: [
+                                // Dış Çerçeve (Level'a göre renk/stil alacak, örn: Altın)
+                                Container(
+                                  margin: EdgeInsets.only(
+                                    bottom: 10.h,
+                                  ), // Rozet için yer
+                                  width: 100.w,
+                                  height: 100.w,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: AppColors.cardBgLight,
+                                    border: Border.all(
+                                      color: AppColors.gold,
+                                      width: 3.w,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.gold.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        blurRadius: 12.r,
+                                        spreadRadius: 2.r,
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                  child: ClipOval(
+                                    child: CachedAssetImage(
+                                      fileName: player != null
+                                          ? player.avatarId
+                                          : 'ae1.webp', // Oyuncunun seçeceği avatar
+                                      fit: BoxFit.cover,
+                                      placeholder: Icon(
+                                        Icons.person,
+                                        color: AppColors.gold,
+                                        size: 50.sp,
+                                      ),
+                                      errorWidget: Icon(
+                                        Icons.person,
+                                        color: AppColors.gold,
+                                        size: 50.sp,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // Seviye Rozeti
+                                Positioned(
+                                  bottom: 0,
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16.w,
+                                      vertical: 4.h,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.navBg,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      border: Border.all(
+                                        color: AppColors.gold,
+                                        width: 2.w,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.5,
+                                          ),
+                                          blurRadius: 4.r,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      player != null
+                                          ? 'Lv. ${player.level}'
+                                          : 'Lv. 1',
+                                      style: TextStyle(
+                                        color: AppColors.goldLight,
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 16.h),
+                            // Unvan
+                            Text(
+                              player != null ? player.playerName : 'CEO',
+                              style: TextStyle(
+                                color: AppColors.goldLight,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
                               ),
-                              child: ClipOval(
-                                child: CachedAssetImage(
-                                  fileName: player != null ? player.avatarId : 'avatar_1.webp', // Oyuncunun seçeceği avatar
-                                  fit: BoxFit.cover,
-                                  placeholder: Icon(Icons.person, color: AppColors.gold, size: 50.sp),
-                                  errorWidget: Icon(Icons.person, color: AppColors.gold, size: 50.sp),
+                            ),
+                            SizedBox(height: 8.h),
+                            // Exp Bar
+                            Container(
+                              height: 6.h,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: AppColors.background,
+                                borderRadius: BorderRadius.circular(3.r),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: FractionallySizedBox(
+                                alignment: Alignment.centerLeft,
+                                widthFactor: player != null
+                                    ? (player.experience / 1000).clamp(0.0, 1.0)
+                                    : 0.0,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: AppColors.gold,
+                                    borderRadius: BorderRadius.circular(3.r),
+                                  ),
                                 ),
                               ),
                             ),
-                            // Seviye Rozeti
-                            Positioned(
-                              bottom: 0,
-                              child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-                                decoration: BoxDecoration(
-                                  color: AppColors.navBg,
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  border: Border.all(color: AppColors.gold, width: 2.w),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.5),
-                                      blurRadius: 4.r,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  player != null ? 'Lv. ${player.level}' : 'Lv. 1',
-                                  style: TextStyle(
-                                    color: AppColors.goldLight,
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              player != null
+                                  ? '${player.experience} / 1000 XP'
+                                  : '0 / 1000 XP',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 10.sp,
                               ),
                             ),
                           ],
                         ),
-                        SizedBox(height: 16.h),
-                        // Unvan
-                        Text(
-                          player != null ? player.playerName : 'CEO',
-                          style: TextStyle(
-                            color: AppColors.goldLight,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                // Sağ: İstatistikler
-                Expanded(
-                  flex: 11,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Şirket Değeri', style: AppTextStyles.body),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                    SizedBox(width: 16.w),
+                    // Sağ: İstatistikler
+                    Expanded(
+                      flex: 11,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            player != null ? _formatMoney(player.cash) : '...', 
-                            style: AppTextStyles.statValue,
+                          Text('Şirket Değeri', style: AppTextStyles.body),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                player != null
+                                    ? _formatMoney(player.cash)
+                                    : '...',
+                                style: AppTextStyles.statValue,
+                              ),
+                              const Spacer(),
+                              Icon(
+                                Icons.bar_chart,
+                                color: AppColors.gold,
+                                size: 36.sp,
+                              ),
+                            ],
                           ),
-                          const Spacer(),
-                          Icon(
-                            Icons.bar_chart,
-                            color: AppColors.gold,
-                            size: 36.sp,
+                          SizedBox(height: 6.h),
+                          Divider(color: AppColors.border, height: 1.h),
+                          SizedBox(height: 10.h),
+                          _buildSummaryRow(
+                            Icons.show_chart,
+                            'Günlük Kâr',
+                            '+1.28M',
+                            AppColors.green,
+                          ),
+                          SizedBox(height: 8.h),
+                          _buildSummaryRow(
+                            Icons.business,
+                            'Aktif İşletme',
+                            '18 işletme',
+                            AppColors.textPrimary,
+                          ),
+                          SizedBox(height: 8.h),
+                          _buildSummaryRow(
+                            Icons.location_on,
+                            'Şehir:',
+                            'Erzurum',
+                            AppColors.textPrimary,
+                          ),
+                          SizedBox(height: 16.h),
+                          // Şirket Raporu Butonu
+                          Container(
+                            width: double.infinity,
+                            height: 36.h,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Color(0xFF0F2B5B), Color(0xFF061430)],
+                              ),
+                              borderRadius: BorderRadius.circular(8.r),
+                              border: Border.all(color: Color(0xFF1E407C)),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {},
+                                borderRadius: BorderRadius.circular(8.r),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.analytics,
+                                      color: AppColors.textPrimary,
+                                      size: 16.sp,
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Text(
+                                      'Şirket Raporu',
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Icon(
+                                      Icons.chevron_right,
+                                      color: AppColors.textPrimary,
+                                      size: 18.sp,
+                                    ),
+                                    SizedBox(width: 4.w),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 6.h),
-                      Divider(color: AppColors.border, height: 1.h),
-                      SizedBox(height: 10.h),
-                      _buildSummaryRow(
-                        Icons.show_chart,
-                        'Günlük Kâr',
-                        '+1.28M',
-                        AppColors.green,
-                      ),
-                      SizedBox(height: 8.h),
-                      _buildSummaryRow(
-                        Icons.business,
-                        'Aktif İşletme',
-                        '18 işletme',
-                        AppColors.textPrimary,
-                      ),
-                      SizedBox(height: 8.h),
-                      _buildSummaryRow(
-                        Icons.location_on,
-                        'Şehir:',
-                        'Erzurum',
-                        AppColors.textPrimary,
-                      ),
-                      SizedBox(height: 16.h),
-                      // Şirket Raporu Butonu
-                      Container(
-                        width: double.infinity,
-                        height: 36.h,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF0F2B5B), Color(0xFF061430)],
-                          ),
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(color: Color(0xFF1E407C)),
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {},
-                            borderRadius: BorderRadius.circular(8.r),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.analytics,
-                                  color: AppColors.textPrimary,
-                                  size: 16.sp,
-                                ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  'Şirket Raporu',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Icon(
-                                  Icons.chevron_right,
-                                  color: AppColors.textPrimary,
-                                  size: 18.sp,
-                                ),
-                                SizedBox(width: 4.w),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-    },
+        );
+      },
     );
   }
 
@@ -359,7 +418,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.5)),
+                border: Border.all(
+                  color: AppColors.borderGold.withValues(alpha: 0.5),
+                ),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -385,7 +446,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Icon(Icons.chevron_right, color: AppColors.gold, size: 14.sp),
+                      Icon(
+                        Icons.chevron_right,
+                        color: AppColors.gold,
+                        size: 14.sp,
+                      ),
                     ],
                   ),
                 ],

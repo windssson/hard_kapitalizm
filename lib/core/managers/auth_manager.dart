@@ -44,7 +44,7 @@ class AuthManager {
           'id': userId,
           'player_name': 'Oyuncu ${userId.substring(0, 4)}',
           'company_name': 'Yeni Holding',
-          'avatar_id': 'avatar_1.webp',
+          'avatar_id': 'ae1.webp',
           'level': 1,
           'experience': 0,
           'cash': 100000, // Başlangıç parası
