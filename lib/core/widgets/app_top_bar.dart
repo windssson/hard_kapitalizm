@@ -10,9 +10,6 @@ class AppTopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final String currentRoute = GoRouterState.of(context).uri.toString();
-    final bool isHome = currentRoute == '/home' || currentRoute == '/';
-    
     final playerAsyncValue = ref.watch(playerStreamProvider);
     final player = playerAsyncValue.value;
 
@@ -26,30 +23,7 @@ class AppTopBar extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          if (!isHome) ...[
-            GestureDetector(
-              onTap: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/home');
-                }
-              },
-              child: Container(
-                padding: EdgeInsets.all(6.w),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBg,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.borderGoldLight.withValues(alpha: 0.4),
-                  ),
-                ),
-                child: Icon(Icons.arrow_back, color: AppColors.gold, size: 20.sp),
-              ),
-            ),
-            SizedBox(width: 12.w),
-          ],
-          // Logo
+          // Logo / Player Info
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -65,7 +39,7 @@ class AppTopBar extends ConsumerWidget {
                 ),
               ),
               Text(
-                player != null ? player.companyName : 'Winds Holdings',
+                player != null ? player.companyName : '...',
                 style: TextStyle(
                   color: AppColors.gold,
                   fontSize: 11.sp,
@@ -83,13 +57,15 @@ class AppTopBar extends ConsumerWidget {
             player != null ? _formatMoney(player.cash) : '...', 
             AppColors.green
           ),
-          SizedBox(width: 6.w),
+          SizedBox(width: 4.w),
           _buildCurrencyBadge(
             Icons.star, 
-            player != null ? player.gold.toString() : '...', 
+            player != null ? player.gold.toInt().toString() : '...', 
             AppColors.goldLight
           ),
-          SizedBox(width: 6.w),
+          SizedBox(width: 4.w),
+          _buildLevelBadge(player?.level ?? 1),
+          SizedBox(width: 8.w),
 
           // Ayarlar
           Container(
@@ -102,6 +78,32 @@ class AppTopBar extends ConsumerWidget {
               ),
             ),
             child: Icon(Icons.settings, color: AppColors.gold, size: 18.sp),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLevelBadge(int level) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: AppColors.background.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.trending_up, color: AppColors.gold, size: 10.sp),
+          SizedBox(width: 4.w),
+          Text(
+            'LV.$level',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),

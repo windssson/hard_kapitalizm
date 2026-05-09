@@ -26,7 +26,7 @@ class PlayerModel {
       id: json['id'] as String,
       playerName: json['player_name'] as String? ?? 'Oyuncu',
       companyName: json['company_name'] as String? ?? 'Yeni Holding',
-      avatarId: json['avatar_id'] as String? ?? 'ae1.webp',
+      avatarId: json['avatar_id'] as String? ?? 'avatar_1.webp',
       level: json['level'] as int? ?? 1,
       experience: json['experience'] as int? ?? 0,
       cash: (json['cash'] as num?)?.toDouble() ?? 100000.0,

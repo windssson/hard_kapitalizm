@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final authManagerProvider = Provider((ref) => AuthManager(Supabase.instance.client));
+final authManagerProvider = Provider(
+  (ref) => AuthManager(Supabase.instance.client),
+);
 
 class AuthManager {
   final SupabaseClient _supabase;
@@ -13,7 +15,7 @@ class AuthManager {
   Future<void> signInAnonymouslyIfNeeded() async {
     try {
       final session = _supabase.auth.currentSession;
-      
+
       if (session == null) {
         // Oturum yok, anonim giriş yap
         final response = await _supabase.auth.signInAnonymously();
@@ -25,7 +27,9 @@ class AuthManager {
         await _ensurePlayerRecordExists(session.user.id);
       }
     } catch (e) {
-      throw Exception('Giriş işlemi başarısız: $e\nLütfen Supabase Dashboard -> Authentication -> Providers -> Anonymous Sign-In ayarının açık olduğundan emin olun.');
+      throw Exception(
+        'Giriş işlemi başarısız: $e\nLütfen Supabase Dashboard -> Authentication -> Providers -> Anonymous Sign-In ayarının açık olduğundan emin olun.',
+      );
     }
   }
 
@@ -42,13 +46,13 @@ class AuthManager {
         // Kullanıcı için ilk defa oyuncu kaydı oluşturuluyor
         await _supabase.from('players').insert({
           'id': userId,
-          'player_name': 'Oyuncu ${userId.substring(0, 4)}',
+          'player_name': 'Oyuncu_${userId.substring(0, 4)}',
           'company_name': 'Yeni Holding',
           'avatar_id': 'ae1.webp',
           'level': 1,
           'experience': 0,
           'cash': 100000, // Başlangıç parası
-          'gold': 100,    // Başlangıç altını
+          'gold': 100, // Başlangıç altını
         });
       }
     } catch (e) {

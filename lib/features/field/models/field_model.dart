@@ -1,0 +1,67 @@
+class FieldModel {
+  final String id;
+  final String playerId;
+  final String fieldTypeId;
+  final String cityId;
+  final String name;
+  final int level;
+  final int currentSlotCount;
+  final int maxSlotCount;
+  final int inputCapacity;
+  final int outputCapacity;
+  final bool isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  FieldModel({
+    required this.id,
+    required this.playerId,
+    required this.fieldTypeId,
+    required this.cityId,
+    required this.name,
+    required this.level,
+    required this.currentSlotCount,
+    required this.maxSlotCount,
+    required this.inputCapacity,
+    required this.outputCapacity,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory FieldModel.fromJson(Map<String, dynamic> json) {
+    return FieldModel(
+      id: json['id'] as String,
+      playerId: json['player_id'] as String,
+      fieldTypeId: json['field_type_id'] as String,
+      cityId: json['city_id'] as String,
+      name: json['name'] as String,
+      level: json['level'] as int? ?? 1,
+      currentSlotCount: json['current_slot_count'] as int? ?? 0,
+      maxSlotCount: json['max_slot_count'] as int? ?? 0,
+      inputCapacity: json['input_capacity'] as int? ?? 0,
+      outputCapacity: json['output_capacity'] as int? ?? 0,
+      isActive: json['is_active'] as bool? ?? true,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'player_id': playerId,
+      'field_type_id': fieldTypeId,
+      'city_id': cityId,
+      'name': name,
+      'level': level,
+      'current_slot_count': currentSlotCount,
+      'max_slot_count': maxSlotCount,
+      'input_capacity': inputCapacity,
+      'output_capacity': outputCapacity,
+      'is_active': isActive,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+}
