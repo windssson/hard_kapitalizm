@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -27,6 +28,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     try {
       final authManager = ref.read(authManagerProvider);
       await authManager.signInAnonymouslyIfNeeded();
+
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        try {
+          await Supabase.instance.client.rpc(
+            'complete_due_market_transfers',
+            params: {
+              'p_buyer_player_id': user.id,
+              'p_limit': 100,
+            },
+          );
+        } catch (_) {
+          // Gecikmis transfer tamamlama basarisiz olsa bile giris akisini bloklamiyoruz.
+        }
+      }
 
       final assetManager = ref.read(assetManagerProvider);
       

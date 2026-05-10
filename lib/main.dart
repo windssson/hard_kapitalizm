@@ -23,6 +23,7 @@ import 'package:hard_kapitalizm/features/mine/ui/mine_type_selection_screen.dart
 import 'package:hard_kapitalizm/features/market/ui/market_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_setup_screen.dart';
+import 'package:hard_kapitalizm/features/transfer_map/ui/transfer_map_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_detail_screen.dart';
@@ -47,6 +48,10 @@ final _router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      path: '/transfer-map',
+      builder: (context, state) => const TransferMapScreen(),
+    ),
     GoRoute(
       path: '/store',
       builder: (context, state) => const StoreScreen(),
@@ -154,12 +159,18 @@ final _router = GoRouter(
         final warehouseId = state.uri.queryParameters['warehouseId'] ?? '';
         final playerId = state.uri.queryParameters['playerId'] ?? '';
         final cityId = state.uri.queryParameters['cityId'] ?? '';
+        final targetType = state.uri.queryParameters['targetType'] ?? 'warehouse';
+        final storeId = state.uri.queryParameters['storeId'] ?? '';
+        final storeSlotId = state.uri.queryParameters['storeSlotId'] ?? '';
 
         return MarketScreen(
           productId: productId,
           warehouseId: warehouseId,
           playerId: playerId,
           cityId: cityId,
+          targetType: targetType,
+          storeId: storeId,
+          storeSlotId: storeSlotId,
         );
       },
     ),

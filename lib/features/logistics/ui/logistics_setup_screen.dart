@@ -32,14 +32,14 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Nakliye Firmasi Kur'),
+            const SecondaryTopBar(title: 'Lojistik Ağı Kur'),
             Expanded(
               child: companyAsync.when(
                 data: (company) {
                   if (company != null) {
-                    return _buildAlreadyExistsState(
+                    return _buildRedirectState(
                       title: company.name,
-                      message: 'Bu oyuncunun zaten kurulu bir nakliye firmasi var.',
+                      message: 'Zaten aktif bir lojistik firmanız bulunuyor.',
                     );
                   }
 
@@ -47,9 +47,9 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                     data: (construction) {
                       if (construction != null) {
                         final params = construction['params'] as Map<String, dynamic>?;
-                        return _buildAlreadyExistsState(
-                          title: (params?['name'] ?? 'Nakliye Firmasi').toString(),
-                          message: 'Nakliye firmanin insaati devam ediyor. Yonetim ekranindan takip edebilirsin.',
+                        return _buildRedirectState(
+                          title: (params?['name'] ?? 'Lojistik Firması').toString(),
+                          message: 'Lojistik merkezinizin inşaatı devam ediyor.',
                         );
                       }
 
@@ -61,18 +61,18 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                             playerLevel: player?.level ?? 1,
                           ),
                           loading: _buildLoading,
-                          error: (error, stack) => _buildError('Firma tipleri yuklenemedi: $error'),
+                          error: (error, stack) => _buildError('Firma tipleri yüklenemedi.'),
                         ),
                         loading: _buildLoading,
-                        error: (error, stack) => _buildError('Oyuncu bilgisi yuklenemedi.'),
+                        error: (error, stack) => _buildError('Oyuncu bilgisi okunamadı.'),
                       );
                     },
                     loading: _buildLoading,
-                    error: (error, stack) => _buildError('Insaat durumu okunamadi.'),
+                    error: (error, stack) => _buildError('İnşaat durumu okunamadı.'),
                   );
                 },
                 loading: _buildLoading,
-                error: (error, stack) => _buildError('Firma bilgisi okunamadi.'),
+                error: (error, stack) => _buildError('Veri senkronizasyon hatası.'),
               ),
             ),
           ],
@@ -87,14 +87,14 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
     required int playerLevel,
   }) {
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
+      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 100.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildIntroCard(),
-          SizedBox(height: 16.h),
-          _buildSectionTitle('Firma Tipi'),
-          SizedBox(height: 8.h),
+          _buildPremiumIntro(),
+          SizedBox(height: 24.h),
+          _buildSectionTitle('OPERASYON MERKEZİ TİPİ'),
+          SizedBox(height: 12.h),
           ...types.map((type) => _buildTypeCard(type, playerCash, playerLevel)),
           SizedBox(height: 24.h),
           _buildSubmitButton(),
@@ -103,33 +103,42 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
     );
   }
 
-  Widget _buildIntroCard() {
+  Widget _buildPremiumIntro() {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.35)),
+        gradient: LinearGradient(
+          colors: [AppColors.cardBg, AppColors.cardBgLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Container(
-            width: 52.w,
-            height: 52.w,
+            width: 60.w,
+            height: 60.w,
             decoration: BoxDecoration(
-              color: AppColors.cardBgLight,
-              borderRadius: BorderRadius.circular(14.r),
+              color: AppColors.gold.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
             ),
-            child: Icon(Icons.local_shipping, color: AppColors.gold, size: 28.sp),
+            child: Icon(Icons.hub_outlined, color: AppColors.gold, size: 32.sp),
           ),
-          SizedBox(width: 14.w),
+          SizedBox(width: 16.w),
           Expanded(
-            child: Text(
-              'Nakliye firmasi, oyuncular arasi ticaret ve transfer sistemlerinin merkezi olacak. Bu yapi global calisacak; sadece firma tipini secip kurulumu baslatman yeterli.',
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.textPrimary,
-                height: 1.5,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Lojistik Hub', style: AppTextStyles.h2.copyWith(color: AppColors.gold)),
+                SizedBox(height: 4.h),
+                Text(
+                  'Ticaretin kalbi burada atar. Mal taşıyın, araç kiralayın ve imparatorluğunuzu büyütün.',
+                  style: AppTextStyles.body.copyWith(height: 1.4),
+                ),
+              ],
             ),
           ),
         ],
@@ -138,17 +147,16 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: AppTextStyles.titleGold.copyWith(fontSize: 16.sp),
+    return Padding(
+      padding: EdgeInsets.only(left: 4.w),
+      child: Text(
+        title,
+        style: AppTextStyles.titleGold.copyWith(fontSize: 12.sp, letterSpacing: 1.2),
+      ),
     );
   }
 
-  Widget _buildTypeCard(
-    LogisticsCompanyTypeModel type,
-    double playerCash,
-    int playerLevel,
-  ) {
+  Widget _buildTypeCard(LogisticsCompanyTypeModel type, double playerCash, int playerLevel) {
     final isSelected = _selectedType?.id == type.id;
     final levelLocked = playerLevel < type.requiredLevel;
     final cashLocked = playerCash < type.cost;
@@ -157,76 +165,62 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
     return GestureDetector(
       onTap: isLocked ? null : () => setState(() => _selectedType = type),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        margin: EdgeInsets.only(bottom: 10.h),
-        padding: EdgeInsets.all(14.w),
+        duration: const Duration(milliseconds: 250),
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.gold.withValues(alpha: 0.08) : AppColors.cardBg,
-          borderRadius: BorderRadius.circular(16.r),
+          color: isSelected ? AppColors.gold.withValues(alpha: 0.05) : AppColors.cardBg,
+          borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
             color: isSelected ? AppColors.gold : AppColors.border,
-            width: isSelected ? 1.5 : 1,
+            width: isSelected ? 2 : 1,
           ),
+          boxShadow: isSelected ? [BoxShadow(color: AppColors.gold.withValues(alpha: 0.1), blurRadius: 10)] : null,
         ),
         child: Opacity(
-          opacity: isLocked ? 0.55 : 1,
+          opacity: isLocked ? 0.5 : 1.0,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 48.w,
-                height: 48.w,
+                width: 52.w,
+                height: 52.w,
                 decoration: BoxDecoration(
                   color: AppColors.cardBgLight,
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(14.r),
+                  border: Border.all(color: isSelected ? AppColors.gold.withValues(alpha: 0.3) : AppColors.border),
                 ),
-                child: Icon(Icons.apartment, color: AppColors.gold, size: 26.sp),
+                child: Icon(Icons.apartment_rounded, color: AppColors.gold, size: 28.sp),
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: 14.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      type.name,
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
+                    Text(type.name, style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.w800)),
+                    SizedBox(height: 8.h),
                     Wrap(
-                      spacing: 8.w,
-                      runSpacing: 8.h,
+                      spacing: 6.w,
+                      runSpacing: 6.h,
                       children: [
-                        _buildMetaChip(Icons.payments, _formatMoney(type.cost)),
-                        _buildMetaChip(Icons.star, 'Lv. ${type.requiredLevel}'),
-                        _buildMetaChip(Icons.local_shipping, '${type.maxVehicleCount} arac'),
-                        _buildMetaChip(Icons.local_gas_station, '${type.fuelCapacity} yakit'),
+                        _buildTypeChip(Icons.payments_outlined, _formatMoney(type.cost), cashLocked ? AppColors.red : AppColors.green),
+                        _buildTypeChip(Icons.star_outline, 'Lv. ${type.requiredLevel}', levelLocked ? AppColors.red : AppColors.blue),
+                        _buildTypeChip(Icons.local_shipping_outlined, '${type.maxVehicleCount} Kapasite', AppColors.gold),
                       ],
                     ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Insaat suresi ${type.constructionTimeMinutes} dakika',
-                      style: AppTextStyles.body,
+                    SizedBox(height: 10.h),
+                    Row(
+                      children: [
+                        Icon(Icons.timer_outlined, color: AppColors.textMuted, size: 12.sp),
+                        SizedBox(width: 4.w),
+                        Text('İnşaat: ${type.constructionTimeMinutes} Dakika', style: AppTextStyles.body.copyWith(fontSize: 11.sp)),
+                      ],
                     ),
-                    if (isLocked) ...[
-                      SizedBox(height: 6.h),
-                      Text(
-                        levelLocked ? 'Seviye yetersiz' : 'Nakit yetersiz',
-                        style: TextStyle(
-                          color: AppColors.red,
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
-              if (isSelected)
-                Icon(Icons.check_circle, color: AppColors.gold, size: 22.sp),
+              if (isSelected) Icon(Icons.check_circle, color: AppColors.gold, size: 24.sp),
+              if (isLocked) Icon(Icons.lock_outline, color: AppColors.red.withValues(alpha: 0.7), size: 20.sp),
             ],
           ),
         ),
@@ -234,20 +228,20 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
     );
   }
 
-  Widget _buildMetaChip(IconData icon, String text) {
+  Widget _buildTypeChip(IconData icon, String label, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: AppColors.cardBgLight,
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: AppColors.border),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.gold, size: 12.sp),
-          SizedBox(width: 5.w),
-          Text(text, style: AppTextStyles.body),
+          Icon(icon, color: color, size: 10.sp),
+          SizedBox(width: 4.w),
+          Text(label, style: TextStyle(color: color, fontSize: 9.sp, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -256,154 +250,88 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
   Widget _buildSubmitButton() {
     final canSubmit = _selectedType != null && !_isSubmitting;
 
-    return SizedBox(
+    return Container(
       width: double.infinity,
-      height: 54.h,
+      height: 56.h,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: canSubmit ? [BoxShadow(color: AppColors.gold.withValues(alpha: 0.2), blurRadius: 15, offset: const Offset(0, 5))] : null,
+      ),
       child: ElevatedButton(
         onPressed: canSubmit ? _handleSubmit : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.gold,
-          disabledBackgroundColor: AppColors.gold.withValues(alpha: 0.14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.r),
-          ),
+          disabledBackgroundColor: AppColors.border,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          elevation: 0,
         ),
         child: _isSubmitting
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.black,
-                ),
-              )
+            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
             : Text(
-                'NAKLIYE FIRMASINI KUR',
-                style: TextStyle(
-                  color: canSubmit ? Colors.black : Colors.white.withValues(alpha: 0.35),
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w900,
-                ),
+                'MERKEZİ KURMAYI BAŞLAT',
+                style: TextStyle(color: Colors.black, fontSize: 14.sp, fontWeight: FontWeight.w900, letterSpacing: 1),
               ),
       ),
     );
   }
 
-  Widget _buildAlreadyExistsState({
-    required String title,
-    required String message,
-  }) {
+  Widget _buildRedirectState({required String title, required String message}) {
     return Center(
-      child: Padding(
+      child: Container(
+        margin: EdgeInsets.all(24.w),
         padding: EdgeInsets.all(24.w),
-        child: Container(
-          padding: EdgeInsets.all(20.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.35)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.local_shipping, color: AppColors.gold, size: 42.sp),
-              SizedBox(height: 12.h),
-              Text(title, style: AppTextStyles.h2, textAlign: TextAlign.center),
-              SizedBox(height: 8.h),
-              Text(
-                message,
-                style: AppTextStyles.body.copyWith(height: 1.5),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16.h),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => context.go('/logistics'),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.gold),
-                    padding: EdgeInsets.symmetric(vertical: 14.h),
-                  ),
-                  child: Text(
-                    'YONETIME GIT',
-                    style: TextStyle(
-                      color: AppColors.gold,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13.sp,
-                    ),
-                  ),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(24.r),
+          border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.verified_user_outlined, color: AppColors.gold, size: 48.sp),
+            SizedBox(height: 16.h),
+            Text(title, style: AppTextStyles.h2, textAlign: TextAlign.center),
+            SizedBox(height: 8.h),
+            Text(message, style: AppTextStyles.body, textAlign: TextAlign.center),
+            SizedBox(height: 24.h),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.go('/logistics'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.cardBgLight,
+                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: BorderSide(color: AppColors.gold.withValues(alpha: 0.5))),
                 ),
+                child: Text('YÖNETİM EKRANINA GİT', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold)),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLoading() {
-    return const Center(
-      child: CircularProgressIndicator(color: AppColors.gold),
-    );
-  }
-
-  Widget _buildError(String message) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(24.w),
-        child: Text(
-          message,
-          style: TextStyle(color: AppColors.red, fontSize: 14.sp),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
+  Widget _buildLoading() => const Center(child: CircularProgressIndicator(color: AppColors.gold));
+  Widget _buildError(String m) => Center(child: Text(m, style: TextStyle(color: AppColors.red)));
 
   Future<void> _handleSubmit() async {
     if (_selectedType == null) return;
-
     setState(() => _isSubmitting = true);
-
     try {
-      final result = await ref.read(logisticsActionProvider).createLogisticsCompany(
-            typeId: _selectedType!.id,
-            name: _selectedType!.name,
-          );
-
-      if (!mounted) return;
-
-      if (result['success'] == true) {
+      final res = await ref.read(logisticsActionProvider).createLogisticsCompany(typeId: _selectedType!.id, name: _selectedType!.name);
+      if (res['success'] == true) {
         ref.invalidate(playerLogisticsCompanyProvider);
         ref.invalidate(playerLogisticsConstructionProvider);
-        ref.invalidate(logisticsCompanyListStreamProvider);
-
-        AppSnackbar.show(
-          context,
-          title: 'Basarili',
-          message: 'Nakliye firmasi insaati baslatildi.',
-          type: SnackbarType.success,
-        );
+        AppSnackbar.show(context, title: 'Başarılı', message: 'İnşaat başlatıldı.', type: SnackbarType.success);
         context.go('/logistics');
-        return;
+      } else {
+        AppSnackbar.show(context, title: 'Hata', message: res['message'] ?? 'İşlem başarısız.', type: SnackbarType.error);
       }
-
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: (result['message'] ?? 'Islem basarisiz oldu.').toString(),
-        type: SnackbarType.error,
-      );
     } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  String _formatMoney(double amount) {
-    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';
-    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(1)}K';
-    return amount.toStringAsFixed(0);
-  }
+  String _formatMoney(double a) => a >= 1000000 ? '${(a/1000000).toStringAsFixed(1)}M' : (a >= 1000 ? '${(a/1000).toStringAsFixed(1)}K' : a.toStringAsFixed(0));
 }

@@ -63,16 +63,24 @@ class WarehouseModel {
 class WarehouseSlotModel {
   final String id;
   final String? productId;
+  final String? productName;
   final String? productIcon;
   final int quantity;
   final int qualityLevel;
+  final double price;
+  final double cost;
+  final bool isAvailableForSale;
 
   WarehouseSlotModel({
     required this.id,
     this.productId,
+    this.productName,
     this.productIcon,
     required this.quantity,
     required this.qualityLevel,
+    this.price = 0,
+    this.cost = 0,
+    this.isAvailableForSale = false,
   });
 
   factory WarehouseSlotModel.fromJson(Map<String, dynamic> json) {
@@ -81,11 +89,15 @@ class WarehouseSlotModel {
     return WarehouseSlotModel(
       id: json['id'] as String,
       productId: json['product_id'] as String?,
+      productName: json['product_name'] as String? ?? productJson?['urun_adi'] as String?,
       productIcon: productJson?['urun_iconu'] as String?,
       quantity: json['quantity'] as int? ?? 0,
       qualityLevel: json['quality_level'] as int? ?? 0,
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      cost: (json['cost'] as num?)?.toDouble() ?? 0.0,
+      isAvailableForSale: json['is_available_for_sale'] as bool? ?? false,
     );
   }
 
-  bool get isEmpty => productId == null || quantity <= 0;
+  bool get isEmpty => productId == null;
 }

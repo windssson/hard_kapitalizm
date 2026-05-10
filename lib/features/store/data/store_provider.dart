@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
+import 'package:hard_kapitalizm/features/store/models/store_model.dart';
+import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
   final supabase = Supabase.instance.client;
@@ -10,7 +12,6 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
   if (user == null) return [];
 
   try {
-    // 1. Mevcut aktif dükkanları çek (RPC)
     final response = await supabase.rpc(
       'get_stores_list',
       params: {'p_player_id': user.id},
@@ -19,22 +20,22 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
     List<StoreModel> allStores = [];
 
     if (response != null && response['success'] == true) {
-      final List<dynamic> storesJson = response['stores'] as List<dynamic>;
-      allStores = storesJson.map((json) => StoreModel.fromJson(json)).toList();
+      final storesJson = response['stores'] as List<dynamic>;
+      allStores = storesJson
+          .map((json) => StoreModel.fromJson(json))
+          .toList();
     }
 
-    // 2. Yardımcı verileri çek (İnşaat eşleştirmesi için)
     final typesResponse = await supabase.from('store_types').select();
-    final List<StoreTypeModel> allTypes = (typesResponse as List)
+    final allTypes = (typesResponse as List)
         .map((json) => StoreTypeModel.fromJson(json))
         .toList();
 
     final citiesResponse = await supabase.from('cities').select();
-    final List<CityModel> allCities = (citiesResponse as List)
+    final allCities = (citiesResponse as List)
         .map((json) => CityModel.fromJson(json))
         .toList();
 
-    // 3. Devam eden inşaatları çek
     final constructionResponse = await supabase
         .from('building_constructions')
         .select('*')
@@ -42,52 +43,70 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
         .eq('building_kind', 'store')
         .eq('status', 'in_progress');
 
-    if (constructionResponse != null && (constructionResponse as List).isNotEmpty) {
-      for (var constr in (constructionResponse as List)) {
+    if (constructionResponse != null &&
+        (constructionResponse as List).isNotEmpty) {
+      for (final constr in constructionResponse) {
         final params = constr['params'] as Map<String, dynamic>;
         final storeTypeId = params['store_type_id'] as String?;
         final cityId = params['city_id'] as String?;
-        
+
         final type = allTypes.firstWhere(
           (t) => t.id == storeTypeId,
-          orElse: () => StoreTypeModel(id: 'unknown', name: 'Bilinmeyen', icon: 'default.webp'),
+          orElse: () => StoreTypeModel(
+            id: 'unknown',
+            name: 'Bilinmeyen',
+            icon: 'default.webp',
+          ),
         );
 
         final city = allCities.firstWhere(
           (c) => c.id == cityId,
-          orElse: () => CityModel(id: '', name: 'Bilinmeyen Sehir', population: 0, taxRate: 0.0, mapPositionX: 0, mapPositionY: 0, isActive: true),
+          orElse: () => CityModel(
+            id: '',
+            name: 'Bilinmeyen Sehir',
+            population: 0,
+            taxRate: 0.0,
+            mapPositionX: 0,
+            mapPositionY: 0,
+            isActive: true,
+          ),
         );
 
         final startedAt = DateTime.parse(constr['started_at'] as String);
         final finishAt = DateTime.parse(constr['finish_at'] as String);
         final now = DateTime.now();
-        
+
         final totalDuration = finishAt.difference(startedAt).inSeconds;
         final elapsed = now.difference(startedAt).inSeconds;
-        double progress = totalDuration > 0 ? (elapsed / totalDuration).clamp(0.0, 1.0) : 0.0;
+        final progress = totalDuration > 0
+            ? (elapsed / totalDuration).clamp(0.0, 1.0)
+            : 0.0;
 
-        allStores.add(StoreModel(
-          id: constr['id'] as String,
-          name: params['name'] as String? ?? type.name,
-          cityId: cityId,
-          cityName: city.name,
-          level: 1,
-          isActive: false,
-          currentSlotCount: 0,
-          maxSlotCount: params['max_slot_count'] as int? ?? 0,
-          storeType: type,
-          summary: StoreSummaryModel(
-            totalQuantity: 0,
-            totalCapacity: params['slot_capacity'] as int? ?? 0,
-            availableCapacity: params['slot_capacity'] as int? ?? 0,
-            usedCapacityRatio: 0.0,
+        allStores.add(
+          StoreModel(
+            id: constr['id'] as String,
+            name: params['name'] as String? ?? type.name,
+            cityId: cityId,
+            cityName: city.name,
+            level: 1,
+            isActive: false,
+            currentSlotCount: 0,
+            maxSlotCount: params['max_slot_count'] as int? ?? 0,
+            storeType: type,
+            summary: StoreSummaryModel(
+              totalQuantity: 0,
+              totalCapacity: params['slot_capacity'] as int? ?? 0,
+              pendingQuantity: 0,
+              availableCapacity: params['slot_capacity'] as int? ?? 0,
+              usedCapacityRatio: 0.0,
+            ),
+            slots: const [],
+            isUnderConstruction: true,
+            startedAt: startedAt,
+            finishAt: finishAt,
+            constructionProgress: progress,
           ),
-          slots: [],
-          isUnderConstruction: true,
-          startedAt: startedAt,
-          finishAt: finishAt,
-          constructionProgress: progress,
-        ));
+        );
       }
     }
 
@@ -98,11 +117,16 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
   }
 });
 
-final storeDetailProvider = FutureProvider.family<StoreModel, String>((ref, storeId) async {
+final storeDetailProvider = FutureProvider.family<StoreModel, String>((
+  ref,
+  storeId,
+) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
-  if (user == null) throw Exception('Kullanıcı girişi yapılmamış.');
+  if (user == null) {
+    throw Exception('Kullanici girisi yapilmamis.');
+  }
 
   final response = await supabase.rpc(
     'get_store_detail',
@@ -114,15 +138,17 @@ final storeDetailProvider = FutureProvider.family<StoreModel, String>((ref, stor
 
   if (response['success'] == true) {
     return StoreModel.fromJson(response['store']);
-  } else {
-    throw Exception(response['message'] ?? 'Mağaza detayları alınırken hata oluştu.');
   }
+
+  throw Exception(
+    response['message'] ?? 'Magaza detaylari alinirken hata olustu.',
+  );
 });
 
 final citiesProvider = FutureProvider<List<CityModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final response = await supabase.from('cities').select().eq('is_active', true);
-  
+
   return (response as List).map((json) => CityModel.fromJson(json)).toList();
 });
 
@@ -133,8 +159,10 @@ final storeTypesProvider = FutureProvider<List<StoreTypeModel>>((ref) async {
       .select()
       .order('required_level', ascending: true)
       .order('cost', ascending: true);
-  
-  return (response as List).map((json) => StoreTypeModel.fromJson(json)).toList();
+
+  return (response as List)
+      .map((json) => StoreTypeModel.fromJson(json))
+      .toList();
 });
 
 class StoreActionNotifier {
@@ -146,7 +174,9 @@ class StoreActionNotifier {
     required String name,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
 
     try {
       final response = await _supabase.rpc(
@@ -166,9 +196,13 @@ class StoreActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> finishConstructionWithGold(String constructionId) async {
+  Future<Map<String, dynamic>> finishConstructionWithGold(
+    String constructionId,
+  ) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
 
     try {
       final response = await _supabase.rpc(
@@ -186,7 +220,9 @@ class StoreActionNotifier {
 
   Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
 
     try {
       final response = await _supabase.rpc(
@@ -204,7 +240,9 @@ class StoreActionNotifier {
 
   Future<Map<String, dynamic>> addStoreSlot(String storeId) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
 
     try {
       final response = await _supabase.rpc(
@@ -240,7 +278,9 @@ class StoreActionNotifier {
     int qualityLevel = 1,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
 
     try {
       final response = await _supabase.rpc(
@@ -257,28 +297,45 @@ class StoreActionNotifier {
       return {'success': false, 'message': e.toString()};
     }
   }
+
   Future<Map<String, dynamic>> getEligibleWarehousesForStock({
     required String productId,
-    required String cityId,
+    String? cityId,
+    int? qualityLevel,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
 
     try {
-      // Oyuncunun bu şehirdeki aktif depolarını ve slotlarını çek
       final response = await _supabase
           .from('warehouses')
-          .select('*, warehouse_slots(*)')
+          .select('*, city:cities(name), warehouse_slots(*, product:products(*))')
           .eq('player_id', user.id)
-          .eq('city_id', cityId)
           .eq('is_active', true);
 
-      final List<dynamic> warehouses = response as List<dynamic>;
-      
-      // Filtrele: Ürün bu depoda var mı ve miktarı > 0 mı?
-      final eligible = warehouses.where((w) {
-        final slots = w['warehouse_slots'] as List<dynamic>;
-        return slots.any((s) => s['product_id'] == productId && (s['quantity'] as num) > 0);
+      final warehouses = response as List<dynamic>;
+
+      final eligible = warehouses.map((warehouse) {
+        final slots = (warehouse['warehouse_slots'] as List<dynamic>)
+            .where(
+              (slot) =>
+                  slot['product_id'] == productId &&
+                  (qualityLevel == null ||
+                      (slot['quality_level'] as num?)?.toInt() ==
+                          qualityLevel) &&
+                  (slot['quantity'] as num? ?? 0) > 0,
+            )
+            .toList();
+
+        return {
+          ...warehouse,
+          'warehouse_slots': slots,
+        };
+      }).where((warehouse) {
+        final slots = warehouse['warehouse_slots'] as List<dynamic>;
+        return slots.isNotEmpty;
       }).toList();
 
       return {'success': true, 'warehouses': eligible};
@@ -293,7 +350,9 @@ class StoreActionNotifier {
     required int quantity,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
 
     try {
       final response = await _supabase.rpc(
@@ -308,6 +367,168 @@ class StoreActionNotifier {
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<List<MarketTransferVehicleOptionModel>> getStoreTransferVehicleOptions({
+    required String storeSlotId,
+    required String warehouseSlotId,
+    required int quantity,
+  }) async {
+    final response = await _supabase.rpc(
+      'get_store_transfer_vehicle_options',
+      params: {
+        'p_store_slot_id': storeSlotId,
+        'p_warehouse_slot_id': warehouseSlotId,
+        'p_quantity': quantity,
+      },
+    );
+
+    return (response as List<dynamic>)
+        .map(
+          (json) => MarketTransferVehicleOptionModel.fromJson(
+            json as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getPlayerWarehouses() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      throw Exception('Oturum acilmamis.');
+    }
+
+    final response = await _supabase
+        .from('warehouses')
+        .select('id, name, city_id, is_active, city:cities(name)')
+        .eq('player_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', ascending: true);
+
+    return (response as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> startWarehouseToStoreTransfer({
+    required String storeSlotId,
+    required String warehouseSlotId,
+    required int quantity,
+    String? vehicleId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_warehouse_to_store_transfer',
+        params: {
+          'p_store_slot_id': storeSlotId,
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_quantity': quantity,
+          'p_vehicle_id': vehicleId,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<List<MarketTransferVehicleOptionModel>>
+      getStoreToWarehouseVehicleOptions({
+    required String storeSlotId,
+    required String warehouseId,
+    required int quantity,
+  }) async {
+    final response = await _supabase.rpc(
+      'get_store_to_warehouse_vehicle_options',
+      params: {
+        'p_store_slot_id': storeSlotId,
+        'p_buyer_warehouse_id': warehouseId,
+        'p_quantity': quantity,
+      },
+    );
+
+    return (response as List<dynamic>)
+        .map(
+          (json) => MarketTransferVehicleOptionModel.fromJson(
+            json as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> startStoreToWarehouseTransfer({
+    required String storeSlotId,
+    required String warehouseId,
+    required int quantity,
+    String? vehicleId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_store_to_warehouse_transfer',
+        params: {
+          'p_store_slot_id': storeSlotId,
+          'p_buyer_warehouse_id': warehouseId,
+          'p_quantity': quantity,
+          'p_vehicle_id': vehicleId,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<StoreSaleResultModel> processStoreSalesOnEntry(String storeId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return const StoreSaleResultModel(
+        success: false,
+        processed: false,
+        message: 'Oturum acilmamis.',
+        processedAt: null,
+        elapsedMinutes: 0,
+        totalRevenue: 0,
+        totalProfit: 0,
+        totalSoldQuantity: 0,
+        items: [],
+      );
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'process_store_sales_on_entry',
+        params: {
+          'p_player_id': user.id,
+          'p_store_id': storeId,
+        },
+      );
+
+      return StoreSaleResultModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    } catch (e) {
+      return StoreSaleResultModel(
+        success: false,
+        processed: false,
+        message: e.toString(),
+        processedAt: null,
+        elapsedMinutes: 0,
+        totalRevenue: 0,
+        totalProfit: 0,
+        totalSoldQuantity: 0,
+        items: const [],
+      );
     }
   }
 }

@@ -41,6 +41,7 @@ class StoreTypeModel {
 class StoreSummaryModel {
   final int totalQuantity;
   final int totalCapacity;
+  final int pendingQuantity;
   final int availableCapacity;
   final double usedCapacityRatio;
   final double? pendingSaleTotal;
@@ -50,6 +51,7 @@ class StoreSummaryModel {
   StoreSummaryModel({
     required this.totalQuantity,
     required this.totalCapacity,
+    required this.pendingQuantity,
     required this.availableCapacity,
     required this.usedCapacityRatio,
     this.pendingSaleTotal,
@@ -61,6 +63,7 @@ class StoreSummaryModel {
     return StoreSummaryModel(
       totalQuantity: (json['total_quantity'] as num?)?.toInt() ?? 0,
       totalCapacity: (json['total_capacity'] as num?)?.toInt() ?? 0,
+      pendingQuantity: (json['pending_quantity'] as num?)?.toInt() ?? 0,
       availableCapacity: (json['available_capacity'] as num?)?.toInt() ?? 0,
       usedCapacityRatio: (json['used_capacity_ratio'] as num?)?.toDouble() ?? 0.0,
       pendingSaleTotal: (json['pending_sale_total'] as num?)?.toDouble(),
@@ -78,6 +81,7 @@ class StoreSlotModel {
   final String? productName;
   final String? productIcon;
   final int quantity;
+  final int pendingQuantity;
   final int qualityLevel;
   final double? price;
   final double? cost;
@@ -97,6 +101,7 @@ class StoreSlotModel {
     this.productName,
     this.productIcon,
     required this.quantity,
+    required this.pendingQuantity,
     required this.qualityLevel,
     this.price,
     this.cost,
@@ -120,6 +125,7 @@ class StoreSlotModel {
       productName: json['product_name'] as String? ?? productJson?['urun_adi'] as String?,
       productIcon: json['product_icon'] as String? ?? productJson?['urun_iconu'] as String?,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+      pendingQuantity: (json['pending_quantity'] as num?)?.toInt() ?? 0,
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       price: (json['price'] as num?)?.toDouble(),
       cost: (json['cost'] as num?)?.toDouble(),

@@ -190,6 +190,100 @@ class LogisticsActionNotifier {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  Future<Map<String, dynamic>> setVehicleRental({
+    required String vehicleId,
+    required bool isAvailableForRent,
+    required double rentalPrice,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_logistics_vehicle_rental',
+        params: {
+          'p_player_id': user.id,
+          'p_vehicle_id': vehicleId,
+          'p_is_available_for_rent': isAvailableForRent,
+          'p_rental_price': rentalPrice,
+        },
+      );
+
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> refuelVehicle(String vehicleId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'refuel_logistics_vehicle',
+        params: {
+          'p_player_id': user.id,
+          'p_vehicle_id': vehicleId,
+        },
+      );
+
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> repairVehicle(String vehicleId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'repair_logistics_vehicle',
+        params: {
+          'p_player_id': user.id,
+          'p_vehicle_id': vehicleId,
+        },
+      );
+
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> setVehicleActive({
+    required String vehicleId,
+    required bool isActive,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_logistics_vehicle_active',
+        params: {
+          'p_player_id': user.id,
+          'p_vehicle_id': vehicleId,
+          'p_is_active': isActive,
+        },
+      );
+
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
 
 final logisticsActionProvider = Provider((ref) => LogisticsActionNotifier());

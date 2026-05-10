@@ -200,6 +200,53 @@ class WarehouseActionNotifier {
       return {'success': false, 'message': e.toString()};
     }
   }
+  Future<Map<String, dynamic>> updateWarehouseSlotPrice({
+    required String warehouseSlotId,
+    required double price,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum aÃ§Ä±lmamÄ±ÅŸ.'};
+
+    if (price <= 0) {
+      return {'success': false, 'message': 'SatÄ±ÅŸ fiyatÄ± 0 bÃ¼yÃ¼k olmalÄ±.'};
+    }
+
+    try {
+      await _supabase
+          .from('warehouse_slots')
+          .update({'price': price})
+          .eq('id', warehouseSlotId);
+
+      return {
+        'success': true,
+        'message': 'Depo slot fiyatÄ± gÃ¼ncellendi.',
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> setWarehouseSlotSaleStatus({
+    required String warehouseSlotId,
+    required bool isAvailableForSale,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum aÃ§Ä±lmamÄ±ÅŸ.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'set_warehouse_slot_sale_status',
+        params: {
+          'p_player_id': user.id,
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_is_available_for_sale': isAvailableForSale,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
 
 final warehouseActionProvider = Provider((ref) => WarehouseActionNotifier());

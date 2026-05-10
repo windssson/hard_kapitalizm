@@ -29,7 +29,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         context.go('/home');
         break;
       case 2:
-        context.go('/store');
+        context.go('/transfer-map');
         break;
       case 4:
         context.go('/profile');

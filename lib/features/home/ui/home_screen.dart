@@ -53,7 +53,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     context.go('/home');
                     break;
                   case 2:
-                    context.go('/store');
+                    context.go('/transfer-map');
                     break;
                   case 4:
                     context.go('/profile');

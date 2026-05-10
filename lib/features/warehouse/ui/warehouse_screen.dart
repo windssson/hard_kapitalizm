@@ -27,7 +27,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     if (index == _selectedIndex) return;
     switch (index) {
       case 0: context.go('/home'); break;
-      case 2: context.go('/store'); break;
+      case 2: context.go('/transfer-map'); break;
       case 4: context.go('/profile'); break;
     }
   }
