@@ -11,18 +11,21 @@ import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
-final storeSalesCheckDoneProvider = Provider.autoDispose.family<ValueNotifier<bool>, String>(
-  (ref, storeId) => ValueNotifier<bool>(false),
-);
-
-class StoreDetailScreen extends ConsumerWidget {
+class StoreDetailScreen extends ConsumerStatefulWidget {
   final String storeId;
 
   const StoreDetailScreen({super.key, required this.storeId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final storeAsync = ref.watch(storeDetailProvider(storeId));
+  ConsumerState<StoreDetailScreen> createState() => _StoreDetailScreenState();
+}
+
+class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
+  bool _salesCheckDone = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final storeAsync = ref.watch(storeDetailProvider(widget.storeId));
     final playerAsync = ref.watch(playerStreamProvider);
 
     return Scaffold(
@@ -30,7 +33,7 @@ class StoreDetailScreen extends ConsumerWidget {
       body: SafeArea(
         child: storeAsync.when(
           data: (store) {
-            _scheduleStoreSalesCheck(context, ref, store);
+            _scheduleStoreSalesCheck(store);
             return _buildMainContent(context, ref, store, playerAsync.value);
           },
           loading: () => const Center(
@@ -42,31 +45,21 @@ class StoreDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _scheduleStoreSalesCheck(
-    BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-  ) {
-    final salesCheckNotifier = ref.read(
-      storeSalesCheckDoneProvider(store.id),
-    );
-    final alreadyChecked = salesCheckNotifier.value;
-    if (alreadyChecked) return;
-    salesCheckNotifier.value = true;
+  void _scheduleStoreSalesCheck(StoreModel store) {
+    if (_salesCheckDone) return;
+    _salesCheckDone = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!context.mounted) return;
+      if (!mounted) return;
 
       final result = await ref
           .read(storeActionProvider)
           .processStoreSalesOnEntry(store.id);
 
-      if (!context.mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       if (result.success != true) {
-        salesCheckNotifier.value = false;
+        _salesCheckDone = false;
         return;
       }
 
@@ -1449,7 +1442,7 @@ class StoreDetailScreen extends ConsumerWidget {
           ),
           SizedBox(height: 16.h),
           ElevatedButton(
-            onPressed: () => ref.refresh(storeDetailProvider(storeId)),
+            onPressed: () => ref.refresh(storeDetailProvider(widget.storeId)),
             child: const Text('Tekrar Dene'),
           ),
         ],

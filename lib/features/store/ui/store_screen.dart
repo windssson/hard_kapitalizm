@@ -259,7 +259,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     return GestureDetector(
       onTap: () => context.go('/store/${store.id}'),
       child: Container(
-        margin: EdgeInsets.only(bottom: 20.h),
+        margin: EdgeInsets.only(bottom: 10.h),
         padding: EdgeInsets.all(8.w),
         decoration: BoxDecoration(
           color: AppColors.cardBg,
@@ -448,7 +448,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     return Column(
       children: [
         Container(
-          height: 10.h,
+          height: 15.h,
           width: double.infinity,
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.3),
@@ -489,57 +489,67 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildAdvancedSlot(StoreSlotModel slot) {
-    return Container(
-      width: 50.w,
-      height: 60.h,
-      padding: EdgeInsets.all(3.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+    final progress = slot.usedCapacityRatio.clamp(0.0, 1.0);
+    final glowColor = _getRatioColor(progress);
+
+    return CustomPaint(
+      painter: _SlotBorderProgressPainter(
+        progress: progress,
+        glowColor: glowColor,
+        borderRadius: 8.r,
       ),
-      child: Stack(
-        children: [
-          // Kalite Badge
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
-              decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(3.r),
-              ),
-              child: Text(
-                'K${slot.qualityLevel}',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 6.sp,
-                  fontWeight: FontWeight.bold,
+      child: Container(
+        width: 50.w,
+        height: 50.h,
+        padding: EdgeInsets.all(3.w),
+        decoration: BoxDecoration(
+          color: AppColors.cardBgLight.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(8.r),
+          // Border artık CustomPainter ile çiziliyor
+        ),
+        child: Stack(
+          children: [
+            // Ürün Resmi (Bütün alanı kaplayacak şekilde)
+            Positioned.fill(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: 10.h,
+                ), // Alttaki miktar bandı için boşluk
+                child: CachedAssetImage(
+                  fileName: slot.productIcon ?? 'default',
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
-          ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CachedAssetImage(
-                fileName: slot.productIcon ?? 'default',
-                width: 22.w,
-                height: 22.w,
-              ),
-              SizedBox(height: 2.h),
-              Text(
-                '${slot.quantity}',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 8.sp,
-                  fontWeight: FontWeight.bold,
+            // Ürün İsmi
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 2.h, horizontal: 2.w),
+                child: Text(
+                  slot.productName ?? 'Bilinmiyor',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 7.sp,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.8),
+                        offset: const Offset(0, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -575,7 +585,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
   Widget _buildConstructionCard(StoreModel store) {
     return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
+      margin: EdgeInsets.only(bottom: 10.h),
       padding: EdgeInsets.all(8.w),
       decoration: BoxDecoration(
         color: AppColors.cardBg.withValues(alpha: 0.8),
@@ -893,6 +903,77 @@ class _ConstructionCountdownState extends State<_ConstructionCountdown> {
         ),
       ],
     );
+  }
+}
+
+class _SlotBorderProgressPainter extends CustomPainter {
+  final double progress;
+  final Color glowColor;
+  final double borderRadius;
+
+  _SlotBorderProgressPainter({
+    required this.progress,
+    required this.glowColor,
+    required this.borderRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Arka plan mat çerçeve
+    final bgPaint = Paint()
+      ..color = AppColors.border.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final w = size.width;
+    final h = size.height;
+    final r = borderRadius;
+
+    // Saat yönünde (Top-Center'dan başlayarak) dönen Path
+    final path = Path();
+    path.moveTo(w / 2, 0); // Üst orta noktadan başla
+
+    path.lineTo(w - r, 0);
+    path.arcToPoint(Offset(w, r), radius: Radius.circular(r));
+
+    path.lineTo(w, h - r);
+    path.arcToPoint(Offset(w - r, h), radius: Radius.circular(r));
+
+    path.lineTo(r, h);
+    path.arcToPoint(Offset(0, h - r), radius: Radius.circular(r));
+
+    path.lineTo(0, r);
+    path.arcToPoint(Offset(r, 0), radius: Radius.circular(r));
+
+    path.lineTo(w / 2, 0); // Başlangıca dön
+    path.close();
+
+    canvas.drawPath(path, bgPaint);
+
+    if (progress <= 0) return;
+
+    // 2. Neon (Glow) doluluk çerçevesi
+    final progressPaint = Paint()
+      ..color = glowColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2);
+
+    final pathMetrics = path.computeMetrics().toList();
+    if (pathMetrics.isEmpty) return;
+
+    final metric = pathMetrics.first;
+    // Progress oranına göre çizginin sadece bir kısmını kes
+    final extractPath = metric.extractPath(0.0, metric.length * progress);
+
+    canvas.drawPath(extractPath, progressPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SlotBorderProgressPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.glowColor != glowColor;
   }
 }
 
