@@ -44,6 +44,7 @@ class StoreSummaryModel {
   final int pendingQuantity;
   final int availableCapacity;
   final double usedCapacityRatio;
+  // Fractional sales carried over until they accumulate to a whole sale.
   final double? pendingSaleTotal;
   final double? totalStockCostValue;
   final double? totalStockSaleValue;
@@ -87,6 +88,7 @@ class StoreSlotModel {
   final double? cost;
   final int capacity;
   final double boostMultiplier;
+  // Fractional sale carry-over for this slot. This is not stock in transit.
   final double? pendingSale;
   final bool isActive;
   final bool isEmpty;

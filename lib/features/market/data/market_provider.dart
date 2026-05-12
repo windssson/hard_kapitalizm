@@ -74,6 +74,19 @@ final marketListingsProvider =
           .toList();
     });
 
+final marketCityProvider =
+    FutureProvider.family<Map<String, dynamic>?, String>((ref, cityId) async {
+      final supabase = Supabase.instance.client;
+      final response = await supabase
+          .from('cities')
+          .select('id, name, map_position_x, map_position_y')
+          .eq('id', cityId)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return Map<String, dynamic>.from(response);
+    });
+
 final marketBuyerWarehouseProvider =
     FutureProvider.family<MarketBuyerWarehouseModel?, String>((
       ref,

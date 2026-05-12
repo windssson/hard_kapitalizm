@@ -50,6 +50,7 @@ CREATE TABLE public.factory_types (
     required_level integer,
     construction_time_minutes integer,
     created_at timestamp with time zone,
+    max_slot_count integer DEFAULT 5,
     input_capacity integer,
     output_capacity integer,
 );
@@ -62,9 +63,8 @@ CREATE TABLE public.farm_types (
     cost integer,
     required_level integer,
     construction_time_minutes integer,
-    created_at timestamp with time zone,
+    max_slot_count integer DEFAULT 5,
     input_capacity integer,
-    slot_capacity integer,
     output_capacity integer DEFAULT 0,
 );
 
@@ -93,6 +93,7 @@ CREATE TABLE public.field_types (
     required_level integer,
     construction_time_minutes integer,
     created_at timestamp with time zone,
+    max_slot_count integer DEFAULT 5,
     input_capacity integer,
     output_capacity integer,
     slot_capacity integer,
@@ -638,7 +639,7 @@ begin
         'construction_time_minutes', coalesce(construction_time_minutes, 0),
         'level', 1,
         'current_slot_count', 0,
-        'max_slot_count', coalesce(slot_capacity, 0),
+        'max_slot_count', coalesce(max_slot_count, 5),
         'input_capacity', coalesce(input_capacity, 0),
         'output_capacity', coalesce(output_capacity, 0)
       )
@@ -661,7 +662,7 @@ begin
         'construction_time_minutes', coalesce(construction_time_minutes, 0),
         'level', 1,
         'current_slot_count', 0,
-        'max_slot_count', coalesce(slot_capacity, 0),
+        'max_slot_count', coalesce(max_slot_count, 5),
         'input_capacity', coalesce(input_capacity, 0),
         'output_capacity', coalesce(output_capacity, 0)
       )
@@ -7738,5 +7739,3 @@ begin
   );
 end;
 $function$
-
-

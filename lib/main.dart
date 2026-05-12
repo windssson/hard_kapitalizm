@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,12 +10,16 @@ import 'package:hard_kapitalizm/features/home/ui/home_screen.dart';
 import 'package:hard_kapitalizm/features/splash/ui/splash_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_detail_screen.dart';
+import 'package:hard_kapitalizm/features/store/ui/store_history_screen.dart';
+import 'package:hard_kapitalizm/features/store/ui/store_performance_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/city_selection_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/auth/ui/profile_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_screen.dart';
+import 'package:hard_kapitalizm/features/field/ui/field_detail_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/farm/ui/farm_screen.dart';
+import 'package:hard_kapitalizm/features/farm/ui/farm_detail_screen.dart';
 import 'package:hard_kapitalizm/features/farm/ui/farm_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_type_selection_screen.dart';
@@ -39,6 +44,12 @@ Future<void> main() async {
     url: SupabaseConstants.supabaseUrl,
     anonKey: SupabaseConstants.supabaseAnonKey,
   );
+
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
 
   runApp(const ProviderScope(child: HardKapitalizmApp()));
 }
@@ -72,6 +83,20 @@ final _router = GoRouter(
           builder: (context, state) => StoreDetailScreen(
             storeId: state.pathParameters['id']!,
           ),
+          routes: [
+            GoRoute(
+              path: 'history',
+              builder: (context, state) => StoreHistoryScreen(
+                storeId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'report',
+              builder: (context, state) => StorePerformanceScreen(
+                storeId: state.pathParameters['id']!,
+              ),
+            ),
+          ],
         ),
       ],
     ),
@@ -91,6 +116,11 @@ final _router = GoRouter(
             return FieldTypeSelectionScreen(selectedCity: city);
           },
         ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) =>
+              FieldDetailScreen(fieldId: state.pathParameters['id']!),
+        ),
       ],
     ),
     GoRoute(
@@ -107,6 +137,11 @@ final _router = GoRouter(
             final city = state.extra as CityModel;
             return FarmTypeSelectionScreen(selectedCity: city);
           },
+        ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) =>
+              FarmDetailScreen(farmId: state.pathParameters['id']!),
         ),
       ],
     ),

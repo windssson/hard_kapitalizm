@@ -11,6 +11,7 @@ class StoreSaleItemModel {
   final double revenue;
   final double profit;
   final int remainingQuantity;
+  // Remaining fractional sale carry-over after whole-unit sales are applied.
   final double pendingSaleAfter;
 
   const StoreSaleItemModel({

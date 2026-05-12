@@ -370,10 +370,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         context.go('/warehouses');
         return;
       case 'Tarlalar':
-        context.go('/fields');
+        context.go('/farms');
         return;
       case 'Ciftlikler':
-        context.go('/farms');
+        context.go('/fields');
         return;
       case 'Fabrikalar':
         context.go('/factories');

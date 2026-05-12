@@ -122,6 +122,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   MarketBuyerStoreSlotModel? _deriveBuyerStoreSlot(
     StoreModel? store,
     MarketBuyerStoreSlotModel? rawStoreSlot,
+    Map<String, dynamic>? fallbackCity,
   ) {
     if (store == null) return null;
 
@@ -133,9 +134,19 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       storeId: store.id,
       storeName: store.name,
       cityId: store.cityId ?? widget.cityId,
-      cityName: store.cityName ?? 'Bilinmeyen Sehir',
-      cityX: rawStoreSlot?.cityX ?? 0,
-      cityY: rawStoreSlot?.cityY ?? 0,
+      cityName:
+          store.cityName ??
+          rawStoreSlot?.cityName ??
+          fallbackCity?['name']?.toString() ??
+          'Bilinmeyen Sehir',
+      cityX: _resolveCoordinate(
+        rawStoreSlot?.cityX,
+        fallbackCity?['map_position_x'],
+      ),
+      cityY: _resolveCoordinate(
+        rawStoreSlot?.cityY,
+        fallbackCity?['map_position_y'],
+      ),
       isActive: store.isActive,
       productId: slot.productId,
       qualityLevel: slot.qualityLevel,
@@ -149,6 +160,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Widget build(BuildContext context) {
     final productAsync = ref.watch(marketProductProvider(widget.productId));
     final listingsAsync = ref.watch(marketListingsProvider(widget.productId));
+    final fallbackCityAsync = widget.cityId.isNotEmpty
+        ? ref.watch(marketCityProvider(widget.cityId))
+        : const AsyncValue<Map<String, dynamic>?>.data(null);
     final buyerWarehouseAsync = _isStoreTarget
         ? AsyncValue<MarketBuyerWarehouseModel?>.data(null)
         : ref.watch(marketBuyerWarehouseProvider(widget.warehouseId));
@@ -162,6 +176,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         ? _deriveBuyerStoreSlot(
             buyerStoreAsync.value,
             rawBuyerStoreSlotAsync.value,
+            fallbackCityAsync.value,
           )
         : null;
     final capacityAsync = _isStoreTarget
@@ -220,11 +235,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       SizedBox(height: 24.h),
                       _buildSectionHeader('SATIS NOKTALARI', 'Pazar Listesi'),
                       SizedBox(height: 12.h),
-                      listingsAsync.when(
+                          listingsAsync.when(
                         data: (listings) => _buildListingsSection(
                           listings: listings,
                           buyer: buyerWarehouseAsync.value,
                           buyerStoreSlot: buyerStoreSlot,
+                          fallbackCity: fallbackCityAsync.value,
                           product: productAsync.value,
                         ),
                         loading: _buildLoadingCard,
@@ -522,6 +538,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     required List<MarketListingModel> listings,
     required MarketBuyerWarehouseModel? buyer,
     required MarketBuyerStoreSlotModel? buyerStoreSlot,
+    required Map<String, dynamic>? fallbackCity,
     required ProductModel? product,
   }) {
     if (listings.isEmpty) return _buildEmptyState();
@@ -533,6 +550,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               listing,
               buyer,
               buyerStoreSlot,
+              fallbackCity,
               product,
             ),
           )
@@ -544,11 +562,20 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     MarketListingModel listing,
     MarketBuyerWarehouseModel? buyer,
     MarketBuyerStoreSlotModel? buyerStoreSlot,
+    Map<String, dynamic>? fallbackCity,
     ProductModel? product,
   ) {
-    final targetCityX = buyerStoreSlot?.cityX ?? buyer?.cityX ?? 0.0;
-    final targetCityY = buyerStoreSlot?.cityY ?? buyer?.cityY ?? 0.0;
-    final hasTarget = buyerStoreSlot != null || buyer != null;
+    final targetCityX = _resolveCoordinate(
+      buyerStoreSlot?.cityX ?? buyer?.cityX,
+      fallbackCity?['map_position_x'],
+    );
+    final targetCityY = _resolveCoordinate(
+      buyerStoreSlot?.cityY ?? buyer?.cityY,
+      fallbackCity?['map_position_y'],
+    );
+    final hasTarget =
+        _hasUsableCoordinates(targetCityX, targetCityY) &&
+        _hasUsableCoordinates(listing.cityX, listing.cityY);
     final distanceKm = !hasTarget
         ? 0.0
         : _calculateDistanceKm(
@@ -946,6 +973,22 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             math.sin(dLon / 2);
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return earthRadiusKm * c;
+  }
+
+  double _resolveCoordinate(dynamic primary, dynamic fallback) {
+    final primaryValue = _parseCoordinate(primary);
+    if (primaryValue != 0) return primaryValue;
+    return _parseCoordinate(fallback);
+  }
+
+  double _parseCoordinate(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
+  }
+
+  bool _hasUsableCoordinates(double x, double y) {
+    return x != 0 && y != 0;
   }
 
   double _degreesToRadians(double degrees) => degrees * (math.pi / 180);

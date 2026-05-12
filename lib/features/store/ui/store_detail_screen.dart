@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 class StoreDetailScreen extends ConsumerStatefulWidget {
   final String storeId;
@@ -26,7 +27,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final storeAsync = ref.watch(storeDetailProvider(widget.storeId));
-    final playerAsync = ref.watch(playerStreamProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -34,7 +34,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         child: storeAsync.when(
           data: (store) {
             _scheduleStoreSalesCheck(store);
-            return _buildMainContent(context, ref, store, playerAsync.value);
+            return _buildMainContent(context, ref, store);
           },
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.gold),
@@ -228,11 +228,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
-    dynamic player,
   ) {
     return Column(
       children: [
-        SecondaryTopBar(title: 'Mağaza Yönetimi'),
+        SecondaryTopBar(title: 'Magaza Yonetimi'),
         Expanded(
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 8.w),
@@ -241,6 +240,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
               children: [
                 SizedBox(height: 10.h),
                 _buildStoreHeader(store),
+                SizedBox(height: 12.h),
+                _buildSummaryBar(store),
                 SizedBox(height: 16.h),
                 _buildMainActionButtons(context, ref, store),
                 SizedBox(height: 16.h),
@@ -276,7 +277,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         children: [
           Row(
             children: [
-              // Mağaza İkonu (Görseldeki gibi hafif taşan ve gölgeli)
+              // Magaza ikonu
               Container(
                 width: 110.w,
                 height: 110.w,
@@ -319,7 +320,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                       ],
                     ),
                     Text(
-                      'Aktif İşletme',
+                      'Aktif Isletme',
                       style: TextStyle(
                         color: AppColors.green,
                         fontSize: 13.sp,
@@ -328,12 +329,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     ),
                     SizedBox(height: 12.h),
                     _buildHeaderInfoRow(
-                      'Şehir:',
+                      'Sehir:',
                       store.cityName ?? 'Bilinmiyor',
                     ),
-                    _buildHeaderInfoRow('Mağaza Tipi:', store.storeType.name),
+                    _buildHeaderInfoRow('Magaza Tipi:', store.storeType.name),
                     _buildHeaderInfoRow(
-                      'Günlük Kâr:',
+                      'Gunluk Kar:',
                       '+${_formatValue(store.summary.totalStockSaleValue ?? 0)}',
                       valueColor: AppColors.green,
                     ),
@@ -384,49 +385,47 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   }
 
   Widget _buildMainActionButtons(BuildContext context, WidgetRef ref, StoreModel store) {
+    final canOpenNewSlot = store.currentSlotCount < store.maxSlotCount;
+    final actions = [
+      (
+        icon: Icons.trending_up,
+        label: 'Yukselt',
+        color: AppColors.gold,
+        onTap: () => _showUpgradeInfoSheet(context, store),
+      ),
+      (
+        icon: Icons.bar_chart,
+        label: 'Rapor',
+        color: AppColors.blue,
+        onTap: () => context.push('/store/${store.id}/report'),
+      ),
+      (
+        icon: Icons.add_box,
+        label: 'Slot Ac',
+        color: AppColors.gold,
+        onTap: canOpenNewSlot ? () => _handleOpenSlot(context, ref, store) : null,
+      ),
+      (
+        icon: Icons.history,
+        label: 'Gecmis',
+        color: AppColors.textPrimary,
+        onTap: () => context.push('/store/${store.id}/history'),
+      ),
+    ];
+
     return Row(
       children: [
-        Expanded(
-          child: _buildActionButton(
-            Icons.trending_up,
-            'Yükselt',
-            AppColors.gold,
-            onTap: () {
-              // TODO: Yükseltme mantığı
-            },
+        for (var index = 0; index < actions.length; index++) ...[
+          Expanded(
+            child: _buildActionButton(
+              actions[index].icon,
+              actions[index].label,
+              actions[index].color,
+              onTap: actions[index].onTap,
+            ),
           ),
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: _buildActionButton(
-            Icons.bar_chart,
-            'Rapor',
-            AppColors.blue,
-            onTap: () {
-              // TODO: Rapor ekranına git
-            },
-          ),
-        ),
-        SizedBox(width: 8.w),
-        Expanded(
-          child: _buildActionButton(
-            Icons.add_box,
-            'Slot Aç',
-            AppColors.gold,
-            onTap: () => _handleOpenSlot(context, ref, store),
-          ),
-        ),
-        SizedBox(width: 8.w),
-        Expanded(
-          child: _buildActionButton(
-            Icons.history,
-            'Geçmiş',
-            AppColors.textPrimary,
-            onTap: () {
-              // TODO: Geçmiş ekranına git
-            },
-          ),
-        ),
+          if (index != actions.length - 1) SizedBox(width: index == 0 ? 10.w : 8.w),
+        ],
       ],
     );
   }
@@ -437,7 +436,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     StoreModel store,
   ) async {
     // ScaffoldMessenger.of(context).showSnackBar(
-    //   const SnackBar(content: Text('Slot açılıyor...')),
+    //   const SnackBar(content: Text('Slot aciliyor...')),
     // );
 
     final result =
@@ -445,37 +444,22 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (context.mounted) {
       if (result['success'] == true) {
-        // Veritabanının güncellenmesi için çok kısa bir süre bekle (Race condition önleyici)
+        // Veritabaninin guncellenmesi icin kisa bir sure bekle.
         await Future.delayed(const Duration(milliseconds: 500));
         ref.refresh(storeDetailProvider(store.id));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Yeni slot başarıyla açıldı!'),
-            backgroundColor: AppColors.green,
-          ),
-        );
+        _showSuccess(context, 'Yeni slot basariyla acildi!');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Slot açılırken bir hata oluştu.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, result['message'] ?? 'Slot acilirken bir hata olustu.');
       }
     }
   }
 
   Widget _buildSlotList(BuildContext context, WidgetRef ref, StoreModel store) {
-    return GridView.builder(
+    return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 10.h,
-        crossAxisSpacing: 10.w,
-        childAspectRatio: 0.85, // Butonlar için biraz daha uzun kartlar
-      ),
       itemCount: store.slots.length,
+      separatorBuilder: (_, __) => SizedBox(height: 10.h),
       itemBuilder: (context, index) {
         return _buildProductSlotCard(
           context,
@@ -495,252 +479,372 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     int index,
     StoreSlotModel slot,
   ) {
+    final canAddStock = _canAddStockToSlot(slot);
+    final canSendStock = _canSendStockFromSlot(slot);
+    final canEditProduct = _canEditSlotProduct(slot);
+    final qColor = slot.qualityLevel <= 1
+        ? AppColors.red
+        : slot.qualityLevel <= 2
+            ? Colors.orange
+            : slot.qualityLevel <= 3
+                ? Colors.yellow
+                : slot.qualityLevel <= 4
+                    ? Colors.lightGreen
+                    : AppColors.green;
+
     return Container(
+      padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.cardBg, AppColors.cardBg.withValues(alpha: 0.6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: slot.isActive 
+              ? AppColors.gold.withValues(alpha: 0.3) 
+              : AppColors.borderGold.withValues(alpha: 0.4),
+          width: 1.2.w,
         ),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+          if (slot.isActive)
+            BoxShadow(
+              color: AppColors.gold.withValues(alpha: 0.05),
+              blurRadius: 12,
+              spreadRadius: 2,
+            ),
+        ],
       ),
-      child: Stack(
-        children: [
-          // 1. ANA İKON (Arka Planı Doldurur)
-          Positioned.fill(
-            child: Opacity(
-              opacity: slot.isEmpty ? 1.0 : 0.5,
-              child: Align(
-                alignment: slot.isEmpty 
-                    ? const Alignment(0, 0) 
-                    : const Alignment(0, -1.2), // Doluyken yukarı kaydır
-                child: slot.isEmpty
-                    ? Icon(Icons.add_shopping_cart,
-                        color: AppColors.gold.withValues(alpha: 0.15), size: 60.sp)
-                    : CachedAssetImage(
+      child: slot.isEmpty
+          ? InkWell(
+              borderRadius: BorderRadius.circular(8.r),
+              onTap: canEditProduct
+                  ? () => _showProductSelectionDialog(context, ref, store, slot)
+                  : () => _showStoreSlotLockedMessage(
+                        context,
+                        'Yolda urun varken slot urunu degistirilemez.',
+                      ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 64.w,
+                    height: 64.w,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.15),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.add_shopping_cart,
+                      color: AppColors.gold.withValues(alpha: 0.6),
+                      size: 28.sp,
+                    ),
+                  ),
+                  SizedBox(width: 16.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Slot $index',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          'Bos Slot',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          'Yeni urun atamak icin dokunun',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.gold.withValues(alpha: 0.4),
+                    size: 16.sp,
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Urun ikonu
+                    Container(
+                      width: 80.w,
+                      height: 80.w,
+                      padding: EdgeInsets.all(10.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBgLight,
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.1),
+                        ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.cardBgLight,
+                            AppColors.cardBgLight.withValues(alpha: 0.5),
+                          ],
+                        ),
+                      ),
+                      child: CachedAssetImage(
                         fileName: slot.productIcon ?? 'default',
                         fit: BoxFit.contain,
                       ),
-              ),
-            ),
-          ),
-
-          // 2. KALİTE (Sol Üst - Renkli Segmentli Bar)
-          if (!slot.isEmpty)
-            Positioned(
-              top: 6,
-              left: 6,
-              child: Builder(
-                builder: (context) {
-                  final qColor = slot.qualityLevel <= 1 
-                      ? AppColors.red 
-                      : slot.qualityLevel <= 2 
-                          ? Colors.orange 
-                          : slot.qualityLevel <= 3 
-                              ? Colors.yellow 
-                              : slot.qualityLevel <= 4 
-                                  ? Colors.lightGreen 
-                                  : AppColors.green;
-                                  
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'KALİTE',
-                        style: TextStyle(
-                          color: qColor.withValues(alpha: 0.8),
-                          fontSize: 8.sp,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      SizedBox(height: 3.h),
-                      Row(
-                        children: List.generate(5, (index) {
-                          return Container(
-                            width: 8.w,
-                            height: 4.h,
-                            margin: EdgeInsets.only(right: 2.w),
-                            decoration: BoxDecoration(
-                              color: index < slot.qualityLevel 
-                                  ? qColor 
-                                  : Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(1.r),
-                              boxShadow: index < slot.qualityLevel ? [
-                                BoxShadow(
-                                  color: qColor.withValues(alpha: 0.4),
-                                  blurRadius: 3,
-                                )
-                              ] : null,
-                            ),
-                          );
-                        }),
-                      ),
-                    ],
-                  );
-                }
-              ),
-            ),
-
-          // 3. FİYAT VE KALEM (Sağ Üst - Chip Tasarımı)
-          if (!slot.isEmpty)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(6.r),
-                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${slot.price?.toStringAsFixed(1) ?? '0'}₺',
-                      style: TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 9.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
                     ),
-                    SizedBox(width: 4.w),
-                    GestureDetector(
-                      onTap: () {
-                        // Fiyat düzenleme diyaloğu açılabilir
-                      },
-                      child: Icon(
-                        Icons.edit,
-                        color: AppColors.gold.withValues(alpha: 0.8),
-                        size: 10.sp,
+                    SizedBox(width: 14.w),
+                    // Detaylar
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Slot $index',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              _buildMiniStatus(slot.isActive),
+                            ],
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            slot.productName ?? '',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 8.h),
+                          // Kalite Barlari
+                          Row(
+                            children: [
+                              Text(
+                                'KALITE',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 9.sp,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              ...List.generate(5, (barIndex) {
+                                return Container(
+                                  width: 12.w,
+                                  height: 6.h,
+                                  margin: EdgeInsets.only(right: 3.w),
+                                  decoration: BoxDecoration(
+                                    color: barIndex < slot.qualityLevel
+                                        ? qColor
+                                        : Colors.white.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(2.r),
+                                    boxShadow: barIndex < slot.qualityLevel ? [
+                                      BoxShadow(
+                                        color: qColor.withValues(alpha: 0.3),
+                                        blurRadius: 4,
+                                      )
+                                    ] : null,
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                          SizedBox(height: 12.h),
+                          // Fiyat ve Kar
+                          Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w,
+                                  vertical: 6.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.gold.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  border: Border.all(
+                                    color: AppColors.gold.withValues(alpha: 0.25),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      '${slot.price?.toStringAsFixed(1) ?? '0'}',
+                                      style: TextStyle(
+                                        color: AppColors.gold,
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    Text(
+                                      ' TL',
+                                      style: TextStyle(
+                                        color: AppColors.gold.withValues(alpha: 0.7),
+                                        fontSize: 10.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    GestureDetector(
+                                      onTap: () => _showPriceEditDialog(
+                                        context,
+                                        ref,
+                                        store,
+                                        slot,
+                                      ),
+                                      child: Container(
+                                        padding: EdgeInsets.all(2.w),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.gold.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(4.r),
+                                        ),
+                                        child: Icon(
+                                          Icons.edit,
+                                          color: AppColors.gold,
+                                          size: 14.sp,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 10.w),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                decoration: BoxDecoration(
+                                  color: _storeSlotMarginColor(slot).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6.r),
+                                  border: Border.all(
+                                    color: _storeSlotMarginColor(slot).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Text(
+                                  _formatStoreSlotMargin(slot),
+                                  style: TextStyle(
+                                    color: _storeSlotMarginColor(slot),
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              // Degistir butonu (Kucuk)
+                              IconButton(
+                                icon: Icon(Icons.swap_horiz, 
+                                  color: canEditProduct ? AppColors.blue : AppColors.textMuted,
+                                  size: 20.sp,
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: canEditProduct
+                                    ? () => _showProductSelectionDialog(context, ref, store, slot)
+                                    : () => _showStoreSlotLockedMessage(context, 'Stok varken urun degistirilemez.'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
-
-          // 4. ÜRÜN İSMİ (Alt Ortaya Yakın)
-          if (!slot.isEmpty)
-            Positioned(
-              left: 4,
-              right: 4,
-              bottom: 58.h,
-              child: Text(
-                slot.productName ?? '',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold,
-                  shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
-                ),
-              ),
-            ),
-
-          // 5. STOK/PROGRESS BAR (Butonların Üstü)
-          if (!slot.isEmpty)
-            Positioned(
-              left: 6,
-              right: 6,
-              bottom: 40.h,
-              child: _buildMiniProgressStacked(
-                slot.quantity / (slot.capacity > 0 ? slot.capacity : 1),
-                text:
-                    '${slot.quantity}+${slot.pendingQuantity}/${slot.capacity}',
-                reservedProgress:
-                    slot.pendingQuantity /
-                    (slot.capacity > 0 ? slot.capacity : 1),
-              ),
-            ),
-
-          // 6. BUTONLAR (Ekle / Çıkar)
-          if (!slot.isEmpty)
-            Positioned(
-              left: 6,
-              right: 6,
-              bottom: 6,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildSmallButton(
-                      'Ekle',
-                      AppColors.green,
-                      onTap: () => _startStoreTransferFlow(context, ref, store, slot),
-                    ),
-                  ),
-                  SizedBox(width: 6.w),
-                  Expanded(
-                    child: _buildSmallButton(
-                      'Gönder',
-                      AppColors.red,
-                      onTap: () => _startStoreOutboundFlow(
-                        context,
-                        ref,
-                        store,
-                        slot,
+                SizedBox(height: 16.h),
+                // Stok Durumu Başlığı
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'STOK DURUMU',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 9.sp,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-          // 7. TIKLAMA ALANI (Boşsa ekleme)
-          if (slot.isEmpty)
-            Positioned.fill(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16.r),
-                  onTap: () => _showProductSelectionDialog(context, ref, store, slot),
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 50.h),
-                      child: Text(
-                        'Ürün Ekle',
-                        style: TextStyle(
-                          color: AppColors.gold,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11.sp,
-                        ),
+                    Text(
+                      '${slot.quantity}/${slot.capacity}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-            ),
-        ],
-      ),
+                SizedBox(height: 6.h),
+                _buildMiniProgressStacked(
+                  slot.quantity / (slot.capacity > 0 ? slot.capacity : 1),
+                  reservedProgress: slot.pendingQuantity /
+                      (slot.capacity > 0 ? slot.capacity : 1),
+                ),
+                SizedBox(height: 14.h),
+                // Butonlar
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionBtn(
+                        'STOK EKLE',
+                        Icons.add_circle_outline,
+                        canAddStock ? AppColors.green : AppColors.textMuted,
+                        onTap: canAddStock
+                            ? () => _startStoreTransferFlow(context, ref, store, slot)
+                            : null,
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: _buildActionBtn(
+                        'GONDER',
+                        Icons.local_shipping,
+                        canSendStock ? AppColors.red : AppColors.textMuted,
+                        onTap: canSendStock
+                            ? () => _startStoreOutboundFlow(context, ref, store, slot)
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
     );
   }
 
-  Widget _buildSmallButton(String label, Color color, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 4.h),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(6.r),
-          border: Border.all(color: color.withValues(alpha: 0.5)),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: color,
-            fontSize: 10.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildMiniStatus(bool isActive) {
     return Container(
@@ -760,15 +864,229 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
+  bool _canEditSlotProduct(StoreSlotModel slot) {
+    return slot.quantity <= 0 && slot.pendingQuantity <= 0;
+  }
+
+  bool _canAddStockToSlot(StoreSlotModel slot) {
+    if (slot.productId == null || slot.productId!.isEmpty) return false;
+    final remainingCapacity = slot.capacity - slot.quantity;
+    return remainingCapacity > 0;
+  }
+
+  bool _canSendStockFromSlot(StoreSlotModel slot) {
+    return slot.quantity > 0;
+  }
+
+  void _showSuccess(BuildContext context, String message) {
+    AppSnackbar.show(
+      context,
+      message: message,
+      type: SnackbarType.success,
+    );
+  }
+
+  void _showError(BuildContext context, String message) {
+    AppSnackbar.show(
+      context,
+      message: message,
+      type: SnackbarType.error,
+    );
+  }
+
+  void _showInfo(BuildContext context, String message) {
+    AppSnackbar.show(
+      context,
+      message: message,
+      type: SnackbarType.info,
+    );
+  }
+
+  void _showWarning(BuildContext context, String message) {
+    AppSnackbar.show(
+      context,
+      message: message,
+      type: SnackbarType.warning,
+    );
+  }
+
+  void _showStoreSlotLockedMessage(BuildContext context, String message) {
+    _showWarning(context, message);
+  }
+
+  String _formatStoreSlotMargin(StoreSlotModel slot) {
+    final price = slot.price ?? 0;
+    final cost = slot.cost ?? 0;
+    if (cost <= 0) return 'M0';
+
+    final marginRatio = ((price - cost) / cost) * 100;
+    final sign = marginRatio >= 0 ? '+' : '';
+    return '$sign${marginRatio.toStringAsFixed(0)}%';
+  }
+
+  Color _storeSlotMarginColor(StoreSlotModel slot) {
+    final price = slot.price ?? 0;
+    final cost = slot.cost ?? 0;
+    if (cost <= 0) return AppColors.textMuted;
+    return price >= cost ? AppColors.green : AppColors.red;
+  }
+
+  void _showPriceEditDialog(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) {
+    final controller = TextEditingController(
+      text: (slot.price ?? 0).toStringAsFixed(1),
+    );
+    final cost = slot.cost ?? 0;
+    double previewPrice = slot.price ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (sheetContext, setState) {
+          final marginAmount = previewPrice - cost;
+          final marginRatio = cost > 0 ? (marginAmount / cost) * 100 : null;
+
+          return AlertDialog(
+            backgroundColor: AppColors.background,
+            title: Text(
+              'Satis Fiyati',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  slot.productName ?? 'Urun',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                TextField(
+                  controller: controller,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Birim satis fiyati',
+                    labelStyle: TextStyle(color: AppColors.gold),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.gold),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      previewPrice =
+                          double.tryParse(value.replaceAll(',', '.')) ??
+                          0;
+                    });
+                  },
+                ),
+                SizedBox(height: 12.h),
+                _buildSalesSummaryRow(
+                  'Maliyet',
+                  cost.toStringAsFixed(1),
+                  valueColor: AppColors.textPrimary,
+                ),
+                _buildSalesSummaryRow(
+                  'Kar Tutari',
+                  marginAmount.toStringAsFixed(1),
+                  valueColor: marginAmount >= 0
+                      ? AppColors.green
+                      : AppColors.red,
+                ),
+                _buildSalesSummaryRow(
+                  'Kar Orani',
+                  marginRatio == null
+                      ? cost == 0
+                            ? 'Maliyet 0'
+                            : '-'
+                      : '%${marginRatio.toStringAsFixed(1)}',
+                  valueColor: marginRatio == null
+                      ? AppColors.gold
+                      : marginRatio >= 0
+                      ? AppColors.green
+                      : AppColors.red,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Iptal'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                ),
+                onPressed: () async {
+                  final parsedPrice = double.tryParse(
+                    controller.text.replaceAll(',', '.'),
+                  );
+
+                  if (parsedPrice == null || parsedPrice <= 0) {
+                    _showWarning(context, 'Gecerli bir fiyat girin.');
+                    return;
+                  }
+
+                  final result = await ref
+                      .read(storeActionProvider)
+                      .setStoreSlotPrice(
+                        slotId: slot.id,
+                        price: parsedPrice,
+                      );
+
+                  if (!context.mounted || !dialogContext.mounted) return;
+
+                  if (result['success'] == true) {
+                    Navigator.of(dialogContext).pop();
+                    ref.invalidate(storeDetailProvider(store.id));
+                    _showSuccess(context, 'Satis fiyati kaydedildi.');
+                    return;
+                  }
+
+                  _showError(
+                    context,
+                    result['message'] ?? 'Fiyat kaydedilemedi.',
+                  );
+                },
+                child: const Text(
+                  'Kaydet',
+                  style: TextStyle(color: Colors.black),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _showProductSelectionDialog(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
   ) {
+    final parentContext = context;
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 40.h),
@@ -793,7 +1111,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                       Icon(Icons.inventory, color: AppColors.gold),
                       SizedBox(width: 12.w),
                       Text(
-                        'Ürün Seçimi',
+                        'Urun Secimi',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18.sp,
@@ -803,7 +1121,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                       const Spacer(),
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ],
                   ),
@@ -829,7 +1147,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                         return Padding(
                           padding: EdgeInsets.all(20.w),
                           child: Text(
-                            'Ürünler yüklenirken hata oluştu: ${snapshot.data?['message'] ?? 'Bilinmeyen hata'}',
+                            'Urunler yuklenirken hata olustu: ${snapshot.data?['message'] ?? 'Bilinmeyen hata'}',
                             style: const TextStyle(color: AppColors.red),
                           ),
                         );
@@ -848,7 +1166,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                                   color: AppColors.textMuted, size: 48.sp),
                               SizedBox(height: 16.h),
                               Text(
-                                'Bu mağaza için uygun veya eklenmemiş ürün bulunamadı.',
+                                'Bu magaza icin uygun veya eklenmemis urun bulunamadi.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: AppColors.textMuted),
                               ),
@@ -866,7 +1184,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                         itemBuilder: (context, index) {
                           final product = products[index];
                           return _buildProductSelectionItem(
-                            context,
+                            parentContext,
+                            dialogContext,
                             ref,
                             store,
                             slot,
@@ -887,14 +1206,22 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   }
 
   Widget _buildProductSelectionItem(
-    BuildContext context,
+    BuildContext parentContext,
+    BuildContext dialogContext,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
     Map<String, dynamic> product,
   ) {
     return GestureDetector(
-      onTap: () => _handleProductSelectionAndTransfer(context, ref, store, slot, product),
+      onTap: () => _handleProductSelection(
+        parentContext,
+        dialogContext,
+        ref,
+        store,
+        slot,
+        product,
+      ),
       child: Container(
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
@@ -918,7 +1245,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product['name'] ?? 'Bilinmeyen Ürün',
+                    product['name'] ?? 'Bilinmeyen Urun',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 14.sp,
@@ -926,7 +1253,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     ),
                   ),
                   Text(
-                    'Baz Fiyat: ${product['base_price']}₺',
+                    'Baz Fiyat: ${product['base_price']} TL',
                     style: TextStyle(
                       color: AppColors.gold.withValues(alpha: 0.7),
                       fontSize: 12.sp,
@@ -943,77 +1270,41 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   }
 
   Future<void> _handleProductSelection(
-    BuildContext context,
+    BuildContext parentContext,
+    BuildContext dialogContext,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
     Map<String, dynamic> product,
   ) async {
     // Dialog'u kapat
-    Navigator.pop(context);
+    Navigator.pop(dialogContext);
 
-    // İşlemi yap
+    // Ä°ÅŸlemi yap
     final result = await ref.read(storeActionProvider).setStoreSlotProduct(
           slotId: slot.id,
           productId: product['id'],
         );
 
-    if (context.mounted) {
+    if (parentContext.mounted) {
       if (result['success'] == true) {
-        // Veritabanının güncellenmesi için çok kısa bir süre bekle (Race condition önleyici)
+        // VeritabanÄ±nÄ±n gÃ¼ncellenmesi iÃ§in Ã§ok kÄ±sa bir sÃ¼re bekle (Race condition Ã¶nleyici)
         await Future.delayed(const Duration(milliseconds: 500));
         ref.refresh(storeDetailProvider(store.id));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${product['name']} başarıyla eklendi!'),
-            backgroundColor: AppColors.green,
-          ),
-        );
+        _showSuccess(parentContext, '${product['name']} basariyla eklendi!');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Ürün eklenirken hata oluştu.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(parentContext, result['message'] ?? 'Urun eklenirken hata olustu.');
       }
     }
   }
 
-  Future<void> _handleProductSelectionAndTransfer(
-    BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-    StoreSlotModel slot,
-    Map<String, dynamic> product,
-  ) async {
-    Navigator.pop(context);
-
-    final preparedSlot = StoreSlotModel(
-      id: slot.id,
-      storeId: slot.storeId,
-      slotIndex: slot.slotIndex,
-      productId: (product['id'] ?? '').toString(),
-      productName: (product['name'] ?? '').toString(),
-      productIcon: (product['icon'] ?? 'default').toString(),
-      quantity: slot.quantity,
-      pendingQuantity: slot.pendingQuantity,
-      qualityLevel: 0,
-      price: slot.price,
-      cost: slot.cost,
-      capacity: slot.capacity,
-      boostMultiplier: slot.boostMultiplier,
-      pendingSale: slot.pendingSale,
-      isActive: slot.isActive,
-      isEmpty: false,
-      usedCapacityRatio: slot.usedCapacityRatio,
-      product: slot.product,
-    );
-
-    _startStoreTransferFlow(context, ref, store, preparedSlot);
-  }
-
   Widget _buildFinancialFooter(StoreModel store) {
+    final stockCost = _calculateStoreStockCost(store);
+    final stockSaleValue = _calculateStoreStockSaleValue(store);
+    final pendingSale = _calculatePendingSaleValue(store);
+    final estimatedProfit = stockSaleValue - stockCost;
+    final averageMargin = stockCost > 0 ? (estimatedProfit / stockCost) * 100 : 0.0;
+
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -1021,34 +1312,139 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.1)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildFooterStat(
-            Icons.payments,
-            'Bugünkü Satış',
-            '+${_formatValue(38600)}',
-            AppColors.green,
+          Text(
+            'Finansal Ozet',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14.sp,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          _buildFooterStat(
-            Icons.pending_actions,
-            'Bekleyen Talep',
-            '23',
-            AppColors.gold,
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.inventory_2,
+                  'Stok Maliyeti',
+                  _formatValue(stockCost),
+                  AppColors.textPrimary,
+                ),
+              ),
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.sell,
+                  'Liste Degeri',
+                  _formatValue(stockSaleValue),
+                  AppColors.gold,
+                ),
+              ),
+            ],
           ),
-          _buildFooterStat(
-            Icons.trending_up,
-            'Saatlik Satış',
-            '4.8K',
-            AppColors.blue,
-          ),
-          _buildFooterStat(
-            Icons.percent,
-            'Ortalama Marj',
-            '%24.7',
-            AppColors.gold,
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.trending_up,
+                  'Tahmini Kar',
+                  _formatSignedValue(estimatedProfit),
+                  estimatedProfit >= 0 ? AppColors.green : AppColors.red,
+                ),
+              ),
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.av_timer,
+                  'Bekleyen Satis',
+                  pendingSale.toStringAsFixed(1),
+                  AppColors.blue,
+                ),
+              ),
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.percent,
+                  'Ort. Marj',
+                  '${averageMargin.toStringAsFixed(1)}%',
+                  averageMargin >= 0 ? AppColors.green : AppColors.red,
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showUpgradeInfoSheet(BuildContext context, StoreModel store) {
+    final slotUsage = store.maxSlotCount > 0
+        ? (store.currentSlotCount / store.maxSlotCount) * 100
+        : 0.0;
+    final storageUsage = (store.summary.usedCapacityRatio * 100).clamp(0.0, 100.0);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.all(18.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Magaza Seviyesi',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              '${store.name} su an seviye ${store.level}. Yukseltme RPC tarafini henuz baglamadik; bu panel simdilik mevcut kapasiteyi takip etmen icin hazir.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12.sp,
+                height: 1.45,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            _buildSalesSummaryRow(
+              'Kullanilan Slot',
+              '${store.currentSlotCount}/${store.maxSlotCount}',
+            ),
+            _buildSalesSummaryRow(
+              'Slot Doluluk',
+              '%${slotUsage.toStringAsFixed(0)}',
+            ),
+            _buildSalesSummaryRow(
+              'Stok Doluluk',
+              '%${storageUsage.toStringAsFixed(0)}',
+            ),
+            _buildSalesSummaryRow(
+              'Bos Kapasite',
+              store.summary.availableCapacity.toString(),
+              valueColor: AppColors.gold,
+            ),
+            SizedBox(height: 14.h),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: () => Navigator.pop(sheetContext),
+                child: const Text('Tamam'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1204,24 +1600,35 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     Color color, {
     VoidCallback? onTap,
   }) {
+    final isDisabled = onTap == null;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: isDisabled
+              ? AppColors.cardBg.withValues(alpha: 0.55)
+              : AppColors.cardBg,
           borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
+          border: Border.all(
+            color: isDisabled
+                ? AppColors.border.withValues(alpha: 0.2)
+                : color.withValues(alpha: 0.4),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 16.sp),
+            Icon(
+              icon,
+              color: isDisabled ? AppColors.textMuted : color,
+              size: 16.sp,
+            ),
             SizedBox(width: 6.w),
             Text(
               label,
               style: TextStyle(
-                color: Colors.white,
+                color: isDisabled ? AppColors.textMuted : Colors.white,
                 fontSize: 12.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -1288,14 +1695,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Satış Fiyatı',
+            'Satis Fiyati',
             style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
           ),
           SizedBox(width: 6.w),
           Icon(Icons.monetization_on, color: AppColors.gold, size: 12.sp),
           SizedBox(width: 2.w),
           Text(
-            '${price.toStringAsFixed(1)}₺',
+            '${price.toStringAsFixed(1)} TL',
             style: TextStyle(
               color: AppColors.gold,
               fontSize: 12.sp,
@@ -1359,7 +1766,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
               ),
             ),
           ),
-          // Text (Sadece verilmişse gösterilir)
+          // Text (Sadece verilmiÅŸse gÃ¶sterilir)
           if (text != null)
             Text(
               text,
@@ -1384,6 +1791,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     Color color,
   ) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, color: color, size: 16.sp),
         SizedBox(height: 4.h),
@@ -1437,7 +1845,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           const Icon(Icons.error_outline, color: AppColors.red, size: 48),
           SizedBox(height: 16.h),
           Text(
-            'Bir hata oluştu: $error',
+            'Bir hata oluÅŸtu: $error',
             style: const TextStyle(color: Colors.white),
           ),
           SizedBox(height: 16.h),
@@ -1457,7 +1865,48 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     if (val >= 1000) return '${(val / 1000).toStringAsFixed(1)}K';
     return val.toStringAsFixed(1);
   }
-  // --- STOK EKLEME (EKLE BUTONU) MANTIĞI ---
+
+  String _formatSignedValue(double amount) {
+    final prefix = amount >= 0 ? '+' : '-';
+    return '$prefix${_formatValue(amount.abs())}';
+  }
+
+  double _calculateStoreStockCost(StoreModel store) {
+    final summaryCost = store.summary.totalStockCostValue;
+    if (summaryCost != null && summaryCost > 0) {
+      return summaryCost;
+    }
+
+    return store.slots.fold<double>(
+      0,
+      (total, slot) => total + ((slot.cost ?? 0) * slot.quantity),
+    );
+  }
+
+  double _calculateStoreStockSaleValue(StoreModel store) {
+    final summarySaleValue = store.summary.totalStockSaleValue;
+    if (summarySaleValue != null && summarySaleValue > 0) {
+      return summarySaleValue;
+    }
+
+    return store.slots.fold<double>(
+      0,
+      (total, slot) => total + ((slot.price ?? 0) * slot.quantity),
+    );
+  }
+
+  double _calculatePendingSaleValue(StoreModel store) {
+    final summaryPending = store.summary.pendingSaleTotal;
+    if (summaryPending != null && summaryPending > 0) {
+      return summaryPending;
+    }
+
+    return store.slots.fold<double>(
+      0,
+      (total, slot) => total + (slot.pendingSale ?? 0),
+    );
+  }
+  // --- STOK EKLEME (EKLE BUTONU) MANTIÄI ---
 
   void _showAddStockDialog(
     BuildContext context,
@@ -1470,28 +1919,18 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (productId == null || productId.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Once gecerli bir urun secin.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Once gecerli bir urun secin.');
       }
       return;
     }
 
     if (cityId == null || cityId.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Magaza sehri bulunamadi.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Magaza sehri bulunamadi.');
       }
       return;
     }
-    // Yükleniyor göster
+    // YÃ¼kleniyor gÃ¶ster
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1510,9 +1949,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       final List<dynamic> warehouses = result['warehouses'];
       if (warehouses.isEmpty) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bu şehirde bu ürünü içeren uygun deponuz bulunamadı.')),
-          );
+          _showInfo(context, 'Bu urunu iceren uygun deponuz bulunamadi.');
         }
         return;
       }
@@ -1544,12 +1981,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Kaynak Depo Seçin',
+            'Kaynak Depo Secin',
             style: TextStyle(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 4.h),
           Text(
-            '${slot.productName} gönderilecek depoyu seçin',
+            '${slot.productName} gonderilecek depoyu secin',
             style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
           ),
           SizedBox(height: 16.h),
@@ -1615,7 +2052,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.background,
         title: Text('Miktar Girin', style: TextStyle(color: Colors.white, fontSize: 18.sp)),
         content: Column(
@@ -1640,16 +2077,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Iptal')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
             onPressed: () async {
               final qty = int.tryParse(controller.text) ?? 0;
               if (qty <= 0 || qty > limit) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Geçersiz miktar!')));
+                _showWarning(context, 'Gecersiz miktar!');
                 return;
               }
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               _executeTransfer(
                 context,
                 ref,
@@ -1683,12 +2120,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       final productId = slot.productId;
       if (productId == null || productId.isEmpty) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Transfer icin urun bilgisi bulunamadi.'),
-              backgroundColor: AppColors.red,
-            ),
-          );
+          _showError(context, 'Transfer icin urun bilgisi bulunamadi.');
         }
         return;
       }
@@ -1700,12 +2132,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           );
 
       if (context.mounted && setupResult['success'] != true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Hata: ${setupResult['message']}'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Hata: ${setupResult['message']}');
         return;
       }
     }
@@ -1720,13 +2147,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       if (result['success'] == true) {
         await Future.delayed(const Duration(milliseconds: 500));
         ref.refresh(storeDetailProvider(store.id));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transfer başarıyla tamamlandı!'), backgroundColor: AppColors.green),
-        );
+        _showSuccess(context, 'Transfer basariyla tamamlandi!');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: ${result['message']}'), backgroundColor: AppColors.red),
-        );
+        _showError(context, 'Hata: ${result['message']}');
       }
     }
   }
@@ -1739,12 +2162,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   ) {
     final productId = slot.productId;
     if (productId == null || productId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Once gecerli bir urun secin.'),
-          backgroundColor: AppColors.red,
-        ),
-      );
+      _showError(context, 'Once gecerli bir urun secin.');
       return;
     }
 
@@ -1806,76 +2224,97 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
   Widget _buildMiniProgressStacked(
     double progress, {
-    String? text,
     double reservedProgress = 0,
   }) {
     final stockRatio = progress.clamp(0.0, 1.0);
-    final reserveRatio = reservedProgress.clamp(0.0, 1.0);
+    final totalRatio = (stockRatio + reservedProgress).clamp(0.0, 1.0);
 
     return Container(
-      width: 90.w,
-      height: 14.h,
+      width: double.infinity,
+      height: 10.h,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
+        color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(4.r),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Stack(
-        alignment: Alignment.center,
         children: [
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(3.r),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final totalWidth = constraints.maxWidth;
-                  final stockWidth = totalWidth * stockRatio;
-                  final reserveWidth = totalWidth * reserveRatio;
-
-                  return Stack(
-                    children: [
-                      if (stockWidth > 0)
-                        Positioned(
-                          left: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: stockWidth,
-                          child: Container(
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                        ),
-                      if (reserveWidth > 0)
-                        Positioned(
-                          left: stockWidth,
-                          top: 0,
-                          bottom: 0,
-                          width: reserveWidth,
-                          child: Container(
-                            color: Colors.orange.withValues(alpha: 0.9),
-                          ),
-                        ),
-                    ],
-                  );
-                },
+          if (totalRatio > 0)
+            FractionallySizedBox(
+              widthFactor: totalRatio,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.blue.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
               ),
             ),
-          ),
-          if (text != null)
-            Text(
-              text,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 9.sp,
-                fontWeight: FontWeight.bold,
-                shadows: const [
-                  Shadow(color: Colors.black87, blurRadius: 2),
-                ],
+          if (stockRatio > 0)
+            FractionallySizedBox(
+              widthFactor: stockRatio,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.goldDark,
+                      AppColors.gold,
+                      AppColors.goldLight,
+                    ],
+                    stops: const [0.0, 0.7, 1.0],
+                  ),
+                  borderRadius: BorderRadius.circular(4.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.35),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
       ),
     );
   }
+
+  Widget _buildActionBtn(String label, IconData icon, Color color, {VoidCallback? onTap}) {
+    final isDisabled = onTap == null;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 10.h),
+        decoration: BoxDecoration(
+          color: isDisabled 
+              ? Colors.white.withValues(alpha: 0.03) 
+              : color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(
+            color: isDisabled 
+                ? Colors.white.withValues(alpha: 0.05) 
+                : color.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: isDisabled ? AppColors.textMuted : color, size: 14.sp),
+            SizedBox(width: 6.w),
+            Text(
+              label,
+              style: TextStyle(
+                color: isDisabled ? AppColors.textMuted : color,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildSourceChoiceTileV2({
     required IconData icon,
@@ -1968,12 +2407,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (result['success'] != true) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Depolar yuklenemedi.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, result['message'] ?? 'Depolar yuklenemedi.');
       }
       return;
     }
@@ -1981,11 +2415,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     final warehouses = result['warehouses'] as List<dynamic>? ?? const [];
     if (warehouses.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Bu urunu iceren uygun deponuz bulunamadi.'),
-          ),
-        );
+        _showInfo(context, 'Bu urunu iceren uygun deponuz bulunamadi.');
       }
       return;
     }
@@ -1999,6 +2429,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
       builder: (sheetContext) => _buildWarehouseSelectionSheetV2(
+        context,
         sheetContext,
         ref,
         store,
@@ -2031,6 +2462,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   }
 
   Widget _buildWarehouseSelectionSheetV2(
+    BuildContext parentContext,
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
@@ -2099,7 +2531,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                         onTap: () {
                           Navigator.pop(context);
                           _showQuantityTransferDialogV2(
-                            context,
+                            parentContext,
                             ref,
                             store,
                             slot,
@@ -2137,7 +2569,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.background,
         title: Text(
           'Miktar Girin',
@@ -2170,7 +2602,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Iptal'),
           ),
           ElevatedButton(
@@ -2178,12 +2610,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             onPressed: () {
               final qty = int.tryParse(controller.text) ?? 0;
               if (qty <= 0 || qty > limit) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gecersiz miktar!')),
-                );
+                _showWarning(context, 'Gecersiz miktar!');
                 return;
               }
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               _showVehicleSelectionSheetV2(
                 context,
                 ref,
@@ -2251,12 +2681,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Araclar alinamadi: $e'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Araclar alinamadi: $e');
       }
       return;
     }
@@ -2265,12 +2690,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (options.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Bu transfer icin uygun arac bulunamadi.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Bu transfer icin uygun arac bulunamadi.');
       }
       return;
     }
@@ -2439,12 +2859,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
       if (setupResult['success'] != true) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Hata: ${setupResult['message']}'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Hata: ${setupResult['message']}');
         return;
       }
     }
@@ -2462,25 +2877,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       await Future.delayed(const Duration(milliseconds: 300));
       ref.invalidate(storeDetailProvider(store.id));
       final isInstant = result['mode']?.toString() == 'instant';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isInstant
-                ? 'Ayni sehir transferi aninda tamamlandi.'
-                : 'Transfer baslatildi. Arac yola cikti.',
-          ),
-          backgroundColor: AppColors.green,
-        ),
+      _showSuccess(
+        context,
+        isInstant
+            ? 'Ayni sehir transferi aninda tamamlandi.'
+            : 'Transfer baslatildi. Arac yola cikti.',
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Hata: ${result['message']}'),
-        backgroundColor: AppColors.red,
-      ),
-    );
+    _showError(context, 'Hata: ${result['message']}');
   }
 
   Future<void> _startStoreOutboundFlow(
@@ -2490,12 +2896,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     StoreSlotModel slot,
   ) async {
     if ((slot.quantity) <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gonderilecek stok bulunmuyor.'),
-          backgroundColor: AppColors.red,
-        ),
-      );
+      _showError(context, 'Gonderilecek stok bulunmuyor.');
       return;
     }
 
@@ -2513,12 +2914,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Depolar alinamadi: $e'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Depolar alinamadi: $e');
       }
       return;
     }
@@ -2527,12 +2923,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (warehouses.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Uygun hedef deponuz bulunamadi.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Uygun hedef deponuz bulunamadi.');
       }
       return;
     }
@@ -2546,6 +2937,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
       builder: (sheetContext) => _buildOutboundWarehouseSheet(
+        context,
         sheetContext,
         ref,
         store,
@@ -2556,6 +2948,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   }
 
   Widget _buildOutboundWarehouseSheet(
+    BuildContext parentContext,
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
@@ -2614,7 +3007,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     onTap: () {
                       Navigator.pop(context);
                       _showOutboundQuantityDialog(
-                        context,
+                        parentContext,
                         ref,
                         store,
                         slot,
@@ -2645,7 +3038,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.background,
         title: Text(
           'Miktar Girin',
@@ -2678,7 +3071,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Iptal'),
           ),
           ElevatedButton(
@@ -2686,12 +3079,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             onPressed: () {
               final qty = int.tryParse(controller.text) ?? 0;
               if (qty <= 0 || qty > limit) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gecersiz miktar!')),
-                );
+                _showWarning(context, 'Gecersiz miktar!');
                 return;
               }
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               _maybeStartStoreOutboundTransfer(
                 context,
                 ref,
@@ -2759,12 +3150,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Araclar alinamadi: $e'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Araclar alinamadi: $e');
       }
       return;
     }
@@ -2773,12 +3159,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (options.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Bu transfer icin uygun arac bulunamadi.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        _showError(context, 'Bu transfer icin uygun arac bulunamadi.');
       }
       return;
     }
@@ -2934,24 +3315,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       await Future.delayed(const Duration(milliseconds: 300));
       ref.invalidate(storeDetailProvider(store.id));
       final isInstant = result['mode']?.toString() == 'instant';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isInstant
-                ? 'Ayni sehir gonderimi aninda tamamlandi.'
-                : 'Transfer baslatildi. Arac yola cikti.',
-          ),
-          backgroundColor: AppColors.green,
-        ),
+      _showSuccess(
+        context,
+        isInstant
+            ? 'Ayni sehir gonderimi aninda tamamlandi.'
+            : 'Transfer baslatildi. Arac yola cikti.',
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Hata: ${result['message']}'),
-        backgroundColor: AppColors.red,
-      ),
-    );
+    _showError(context, 'Hata: ${result['message']}');
   }
 }

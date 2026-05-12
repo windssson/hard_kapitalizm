@@ -53,10 +53,37 @@ class _FarmScreenState extends ConsumerState<FarmScreen> {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: result['message'] ?? 'Ciftlik insaati tamamlanamadi.',
+        message: result['message'] ?? 'Tarla insaati tamamlanamadi.',
         type: SnackbarType.error,
       );
     }
+  }
+
+  Future<void> _finishConstructionWithGold(String constructionId) async {
+    final result = await ref
+        .read(farmActionProvider)
+        .finishConstructionWithGold(constructionId);
+
+    ref.invalidate(farmConstructionProvider);
+    ref.invalidate(farmListStreamProvider);
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      AppSnackbar.show(
+        context,
+        title: 'Tamamlandi',
+        message: 'Insaat aninda tamamlandi.',
+        type: SnackbarType.success,
+      );
+      return;
+    }
+
+    AppSnackbar.show(
+      context,
+      title: 'Hata',
+      message: result['message'] ?? 'Yildiz ile bitirme basarisiz oldu.',
+      type: SnackbarType.error,
+    );
   }
 
   @override
@@ -73,7 +100,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen> {
         extendedPadding: EdgeInsets.symmetric(horizontal: 14.w),
         icon: Icon(Icons.add, size: 16.sp),
         label: Text(
-          'YENI CIFTLIK',
+          'YENI TARLA',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.sp),
         ),
       ),
@@ -84,7 +111,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Ciftliklerim'),
+            const SecondaryTopBar(title: 'Tarlalarim'),
             Expanded(
               child: farmsAsync.when(
                 data: (farms) => constructionAsync.when(
@@ -142,13 +169,51 @@ class _FarmScreenState extends ConsumerState<FarmScreen> {
       return const SizedBox.shrink();
     }
 
-    return ConstructionCountdownCard(
-      title: name?.isNotEmpty == true ? name! : 'Yeni Ciftlik',
-      subtitle: 'Ciftlik insaati devam ediyor',
-      finishAt: finishAt.toLocal(),
-      icon: Icons.agriculture,
-      onFinished: () => _completeConstruction(constructionId),
+    final starCost = _calculateStarCost(finishAt.toLocal());
+
+    return Column(
+      children: [
+        ConstructionCountdownCard(
+          title: name?.isNotEmpty == true ? name! : 'Yeni Tarla',
+          subtitle: 'Tarla insaati devam ediyor',
+          finishAt: finishAt.toLocal(),
+          icon: Icons.agriculture,
+          onFinished: () => _completeConstruction(constructionId),
+        ),
+        if (starCost > 0)
+          Padding(
+            padding: EdgeInsets.only(bottom: 12.h),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _finishConstructionWithGold(constructionId),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: Colors.black,
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                icon: Icon(Icons.star, size: 16.sp),
+                label: Text(
+                  '$starCost yildiz ile bitir',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
+  }
+
+  int _calculateStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
   }
 
   Widget _buildEmptyState() {
@@ -159,7 +224,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen> {
           Icon(Icons.agriculture, color: AppColors.textMuted, size: 80.sp),
           SizedBox(height: 16.h),
           Text(
-            'Henuz bir ciftligin yok.',
+            'Henuz bir tarlan yok.',
             style: AppTextStyles.h2.copyWith(color: AppColors.textMuted),
           ),
           SizedBox(height: 16.h),
@@ -170,7 +235,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen> {
               side: const BorderSide(color: AppColors.gold),
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
             ),
-            child: Text('ILK CIFTLIGINI KUR', style: AppTextStyles.titleGold),
+            child: Text('ILK TARLANI KUR', style: AppTextStyles.titleGold),
           ),
         ],
       ),
@@ -184,61 +249,65 @@ class _FarmScreenState extends ConsumerState<FarmScreen> {
       itemCount: farms.length,
       itemBuilder: (context, index) {
         final farm = farms[index];
-        return Container(
-          margin: EdgeInsets.only(bottom: 12.h),
-          padding: EdgeInsets.all(12.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(
-              color: farm.isActive ? AppColors.borderGold : AppColors.border,
+        return InkWell(
+          onTap: () => context.push('/farms/${farm.id}'),
+          borderRadius: BorderRadius.circular(12.r),
+          child: Container(
+            margin: EdgeInsets.only(bottom: 12.h),
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(
+                color: farm.isActive ? AppColors.borderGold : AppColors.border,
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 52.w,
-                height: 52.w,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBgLight,
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(color: AppColors.border),
+            child: Row(
+              children: [
+                Container(
+                  width: 52.w,
+                  height: 52.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBgLight,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Icon(
+                    Icons.agriculture,
+                    color: AppColors.gold,
+                    size: 28.sp,
+                  ),
                 ),
-                child: Icon(
-                  Icons.agriculture,
-                  color: AppColors.gold,
-                  size: 28.sp,
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(farm.name, style: AppTextStyles.h2),
+                      SizedBox(height: 4.h),
+                      Row(
+                        children: [
+                          Icon(Icons.layers, color: AppColors.gold, size: 13.sp),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Slot: ${farm.currentSlotCount}/${farm.maxSlotCount}',
+                            style: AppTextStyles.body.copyWith(fontSize: 12.sp),
+                          ),
+                          SizedBox(width: 10.w),
+                          Icon(Icons.star, color: AppColors.gold, size: 13.sp),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Lv. ${farm.level}',
+                            style: AppTextStyles.body.copyWith(fontSize: 12.sp),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(farm.name, style: AppTextStyles.h2),
-                    SizedBox(height: 4.h),
-                    Row(
-                      children: [
-                        Icon(Icons.layers, color: AppColors.gold, size: 13.sp),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Slot: ${farm.currentSlotCount}/${farm.maxSlotCount}',
-                          style: AppTextStyles.body.copyWith(fontSize: 12.sp),
-                        ),
-                        SizedBox(width: 10.w),
-                        Icon(Icons.star, color: AppColors.gold, size: 13.sp),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Lv. ${farm.level}',
-                          style: AppTextStyles.body.copyWith(fontSize: 12.sp),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              _buildStatusChip(farm.isActive),
-            ],
+                _buildStatusChip(farm.isActive),
+              ],
+            ),
           ),
         );
       },
