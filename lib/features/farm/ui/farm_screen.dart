@@ -429,217 +429,291 @@ class _FarmScreenState extends ConsumerState<FarmScreen> {
     return GestureDetector(
       onTap: () => context.push('/farms/${farm.id}'),
       child: Container(
-        margin: EdgeInsets.only(bottom: 10.h),
-        padding: EdgeInsets.all(8.w),
+        margin: EdgeInsets.only(bottom: 14.h),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(20.r),
+          color: AppColors.cardBg,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.cardBg.withValues(alpha: 0.8),
+              AppColors.background.withValues(alpha: 0.9),
+            ],
+          ),
           border: Border.all(
-            color: AppColors.borderGoldLight.withValues(alpha: 0.15),
+            color: AppColors.borderGoldLight.withValues(alpha: 0.2),
+            width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 115.w,
-              height: 115.w,
-              padding: EdgeInsets.all(4.w),
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(
-                  color: AppColors.gold.withValues(alpha: 0.3),
-                  width: 0.8,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20.r),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -30,
+                top: -30,
+                child: Container(
+                  width: 120.w,
+                  height: 120.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.gold.withValues(alpha: 0.05),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.gold.withValues(alpha: 0.1),
+                        blurRadius: 40,
+                      )
+                    ],
+                  ),
                 ),
               ),
-              child: CachedAssetImage(
-                fileName: item.farmTypeIcon,
-                fit: BoxFit.contain,
-                errorWidget: Icon(
-                  Icons.agriculture,
-                  color: AppColors.green,
-                  size: 46.sp,
-                ),
-              ),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: 8.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: RichText(
-                          overflow: TextOverflow.ellipsis,
-                          text: TextSpan(
+              Padding(
+                padding: EdgeInsets.all(14.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildFarmImage(item),
+                        SizedBox(width: 14.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              TextSpan(
-                                text: farm.name,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' - ${item.cityName}',
-                                style: TextStyle(
-                                  color: AppColors.gold,
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                              _buildFarmHeader(item),
+                              SizedBox(height: 10.h),
+                              _buildOutputSection(item),
                             ],
                           ),
                         ),
-                      ),
-                      SizedBox(width: 6.w),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildSmallBadge('Lv. ${farm.level}', AppColors.gold),
-                          SizedBox(width: 6.w),
-                          _buildSmallBadge(
-                            farm.isActive ? 'Aktif' : 'Pasif',
-                            farm.isActive ? AppColors.green : AppColors.red,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    item.farmTypeName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w500,
+                      ],
                     ),
-                  ),
-                  SizedBox(height: 10.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildCompactMetric(
-                          Icons.layers,
-                          'Slot',
-                          '${farm.currentSlotCount}/${farm.maxSlotCount}',
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: _buildCompactMetric(
-                          Icons.inventory_2_outlined,
-                          'Output',
-                          '${_formatCompact(item.outputStockQuantity)}/${_formatCompact(farm.outputCapacity)}',
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10.h),
-                  _buildOutputProgressBar(item),
-                  SizedBox(height: 12.h),
-                  Wrap(
-                    spacing: 6.w,
-                    runSpacing: 6.h,
-                    children: List.generate(
-                      farm.maxSlotCount,
-                      (index) => _buildFarmSlotIcon(
-                        index: index,
-                        unlockedCount: farm.currentSlotCount,
-                        slot: index < item.slots.length ? item.slots[index] : null,
-                      ),
-                    ),
-                  ),
-                ],
+                    SizedBox(height: 14.h),
+                    _buildSlotsSection(item),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCompactMetric(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.textMuted, size: 12.sp),
-        SizedBox(width: 6.w),
-        Expanded(
-          child: RichText(
-            overflow: TextOverflow.ellipsis,
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: '$label: ',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 10.sp,
-                  ),
-                ),
-                TextSpan(
-                  text: value,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildFarmImage(FarmListItemModel item) {
+    return Container(
+      width: 76.w,
+      height: 76.w,
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.1),
+            blurRadius: 10,
+            spreadRadius: 1,
           ),
+        ],
+      ),
+      child: CachedAssetImage(
+        fileName: item.farmTypeIcon,
+        fit: BoxFit.contain,
+        errorWidget: Icon(
+          Icons.agriculture,
+          color: AppColors.green,
+          size: 36.sp,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFarmHeader(FarmListItemModel item) {
+    final farm = item.farm;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                farm.name,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            _buildSmallBadge(
+              farm.isActive ? 'Aktif' : 'Pasif',
+              farm.isActive ? AppColors.green : AppColors.red,
+            ),
+          ],
+        ),
+        SizedBox(height: 4.h),
+        Row(
+          children: [
+            Icon(Icons.location_on, color: AppColors.gold, size: 12.sp),
+            SizedBox(width: 4.w),
+            Expanded(
+              child: Text(
+                item.cityName,
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            _buildSmallBadge('Seviye ${farm.level}', Colors.orangeAccent),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        Text(
+          item.farmTypeName,
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 11.sp,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
   }
 
-  Widget _buildOutputProgressBar(FarmListItemModel item) {
+  Widget _buildOutputSection(FarmListItemModel item) {
     final ratio = item.outputStockRatio;
+    final color = _getRatioColor(ratio);
     return Container(
-      height: 15.h,
-      width: double.infinity,
+      padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(5.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
+        color: Colors.black.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: Colors.white10),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FractionallySizedBox(
-            widthFactor: ratio,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(5.r),
-                gradient: LinearGradient(
-                  colors: [
-                    _getRatioColor(ratio).withValues(alpha: 0.6),
-                    _getRatioColor(ratio),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.inventory_2, color: AppColors.textMuted, size: 12.sp),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Depo Durumu',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+                  ),
+                ],
+              ),
+              Text(
+                '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.farm.outputCapacity)}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Container(
+            height: 6.h,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(3.r),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: ratio,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3.r),
+                  color: color,
+                  boxShadow: [
+                    BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 4),
                   ],
                 ),
               ),
             ),
           ),
-          Center(
-            child: Text(
-              'Output Stogu %${(ratio * 100).round()}',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 7.sp,
-                fontWeight: FontWeight.bold,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlotsSection(FarmListItemModel item) {
+    final farm = item.farm;
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Uretim Slotlari',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6.r),
+                ),
+                child: Text(
+                  '${farm.currentSlotCount} / ${farm.maxSlotCount}',
+                  style: TextStyle(
+                    color: AppColors.gold,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Wrap(
+            spacing: 10.w,
+            runSpacing: 10.h,
+            children: List.generate(
+              farm.maxSlotCount,
+              (index) => _buildFarmSlotIcon(
+                index: index,
+                unlockedCount: farm.currentSlotCount,
+                slot: index < item.slots.length ? item.slots[index] : null,
               ),
             ),
           ),
@@ -655,56 +729,59 @@ class _FarmScreenState extends ConsumerState<FarmScreen> {
   }) {
     final isLocked = index >= unlockedCount;
     final hasProduct = slot?.hasProduct == true;
-    final iconColor = isLocked
-        ? Colors.white24
-        : hasProduct
-        ? AppColors.green
-        : AppColors.textMuted;
-
+    
     return Container(
-      width: 42.w,
-      height: 42.w,
-      padding: EdgeInsets.all(5.w),
+      width: 48.w,
+      height: 48.w,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8.r),
+        color: isLocked ? Colors.black.withValues(alpha: 0.4) : AppColors.cardBgLight,
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: hasProduct
-              ? AppColors.gold.withValues(alpha: 0.35)
-              : AppColors.border.withValues(alpha: 0.35),
+          color: isLocked 
+              ? Colors.white10 
+              : hasProduct ? AppColors.green.withValues(alpha: 0.5) : AppColors.borderGoldLight.withValues(alpha: 0.3),
+          width: hasProduct ? 1.5 : 1,
         ),
+        boxShadow: hasProduct ? [
+          BoxShadow(
+            color: AppColors.green.withValues(alpha: 0.15),
+            blurRadius: 8,
+            spreadRadius: 1,
+          )
+        ] : null,
       ),
-      child: hasProduct
-          ? CachedAssetImage(
-              fileName: slot!.product!.urunIconu,
-              fit: BoxFit.contain,
-              errorWidget: Icon(
-                Icons.inventory_2,
-                color: iconColor,
-                size: 18.sp,
-              ),
-            )
-          : Icon(
-              isLocked ? Icons.lock_outline : Icons.crop_square_rounded,
-              color: iconColor,
-              size: 18.sp,
-            ),
+      child: isLocked 
+          ? Center(child: Icon(Icons.lock, color: Colors.white24, size: 20.sp))
+          : hasProduct 
+              ? Padding(
+                  padding: EdgeInsets.all(6.w),
+                  child: CachedAssetImage(
+                    fileName: slot!.product!.urunIconu,
+                    fit: BoxFit.contain,
+                    errorWidget: Icon(
+                      Icons.agriculture,
+                      color: AppColors.green,
+                      size: 24.sp,
+                    ),
+                  ),
+                )
+              : Center(child: Icon(Icons.add_circle_outline, color: AppColors.gold.withValues(alpha: 0.3), size: 24.sp)),
     );
   }
 
   Widget _buildSmallBadge(String label, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         border: Border.all(color: color.withValues(alpha: 0.4)),
-        borderRadius: BorderRadius.circular(4.r),
+        borderRadius: BorderRadius.circular(6.r),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: color,
-          fontSize: 8.sp,
+          fontSize: 9.sp,
           fontWeight: FontWeight.bold,
         ),
       ),

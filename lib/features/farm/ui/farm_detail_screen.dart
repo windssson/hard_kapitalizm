@@ -49,8 +49,6 @@ class FarmDetailScreen extends ConsumerWidget {
                     children: [
                       _buildHero(detail),
                       SizedBox(height: 14.h),
-                      _buildOverview(detail),
-                      SizedBox(height: 14.h),
                       _buildQuickActions(context, ref, detail),
                       SizedBox(height: 18.h),
                       _buildSectionHeader(
@@ -115,24 +113,26 @@ class FarmDetailScreen extends ConsumerWidget {
 
   Widget _buildHero(FarmDetailModel detail) {
     return Container(
-      padding: EdgeInsets.all(14.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24.r),
+        color: AppColors.cardBg,
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.cardBgLight,
-            AppColors.cardBg,
-            AppColors.background,
+            AppColors.cardBg.withValues(alpha: 0.8),
+            AppColors.background.withValues(alpha: 0.9),
           ],
         ),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.28)),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: AppColors.borderGoldLight.withValues(alpha: 0.2),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.32),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -141,22 +141,35 @@ class FarmDetailScreen extends ConsumerWidget {
           Row(
             children: [
               Container(
-                width: 84.w,
-                height: 84.w,
-                padding: EdgeInsets.all(10.w),
+                width: 80.w,
+                height: 80.w,
+                padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(18.r),
+                  color: Colors.black.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(16.r),
                   border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.25),
+                    color: AppColors.gold.withValues(alpha: 0.3),
+                    width: 1.5,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                    ),
+                  ],
                 ),
                 child: CachedAssetImage(
                   fileName: detail.farmType.icon,
                   fit: BoxFit.contain,
+                  errorWidget: Icon(
+                    Icons.agriculture,
+                    color: AppColors.green,
+                    size: 36.sp,
+                  ),
                 ),
               ),
-              SizedBox(width: 14.w),
+              SizedBox(width: 16.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,13 +182,24 @@ class FarmDetailScreen extends ConsumerWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '${detail.cityName} | ${detail.farmType.name}',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12.sp,
-                      ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, color: AppColors.gold, size: 14.sp),
+                        SizedBox(width: 4.w),
+                        Expanded(
+                          child: Text(
+                            '${detail.cityName} | ${detail.farmType.name}',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                     SizedBox(height: 10.h),
                     Wrap(
@@ -184,7 +208,7 @@ class FarmDetailScreen extends ConsumerWidget {
                       children: [
                         _buildTag('Lv. ${detail.farm.level}', AppColors.gold),
                         _buildTag(
-                          detail.farm.isActive ? 'AKTIF URETIM' : 'PASIF URETIM',
+                          detail.farm.isActive ? 'AKTIF' : 'PASIF',
                           detail.farm.isActive ? AppColors.green : AppColors.red,
                         ),
                         _buildTag(
@@ -203,8 +227,8 @@ class FarmDetailScreen extends ConsumerWidget {
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(18.r),
-              border: Border.all(color: AppColors.border.withValues(alpha: 0.24)),
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
@@ -243,20 +267,20 @@ class FarmDetailScreen extends ConsumerWidget {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 8.w),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
           ),
-          SizedBox(height: 4.h),
+          SizedBox(height: 6.h),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: color,
-              fontSize: 12.sp,
+              fontSize: 13.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -269,84 +293,77 @@ class FarmDetailScreen extends ConsumerWidget {
     final inputUsed = _calculateUsedCapacity(detail.inputInventories);
     final outputUsed = _calculateUsedCapacity(detail.outputInventories);
 
-    return Row(
-      children: [
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Input Kapasitesi',
-            value: '$inputUsed/${detail.farm.inputCapacity}',
-            ratio: _inventoryRatio(inputUsed, detail.farm.inputCapacity),
-            color: AppColors.blue,
-            icon: Icons.south_west,
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Output Kapasitesi',
-            value: '$outputUsed/${detail.farm.outputCapacity}',
-            ratio: _inventoryRatio(outputUsed, detail.farm.outputCapacity),
-            color: AppColors.green,
-            icon: Icons.north_east,
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Aktif Slot',
-            value: '${detail.farm.currentSlotCount}/${detail.farm.maxSlotCount}',
-            ratio: _inventoryRatio(
-              detail.farm.currentSlotCount,
-              detail.farm.maxSlotCount,
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: _buildMetricItem(
+              title: 'Input',
+              value: '$inputUsed/${detail.farm.inputCapacity}',
+              ratio: _inventoryRatio(inputUsed, detail.farm.inputCapacity),
+              color: AppColors.blue,
+              icon: Icons.login,
             ),
-            color: AppColors.gold,
-            icon: Icons.grid_view_rounded,
           ),
-        ),
-      ],
+          Container(width: 1, height: 40.h, color: AppColors.border),
+          Expanded(
+            child: _buildMetricItem(
+              title: 'Output',
+              value: '$outputUsed/${detail.farm.outputCapacity}',
+              ratio: _inventoryRatio(outputUsed, detail.farm.outputCapacity),
+              color: AppColors.green,
+              icon: Icons.logout,
+            ),
+          ),
+          Container(width: 1, height: 40.h, color: AppColors.border),
+          Expanded(
+            child: _buildMetricItem(
+              title: 'Slotlar',
+              value: '${detail.farm.currentSlotCount}/${detail.farm.maxSlotCount}',
+              ratio: _inventoryRatio(
+                detail.farm.currentSlotCount,
+                detail.farm.maxSlotCount,
+              ),
+              color: Colors.blueAccent,
+              icon: Icons.layers,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildMetricCard({
+  Widget _buildMetricItem({
     required String title,
     required String value,
     required double ratio,
     required Color color,
     required IconData icon,
   }) {
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8.w),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: EdgeInsets.all(6.w),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Icon(icon, color: color, size: 14.sp),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 10.sp,
-                  ),
-                ),
+              Icon(icon, size: 12.sp, color: color),
+              SizedBox(width: 4.w),
+              Text(
+                title,
+                style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
               ),
             ],
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 6.h),
           Text(
             value,
             style: TextStyle(
@@ -356,7 +373,30 @@ class FarmDetailScreen extends ConsumerWidget {
             ),
           ),
           SizedBox(height: 8.h),
-          _buildProgressBar(ratio: ratio, color: color, label: '%${(ratio * 100).round()}'),
+          Container(
+            width: double.infinity,
+            height: 6.h,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(999.r),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: ratio.clamp(0.0, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(999.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.5),
+                      blurRadius: 4,
+                    )
+                  ]
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -367,42 +407,31 @@ class FarmDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     FarmDetailModel detail,
   ) {
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildActionButton(
-              'Slot Ac',
-              'Yeni uretim noktasi ekle',
-              Icons.add_box_outlined,
-              AppColors.gold,
-              () => _handleAddSlot(context, ref, detail),
-            ),
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionButton(
+            'Slot Ac',
+            Icons.add_box_outlined,
+            AppColors.gold,
+            () => _handleAddSlot(context, ref, detail),
           ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: _buildActionButton(
-              'Yenile',
-              'Tum stoklari yeniden hesapla',
-              Icons.refresh_rounded,
-              AppColors.blue,
-              () => ref.invalidate(farmDetailProvider(detail.farm.id)),
-            ),
+        ),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: _buildActionButton(
+            'Yenile',
+            Icons.refresh,
+            AppColors.blue,
+            () => ref.invalidate(farmDetailProvider(detail.farm.id)),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildActionButton(
     String label,
-    String subtitle,
     IconData icon,
     Color color,
     VoidCallback onTap,
@@ -411,31 +440,23 @@ class FarmDetailScreen extends ConsumerWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14.r),
       child: Container(
-        padding: EdgeInsets.all(12.w),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: color.withValues(alpha: 0.35)),
+          border: Border.all(color: color.withValues(alpha: 0.45)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 18.sp),
-            SizedBox(height: 10.h),
+            Icon(icon, color: color, size: 16.sp),
+            SizedBox(width: 8.w),
             Text(
               label,
               style: TextStyle(
                 color: color,
                 fontSize: 12.sp,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 10.sp,
               ),
             ),
           ],
@@ -445,26 +466,30 @@ class FarmDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildSectionHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold,
+    return Padding(
+      padding: EdgeInsets.only(left: 4.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
           ),
-        ),
-        SizedBox(height: 2.h),
-        Text(
-          subtitle,
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 11.sp,
+          SizedBox(height: 2.h),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 11.sp,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -479,11 +504,11 @@ class FarmDetailScreen extends ConsumerWidget {
     required List<FarmProductionInventoryModel> inventories,
   }) {
     return Container(
-      padding: EdgeInsets.all(14.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        color: Colors.black.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,7 +519,7 @@ class FarmDetailScreen extends ConsumerWidget {
                 title,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 14.sp,
+                  fontSize: 15.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -503,18 +528,18 @@ class FarmDetailScreen extends ConsumerWidget {
                 caption,
                 style: TextStyle(
                   color: AppColors.textMuted,
-                  fontSize: 10.sp,
+                  fontSize: 11.sp,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 12.h),
           _buildProgressBar(
             ratio: progressValue,
             color: progressColor,
             label: '%${(progressValue * 100).round()} dolu',
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 16.h),
           if (inventories.isEmpty)
             _buildEmptyCard('Bu alanda stok kaydi bulunmuyor.')
           else
@@ -532,12 +557,12 @@ class FarmDetailScreen extends ConsumerWidget {
     required String label,
   }) {
     return Container(
-      height: 16.h,
+      height: 15.h,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.25)),
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(5.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
       ),
       child: Stack(
         children: [
@@ -545,9 +570,9 @@ class FarmDetailScreen extends ConsumerWidget {
             widthFactor: ratio.clamp(0.0, 1.0),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999.r),
+                borderRadius: BorderRadius.circular(5.r),
                 gradient: LinearGradient(
-                  colors: [color.withValues(alpha: 0.55), color],
+                  colors: [color.withValues(alpha: 0.6), color],
                 ),
               ),
             ),
@@ -569,11 +594,11 @@ class FarmDetailScreen extends ConsumerWidget {
 
   Widget _buildTag(String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         text,
@@ -588,15 +613,17 @@ class FarmDetailScreen extends ConsumerWidget {
 
   Widget _buildEmptyCard(String message) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
       ),
-      child: Text(
-        message,
-        style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+      child: Center(
+        child: Text(
+          message,
+          style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+        ),
       ),
     );
   }
@@ -614,12 +641,19 @@ class FarmDetailScreen extends ConsumerWidget {
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
         color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: slot.isActive
-              ? AppColors.borderGold.withValues(alpha: 0.45)
-              : AppColors.border.withValues(alpha: 0.45),
+          color: slot.isActive 
+              ? AppColors.borderGoldLight.withValues(alpha: 0.4) 
+              : AppColors.border.withValues(alpha: 0.3),
         ),
+        boxShadow: slot.isActive ? [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.05),
+            blurRadius: 10,
+            spreadRadius: 1,
+          )
+        ] : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -628,21 +662,21 @@ class FarmDetailScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 58.w,
-                height: 58.w,
+                width: 50.w,
+                height: 50.w,
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(14.r),
+                  color: Colors.black.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(
-                    color: slot.isEmpty
-                        ? AppColors.border.withValues(alpha: 0.35)
-                        : AppColors.gold.withValues(alpha: 0.25),
+                    color: !slot.isEmpty 
+                        ? AppColors.green.withValues(alpha: 0.3) 
+                        : Colors.white10,
                   ),
                 ),
                 child: slot.isEmpty || slot.product?.urunIconu == null
                     ? Icon(
-                        Icons.crop_square_rounded,
+                        Icons.add_circle_outline,
                         color: AppColors.textMuted,
                         size: 24.sp,
                       )
@@ -651,12 +685,13 @@ class FarmDetailScreen extends ConsumerWidget {
                         fit: BoxFit.contain,
                       ),
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: 14.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Slot ${slot.slotIndex}',
@@ -666,14 +701,13 @@ class FarmDetailScreen extends ConsumerWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(width: 8.w),
                         _buildTag(
                           slot.isActive ? 'AKTIF' : 'PASIF',
                           slotActiveColor,
                         ),
                       ],
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 6.h),
                     Text(
                       slot.isEmpty
                           ? 'Bu slotta henuz urun secilmedi.'
@@ -681,38 +715,50 @@ class FarmDetailScreen extends ConsumerWidget {
                       style: TextStyle(
                         color: slot.isEmpty
                             ? AppColors.textMuted
-                            : AppColors.textPrimary,
-                        fontSize: 12.sp,
+                            : AppColors.gold,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Wrap(
-                      spacing: 8.w,
-                      runSpacing: 8.h,
-                      children: [
-                        _buildMiniInfo(
-                          Icons.bolt,
-                          'Boost x${slot.boostMultiplier.toStringAsFixed(2)}',
-                          AppColors.gold,
-                        ),
-                        _buildMiniInfo(
-                          Icons.schedule,
-                          '10 dk: ${_estimateProductionPerTick(slot)}',
-                          AppColors.blue,
-                        ),
-                        _buildMiniInfo(
-                          Icons.timeline,
-                          'Saatlik: ${_estimateProductionPerHour(slot)}',
-                          AppColors.green,
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          SizedBox(height: 12.h),
+          if (!slot.isEmpty) ...[
+            SizedBox(height: 12.h),
+            Container(
+              padding: EdgeInsets.all(10.w),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildSlotStat(
+                    'Boost', 
+                    'x${slot.boostMultiplier.toStringAsFixed(2)}',
+                    Icons.speed,
+                    Colors.orange,
+                  ),
+                  _buildSlotStat(
+                    '10 Dk', 
+                    '${_estimateProductionPerTick(slot)}',
+                    Icons.timer,
+                    AppColors.blue,
+                  ),
+                  _buildSlotStat(
+                    'Saatlik', 
+                    '${_estimateProductionPerHour(slot)}',
+                    Icons.access_time,
+                    AppColors.green,
+                  ),
+                ],
+              ),
+            ),
+          ],
+          SizedBox(height: 14.h),
           Row(
             children: [
               Expanded(
@@ -722,10 +768,10 @@ class FarmDetailScreen extends ConsumerWidget {
                   () => _showSlotProductDialog(context, ref, detail, slot),
                 ),
               ),
-              SizedBox(width: 8.w),
+              SizedBox(width: 10.w),
               Expanded(
                 child: _buildMiniAction(
-                  slot.isActive ? 'Pasif Yap' : 'Aktif Et',
+                  slot.isActive ? 'Uretimi Durdur' : 'Uretime Basla',
                   slot.isActive ? AppColors.red : AppColors.green,
                   () => _toggleSlotActive(context, ref, detail, slot),
                 ),
@@ -737,28 +783,25 @@ class FarmDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMiniInfo(IconData icon, String text, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10.r),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 12.sp),
-          SizedBox(width: 6.w),
-          Text(
-            text,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
-            ),
+  Widget _buildSlotStat(String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 16.sp),
+        SizedBox(height: 4.h),
+        Text(
+          label,
+          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          value,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 12.sp,
+            fontWeight: FontWeight.bold,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -778,12 +821,12 @@ class FarmDetailScreen extends ConsumerWidget {
     final color = inventory.isInput ? AppColors.blue : AppColors.green;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
-      padding: EdgeInsets.all(12.w),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -791,60 +834,107 @@ class FarmDetailScreen extends ConsumerWidget {
           Row(
             children: [
               Container(
-                width: 46.w,
-                height: 46.w,
-                padding: EdgeInsets.all(6.w),
+                width: 48.w,
+                height: 48.w,
+                padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: Colors.black26,
+                  color: Colors.black.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
                 ),
                 child: inventory.product?.urunIconu != null
                     ? CachedAssetImage(
                         fileName: inventory.product!.urunIconu,
                         fit: BoxFit.contain,
                       )
-                    : Icon(Icons.inventory_2, color: color, size: 18.sp),
+                    : Icon(Icons.inventory_2, color: color, size: 24.sp),
               ),
-              SizedBox(width: 10.w),
+              SizedBox(width: 14.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        _buildTag(
+                          inventory.isInput ? 'INPUT' : 'OUTPUT',
+                          color,
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 3.h),
-                    Text(
-                      'Kalite ${inventory.qualityLevel} | Maliyet ${inventory.cost.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11.sp,
-                      ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Text(
+                          'Kalite ${inventory.qualityLevel}',
+                          style: TextStyle(color: AppColors.gold, fontSize: 11.sp, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          ' • Pending: ${inventory.pendingQuantity.toStringAsFixed(1)}',
+                          style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              _buildTag(
-                inventory.isInput ? 'INPUT' : 'OUTPUT',
-                color,
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Maliyet: ${inventory.cost.toStringAsFixed(2)}',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+              ),
+              Text(
+                '${inventory.quantity} / $maxCapacity',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
-          SizedBox(height: 10.h),
-          _buildProgressBar(
-            ratio: ratio,
-            color: color,
-            label:
-                'Miktar ${inventory.quantity} | Pending ${inventory.pendingQuantity.toStringAsFixed(1)}',
+          SizedBox(height: 6.h),
+          Container(
+            height: 8.h,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(999.r),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: ratio.clamp(0.0, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(999.r),
+                  boxShadow: [
+                    BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 4)
+                  ]
+                ),
+              ),
+            ),
           ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 14.h),
           _buildMiniAction(
-            inventory.isInput ? 'Depodan Besle' : 'Depoya Aktar',
+            inventory.isInput ? 'Depodan Hammadde Getir' : 'Uretimi Depoya Aktar',
             inventory.isInput ? AppColors.gold : AppColors.blue,
             () {
               if (inventory.isInput) {
@@ -862,13 +952,13 @@ class FarmDetailScreen extends ConsumerWidget {
   Widget _buildMiniAction(String label, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12.r),
+      borderRadius: BorderRadius.circular(10.r),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 11.h),
+        padding: EdgeInsets.symmetric(vertical: 10.h),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: BorderRadius.circular(10.r),
           border: Border.all(color: color.withValues(alpha: 0.45)),
         ),
         child: Text(
@@ -876,7 +966,7 @@ class FarmDetailScreen extends ConsumerWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: color,
-            fontSize: 11.sp,
+            fontSize: 12.sp,
             fontWeight: FontWeight.bold,
           ),
         ),

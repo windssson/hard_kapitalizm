@@ -59,6 +59,33 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
     }
   }
 
+  Future<void> _finishConstructionWithGold(String constructionId) async {
+    final result = await ref
+        .read(factoryActionProvider)
+        .finishConstructionWithGold(constructionId);
+
+    ref.invalidate(factoryConstructionProvider);
+    ref.invalidate(factoryListStreamProvider);
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      AppSnackbar.show(
+        context,
+        title: 'Tamamlandi',
+        message: 'Insaat aninda tamamlandi.',
+        type: SnackbarType.success,
+      );
+      return;
+    }
+
+    AppSnackbar.show(
+      context,
+      title: 'Hata',
+      message: result['message'] ?? 'Yildiz ile bitirme basarisiz oldu.',
+      type: SnackbarType.error,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final factoriesAsync = ref.watch(factoryListStreamProvider);
@@ -142,13 +169,51 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
       return const SizedBox.shrink();
     }
 
-    return ConstructionCountdownCard(
-      title: name?.isNotEmpty == true ? name! : 'Yeni Fabrika',
-      subtitle: 'Fabrika insaati devam ediyor',
-      finishAt: finishAt.toLocal(),
-      icon: Icons.factory,
-      onFinished: () => _completeConstruction(constructionId),
+    final starCost = _calculateStarCost(finishAt.toLocal());
+
+    return Column(
+      children: [
+        ConstructionCountdownCard(
+          title: name?.isNotEmpty == true ? name! : 'Yeni Fabrika',
+          subtitle: 'Fabrika insaati devam ediyor',
+          finishAt: finishAt.toLocal(),
+          icon: Icons.factory,
+          onFinished: () => _completeConstruction(constructionId),
+        ),
+        if (starCost > 0)
+          Padding(
+            padding: EdgeInsets.only(bottom: 12.h),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _finishConstructionWithGold(constructionId),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: Colors.black,
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                icon: Icon(Icons.star, size: 16.sp),
+                label: Text(
+                  '$starCost yildiz ile bitir',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
+  }
+
+  int _calculateStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
   }
 
   Widget _buildEmptyState() {
@@ -196,47 +261,51 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
                   : AppColors.border,
             ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 52.w,
-                height: 52.w,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBgLight,
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(color: AppColors.border),
+          child: InkWell(
+            onTap: () => context.push('/factories/${factory.id}'),
+            borderRadius: BorderRadius.circular(12.r),
+            child: Row(
+              children: [
+                Container(
+                  width: 52.w,
+                  height: 52.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBgLight,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Icon(Icons.factory, color: AppColors.blue, size: 28.sp),
                 ),
-                child: Icon(Icons.factory, color: AppColors.blue, size: 28.sp),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(factory.name, style: AppTextStyles.h2),
-                    SizedBox(height: 4.h),
-                    Row(
-                      children: [
-                        Icon(Icons.output, color: AppColors.gold, size: 13.sp),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Kapasite: ${factory.outputCapacity}',
-                          style: AppTextStyles.body.copyWith(fontSize: 12.sp),
-                        ),
-                        SizedBox(width: 10.w),
-                        Icon(Icons.star, color: AppColors.gold, size: 13.sp),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Lv. ${factory.level}',
-                          style: AppTextStyles.body.copyWith(fontSize: 12.sp),
-                        ),
-                      ],
-                    ),
-                  ],
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(factory.name, style: AppTextStyles.h2),
+                      SizedBox(height: 4.h),
+                      Row(
+                        children: [
+                          Icon(Icons.output, color: AppColors.gold, size: 13.sp),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Kapasite: ${factory.outputCapacity}',
+                            style: AppTextStyles.body.copyWith(fontSize: 12.sp),
+                          ),
+                          SizedBox(width: 10.w),
+                          Icon(Icons.star, color: AppColors.gold, size: 13.sp),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Lv. ${factory.level}',
+                            style: AppTextStyles.body.copyWith(fontSize: 12.sp),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              _buildStatusChip(factory.isActive),
-            ],
+                _buildStatusChip(factory.isActive),
+              ],
+            ),
           ),
         );
       },

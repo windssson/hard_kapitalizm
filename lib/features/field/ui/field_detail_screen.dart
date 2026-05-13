@@ -49,8 +49,6 @@ class FieldDetailScreen extends ConsumerWidget {
                     children: [
                       _buildHeader(detail),
                       SizedBox(height: 12.h),
-                      _buildSummary(detail),
-                      SizedBox(height: 12.h),
                       _buildActionRow(context, ref, detail),
                       SizedBox(height: 14.h),
                       _buildSectionTitle('Uretim Slotlari'),
@@ -103,28 +101,61 @@ class FieldDetailScreen extends ConsumerWidget {
 
   Widget _buildHeader(FieldDetailModel detail) {
     return Container(
-      padding: EdgeInsets.all(14.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+        color: AppColors.cardBg,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.cardBg.withValues(alpha: 0.8),
+            AppColors.background.withValues(alpha: 0.9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: AppColors.borderGoldLight.withValues(alpha: 0.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 72.w,
-            height: 72.w,
-            padding: EdgeInsets.all(10.w),
+            width: 80.w,
+            height: 80.w,
+            padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.circular(14.r),
+              color: Colors.black.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color: AppColors.gold.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.gold.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
             child: CachedAssetImage(
               fileName: detail.fieldType.icon,
               fit: BoxFit.contain,
+              errorWidget: Icon(
+                Icons.grass,
+                color: AppColors.green,
+                size: 36.sp,
+              ),
             ),
           ),
-          SizedBox(width: 12.w),
+          SizedBox(width: 16.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,19 +164,30 @@ class FieldDetailScreen extends ConsumerWidget {
                   detail.field.name,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 17.sp,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 4.h),
-                Text(
-                  '${detail.cityName} | ${detail.fieldType.name}',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12.sp,
-                  ),
+                SizedBox(height: 6.h),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: AppColors.gold, size: 14.sp),
+                    SizedBox(width: 4.w),
+                    Expanded(
+                      child: Text(
+                        '${detail.cityName} | ${detail.fieldType.name}',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 8.h),
+                SizedBox(height: 10.h),
                 Row(
                   children: [
                     _buildHeaderChip('Lv. ${detail.field.level}', AppColors.gold),
@@ -166,11 +208,11 @@ class FieldDetailScreen extends ConsumerWidget {
 
   Widget _buildHeaderChip(String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         text,
@@ -194,30 +236,44 @@ class FieldDetailScreen extends ConsumerWidget {
         : 0.0;
 
     return Container(
-      padding: EdgeInsets.all(14.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: Colors.black.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildSummaryItem(
-            'Slot',
-            '${detail.field.currentSlotCount}/${detail.field.maxSlotCount}',
+          Expanded(
+            child: _buildSummaryItem(
+              'Slotlar',
+              '${detail.field.currentSlotCount}/${detail.field.maxSlotCount}',
+              icon: Icons.layers,
+              iconColor: Colors.blueAccent,
+            ),
           ),
-          _buildSummaryItem(
-            'Input',
-            '$inputUsed/${detail.field.inputCapacity}',
-            progress: inputRatio,
-            progressColor: AppColors.blue,
+          Container(width: 1, height: 40.h, color: AppColors.border),
+          Expanded(
+            child: _buildSummaryItem(
+              'Input',
+              '$inputUsed/${detail.field.inputCapacity}',
+              progress: inputRatio,
+              progressColor: AppColors.blue,
+              icon: Icons.login,
+              iconColor: AppColors.blue,
+            ),
           ),
-          _buildSummaryItem(
-            'Output',
-            '$outputUsed/${detail.field.outputCapacity}',
-            progress: outputRatio,
-            progressColor: AppColors.green,
+          Container(width: 1, height: 40.h, color: AppColors.border),
+          Expanded(
+            child: _buildSummaryItem(
+              'Output',
+              '$outputUsed/${detail.field.outputCapacity}',
+              progress: outputRatio,
+              progressColor: AppColors.green,
+              icon: Icons.logout,
+              iconColor: AppColors.green,
+            ),
           ),
         ],
       ),
@@ -229,45 +285,65 @@ class FieldDetailScreen extends ConsumerWidget {
     String value, {
     double? progress,
     Color? progressColor,
+    IconData? icon,
+    Color? iconColor,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
-        ),
-        SizedBox(height: 4.h),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 13.sp,
-            fontWeight: FontWeight.bold,
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 12.sp, color: iconColor ?? AppColors.textMuted),
+                SizedBox(width: 4.w),
+              ],
+              Text(
+                label,
+                style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+              ),
+            ],
           ),
-        ),
-        if (progress != null) ...[
-          SizedBox(height: 5.h),
-          Container(
-            width: 72.w,
-            height: 5.h,
-            decoration: BoxDecoration(
-              color: Colors.white10,
-              borderRadius: BorderRadius.circular(999.r),
+          SizedBox(height: 6.h),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 13.sp,
+              fontWeight: FontWeight.bold,
             ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: progressColor ?? AppColors.gold,
-                  borderRadius: BorderRadius.circular(999.r),
+          ),
+          if (progress != null) ...[
+            SizedBox(height: 8.h),
+            Container(
+              width: double.infinity,
+              height: 6.h,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(999.r),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: progress,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: progressColor ?? AppColors.gold,
+                    borderRadius: BorderRadius.circular(999.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (progressColor ?? AppColors.gold).withValues(alpha: 0.5),
+                        blurRadius: 4,
+                      )
+                    ]
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -337,27 +413,33 @@ class FieldDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 15.sp,
-        fontWeight: FontWeight.bold,
+    return Padding(
+      padding: EdgeInsets.only(left: 4.w, top: 8.h),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 16.sp,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
 
   Widget _buildEmptyCard(String message) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
       ),
-      child: Text(
-        message,
-        style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+      child: Center(
+        child: Text(
+          message,
+          style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+        ),
       ),
     );
   }
@@ -369,87 +451,121 @@ class FieldDetailScreen extends ConsumerWidget {
     ProductionSlotModel slot,
   ) {
     return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
-      padding: EdgeInsets.all(12.w),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: slot.isActive ? AppColors.borderGold : AppColors.border,
+          color: slot.isActive 
+              ? AppColors.borderGoldLight.withValues(alpha: 0.4) 
+              : AppColors.border.withValues(alpha: 0.3),
         ),
+        boxShadow: slot.isActive ? [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.05),
+            blurRadius: 10,
+            spreadRadius: 1,
+          )
+        ] : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              if (!slot.isEmpty && slot.product?.urunIconu != null) ...[
-                Container(
-                  width: 42.w,
-                  height: 42.w,
-                  padding: EdgeInsets.all(6.w),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: CachedAssetImage(
-                    fileName: slot.product!.urunIconu,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                SizedBox(width: 10.w),
-              ],
-              Expanded(
-                child: Text(
-                  'Slot ${slot.slotIndex}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
+              Container(
+                width: 50.w,
+                height: 50.w,
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(
+                    color: !slot.isEmpty 
+                        ? AppColors.green.withValues(alpha: 0.3) 
+                        : Colors.white10,
                   ),
                 ),
+                child: (!slot.isEmpty && slot.product?.urunIconu != null)
+                    ? CachedAssetImage(
+                        fileName: slot.product!.urunIconu,
+                        fit: BoxFit.contain,
+                      )
+                    : Icon(Icons.add_circle_outline, color: AppColors.textMuted, size: 24.sp),
               ),
-              _buildHeaderChip(
-                slot.isActive ? 'AKTIF' : 'PASIF',
-                slot.isActive ? AppColors.green : AppColors.red,
+              SizedBox(width: 14.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Slot ${slot.slotIndex}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        _buildHeaderChip(
+                          slot.isActive ? 'AKTIF' : 'PASIF',
+                          slot.isActive ? AppColors.green : AppColors.red,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      slot.isEmpty
+                          ? 'Henuz urun secilmedi'
+                          : '${slot.product?.urunAdi ?? slot.productId} | Kalite ${slot.qualityLevel}',
+                      style: TextStyle(
+                        color: slot.isEmpty ? AppColors.textMuted : AppColors.gold,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          SizedBox(height: 8.h),
-          Text(
-            slot.isEmpty
-                ? 'Urun secilmemis'
-                : '${slot.product?.urunAdi ?? slot.productId} | Kalite ${slot.qualityLevel}',
-            style: TextStyle(
-              color: slot.isEmpty ? AppColors.textMuted : AppColors.textPrimary,
-              fontSize: 12.sp,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            'Boost: x${slot.boostMultiplier.toStringAsFixed(2)}',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-          ),
           if (!slot.isEmpty) ...[
-            SizedBox(height: 4.h),
-            Text(
-              '10 dk tahmini: ${_estimateProductionPerTick(slot)} adet',
-              style: TextStyle(
-                color: AppColors.gold.withValues(alpha: 0.9),
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w600,
+            SizedBox(height: 12.h),
+            Container(
+              padding: EdgeInsets.all(10.w),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10.r),
               ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              'Saatlik tahmini: ${_estimateProductionPerHour(slot)} adet',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildSlotStat(
+                    'Boost', 
+                    'x${slot.boostMultiplier.toStringAsFixed(2)}',
+                    Icons.speed,
+                    Colors.orange,
+                  ),
+                  _buildSlotStat(
+                    '10 Dk', 
+                    '${_estimateProductionPerTick(slot)}',
+                    Icons.timer,
+                    AppColors.blue,
+                  ),
+                  _buildSlotStat(
+                    'Saatlik', 
+                    '${_estimateProductionPerHour(slot)}',
+                    Icons.access_time,
+                    AppColors.green,
+                  ),
+                ],
               ),
             ),
           ],
-          SizedBox(height: 10.h),
+          SizedBox(height: 14.h),
           Row(
             children: [
               Expanded(
@@ -459,10 +575,10 @@ class FieldDetailScreen extends ConsumerWidget {
                   () => _showSlotProductDialog(context, ref, detail, slot),
                 ),
               ),
-              SizedBox(width: 8.w),
+              SizedBox(width: 10.w),
               Expanded(
                 child: _buildMiniAction(
-                  slot.isActive ? 'Pasif Yap' : 'Aktif Et',
+                  slot.isActive ? 'Uretimi Durdur' : 'Uretime Basla',
                   slot.isActive ? AppColors.red : AppColors.green,
                   () => _toggleSlotActive(context, ref, detail, slot),
                 ),
@@ -471,6 +587,28 @@ class FieldDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSlotStat(String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 16.sp),
+        SizedBox(height: 4.h),
+        Text(
+          label,
+          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          value,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 12.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
@@ -485,90 +623,125 @@ class FieldDetailScreen extends ConsumerWidget {
             ? inventory.product!.urunAdi
             : inventory.productId;
 
+    final capacity = inventory.isInput ? detail.field.inputCapacity : detail.field.outputCapacity;
+    final progress = capacity > 0 ? (inventory.quantity / capacity).clamp(0.0, 1.0) : 0.0;
+    final color = inventory.isInput ? AppColors.blue : AppColors.green;
+
     return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
-      padding: EdgeInsets.all(12.w),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              if (inventory.product?.urunIconu != null) ...[
-                Container(
-                  width: 40.w,
-                  height: 40.w,
-                  padding: EdgeInsets.all(6.w),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: CachedAssetImage(
-                    fileName: inventory.product!.urunIconu,
-                    fit: BoxFit.contain,
-                  ),
+              Container(
+                width: 48.w,
+                height: 48.w,
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
                 ),
-                SizedBox(width: 10.w),
-              ],
+                child: inventory.product?.urunIconu != null
+                    ? CachedAssetImage(
+                        fileName: inventory.product!.urunIconu,
+                        fit: BoxFit.contain,
+                      )
+                    : Icon(Icons.inventory_2, color: AppColors.textMuted, size: 24.sp),
+              ),
+              SizedBox(width: 14.w),
               Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        _buildHeaderChip(
+                          inventory.isInput ? 'INPUT' : 'OUTPUT',
+                          color,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Row(
+                      children: [
+                        Text(
+                          'Kalite ${inventory.qualityLevel}',
+                          style: TextStyle(color: AppColors.gold, fontSize: 11.sp, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          ' • Pending: ${inventory.pendingQuantity.toStringAsFixed(1)}',
+                          style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              _buildHeaderChip(
-                inventory.isInput ? 'INPUT' : 'OUTPUT',
-                inventory.isInput ? AppColors.blue : AppColors.green,
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Maliyet: ${inventory.cost.toStringAsFixed(2)}',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+              ),
+              Text(
+                '${inventory.quantity} / $capacity',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
           SizedBox(height: 6.h),
-          Text(
-            'Kalite ${inventory.qualityLevel} | Miktar ${inventory.quantity} | Pending ${inventory.pendingQuantity.toStringAsFixed(2)}',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-          ),
-          SizedBox(height: 4.h),
           Container(
-            height: 6.h,
+            height: 8.h,
             decoration: BoxDecoration(
-              color: Colors.white10,
+              color: Colors.black.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(999.r),
             ),
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
-              widthFactor: inventory.isInput
-                  ? (detail.field.inputCapacity > 0
-                        ? (inventory.quantity / detail.field.inputCapacity)
-                              .clamp(0.0, 1.0)
-                        : 0.0)
-                  : (detail.field.outputCapacity > 0
-                        ? (inventory.quantity / detail.field.outputCapacity)
-                              .clamp(0.0, 1.0)
-                        : 0.0),
+              widthFactor: progress,
               child: Container(
                 decoration: BoxDecoration(
-                  color: inventory.isInput ? AppColors.blue : AppColors.green,
+                  color: color,
                   borderRadius: BorderRadius.circular(999.r),
+                  boxShadow: [
+                    BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 4)
+                  ]
                 ),
               ),
             ),
           ),
-          SizedBox(height: 6.h),
-          Text(
-            'Maliyet: ${inventory.cost.toStringAsFixed(2)}',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-          ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 14.h),
           _buildMiniAction(
-            inventory.isInput ? 'Depodan Besle' : 'Depoya Aktar',
+            inventory.isInput ? 'Depodan Hammadde Getir' : 'Uretimi Depoya Aktar',
             inventory.isInput ? AppColors.gold : AppColors.blue,
             () {
               if (inventory.isInput) {
@@ -588,7 +761,7 @@ class FieldDetailScreen extends ConsumerWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10.r),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 9.h),
+        padding: EdgeInsets.symmetric(vertical: 10.h),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
@@ -599,7 +772,7 @@ class FieldDetailScreen extends ConsumerWidget {
           label,
           style: TextStyle(
             color: color,
-            fontSize: 11.sp,
+            fontSize: 12.sp,
             fontWeight: FontWeight.bold,
           ),
         ),

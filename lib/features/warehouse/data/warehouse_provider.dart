@@ -212,15 +212,15 @@ class WarehouseActionNotifier {
     }
 
     try {
-      await _supabase
-          .from('warehouse_slots')
-          .update({'price': price})
-          .eq('id', warehouseSlotId);
-
-      return {
-        'success': true,
-        'message': 'Depo slot fiyatÄ± gÃ¼ncellendi.',
-      };
+      final response = await _supabase.rpc(
+        'set_warehouse_slot_price',
+        params: {
+          'p_player_id': user.id,
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_price': price,
+        },
+      );
+      return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

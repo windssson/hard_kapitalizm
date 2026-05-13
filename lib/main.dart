@@ -22,6 +22,7 @@ import 'package:hard_kapitalizm/features/farm/ui/farm_screen.dart';
 import 'package:hard_kapitalizm/features/farm/ui/farm_detail_screen.dart';
 import 'package:hard_kapitalizm/features/farm/ui/farm_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_screen.dart';
+import 'package:hard_kapitalizm/features/factory/ui/factory_detail_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_type_selection_screen.dart';
@@ -159,6 +160,12 @@ final _router = GoRouter(
             final city = state.extra as CityModel;
             return FactoryTypeSelectionScreen(selectedCity: city);
           },
+        ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) => FactoryDetailScreen(
+            factoryId: state.pathParameters['id']!,
+          ),
         ),
       ],
     ),
