@@ -5,10 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
-import 'package:hard_kapitalizm/features/field/models/field_model.dart';
+import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 
 class FieldScreen extends ConsumerStatefulWidget {
   const FieldScreen({super.key});
@@ -223,23 +224,23 @@ class _FieldScreenState extends ConsumerState<FieldScreen> {
     return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
   }
 
-  List<FieldModel> _getFilteredFields(List<FieldModel> fields) {
-    return fields.where((field) {
-      if (_selectedFilter == 'Aktif') return field.isActive;
-      if (_selectedFilter == 'Pasif') return !field.isActive;
+  List<FieldListItemModel> _getFilteredFields(List<FieldListItemModel> fields) {
+    return fields.where((item) {
+      if (_selectedFilter == 'Aktif') return item.field.isActive;
+      if (_selectedFilter == 'Pasif') return !item.field.isActive;
       return true;
     }).toList();
   }
 
-  Widget _buildStatsHeader(List<FieldModel> fields) {
-    final activeCount = fields.where((field) => field.isActive).length;
+  Widget _buildStatsHeader(List<FieldListItemModel> fields) {
+    final activeCount = fields.where((item) => item.field.isActive).length;
     final totalSlots = fields.fold<int>(
       0,
-      (sum, field) => sum + field.maxSlotCount,
+      (sum, item) => sum + item.field.maxSlotCount,
     );
-    final totalOutputCapacity = fields.fold<int>(
+    final totalOutputStock = fields.fold<int>(
       0,
-      (sum, field) => sum + field.outputCapacity,
+      (sum, item) => sum + item.outputStockQuantity,
     );
 
     return Container(
@@ -283,7 +284,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen> {
             Icons.inventory_2,
             AppColors.green,
             'Output',
-            _formatCompact(totalOutputCapacity),
+            _formatCompact(totalOutputStock),
             Colors.white,
           ),
         ],
@@ -412,37 +413,33 @@ class _FieldScreenState extends ConsumerState<FieldScreen> {
     );
   }
 
-  Widget _buildFieldList(List<FieldModel> fields) {
+  Widget _buildFieldList(List<FieldListItemModel> fields) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: fields.length,
       itemBuilder: (context, index) {
-        final field = fields[index];
-        return _buildAdvancedFieldCard(field);
+        return _buildAdvancedFieldCard(fields[index]);
       },
     );
   }
 
-  Widget _buildAdvancedFieldCard(FieldModel field) {
-    final slotRatio = field.maxSlotCount > 0
-        ? (field.currentSlotCount / field.maxSlotCount).clamp(0.0, 1.0)
-        : 0.0;
-
+  Widget _buildAdvancedFieldCard(FieldListItemModel item) {
+    final field = item.field;
     return GestureDetector(
       onTap: () => context.push('/fields/${field.id}'),
       child: Container(
         margin: EdgeInsets.only(bottom: 10.h),
-        padding: EdgeInsets.all(10.w),
+        padding: EdgeInsets.all(8.w),
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
-            color: AppColors.borderGoldLight.withValues(alpha: 0.18),
+            color: AppColors.borderGoldLight.withValues(alpha: 0.15),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.28),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -452,75 +449,122 @@ class _FieldScreenState extends ConsumerState<FieldScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 92.w,
-              height: 92.w,
+              width: 115.w,
+              height: 115.w,
+              padding: EdgeInsets.all(4.w),
               decoration: BoxDecoration(
+                color: Colors.transparent,
                 borderRadius: BorderRadius.circular(16.r),
                 border: Border.all(
-                  color: AppColors.gold.withValues(alpha: 0.25),
+                  color: AppColors.gold.withValues(alpha: 0.3),
                   width: 0.8,
                 ),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.green.withValues(alpha: 0.14),
-                    AppColors.cardBgLight.withValues(alpha: 0.35),
-                  ],
+              ),
+              child: CachedAssetImage(
+                fileName: item.fieldTypeIcon,
+                fit: BoxFit.contain,
+                errorWidget: Icon(
+                  Icons.grass,
+                  color: AppColors.green,
+                  size: 46.sp,
                 ),
               ),
-              child: Icon(Icons.grass, color: AppColors.green, size: 46.sp),
             ),
-            SizedBox(width: 14.w),
+            SizedBox(width: 16.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  SizedBox(height: 8.h),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Text(
-                          field.name,
-                          maxLines: 1,
+                        child: RichText(
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.bold,
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: field.name,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' - ${item.cityName}',
+                                style: TextStyle(
+                                  color: AppColors.gold,
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
+                      SizedBox(width: 6.w),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildSmallBadge('Lv. ${field.level}', AppColors.gold),
+                          SizedBox(width: 6.w),
+                          _buildSmallBadge(
+                            field.isActive ? 'Aktif' : 'Pasif',
+                            field.isActive ? AppColors.green : AppColors.red,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    item.fieldTypeName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 10.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildCompactMetric(
+                          Icons.layers,
+                          'Slot',
+                          '${field.currentSlotCount}/${field.maxSlotCount}',
+                        ),
+                      ),
                       SizedBox(width: 8.w),
-                      _buildStatusChip(field.isActive),
+                      Expanded(
+                        child: _buildCompactMetric(
+                          Icons.inventory_2_outlined,
+                          'Output',
+                          '${_formatCompact(item.outputStockQuantity)}/${_formatCompact(field.outputCapacity)}',
+                        ),
+                      ),
                     ],
                   ),
                   SizedBox(height: 10.h),
-                  _buildMetricRow(
-                    Icons.layers,
-                    'Slot',
-                    '${field.currentSlotCount}/${field.maxSlotCount}',
+                  _buildOutputProgressBar(item),
+                  SizedBox(height: 12.h),
+                  Wrap(
+                    spacing: 6.w,
+                    runSpacing: 6.h,
+                    children: List.generate(
+                      field.maxSlotCount,
+                      (index) => _buildFieldSlotIcon(
+                        index: index,
+                        unlockedCount: field.currentSlotCount,
+                        slot: index < item.slots.length ? item.slots[index] : null,
+                      ),
+                    ),
                   ),
-                  SizedBox(height: 4.h),
-                  _buildMetricRow(
-                    Icons.star,
-                    'Seviye',
-                    'Lv. ${field.level}',
-                  ),
-                  SizedBox(height: 4.h),
-                  _buildMetricRow(
-                    Icons.input,
-                    'Input',
-                    _formatCompact(field.inputCapacity),
-                  ),
-                  SizedBox(height: 4.h),
-                  _buildMetricRow(
-                    Icons.outbox,
-                    'Output',
-                    _formatCompact(field.outputCapacity),
-                  ),
-                  SizedBox(height: 10.h),
-                  _buildSlotProgressBar(slotRatio, field),
                 ],
               ),
             ),
@@ -530,71 +574,142 @@ class _FieldScreenState extends ConsumerState<FieldScreen> {
     );
   }
 
-  Widget _buildMetricRow(IconData icon, String label, String value) {
+  Widget _buildCompactMetric(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.textMuted, size: 13.sp),
+        Icon(icon, color: AppColors.textMuted, size: 12.sp),
         SizedBox(width: 6.w),
-        Text(
-          '$label:',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-        ),
-        SizedBox(width: 8.w),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 12.sp,
-            fontWeight: FontWeight.w700,
+        Expanded(
+          child: RichText(
+            overflow: TextOverflow.ellipsis,
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10.sp,
+                  ),
+                ),
+                TextSpan(
+                  text: value,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSlotProgressBar(double ratio, FieldModel field) {
+  Widget _buildOutputProgressBar(FieldListItemModel item) {
+    final ratio = item.outputStockRatio;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999.r),
-          child: LinearProgressIndicator(
-            value: ratio,
-            minHeight: 8.h,
-            backgroundColor: Colors.white10,
-            valueColor: AlwaysStoppedAnimation<Color>(_getRatioColor(ratio)),
+        Container(
+          height: 15.h,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(5.r),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
           ),
-        ),
-        SizedBox(height: 4.h),
-        Text(
-          'Slot doluluk: %${(ratio * 100).round()}',
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 10.sp,
+          child: Stack(
+            children: [
+              FractionallySizedBox(
+                widthFactor: ratio,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(5.r),
+                    gradient: LinearGradient(
+                      colors: [
+                        _getRatioColor(ratio).withValues(alpha: 0.6),
+                        _getRatioColor(ratio),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  'Output Stogu %${(ratio * 100).round()}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 7.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStatusChip(bool isActive) {
+  Widget _buildFieldSlotIcon({
+    required int index,
+    required int unlockedCount,
+    required FieldSlotPreviewModel? slot,
+  }) {
+    final isLocked = index >= unlockedCount;
+    final hasProduct = slot?.hasProduct == true;
+    final iconColor = isLocked
+        ? Colors.white24
+        : hasProduct
+        ? AppColors.green
+        : AppColors.textMuted;
+
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+      width: 42.w,
+      height: 42.w,
+      padding: EdgeInsets.all(5.w),
       decoration: BoxDecoration(
-        color: isActive
-            ? AppColors.green.withValues(alpha: 0.1)
-            : AppColors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4.r),
+        color: Colors.black.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8.r),
         border: Border.all(
-          color: isActive ? AppColors.green : AppColors.red,
-          width: 0.5,
+          color: hasProduct
+              ? AppColors.gold.withValues(alpha: 0.35)
+              : AppColors.border.withValues(alpha: 0.35),
         ),
       ),
+      child: hasProduct
+          ? CachedAssetImage(
+              fileName: slot!.product!.urunIconu,
+              fit: BoxFit.contain,
+              errorWidget: Icon(
+                Icons.inventory_2,
+                color: iconColor,
+                size: 18.sp,
+              ),
+            )
+          : Icon(
+              isLocked ? Icons.lock_outline : Icons.crop_square_rounded,
+              color: iconColor,
+              size: 18.sp,
+            ),
+    );
+  }
+
+  Widget _buildSmallBadge(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(4.r),
+      ),
       child: Text(
-        isActive ? 'AKTIF' : 'PASIF',
+        label,
         style: TextStyle(
-          color: isActive ? AppColors.green : AppColors.red,
-          fontSize: 10.sp,
+          color: color,
+          fontSize: 8.sp,
           fontWeight: FontWeight.bold,
         ),
       ),

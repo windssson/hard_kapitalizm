@@ -1,22 +1,118 @@
+import 'package:hard_kapitalizm/core/data/production_product_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
+import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_model.dart';
 
-final fieldListStreamProvider = StreamProvider.autoDispose<List<FieldModel>>((
-  ref,
-) {
+final fieldListStreamProvider =
+    FutureProvider.autoDispose<List<FieldListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
-  if (user == null) return const Stream.empty();
+  if (user == null) return const [];
 
-  return supabase
+  final fieldsResponse = await supabase
       .from('fields')
-      .stream(primaryKey: ['id'])
+      .select()
       .eq('player_id', user.id)
-      .map((event) => event.map((e) => FieldModel.fromJson(e)).toList());
+      .order('created_at', ascending: true);
+
+  final fields = (fieldsResponse as List<dynamic>)
+      .map((e) => FieldModel.fromJson(Map<String, dynamic>.from(e as Map)))
+      .toList();
+
+  if (fields.isEmpty) return const [];
+
+  final fieldTypeIds = fields.map((e) => e.fieldTypeId).toSet().toList();
+  final cityIds = fields.map((e) => e.cityId).toSet().toList();
+  final fieldIds = fields.map((e) => e.id).toList();
+
+  final fieldTypesResponse = await supabase
+      .from('field_types')
+      .select('id, name, icon')
+      .inFilter('id', fieldTypeIds);
+  final citiesResponse = await supabase
+      .from('cities')
+      .select('id, name')
+      .inFilter('id', cityIds);
+  final slotsResponse = await supabase
+      .from('production_slots')
+      .select('id, owner_id, slot_index, product_id, is_active')
+      .eq('owner_kind', 'field')
+      .inFilter('owner_id', fieldIds)
+      .order('slot_index', ascending: true);
+  final outputInventoriesResponse = await supabase
+      .from('production_inventory')
+      .select('owner_id, quantity')
+      .eq('owner_kind', 'field')
+      .eq('inventory_type', 'output')
+      .inFilter('owner_id', fieldIds);
+
+  final slotRows = (slotsResponse as List<dynamic>)
+      .map((e) => Map<String, dynamic>.from(e as Map))
+      .toList();
+  final productIds = slotRows
+      .map((e) => e['product_id']?.toString() ?? '')
+      .where((e) => e.isNotEmpty)
+      .toSet()
+      .toList();
+
+  Map<String, ProductModel> productsById = const {};
+  if (productIds.isNotEmpty) {
+    final productsResponse = await supabase
+        .from('products')
+        .select('id, urun_adi, urun_iconu')
+        .inFilter('id', productIds);
+    productsById = {
+      for (final row in productsResponse as List<dynamic>)
+        (row['id'] ?? '').toString(): ProductModel.fromJson(
+          Map<String, dynamic>.from(row as Map),
+        ),
+    };
+  }
+
+  final fieldTypeById = {
+    for (final row in fieldTypesResponse as List<dynamic>)
+      (row['id'] ?? '').toString(): Map<String, dynamic>.from(row as Map),
+  };
+  final cityNameById = {
+    for (final row in citiesResponse as List<dynamic>)
+      (row['id'] ?? '').toString(): (row['name'] ?? 'Bilinmeyen Sehir').toString(),
+  };
+
+  final slotsByFieldId = <String, List<FieldSlotPreviewModel>>{};
+  for (final row in slotRows) {
+    final ownerId = (row['owner_id'] ?? '').toString();
+    final productId = row['product_id']?.toString();
+    final slot = FieldSlotPreviewModel.fromJson({
+      ...row,
+      'product': productId != null ? productsById[productId]?.toJson() : null,
+    });
+    slotsByFieldId.putIfAbsent(ownerId, () => []).add(slot);
+  }
+
+  final outputByFieldId = <String, int>{};
+  for (final row in outputInventoriesResponse as List<dynamic>) {
+    final map = Map<String, dynamic>.from(row as Map);
+    final ownerId = (map['owner_id'] ?? '').toString();
+    final quantity = (map['quantity'] as num?)?.toInt() ?? 0;
+    outputByFieldId[ownerId] = (outputByFieldId[ownerId] ?? 0) + quantity;
+  }
+
+  return fields.map((field) {
+    final type = fieldTypeById[field.fieldTypeId];
+    return FieldListItemModel(
+      field: field,
+      cityName: cityNameById[field.cityId] ?? 'Bilinmeyen Sehir',
+      fieldTypeName: (type?['name'] ?? 'Bilinmeyen Ciftlik').toString(),
+      fieldTypeIcon: (type?['icon'] ?? 'field.webp').toString(),
+      outputStockQuantity: outputByFieldId[field.id] ?? 0,
+      slots: slotsByFieldId[field.id] ?? const [],
+    );
+  }).toList();
 });
 
 final fieldTypesProvider = FutureProvider<List<dynamic>>((ref) async {
@@ -238,7 +334,7 @@ class FieldActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> setProductionSlotProduct({
+  Future<Map<String, dynamic>> assignProductionSlotProduct({
     required String slotId,
     required String productId,
     required int qualityLevel,
@@ -250,7 +346,33 @@ class FieldActionNotifier {
 
     try {
       final response = await _supabase.rpc(
-        'set_production_slot_product',
+        'assign_production_slot_product',
+        params: {
+          'p_player_id': user.id,
+          'p_production_slot_id': slotId,
+          'p_product_id': productId,
+          'p_quality_level': qualityLevel,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> changeProductionSlotProduct({
+    required String slotId,
+    required String productId,
+    required int qualityLevel,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'change_production_slot_product',
         params: {
           'p_player_id': user.id,
           'p_production_slot_id': slotId,
@@ -288,22 +410,15 @@ class FieldActionNotifier {
     }
   }
 
-  Future<List<ProductModel>> getAcceptedProducts(
-    List<String> acceptedProductIds,
-  ) async {
-    if (acceptedProductIds.isEmpty) return const [];
-
-    final response = await _supabase
-        .from('products')
-        .select()
-        .inFilter('id', acceptedProductIds)
-        .order('urun_adi');
-
-    return (response as List<dynamic>)
-        .map(
-          (e) => ProductModel.fromJson(Map<String, dynamic>.from(e as Map)),
-        )
-        .toList();
+  Future<List<SelectableProductionProductModel>> getSelectableProducts({
+    required String ownerKind,
+    required String typeId,
+  }) {
+    return fetchSelectableProductionProducts(
+      supabase: _supabase,
+      ownerKind: ownerKind,
+      typeId: typeId,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getEligibleWarehouseSlotsForInventory({

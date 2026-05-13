@@ -1,20 +1,118 @@
+import 'package:hard_kapitalizm/core/data/production_product_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
+import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_model.dart';
 
-final farmListStreamProvider = StreamProvider.autoDispose<List<FarmModel>>((ref) {
+final farmListStreamProvider =
+    FutureProvider.autoDispose<List<FarmListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
-  if (user == null) return const Stream.empty();
+  if (user == null) return const [];
 
-  return supabase
+  final farmsResponse = await supabase
       .from('farms')
-      .stream(primaryKey: ['id'])
+      .select()
       .eq('player_id', user.id)
-      .map((event) => event.map((e) => FarmModel.fromJson(e)).toList());
+      .order('created_at', ascending: true);
+
+  final farms = (farmsResponse as List<dynamic>)
+      .map((e) => FarmModel.fromJson(Map<String, dynamic>.from(e as Map)))
+      .toList();
+
+  if (farms.isEmpty) return const [];
+
+  final farmTypeIds = farms.map((e) => e.farmTypeId).toSet().toList();
+  final cityIds = farms.map((e) => e.cityId).toSet().toList();
+  final farmIds = farms.map((e) => e.id).toList();
+
+  final farmTypesResponse = await supabase
+      .from('farm_types')
+      .select('id, name, icon')
+      .inFilter('id', farmTypeIds);
+  final citiesResponse = await supabase
+      .from('cities')
+      .select('id, name')
+      .inFilter('id', cityIds);
+  final slotsResponse = await supabase
+      .from('production_slots')
+      .select('id, owner_id, slot_index, product_id, is_active')
+      .eq('owner_kind', 'farm')
+      .inFilter('owner_id', farmIds)
+      .order('slot_index', ascending: true);
+  final outputInventoriesResponse = await supabase
+      .from('production_inventory')
+      .select('owner_id, quantity')
+      .eq('owner_kind', 'farm')
+      .eq('inventory_type', 'output')
+      .inFilter('owner_id', farmIds);
+
+  final slotRows = (slotsResponse as List<dynamic>)
+      .map((e) => Map<String, dynamic>.from(e as Map))
+      .toList();
+  final productIds = slotRows
+      .map((e) => e['product_id']?.toString() ?? '')
+      .where((e) => e.isNotEmpty)
+      .toSet()
+      .toList();
+
+  Map<String, ProductModel> productsById = const {};
+  if (productIds.isNotEmpty) {
+    final productsResponse = await supabase
+        .from('products')
+        .select('id, urun_adi, urun_iconu')
+        .inFilter('id', productIds);
+    productsById = {
+      for (final row in productsResponse as List<dynamic>)
+        (row['id'] ?? '').toString(): ProductModel.fromJson(
+          Map<String, dynamic>.from(row as Map),
+        ),
+    };
+  }
+
+  final farmTypeById = {
+    for (final row in farmTypesResponse as List<dynamic>)
+      (row['id'] ?? '').toString(): Map<String, dynamic>.from(row as Map),
+  };
+  final cityNameById = {
+    for (final row in citiesResponse as List<dynamic>)
+      (row['id'] ?? '').toString(): (row['name'] ?? 'Bilinmeyen Sehir').toString(),
+  };
+
+  final slotsByFarmId = <String, List<FarmSlotPreviewModel>>{};
+  for (final row in slotRows) {
+    final ownerId = (row['owner_id'] ?? '').toString();
+    final productId = row['product_id']?.toString();
+    final slot = FarmSlotPreviewModel.fromJson({
+      ...row,
+      'product': productId != null ? productsById[productId]?.toJson() : null,
+    });
+    slotsByFarmId.putIfAbsent(ownerId, () => []).add(slot);
+  }
+
+  final outputByFarmId = <String, int>{};
+  for (final row in outputInventoriesResponse as List<dynamic>) {
+    final map = Map<String, dynamic>.from(row as Map);
+    final ownerId = (map['owner_id'] ?? '').toString();
+    final quantity = (map['quantity'] as num?)?.toInt() ?? 0;
+    outputByFarmId[ownerId] = (outputByFarmId[ownerId] ?? 0) + quantity;
+  }
+
+  return farms.map((farm) {
+    final type = farmTypeById[farm.farmTypeId];
+    return FarmListItemModel(
+      farm: farm,
+      cityName: cityNameById[farm.cityId] ?? 'Bilinmeyen Sehir',
+      farmTypeName: (type?['name'] ?? 'Bilinmeyen Tarla').toString(),
+      farmTypeIcon: (type?['icon'] ?? 'farm.webp').toString(),
+      outputStockQuantity: outputByFarmId[farm.id] ?? 0,
+      slots: slotsByFarmId[farm.id] ?? const [],
+    );
+  }).toList();
 });
 
 final farmTypesProvider = FutureProvider<List<dynamic>>((ref) async {
@@ -58,85 +156,45 @@ final farmDetailProvider = FutureProvider.family<FarmDetailModel, String>((
     throw Exception('Kullanici girisi yapilmamis.');
   }
 
-  final farmResponse = await supabase
-      .from('farms')
-      .select('*, city:cities(name)')
-      .eq('id', farmId)
-      .eq('player_id', user.id)
-      .single();
+  final response = await supabase.rpc(
+    'get_farm_detail',
+    params: {
+      'p_player_id': user.id,
+      'p_farm_id': farmId,
+    },
+  );
 
-  final farm = FarmModel.fromJson(farmResponse);
-
-  final farmTypeResponse = await supabase
-      .from('farm_types')
-      .select()
-      .eq('id', farm.farmTypeId)
-      .single();
-
-  final slotsResponse = await supabase
-      .from('production_slots')
-      .select()
-      .eq('owner_kind', 'farm')
-      .eq('owner_id', farmId)
-      .order('slot_index');
-
-  final inventoriesResponse = await supabase
-      .from('production_inventory')
-      .select()
-      .eq('owner_kind', 'farm')
-      .eq('owner_id', farmId);
-
-  final slotRows = (slotsResponse as List<dynamic>)
-      .map((e) => Map<String, dynamic>.from(e as Map))
-      .toList();
-  final inventoryRows = (inventoriesResponse as List<dynamic>)
-      .map((e) => Map<String, dynamic>.from(e as Map))
-      .toList();
-
-  final productIds = <String>{
-    ...slotRows
-        .map((e) => e['product_id']?.toString() ?? '')
-        .where((e) => e.isNotEmpty),
-    ...inventoryRows
-        .map((e) => e['product_id']?.toString() ?? '')
-        .where((e) => e.isNotEmpty),
-  }.toList();
-
-  Map<String, ProductModel> productsById = const {};
-  if (productIds.isNotEmpty) {
-    final productResponse = await supabase
-        .from('products')
-        .select()
-        .inFilter('id', productIds);
-    productsById = {
-      for (final row in productResponse as List<dynamic>)
-        (row['id'] ?? '').toString(): ProductModel.fromJson(
-          Map<String, dynamic>.from(row as Map),
-        ),
-    };
+  final responseMap = Map<String, dynamic>.from(response as Map);
+  if (responseMap['success'] != true) {
+    throw Exception(
+      responseMap['message'] ?? 'Tarla detaylari alinirken hata olustu.',
+    );
   }
+
+  final farmPayload = Map<String, dynamic>.from(
+    responseMap['farm'] as Map,
+  );
+  final farm = FarmModel.fromJson(
+    Map<String, dynamic>.from(farmPayload['farm'] as Map),
+  );
+  final farmType = FarmTypeDetailModel.fromJson(
+    Map<String, dynamic>.from(farmPayload['farm_type'] as Map),
+  );
+  final slotRows = (farmPayload['slots'] as List<dynamic>? ?? const [])
+      .map((e) => Map<String, dynamic>.from(e as Map))
+      .toList();
+  final inventoryRows =
+      (farmPayload['inventories'] as List<dynamic>? ?? const [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
 
   return FarmDetailModel(
     farm: farm,
-    farmType: FarmTypeDetailModel.fromJson(farmTypeResponse),
-    cityName: (farmResponse['city']?['name'] ?? 'Bilinmeyen Sehir').toString(),
-    slots: slotRows
-        .map((e) {
-          final productId = e['product_id']?.toString();
-          return FarmProductionSlotModel.fromJson({
-            ...e,
-            'product': productId != null ? productsById[productId]?.toJson() : null,
-          });
-        })
-        .toList(),
+    farmType: farmType,
+    cityName: (farmPayload['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+    slots: slotRows.map(FarmProductionSlotModel.fromJson).toList(),
     inventories: inventoryRows
-        .map((e) {
-          final productId = e['product_id']?.toString();
-          return FarmProductionInventoryModel.fromJson({
-            ...e,
-            'product': productId != null ? productsById[productId]?.toJson() : null,
-          });
-        })
+        .map(FarmProductionInventoryModel.fromJson)
         .toList(),
   );
 });
@@ -236,7 +294,7 @@ class FarmActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> setProductionSlotProduct({
+  Future<Map<String, dynamic>> assignProductionSlotProduct({
     required String slotId,
     required String productId,
     required int qualityLevel,
@@ -248,7 +306,33 @@ class FarmActionNotifier {
 
     try {
       final response = await _supabase.rpc(
-        'set_production_slot_product',
+        'assign_production_slot_product',
+        params: {
+          'p_player_id': user.id,
+          'p_production_slot_id': slotId,
+          'p_product_id': productId,
+          'p_quality_level': qualityLevel,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> changeProductionSlotProduct({
+    required String slotId,
+    required String productId,
+    required int qualityLevel,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'change_production_slot_product',
         params: {
           'p_player_id': user.id,
           'p_production_slot_id': slotId,
@@ -286,20 +370,15 @@ class FarmActionNotifier {
     }
   }
 
-  Future<List<ProductModel>> getAcceptedProducts(
-    List<String> acceptedProductIds,
-  ) async {
-    if (acceptedProductIds.isEmpty) return const [];
-
-    final response = await _supabase
-        .from('products')
-        .select()
-        .inFilter('id', acceptedProductIds)
-        .order('urun_adi');
-
-    return (response as List<dynamic>)
-        .map((e) => ProductModel.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
+  Future<List<SelectableProductionProductModel>> getSelectableProducts({
+    required String ownerKind,
+    required String typeId,
+  }) {
+    return fetchSelectableProductionProducts(
+      supabase: _supabase,
+      ownerKind: ownerKind,
+      typeId: typeId,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getEligibleWarehouseSlotsForInventory({

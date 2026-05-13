@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -45,41 +45,63 @@ class FarmDetailScreen extends ConsumerWidget {
                     await ref.read(farmDetailProvider(farmId).future);
                   },
                   child: ListView(
-                    padding: EdgeInsets.all(12.w),
+                    padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 28.h),
                     children: [
-                      _buildHeader(detail),
-                      SizedBox(height: 12.h),
-                      _buildSummary(detail),
-                      SizedBox(height: 12.h),
-                      _buildActionRow(context, ref, detail),
+                      _buildHero(detail),
                       SizedBox(height: 14.h),
-                      _buildSectionTitle('Uretim Slotlari'),
-                      SizedBox(height: 8.h),
+                      _buildOverview(detail),
+                      SizedBox(height: 14.h),
+                      _buildQuickActions(context, ref, detail),
+                      SizedBox(height: 18.h),
+                      _buildSectionHeader(
+                        'Uretim Slotlari',
+                        'Urun secimi, kalite ve aktiflik buradan yonetilir.',
+                      ),
+                      SizedBox(height: 10.h),
                       if (detail.slots.isEmpty)
-                        _buildEmptyCard('Bu tarlada henuz uretim slotu yok.')
+                        _buildEmptyCard('Bu tarlada henuz aktif uretim slotu yok.')
                       else
                         ...detail.slots.map(
                           (slot) => _buildSlotCard(context, ref, detail, slot),
                         ),
-                      SizedBox(height: 14.h),
-                      _buildSectionTitle('Input Stoklari'),
-                      SizedBox(height: 8.h),
-                      if (detail.inputInventories.isEmpty)
-                        _buildEmptyCard('Hammadde input kaydi yok.')
-                      else
-                        ...detail.inputInventories.map(
-                          (inv) => _buildInventoryCard(context, ref, detail, inv),
+                      SizedBox(height: 18.h),
+                      _buildSectionHeader(
+                        'Input Akisi',
+                        'Depodan hammaddeleri cekerek uretimi besle.',
+                      ),
+                      SizedBox(height: 10.h),
+                      _buildInventoryPanel(
+                        context: context,
+                        ref: ref,
+                        detail: detail,
+                        title: 'Input Stoklari',
+                        caption: 'Maks kapasite: ${detail.farm.inputCapacity}',
+                        progressColor: AppColors.blue,
+                        progressValue: _inventoryRatio(
+                          _calculateUsedCapacity(detail.inputInventories),
+                          detail.farm.inputCapacity,
                         ),
-                      SizedBox(height: 14.h),
-                      _buildSectionTitle('Output Stoklari'),
-                      SizedBox(height: 8.h),
-                      if (detail.outputInventories.isEmpty)
-                        _buildEmptyCard('Uretilmis output kaydi yok.')
-                      else
-                        ...detail.outputInventories.map(
-                          (inv) => _buildInventoryCard(context, ref, detail, inv),
+                        inventories: detail.inputInventories,
+                      ),
+                      SizedBox(height: 18.h),
+                      _buildSectionHeader(
+                        'Output Akisi',
+                        'Uretilen stoklari depoya aktar ve kapasiteyi bosalt.',
+                      ),
+                      SizedBox(height: 10.h),
+                      _buildInventoryPanel(
+                        context: context,
+                        ref: ref,
+                        detail: detail,
+                        title: 'Output Stoklari',
+                        caption: 'Maks kapasite: ${detail.farm.outputCapacity}',
+                        progressColor: AppColors.green,
+                        progressValue: _inventoryRatio(
+                          _calculateUsedCapacity(detail.outputInventories),
+                          detail.farm.outputCapacity,
                         ),
-                      SizedBox(height: 28.h),
+                        inventories: detail.outputInventories,
+                      ),
                     ],
                   ),
                 ),
@@ -91,60 +113,123 @@ class FarmDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(FarmDetailModel detail) {
+  Widget _buildHero(FarmDetailModel detail) {
     return Container(
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 72.w,
-            height: 72.w,
-            padding: EdgeInsets.all(10.w),
-            decoration: BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.circular(14.r),
-            ),
-            child: CachedAssetImage(
-              fileName: detail.farmType.icon,
-              fit: BoxFit.contain,
-            ),
+        borderRadius: BorderRadius.circular(24.r),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.cardBgLight,
+            AppColors.cardBg,
+            AppColors.background,
+          ],
+        ),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.32),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  detail.farm.name,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17.sp,
-                    fontWeight: FontWeight.bold,
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 84.w,
+                height: 84.w,
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(18.r),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.25),
                   ),
                 ),
-                SizedBox(height: 4.h),
-                Text(
-                  '${detail.cityName} | ${detail.farmType.name}',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12.sp,
-                  ),
+                child: CachedAssetImage(
+                  fileName: detail.farmType.icon,
+                  fit: BoxFit.contain,
                 ),
-                SizedBox(height: 8.h),
-                Row(
+              ),
+              SizedBox(width: 14.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeaderChip('Lv. ${detail.farm.level}', AppColors.gold),
-                    SizedBox(width: 8.w),
-                    _buildHeaderChip(
-                      detail.farm.isActive ? 'AKTIF' : 'PASIF',
-                      detail.farm.isActive ? AppColors.green : AppColors.red,
+                    Text(
+                      detail.farm.name,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      '${detail.cityName} | ${detail.farmType.name}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    Wrap(
+                      spacing: 8.w,
+                      runSpacing: 8.h,
+                      children: [
+                        _buildTag('Lv. ${detail.farm.level}', AppColors.gold),
+                        _buildTag(
+                          detail.farm.isActive ? 'AKTIF URETIM' : 'PASIF URETIM',
+                          detail.farm.isActive ? AppColors.green : AppColors.red,
+                        ),
+                        _buildTag(
+                          '${detail.farm.currentSlotCount}/${detail.farm.maxSlotCount} SLOT',
+                          AppColors.blue,
+                        ),
+                      ],
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 14.h),
+          Container(
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(18.r),
+              border: Border.all(color: AppColors.border.withValues(alpha: 0.24)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildHeroStat(
+                    'Input',
+                    '${_calculateUsedCapacity(detail.inputInventories)}/${detail.farm.inputCapacity}',
+                    AppColors.blue,
+                  ),
+                ),
+                Container(width: 1, height: 40.h, color: AppColors.border),
+                Expanded(
+                  child: _buildHeroStat(
+                    'Output',
+                    '${_calculateUsedCapacity(detail.outputInventories)}/${detail.farm.outputCapacity}',
+                    AppColors.green,
+                  ),
+                ),
+                Container(width: 1, height: 40.h, color: AppColors.border),
+                Expanded(
+                  child: _buildHeroStat(
+                    'Tip',
+                    detail.farmType.name,
+                    AppColors.gold,
+                  ),
                 ),
               ],
             ),
@@ -154,9 +239,337 @@ class FarmDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderChip(String text, Color color) {
+  Widget _buildHeroStat(String label, String value, Color color) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverview(FarmDetailModel detail) {
+    final inputUsed = _calculateUsedCapacity(detail.inputInventories);
+    final outputUsed = _calculateUsedCapacity(detail.outputInventories);
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildMetricCard(
+            title: 'Input Kapasitesi',
+            value: '$inputUsed/${detail.farm.inputCapacity}',
+            ratio: _inventoryRatio(inputUsed, detail.farm.inputCapacity),
+            color: AppColors.blue,
+            icon: Icons.south_west,
+          ),
+        ),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: _buildMetricCard(
+            title: 'Output Kapasitesi',
+            value: '$outputUsed/${detail.farm.outputCapacity}',
+            ratio: _inventoryRatio(outputUsed, detail.farm.outputCapacity),
+            color: AppColors.green,
+            icon: Icons.north_east,
+          ),
+        ),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: _buildMetricCard(
+            title: 'Aktif Slot',
+            value: '${detail.farm.currentSlotCount}/${detail.farm.maxSlotCount}',
+            ratio: _inventoryRatio(
+              detail.farm.currentSlotCount,
+              detail.farm.maxSlotCount,
+            ),
+            color: AppColors.gold,
+            icon: Icons.grid_view_rounded,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard({
+    required String title,
+    required String value,
+    required double ratio,
+    required Color color,
+    required IconData icon,
+  }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(6.w),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(icon, color: color, size: 14.sp),
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10.sp,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 13.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          _buildProgressBar(ratio: ratio, color: color, label: '%${(ratio * 100).round()}'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(
+    BuildContext context,
+    WidgetRef ref,
+    FarmDetailModel detail,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildActionButton(
+              'Slot Ac',
+              'Yeni uretim noktasi ekle',
+              Icons.add_box_outlined,
+              AppColors.gold,
+              () => _handleAddSlot(context, ref, detail),
+            ),
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: _buildActionButton(
+              'Yenile',
+              'Tum stoklari yeniden hesapla',
+              Icons.refresh_rounded,
+              AppColors.blue,
+              () => ref.invalidate(farmDetailProvider(detail.farm.id)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    String label,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14.r),
+      child: Container(
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 18.sp),
+            SizedBox(height: 10.h),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 10.sp,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 11.sp,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInventoryPanel({
+    required BuildContext context,
+    required WidgetRef ref,
+    required FarmDetailModel detail,
+    required String title,
+    required String caption,
+    required Color progressColor,
+    required double progressValue,
+    required List<FarmProductionInventoryModel> inventories,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                caption,
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 10.sp,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          _buildProgressBar(
+            ratio: progressValue,
+            color: progressColor,
+            label: '%${(progressValue * 100).round()} dolu',
+          ),
+          SizedBox(height: 12.h),
+          if (inventories.isEmpty)
+            _buildEmptyCard('Bu alanda stok kaydi bulunmuyor.')
+          else
+            ...inventories.map(
+              (inv) => _buildInventoryCard(context, ref, detail, inv),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressBar({
+    required double ratio,
+    required Color color,
+    required String label,
+  }) {
+    return Container(
+      height: 16.h,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white10,
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.25)),
+      ),
+      child: Stack(
+        children: [
+          FractionallySizedBox(
+            widthFactor: ratio.clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999.r),
+                gradient: LinearGradient(
+                  colors: [color.withValues(alpha: 0.55), color],
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 8.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTag(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999.r),
@@ -173,176 +586,12 @@ class FarmDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSummary(FarmDetailModel detail) {
-    final inputUsed = _calculateUsedCapacity(detail.inputInventories);
-    final outputUsed = _calculateUsedCapacity(detail.outputInventories);
-    final inputRatio = detail.farm.inputCapacity > 0
-        ? (inputUsed / detail.farm.inputCapacity).clamp(0.0, 1.0)
-        : 0.0;
-    final outputRatio = detail.farm.outputCapacity > 0
-        ? (outputUsed / detail.farm.outputCapacity).clamp(0.0, 1.0)
-        : 0.0;
-
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildSummaryItem(
-            'Slot',
-            '${detail.farm.currentSlotCount}/${detail.farm.maxSlotCount}',
-          ),
-          _buildSummaryItem(
-            'Input',
-            '$inputUsed/${detail.farm.inputCapacity}',
-            progress: inputRatio,
-            progressColor: AppColors.blue,
-          ),
-          _buildSummaryItem(
-            'Output',
-            '$outputUsed/${detail.farm.outputCapacity}',
-            progress: outputRatio,
-            progressColor: AppColors.green,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem(
-    String label,
-    String value, {
-    double? progress,
-    Color? progressColor,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
-        ),
-        SizedBox(height: 4.h),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 13.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        if (progress != null) ...[
-          SizedBox(height: 5.h),
-          Container(
-            width: 72.w,
-            height: 5.h,
-            decoration: BoxDecoration(
-              color: Colors.white10,
-              borderRadius: BorderRadius.circular(999.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: progressColor ?? AppColors.gold,
-                  borderRadius: BorderRadius.circular(999.r),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildActionRow(
-    BuildContext context,
-    WidgetRef ref,
-    FarmDetailModel detail,
-  ) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildActionButton(
-            'Slot Ac',
-            Icons.add_box_outlined,
-            AppColors.gold,
-            () => _handleAddSlot(context, ref, detail),
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: _buildActionButton(
-            'Yenile',
-            Icons.refresh,
-            AppColors.blue,
-            () {
-              ref.invalidate(farmDetailProvider(detail.farm.id));
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14.r),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: color.withValues(alpha: 0.45)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 16.sp),
-            SizedBox(width: 8.w),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 15.sp,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
   Widget _buildEmptyCard(String message) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
       ),
       child: Text(
@@ -358,93 +607,117 @@ class FarmDetailScreen extends ConsumerWidget {
     FarmDetailModel detail,
     FarmProductionSlotModel slot,
   ) {
+    final slotActiveColor = slot.isActive ? AppColors.green : AppColors.red;
+
     return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
-      padding: EdgeInsets.all(12.w),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
         color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(20.r),
         border: Border.all(
-          color: slot.isActive ? AppColors.borderGold : AppColors.border,
+          color: slot.isActive
+              ? AppColors.borderGold.withValues(alpha: 0.45)
+              : AppColors.border.withValues(alpha: 0.45),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!slot.isEmpty && slot.product?.urunIconu != null) ...[
-                Container(
-                  width: 42.w,
-                  height: 42.w,
-                  padding: EdgeInsets.all(6.w),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: CachedAssetImage(
-                    fileName: slot.product!.urunIconu,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                SizedBox(width: 10.w),
-              ],
-              Expanded(
-                child: Text(
-                  'Slot ${slot.slotIndex}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
+              Container(
+                width: 58.w,
+                height: 58.w,
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(14.r),
+                  border: Border.all(
+                    color: slot.isEmpty
+                        ? AppColors.border.withValues(alpha: 0.35)
+                        : AppColors.gold.withValues(alpha: 0.25),
                   ),
                 ),
+                child: slot.isEmpty || slot.product?.urunIconu == null
+                    ? Icon(
+                        Icons.crop_square_rounded,
+                        color: AppColors.textMuted,
+                        size: 24.sp,
+                      )
+                    : CachedAssetImage(
+                        fileName: slot.product!.urunIconu,
+                        fit: BoxFit.contain,
+                      ),
               ),
-              _buildHeaderChip(
-                slot.isActive ? 'AKTIF' : 'PASIF',
-                slot.isActive ? AppColors.green : AppColors.red,
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Slot ${slot.slotIndex}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        _buildTag(
+                          slot.isActive ? 'AKTIF' : 'PASIF',
+                          slotActiveColor,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      slot.isEmpty
+                          ? 'Bu slotta henuz urun secilmedi.'
+                          : '${slot.product?.urunAdi ?? slot.productId} | Kalite ${slot.qualityLevel}',
+                      style: TextStyle(
+                        color: slot.isEmpty
+                            ? AppColors.textMuted
+                            : AppColors.textPrimary,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Wrap(
+                      spacing: 8.w,
+                      runSpacing: 8.h,
+                      children: [
+                        _buildMiniInfo(
+                          Icons.bolt,
+                          'Boost x${slot.boostMultiplier.toStringAsFixed(2)}',
+                          AppColors.gold,
+                        ),
+                        _buildMiniInfo(
+                          Icons.schedule,
+                          '10 dk: ${_estimateProductionPerTick(slot)}',
+                          AppColors.blue,
+                        ),
+                        _buildMiniInfo(
+                          Icons.timeline,
+                          'Saatlik: ${_estimateProductionPerHour(slot)}',
+                          AppColors.green,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          SizedBox(height: 8.h),
-          Text(
-            slot.isEmpty
-                ? 'Urun secilmemis'
-                : '${slot.product?.urunAdi ?? slot.productId} | Kalite ${slot.qualityLevel}',
-            style: TextStyle(
-              color: slot.isEmpty ? AppColors.textMuted : AppColors.textPrimary,
-              fontSize: 12.sp,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            'Boost: x${slot.boostMultiplier.toStringAsFixed(2)}',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-          ),
-          if (!slot.isEmpty) ...[
-            SizedBox(height: 4.h),
-            Text(
-              '10 dk tahmini: ${_estimateProductionPerTick(slot)} adet',
-              style: TextStyle(
-                color: AppColors.gold.withValues(alpha: 0.9),
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              'Saatlik tahmini: ${_estimateProductionPerHour(slot)} adet',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
-              ),
-            ),
-          ],
-          SizedBox(height: 10.h),
+          SizedBox(height: 12.h),
           Row(
             children: [
               Expanded(
                 child: _buildMiniAction(
-                  'Urun Sec',
+                  slot.isEmpty ? 'Urun Sec' : 'Urun Degistir',
                   AppColors.gold,
                   () => _showSlotProductDialog(context, ref, detail, slot),
                 ),
@@ -464,6 +737,31 @@ class FarmDetailScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildMiniInfo(IconData icon, String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 12.sp),
+          SizedBox(width: 6.w),
+          Text(
+            text,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInventoryCard(
     BuildContext context,
     WidgetRef ref,
@@ -473,6 +771,11 @@ class FarmDetailScreen extends ConsumerWidget {
     final title = inventory.product?.urunAdi.isNotEmpty == true
         ? inventory.product!.urunAdi
         : inventory.productId;
+    final maxCapacity = inventory.isInput
+        ? detail.farm.inputCapacity
+        : detail.farm.outputCapacity;
+    final ratio = _inventoryRatio(inventory.quantity, maxCapacity);
+    final color = inventory.isInput ? AppColors.blue : AppColors.green;
 
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
@@ -487,71 +790,57 @@ class FarmDetailScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              if (inventory.product?.urunIconu != null) ...[
-                Container(
-                  width: 40.w,
-                  height: 40.w,
-                  padding: EdgeInsets.all(6.w),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: CachedAssetImage(
-                    fileName: inventory.product!.urunIconu,
-                    fit: BoxFit.contain,
-                  ),
+              Container(
+                width: 46.w,
+                height: 46.w,
+                padding: EdgeInsets.all(6.w),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
-                SizedBox(width: 10.w),
-              ],
+                child: inventory.product?.urunIconu != null
+                    ? CachedAssetImage(
+                        fileName: inventory.product!.urunIconu,
+                        fit: BoxFit.contain,
+                      )
+                    : Icon(Icons.inventory_2, color: color, size: 18.sp),
+              ),
+              SizedBox(width: 10.w),
               Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 3.h),
+                    Text(
+                      'Kalite ${inventory.qualityLevel} | Maliyet ${inventory.cost.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              _buildHeaderChip(
+              _buildTag(
                 inventory.isInput ? 'INPUT' : 'OUTPUT',
-                inventory.isInput ? AppColors.blue : AppColors.green,
+                color,
               ),
             ],
           ),
-          SizedBox(height: 6.h),
-          Text(
-            'Kalite ${inventory.qualityLevel} | Miktar ${inventory.quantity} | Pending ${inventory.pendingQuantity.toStringAsFixed(2)}',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-          ),
-          SizedBox(height: 4.h),
-          Container(
-            height: 6.h,
-            decoration: BoxDecoration(
-              color: Colors.white10,
-              borderRadius: BorderRadius.circular(999.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: inventory.isInput
-                  ? (detail.farm.inputCapacity > 0
-                        ? (inventory.quantity / detail.farm.inputCapacity).clamp(0.0, 1.0)
-                        : 0.0)
-                  : (detail.farm.outputCapacity > 0
-                        ? (inventory.quantity / detail.farm.outputCapacity).clamp(0.0, 1.0)
-                        : 0.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: inventory.isInput ? AppColors.blue : AppColors.green,
-                  borderRadius: BorderRadius.circular(999.r),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: 6.h),
-          Text(
-            'Maliyet: ${inventory.cost.toStringAsFixed(2)}',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+          SizedBox(height: 10.h),
+          _buildProgressBar(
+            ratio: ratio,
+            color: color,
+            label:
+                'Miktar ${inventory.quantity} | Pending ${inventory.pendingQuantity.toStringAsFixed(1)}',
           ),
           SizedBox(height: 10.h),
           _buildMiniAction(
@@ -573,17 +862,18 @@ class FarmDetailScreen extends ConsumerWidget {
   Widget _buildMiniAction(String label, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10.r),
+      borderRadius: BorderRadius.circular(12.r),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 9.h),
+        padding: EdgeInsets.symmetric(vertical: 11.h),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10.r),
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(color: color.withValues(alpha: 0.45)),
         ),
         child: Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: color,
             fontSize: 11.sp,
@@ -599,11 +889,13 @@ class FarmDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     FarmDetailModel detail,
   ) async {
-    final result = await ref.read(farmActionProvider).addProductionSlot(detail.farm.id);
+    final result = await ref
+        .read(farmActionProvider)
+        .addProductionSlot(detail.farm.id);
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(farmDetailProvider(detail.farm.id));
+      await ref.refresh(farmDetailProvider(detail.farm.id).future);
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -634,7 +926,7 @@ class FarmDetailScreen extends ConsumerWidget {
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(farmDetailProvider(detail.farm.id));
+      await ref.refresh(farmDetailProvider(detail.farm.id).future);
       return;
     }
 
@@ -652,9 +944,24 @@ class FarmDetailScreen extends ConsumerWidget {
     FarmDetailModel detail,
     FarmProductionSlotModel slot,
   ) async {
-    final products = await ref
-        .read(farmActionProvider)
-        .getAcceptedProducts(detail.farmType.acceptedProductIds);
+    List<SelectableProductionProductModel> products;
+    try {
+      products = await ref
+          .read(farmActionProvider)
+          .getSelectableProducts(
+            ownerKind: 'farm',
+            typeId: detail.farmType.id,
+          );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: e.toString(),
+        type: SnackbarType.error,
+      );
+      return;
+    }
 
     if (!context.mounted) return;
 
@@ -666,6 +973,7 @@ class FarmDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
       builder: (sheetContext) => _buildProductSelectionSheet(
+        context,
         sheetContext,
         ref,
         detail,
@@ -676,12 +984,19 @@ class FarmDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildProductSelectionSheet(
+    BuildContext parentContext,
     BuildContext context,
     WidgetRef ref,
     FarmDetailModel detail,
     FarmProductionSlotModel slot,
-    List<ProductModel> products,
+    List<SelectableProductionProductModel> products,
   ) {
+    final disabledProductIds = detail.slots
+        .where((otherSlot) => otherSlot.id != slot.id)
+        .map((otherSlot) => otherSlot.productId ?? '')
+        .where((productId) => productId.isNotEmpty)
+        .toSet();
+
     return Container(
       padding: EdgeInsets.all(16.w),
       constraints: BoxConstraints(
@@ -700,122 +1015,128 @@ class FarmDetailScreen extends ConsumerWidget {
           ),
           SizedBox(height: 12.h),
           Expanded(
-            child: ListView.separated(
-              itemCount: products.length,
-              separatorBuilder: (_, __) => SizedBox(height: 8.h),
-              itemBuilder: (_, index) {
-                final product = products[index];
-                return ListTile(
-                  tileColor: Colors.white.withValues(alpha: 0.04),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  leading: SizedBox(
-                    width: 40.w,
-                    height: 40.w,
-                    child: CachedAssetImage(
-                      fileName: product.urunIconu,
-                      fit: BoxFit.contain,
+            child: products.isEmpty
+                ? Center(
+                    child: Text(
+                      'Bu tarla turu icin uygun urun bulunamadi.',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
+                  )
+                : ListView.separated(
+                    itemCount: products.length,
+                    separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                    itemBuilder: (_, index) {
+                      final selectableProduct = products[index];
+                      final product = selectableProduct.product;
+                      final isDisabled = disabledProductIds.contains(product.id);
+                      return ListTile(
+                        enabled: !isDisabled,
+                        tileColor: isDisabled
+                            ? Colors.white.withValues(alpha: 0.02)
+                            : Colors.white.withValues(alpha: 0.04),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        leading: SizedBox(
+                          width: 40.w,
+                          height: 40.w,
+                          child: Opacity(
+                            opacity: isDisabled ? 0.4 : 1,
+                            child: CachedAssetImage(
+                              fileName: product.urunIconu,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          product.urunAdi,
+                          style: TextStyle(
+                            color: isDisabled
+                                ? AppColors.textMuted
+                                : Colors.white,
+                          ),
+                        ),
+                        subtitle: Text(
+                          isDisabled
+                              ? 'Bu urun baska bir slotta kullaniliyor'
+                              : 'Maks kalite: ${selectableProduct.maxQualityLevel} | Saatlik uretim: ${product.uretimAdedi}',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                        trailing: Icon(
+                          isDisabled ? Icons.block : Icons.chevron_right,
+                          color: isDisabled
+                              ? AppColors.textMuted
+                              : AppColors.gold,
+                        ),
+                        onTap: isDisabled
+                            ? null
+                            : () async {
+                          Navigator.pop(context);
+                          await _selectSlotProduct(
+                            parentContext,
+                            ref,
+                            detail,
+                            slot,
+                            selectableProduct,
+                          );
+                        },
+                      );
+                    },
                   ),
-                  title: Text(
-                    product.urunAdi,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
-                    'Saatlik uretim: ${product.uretimAdedi}',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: AppColors.gold,
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showQualitySelectionDialog(context, ref, detail, slot, product);
-                  },
-                );
-              },
-            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _showQualitySelectionDialog(
+  Future<void> _selectSlotProduct(
     BuildContext context,
     WidgetRef ref,
     FarmDetailModel detail,
     FarmProductionSlotModel slot,
-    ProductModel product,
+    SelectableProductionProductModel selectableProduct,
   ) async {
-    int selectedQuality = slot.qualityLevel > 0 ? slot.qualityLevel : 1;
+    final product = selectableProduct.product;
+    final action = ref.read(farmActionProvider);
+    final result = slot.isEmpty
+        ? await action.assignProductionSlotProduct(
+            slotId: slot.id,
+            productId: product.id,
+            qualityLevel: selectableProduct.maxQualityLevel,
+          )
+        : await action.changeProductionSlotProduct(
+            slotId: slot.id,
+            productId: product.id,
+            qualityLevel: selectableProduct.maxQualityLevel,
+          );
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          backgroundColor: AppColors.background,
-          title: Text(
-            'Kalite Sec',
-            style: TextStyle(color: Colors.white, fontSize: 18.sp),
-          ),
-          content: DropdownButtonFormField<int>(
-            value: selectedQuality,
-            dropdownColor: AppColors.cardBg,
-            style: const TextStyle(color: Colors.white),
-            items: List.generate(
-              5,
-              (index) => DropdownMenuItem(
-                value: index + 1,
-                child: Text('Kalite ${index + 1}'),
-              ),
-            ),
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => selectedQuality = value);
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Iptal'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-              onPressed: () async {
-                final result = await ref.read(farmActionProvider).setProductionSlotProduct(
-                  slotId: slot.id,
-                  productId: product.id,
-                  qualityLevel: selectedQuality,
-                );
+    if (!context.mounted) return;
+    if (result['success'] == true) {
+      await ref.refresh(farmDetailProvider(detail.farm.id).future);
+      AppSnackbar.show(
+        context,
+        title: 'Basarili',
+        message:
+            slot.isEmpty
+                ? '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} ile eklendi.'
+                : '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} olarak degistirildi.',
+        type: SnackbarType.success,
+      );
+      return;
+    }
 
-                if (!context.mounted) return;
-                if (result['success'] == true) {
-                  Navigator.pop(dialogContext);
-                  ref.invalidate(farmDetailProvider(detail.farm.id));
-                  return;
-                }
-
-                AppSnackbar.show(
-                  context,
-                  title: 'Hata',
-                  message: result['message'] ?? 'Urun secilemedi.',
-                  type: SnackbarType.error,
-                );
-              },
-              child: const Text(
-                'Kaydet',
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-          ],
-        ),
-      ),
+    AppSnackbar.show(
+      context,
+      title: 'Hata',
+      message: result['message'] ?? 'Urun secilemedi.',
+      type: SnackbarType.error,
     );
   }
 
@@ -825,10 +1146,12 @@ class FarmDetailScreen extends ConsumerWidget {
     FarmDetailModel detail,
     FarmProductionInventoryModel inventory,
   ) async {
-    final warehouses = await ref.read(farmActionProvider).getEligibleWarehouseSlotsForInventory(
-      inventory: inventory,
-      cityId: detail.farm.cityId,
-    );
+    final warehouses = await ref
+        .read(farmActionProvider)
+        .getEligibleWarehouseSlotsForInventory(
+          inventory: inventory,
+          cityId: detail.farm.cityId,
+        );
 
     if (!context.mounted) return;
     if (warehouses.isEmpty) {
@@ -865,7 +1188,8 @@ class FarmDetailScreen extends ConsumerWidget {
             ),
             SizedBox(height: 12.h),
             ...warehouses.map((warehouse) {
-              final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
+              final slots =
+                  (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
               return Column(
                 children: slots.map((slotMap) {
                   final slot = Map<String, dynamic>.from(slotMap as Map);
@@ -906,13 +1230,16 @@ class FarmDetailScreen extends ConsumerWidget {
                                 );
                             if (!context.mounted) return;
                             if (result['success'] == true) {
-                              ref.invalidate(farmDetailProvider(detail.farm.id));
+                              await ref.refresh(
+                                farmDetailProvider(detail.farm.id).future,
+                              );
                               return;
                             }
                             AppSnackbar.show(
                               context,
                               title: 'Hata',
-                              message: result['message'] ?? 'Transfer basarisiz oldu.',
+                              message:
+                                  result['message'] ?? 'Transfer basarisiz oldu.',
                               type: SnackbarType.error,
                             );
                           },
@@ -1010,13 +1337,16 @@ class FarmDetailScreen extends ConsumerWidget {
                             );
                         if (!context.mounted) return;
                         if (result['success'] == true) {
-                          ref.invalidate(farmDetailProvider(detail.farm.id));
+                          await ref.refresh(
+                            farmDetailProvider(detail.farm.id).future,
+                          );
                           return;
                         }
                         AppSnackbar.show(
                           context,
                           title: 'Hata',
-                          message: result['message'] ?? 'Transfer basarisiz oldu.',
+                          message:
+                              result['message'] ?? 'Transfer basarisiz oldu.',
                           type: SnackbarType.error,
                         );
                       },
@@ -1044,7 +1374,10 @@ class FarmDetailScreen extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.background,
-        title: Text(title, style: TextStyle(color: Colors.white, fontSize: 18.sp)),
+        title: Text(
+          title,
+          style: TextStyle(color: Colors.white, fontSize: 18.sp),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1104,6 +1437,11 @@ class FarmDetailScreen extends ConsumerWidget {
       total += inventory.quantity;
     }
     return total;
+  }
+
+  double _inventoryRatio(int current, int capacity) {
+    if (capacity <= 0) return 0.0;
+    return (current / capacity).clamp(0.0, 1.0);
   }
 
   String _estimateProductionPerTick(FarmProductionSlotModel slot) {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -454,7 +454,7 @@ class FieldDetailScreen extends ConsumerWidget {
             children: [
               Expanded(
                 child: _buildMiniAction(
-                  'Urun Sec',
+                  slot.isEmpty ? 'Urun Sec' : 'Urun Degistir',
                   AppColors.gold,
                   () => _showSlotProductDialog(context, ref, detail, slot),
                 ),
@@ -667,9 +667,24 @@ class FieldDetailScreen extends ConsumerWidget {
     FieldDetailModel detail,
     ProductionSlotModel slot,
   ) async {
-    final products = await ref
-        .read(fieldActionProvider)
-        .getAcceptedProducts(detail.fieldType.acceptedProductIds);
+    List<SelectableProductionProductModel> products;
+    try {
+      products = await ref
+          .read(fieldActionProvider)
+          .getSelectableProducts(
+            ownerKind: 'field',
+            typeId: detail.fieldType.id,
+          );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: e.toString(),
+        type: SnackbarType.error,
+      );
+      return;
+    }
 
     if (!context.mounted) return;
 
@@ -697,8 +712,14 @@ class FieldDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     FieldDetailModel detail,
     ProductionSlotModel slot,
-    List<ProductModel> products,
+    List<SelectableProductionProductModel> products,
   ) {
+    final disabledProductIds = detail.slots
+        .where((otherSlot) => otherSlot.id != slot.id)
+        .map((otherSlot) => otherSlot.productId ?? '')
+        .where((productId) => productId.isNotEmpty)
+        .toSet();
+
     return Container(
       padding: EdgeInsets.all(16.w),
       constraints: BoxConstraints(
@@ -717,130 +738,128 @@ class FieldDetailScreen extends ConsumerWidget {
           ),
           SizedBox(height: 12.h),
           Expanded(
-            child: ListView.separated(
-              itemCount: products.length,
-              separatorBuilder: (_, __) => SizedBox(height: 8.h),
-              itemBuilder: (_, index) {
-                final product = products[index];
-                return ListTile(
-                  tileColor: Colors.white.withValues(alpha: 0.04),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  leading: SizedBox(
-                    width: 40.w,
-                    height: 40.w,
-                    child: CachedAssetImage(
-                      fileName: product.urunIconu,
-                      fit: BoxFit.contain,
+            child: products.isEmpty
+                ? Center(
+                    child: Text(
+                      'Bu ciftlik turu icin uygun urun bulunamadi.',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
+                  )
+                : ListView.separated(
+                    itemCount: products.length,
+                    separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                    itemBuilder: (_, index) {
+                      final selectableProduct = products[index];
+                      final product = selectableProduct.product;
+                      final isDisabled = disabledProductIds.contains(product.id);
+                      return ListTile(
+                        enabled: !isDisabled,
+                        tileColor: isDisabled
+                            ? Colors.white.withValues(alpha: 0.02)
+                            : Colors.white.withValues(alpha: 0.04),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        leading: SizedBox(
+                          width: 40.w,
+                          height: 40.w,
+                          child: Opacity(
+                            opacity: isDisabled ? 0.4 : 1,
+                            child: CachedAssetImage(
+                              fileName: product.urunIconu,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          product.urunAdi,
+                          style: TextStyle(
+                            color: isDisabled
+                                ? AppColors.textMuted
+                                : Colors.white,
+                          ),
+                        ),
+                        subtitle: Text(
+                          isDisabled
+                              ? 'Bu urun baska bir slotta kullaniliyor'
+                              : 'Maks kalite: ${selectableProduct.maxQualityLevel} | Saatlik uretim: ${product.uretimAdedi}',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                        trailing: Icon(
+                          isDisabled ? Icons.block : Icons.chevron_right,
+                          color: isDisabled
+                              ? AppColors.textMuted
+                              : AppColors.gold,
+                        ),
+                        onTap: isDisabled
+                            ? null
+                            : () async {
+                          Navigator.pop(context);
+                          await _selectSlotProduct(
+                            parentContext,
+                            ref,
+                            detail,
+                            slot,
+                            selectableProduct,
+                          );
+                        },
+                      );
+                    },
                   ),
-                  title: Text(
-                    product.urunAdi,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
-                    'Saatlik uretim: ${product.uretimAdedi}',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: AppColors.gold,
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showQualitySelectionDialog(
-                      parentContext,
-                      ref,
-                      detail,
-                      slot,
-                      product,
-                    );
-                  },
-                );
-              },
-            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _showQualitySelectionDialog(
+  Future<void> _selectSlotProduct(
     BuildContext context,
     WidgetRef ref,
     FieldDetailModel detail,
     ProductionSlotModel slot,
-    ProductModel product,
+    SelectableProductionProductModel selectableProduct,
   ) async {
-    int selectedQuality = slot.qualityLevel > 0 ? slot.qualityLevel : 1;
+    final product = selectableProduct.product;
+    final action = ref.read(fieldActionProvider);
+    final result = slot.isEmpty
+        ? await action.assignProductionSlotProduct(
+            slotId: slot.id,
+            productId: product.id,
+            qualityLevel: selectableProduct.maxQualityLevel,
+          )
+        : await action.changeProductionSlotProduct(
+            slotId: slot.id,
+            productId: product.id,
+            qualityLevel: selectableProduct.maxQualityLevel,
+          );
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          backgroundColor: AppColors.background,
-          title: Text(
-            'Kalite Sec',
-            style: TextStyle(color: Colors.white, fontSize: 18.sp),
-          ),
-          content: DropdownButtonFormField<int>(
-            value: selectedQuality,
-            dropdownColor: AppColors.cardBg,
-            style: const TextStyle(color: Colors.white),
-            items: List.generate(
-              5,
-              (index) => DropdownMenuItem(
-                value: index + 1,
-                child: Text('Kalite ${index + 1}'),
-              ),
-            ),
-            onChanged: (value) {
-              if (value == null) return;
-              setState(() => selectedQuality = value);
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Iptal'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-              onPressed: () async {
-                final result = await ref
-                    .read(fieldActionProvider)
-                    .setProductionSlotProduct(
-                      slotId: slot.id,
-                      productId: product.id,
-                      qualityLevel: selectedQuality,
-                    );
+    if (!context.mounted) return;
+    if (result['success'] == true) {
+      ref.invalidate(fieldDetailProvider(detail.field.id));
+      AppSnackbar.show(
+        context,
+        title: 'Basarili',
+        message:
+            slot.isEmpty
+                ? '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} ile eklendi.'
+                : '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} olarak degistirildi.',
+        type: SnackbarType.success,
+      );
+      return;
+    }
 
-                if (!context.mounted) return;
-                if (result['success'] == true) {
-                  Navigator.pop(dialogContext);
-                  ref.invalidate(fieldDetailProvider(detail.field.id));
-                  return;
-                }
-
-                AppSnackbar.show(
-                  context,
-                  title: 'Hata',
-                  message: result['message'] ?? 'Urun secilemedi.',
-                  type: SnackbarType.error,
-                );
-              },
-              child: const Text(
-                'Kaydet',
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-          ],
-        ),
-      ),
+    AppSnackbar.show(
+      context,
+      title: 'Hata',
+      message: result['message'] ?? 'Urun secilemedi.',
+      type: SnackbarType.error,
     );
   }
 
