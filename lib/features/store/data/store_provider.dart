@@ -45,8 +45,7 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
         .eq('building_kind', 'store')
         .eq('status', 'in_progress');
 
-    if (constructionResponse != null &&
-        (constructionResponse as List).isNotEmpty) {
+    if (constructionResponse.isNotEmpty) {
       for (final constr in constructionResponse) {
         final params = constr['params'] as Map<String, dynamic>;
         final storeTypeId = params['store_type_id'] as String?;
@@ -491,6 +490,50 @@ class StoreActionNotifier {
           'p_player_id': user.id,
           'p_store_slot_id': slotId,
           'p_price': price,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> clearStoreSlotProduct(String slotId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'clear_store_slot_product',
+        params: {
+          'p_player_id': user.id,
+          'p_store_slot_id': slotId,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> setStoreSlotActive({
+    required String slotId,
+    required bool isActive,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_store_slot_active',
+        params: {
+          'p_player_id': user.id,
+          'p_store_slot_id': slotId,
+          'p_is_active': isActive,
         },
       );
       return response as Map<String, dynamic>;

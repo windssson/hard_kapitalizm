@@ -15,7 +15,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   int _totalFiles = 0;
   int _currentFile = 0;
-  String _currentFileName = '';
+
   String? _error;
 
   @override
@@ -51,7 +51,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           setState(() {
             _currentFile = current;
             _totalFiles = total;
-            _currentFileName = fileName;
           });
         }
       });
@@ -63,7 +62,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           if (_totalFiles == 0) {
             _totalFiles = 1;
             _currentFile = 1;
-            _currentFileName = 'Tamamlandı';
           } else {
             _currentFile = _totalFiles;
           }

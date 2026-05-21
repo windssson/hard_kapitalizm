@@ -34,7 +34,6 @@ class AppSnackbar {
         icon = Icons.warning_amber_rounded;
         break;
       case SnackbarType.info:
-      default:
         mainColor = AppColors.gold;
         icon = Icons.info_outline;
         break;

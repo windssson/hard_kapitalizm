@@ -16,11 +16,8 @@ final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
         .select('*, warehouse_slots(*, product:products(*)), city:cities(name), warehouse_type:warehouse_types(icon)')
         .eq('player_id', user.id);
 
-    List<WarehouseModel> allWarehouses = [];
-    if (response != null) {
-      final List<dynamic> data = response as List<dynamic>;
-      allWarehouses = data.map((json) => WarehouseModel.fromJson(json)).toList();
-    }
+    final List<dynamic> data = response as List<dynamic>;
+    List<WarehouseModel> allWarehouses = data.map((json) => WarehouseModel.fromJson(json)).toList();
 
     final constructionResponse = await supabase
         .from('building_constructions')
@@ -29,11 +26,11 @@ final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
         .eq('building_kind', 'warehouse')
         .eq('status', 'in_progress');
 
-    if (constructionResponse != null && (constructionResponse as List).isNotEmpty) {
+    if (constructionResponse.isNotEmpty) {
       final typesResponse = await supabase.from('warehouse_types').select();
       final citiesResponse = await supabase.from('cities').select();
 
-      for (var constr in (constructionResponse as List)) {
+      for (var constr in constructionResponse) {
         final params = constr['params'] as Map<String, dynamic>;
         final typeId = params['warehouse_type_id'] as String?;
         final cityId = params['city_id'] as String?;

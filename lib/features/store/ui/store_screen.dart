@@ -20,7 +20,7 @@ class StoreScreen extends ConsumerStatefulWidget {
 
 class _StoreScreenState extends ConsumerState<StoreScreen> {
   final int _selectedIndex = 1;
-  String _selectedFilter = 'Tümü';
+  String _selectedFilter = 'Tumu';
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
@@ -52,14 +52,14 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         backgroundColor: AppColors.gold,
         icon: const Icon(Icons.add_business, color: Colors.black),
         label: const Text(
-          'Mağaza Kur',
+          'Magaza Kur',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Mağazalarım'),
+            const SecondaryTopBar(title: 'Magazalarim'),
             Expanded(
               child: storesAsync.when(
                 data: (stores) {
@@ -204,7 +204,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   Widget _buildFilters() {
     return Row(
       children: [
-        _buildFilterChip('Tümü', null),
+        _buildFilterChip('Tumu', null),
         SizedBox(width: 8.w),
         _buildFilterChip('Aktif', AppColors.green),
         SizedBox(width: 8.w),
@@ -394,36 +394,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     );
   }
 
-  Widget _buildStatRow(
-    IconData icon,
-    String label,
-    String value, {
-    Color? color,
-  }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 2.h),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10.sp, color: AppColors.textMuted),
-          SizedBox(width: 4.w),
-          Text(
-            label,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
-          ),
-          SizedBox(width: 12.w),
-          Text(
-            value,
-            style: TextStyle(
-              color: color ?? Colors.white,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildSmallBadge(String label, Color color) {
     return Container(
@@ -708,7 +679,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                             Icon(Icons.star, color: Colors.white, size: 14.sp),
                             SizedBox(width: 4.w),
                             Text(
-                              'Hızlı Bitir',
+                              'Hizli Bitir',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 10.sp,
@@ -777,7 +748,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           Icon(Icons.store_outlined, color: AppColors.textMuted, size: 80.sp),
           SizedBox(height: 16.h),
           const Text(
-            'Henüz bir mağazan yok.',
+            'Henuz bir magazan yok.',
             style: TextStyle(color: Colors.white),
           ),
         ],
@@ -977,6 +948,4 @@ class _SlotBorderProgressPainter extends CustomPainter {
   }
 }
 
-extension on Widget {
-  Widget withHeight(double height) => SizedBox(height: height, child: this);
-}
+

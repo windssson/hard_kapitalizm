@@ -320,9 +320,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                       ],
                     ),
                     Text(
-                      'Aktif Isletme',
+                      store.isActive ? 'Aktif Isletme' : 'Pasif Isletme',
                       style: TextStyle(
-                        color: AppColors.green,
+                        color: store.isActive ? AppColors.green : AppColors.red,
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w500,
                       ),
@@ -388,8 +388,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     final canOpenNewSlot = store.currentSlotCount < store.maxSlotCount;
     final actions = [
       (
-        icon: Icons.trending_up,
-        label: 'Yukselt',
+        icon: Icons.insights,
+        label: 'Durum',
         color: AppColors.gold,
         onTap: () => _showUpgradeInfoSheet(context, store),
       ),
@@ -446,7 +446,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       if (result['success'] == true) {
         // Veritabaninin guncellenmesi icin kisa bir sure bekle.
         await Future.delayed(const Duration(milliseconds: 500));
-        ref.refresh(storeDetailProvider(store.id));
+        final _ = ref.refresh(storeDetailProvider(store.id));
         _showSuccess(context, 'Yeni slot basariyla acildi!');
       } else {
         _showError(context, result['message'] ?? 'Slot acilirken bir hata olustu.');
@@ -839,6 +839,42 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     ),
                   ],
                 ),
+                SizedBox(height: 10.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionBtn(
+                        slot.isActive ? 'PASIF YAP' : 'AKTIF ET',
+                        slot.isActive
+                            ? Icons.pause_circle_outline
+                            : Icons.play_circle_outline,
+                        slot.isActive ? AppColors.textPrimary : AppColors.green,
+                        onTap: () => _toggleStoreSlotActive(
+                          context,
+                          ref,
+                          store,
+                          slot,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: _buildActionBtn(
+                        'TEMIZLE',
+                        Icons.cleaning_services_outlined,
+                        canEditProduct ? AppColors.blue : AppColors.textMuted,
+                        onTap: canEditProduct && !slot.isEmpty
+                            ? () => _confirmClearStoreSlot(
+                                  context,
+                                  ref,
+                                  store,
+                                  slot,
+                                )
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             )
     );
@@ -912,6 +948,93 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
   void _showStoreSlotLockedMessage(BuildContext context, String message) {
     _showWarning(context, message);
+  }
+
+  Future<void> _toggleStoreSlotActive(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) async {
+    final result = await ref.read(storeActionProvider).setStoreSlotActive(
+          slotId: slot.id,
+          isActive: !slot.isActive,
+        );
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      ref.invalidate(storeDetailProvider(store.id));
+      ref.invalidate(storesListProvider);
+      _showSuccess(
+        context,
+        slot.isActive ? 'Slot pasif yapildi.' : 'Slot aktif edildi.',
+      );
+      return;
+    }
+
+    _showError(context, result['message'] ?? 'Slot durumu guncellenemedi.');
+  }
+
+  Future<void> _confirmClearStoreSlot(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) async {
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.background,
+        title: Text(
+          'Slot Temizle',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '${slot.productName ?? 'Bu urun'} secimini kaldirmak istiyor musun? Fiyat ve bekleyen kesirli satis verisi de sifirlanir.',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 13.sp,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Iptal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.blue,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Temizle'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldClear != true || !context.mounted) return;
+
+    final result = await ref.read(storeActionProvider).clearStoreSlotProduct(
+          slot.id,
+        );
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      ref.invalidate(storeDetailProvider(store.id));
+      ref.invalidate(storesListProvider);
+      _showSuccess(context, 'Slot urun secimi temizlendi.');
+      return;
+    }
+
+    _showError(context, result['message'] ?? 'Slot temizlenemedi.');
   }
 
   String _formatStoreSlotMargin(StoreSlotModel slot) {
@@ -1290,7 +1413,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       if (result['success'] == true) {
         // VeritabanÄ±nÄ±n gÃ¼ncellenmesi iÃ§in Ã§ok kÄ±sa bir sÃ¼re bekle (Race condition Ã¶nleyici)
         await Future.delayed(const Duration(milliseconds: 500));
-        ref.refresh(storeDetailProvider(store.id));
+        final _ = ref.refresh(storeDetailProvider(store.id));
         _showSuccess(parentContext, '${product['name']} basariyla eklendi!');
       } else {
         _showError(parentContext, result['message'] ?? 'Urun eklenirken hata olustu.');
@@ -1406,7 +1529,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             ),
             SizedBox(height: 8.h),
             Text(
-              '${store.name} su an seviye ${store.level}. Yukseltme RPC tarafini henuz baglamadik; bu panel simdilik mevcut kapasiteyi takip etmen icin hazir.',
+              '${store.name} su an seviye ${store.level}. Bu panel slot ve stok kapasitesini hizlica takip etmen icin hazirlandi.',
               style: TextStyle(
                 color: AppColors.textMuted,
                 fontSize: 12.sp,
@@ -1449,53 +1572,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  // HELPER WIDGETS
-  Widget _buildCircleButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(8.w),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: AppColors.borderGold.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Icon(icon, color: AppColors.gold, size: 20.sp),
-      ),
-    );
-  }
 
-  Widget _buildStatBadge(IconData icon, String value, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 14.sp),
-          SizedBox(width: 4.w),
-          Text(
-            value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(width: 4.w),
-          Icon(Icons.add, color: AppColors.gold, size: 12.sp),
-        ],
-      ),
-    );
-  }
 
   Widget _buildLevelBadge(int level) {
     return Container(
@@ -1639,105 +1716,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Row(
-      children: [
-        Container(
-          width: 4.w,
-          height: 16.h,
-          decoration: BoxDecoration(
-            color: AppColors.gold,
-            borderRadius: BorderRadius.circular(2.r),
-          ),
-        ),
-        SizedBox(width: 8.w),
-        Text(
-          title,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildQualityBadge(int level) {
-    return Container(
-      margin: EdgeInsets.only(top: 4.h),
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-      decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(4.r),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.5)),
-      ),
-      child: Text(
-        'Kalite $level',
-        style: TextStyle(
-          color: Colors.blue,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPriceBadge(double price) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Satis Fiyati',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
-          ),
-          SizedBox(width: 6.w),
-          Icon(Icons.monetization_on, color: AppColors.gold, size: 12.sp),
-          SizedBox(width: 2.w),
-          Text(
-            '${price.toStringAsFixed(1)} TL',
-            style: TextStyle(
-              color: AppColors.gold,
-              fontSize: 12.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusTag(bool isActive) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: isActive
-            ? AppColors.green.withValues(alpha: 0.1)
-            : AppColors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6.r),
-        border: Border.all(
-          color: isActive
-              ? AppColors.green.withValues(alpha: 0.5)
-              : AppColors.red.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Text(
-        isActive ? 'Aktif' : 'Pasif',
-        style: TextStyle(
-          color: isActive ? AppColors.green : AppColors.red,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 
   Widget _buildMiniProgress(double progress, [String? text]) {
     return Container(
@@ -1811,31 +1790,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  Widget _buildGridAction(IconData icon, String label) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppColors.gold, size: 24.sp),
-          SizedBox(height: 4.h),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildErrorState(WidgetRef ref, Object error) {
     return Center(
@@ -1906,254 +1861,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       (total, slot) => total + (slot.pendingSale ?? 0),
     );
   }
-  // --- STOK EKLEME (EKLE BUTONU) MANTIÄI ---
-
-  void _showAddStockDialog(
-    BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-    StoreSlotModel slot,
-  ) async {
-    final productId = slot.productId;
-    final cityId = store.cityId;
-
-    if (productId == null || productId.isEmpty) {
-      if (context.mounted) {
-        _showError(context, 'Once gecerli bir urun secin.');
-      }
-      return;
-    }
-
-    if (cityId == null || cityId.isEmpty) {
-      if (context.mounted) {
-        _showError(context, 'Magaza sehri bulunamadi.');
-      }
-      return;
-    }
-    // YÃ¼kleniyor gÃ¶ster
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
-    );
-
-    final result = await ref.read(storeActionProvider).getEligibleWarehousesForStock(
-          productId: productId,
-          cityId: cityId,
-          qualityLevel: slot.qualityLevel > 0 ? slot.qualityLevel : null,
-        );
-
-    if (context.mounted) Navigator.pop(context);
-
-    if (result['success'] == true) {
-      final List<dynamic> warehouses = result['warehouses'];
-      if (warehouses.isEmpty) {
-        if (context.mounted) {
-          _showInfo(context, 'Bu urunu iceren uygun deponuz bulunamadi.');
-        }
-        return;
-      }
-
-      if (context.mounted) {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: AppColors.background,
-          isScrollControlled: true,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20.r))),
-          builder: (context) => _buildWarehouseSelectionSheet(context, ref, store, slot, warehouses),
-        );
-      }
-    }
-  }
-
-  Widget _buildWarehouseSelectionSheet(
-    BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-    StoreSlotModel slot,
-    List<dynamic> warehouses,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Kaynak Depo Secin',
-            style: TextStyle(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            '${slot.productName} gonderilecek depoyu secin',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
-          ),
-          SizedBox(height: 16.h),
-          Expanded(
-            child: ListView.builder(
-              itemCount: warehouses.length,
-              itemBuilder: (context, index) {
-                final w = warehouses[index];
-                final wSlots = w['warehouse_slots'] as List<dynamic>;
-                return Column(
-                  children: wSlots.map<Widget>((productSlot) {
-                    final availableQty = productSlot['quantity'] as int;
-                    final qualityLevel =
-                        (productSlot['quality_level'] as num?)?.toInt() ?? 1;
-
-                    return Card(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      margin: EdgeInsets.only(bottom: 10.h),
-                      child: ListTile(
-                        leading: Icon(Icons.warehouse, color: AppColors.gold),
-                        title: Text(w['name'], style: const TextStyle(color: Colors.white)),
-                        subtitle: Text(
-                          'Kalite: $qualityLevel | Mevcut: $availableQty adet',
-                          style: TextStyle(color: AppColors.gold.withValues(alpha: 0.7)),
-                        ),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _showQuantityTransferDialog(
-                            context,
-                            ref,
-                            store,
-                            slot,
-                            productSlot['id'],
-                            availableQty,
-                            qualityLevel,
-                          );
-                        },
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showQuantityTransferDialog(
-    BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-    StoreSlotModel slot,
-    String warehouseSlotId,
-    int availableQty,
-    int selectedQualityLevel,
-  ) {
-    final TextEditingController controller = TextEditingController(text: '1');
-    final maxCanTake = slot.capacity - slot.quantity;
-    final limit = availableQty < maxCanTake ? availableQty : maxCanTake.toInt();
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.background,
-        title: Text('Miktar Girin', style: TextStyle(color: Colors.white, fontSize: 18.sp)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${slot.productName} Transferi',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
-            ),
-            SizedBox(height: 16.h),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Miktar (Maks: $limit)',
-                labelStyle: const TextStyle(color: AppColors.gold),
-                enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppColors.gold)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Iptal')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            onPressed: () async {
-              final qty = int.tryParse(controller.text) ?? 0;
-              if (qty <= 0 || qty > limit) {
-                _showWarning(context, 'Gecersiz miktar!');
-                return;
-              }
-              Navigator.pop(dialogContext);
-              _executeTransfer(
-                context,
-                ref,
-                store,
-                slot,
-                warehouseSlotId,
-                qty,
-                selectedQualityLevel,
-              );
-            },
-            child: const Text('Transfer Et', style: TextStyle(color: Colors.black)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _executeTransfer(
-    BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-    StoreSlotModel slot,
-    String wSlotId,
-    int qty,
-    int selectedQualityLevel,
-  ) async {
-    final needsSlotSetup =
-        slot.productId == null || slot.qualityLevel != selectedQualityLevel;
-
-    if (needsSlotSetup) {
-      final productId = slot.productId;
-      if (productId == null || productId.isEmpty) {
-        if (context.mounted) {
-          _showError(context, 'Transfer icin urun bilgisi bulunamadi.');
-        }
-        return;
-      }
-
-      final setupResult = await ref.read(storeActionProvider).setStoreSlotProduct(
-            slotId: slot.id,
-            productId: productId,
-            qualityLevel: selectedQualityLevel,
-          );
-
-      if (context.mounted && setupResult['success'] != true) {
-        _showError(context, 'Hata: ${setupResult['message']}');
-        return;
-      }
-    }
-
-    final result = await ref.read(storeActionProvider).transferStockToStore(
-          warehouseSlotId: wSlotId,
-          storeSlotId: slot.id,
-          quantity: qty,
-        );
-
-    if (context.mounted) {
-      if (result['success'] == true) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        ref.refresh(storeDetailProvider(store.id));
-        _showSuccess(context, 'Transfer basariyla tamamlandi!');
-      } else {
-        _showError(context, 'Hata: ${result['message']}');
-      }
-    }
-  }
-
   void _startStoreTransferFlow(
     BuildContext context,
     WidgetRef ref,

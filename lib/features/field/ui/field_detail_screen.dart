@@ -225,127 +225,6 @@ class FieldDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSummary(FieldDetailModel detail) {
-    final inputUsed = _calculateUsedCapacity(detail.inputInventories);
-    final outputUsed = _calculateUsedCapacity(detail.outputInventories);
-    final inputRatio = detail.field.inputCapacity > 0
-        ? (inputUsed / detail.field.inputCapacity).clamp(0.0, 1.0)
-        : 0.0;
-    final outputRatio = detail.field.outputCapacity > 0
-        ? (outputUsed / detail.field.outputCapacity).clamp(0.0, 1.0)
-        : 0.0;
-
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: _buildSummaryItem(
-              'Slotlar',
-              '${detail.field.currentSlotCount}/${detail.field.maxSlotCount}',
-              icon: Icons.layers,
-              iconColor: Colors.blueAccent,
-            ),
-          ),
-          Container(width: 1, height: 40.h, color: AppColors.border),
-          Expanded(
-            child: _buildSummaryItem(
-              'Input',
-              '$inputUsed/${detail.field.inputCapacity}',
-              progress: inputRatio,
-              progressColor: AppColors.blue,
-              icon: Icons.login,
-              iconColor: AppColors.blue,
-            ),
-          ),
-          Container(width: 1, height: 40.h, color: AppColors.border),
-          Expanded(
-            child: _buildSummaryItem(
-              'Output',
-              '$outputUsed/${detail.field.outputCapacity}',
-              progress: outputRatio,
-              progressColor: AppColors.green,
-              icon: Icons.logout,
-              iconColor: AppColors.green,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem(
-    String label,
-    String value, {
-    double? progress,
-    Color? progressColor,
-    IconData? icon,
-    Color? iconColor,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 12.sp, color: iconColor ?? AppColors.textMuted),
-                SizedBox(width: 4.w),
-              ],
-              Text(
-                label,
-                style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-              ),
-            ],
-          ),
-          SizedBox(height: 6.h),
-          Text(
-            value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (progress != null) ...[
-            SizedBox(height: 8.h),
-            Container(
-              width: double.infinity,
-              height: 6.h,
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(999.r),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: progress,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: progressColor ?? AppColors.gold,
-                    borderRadius: BorderRadius.circular(999.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (progressColor ?? AppColors.gold).withValues(alpha: 0.5),
-                        blurRadius: 4,
-                      )
-                    ]
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   Widget _buildActionRow(
     BuildContext context,
@@ -1320,13 +1199,7 @@ class FieldDetailScreen extends ConsumerWidget {
     );
   }
 
-  int _calculateUsedCapacity(List<ProductionInventoryModel> inventories) {
-    var total = 0;
-    for (final inventory in inventories) {
-      total += inventory.quantity;
-    }
-    return total;
-  }
+
 
   String _estimateProductionPerTick(ProductionSlotModel slot) {
     final product = slot.product;

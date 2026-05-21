@@ -25,6 +25,7 @@ import 'package:hard_kapitalizm/features/factory/ui/factory_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_detail_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_screen.dart';
+import 'package:hard_kapitalizm/features/mine/ui/mine_detail_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/market/ui/market_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_screen.dart';
@@ -183,6 +184,12 @@ final _router = GoRouter(
             final city = state.extra as CityModel;
             return MineTypeSelectionScreen(selectedCity: city);
           },
+        ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) => MineDetailScreen(
+            mineId: state.pathParameters['id']!,
+          ),
         ),
       ],
     ),

@@ -289,118 +289,6 @@ class FarmDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildOverview(FarmDetailModel detail) {
-    final inputUsed = _calculateUsedCapacity(detail.inputInventories);
-    final outputUsed = _calculateUsedCapacity(detail.outputInventories);
-
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: _buildMetricItem(
-              title: 'Input',
-              value: '$inputUsed/${detail.farm.inputCapacity}',
-              ratio: _inventoryRatio(inputUsed, detail.farm.inputCapacity),
-              color: AppColors.blue,
-              icon: Icons.login,
-            ),
-          ),
-          Container(width: 1, height: 40.h, color: AppColors.border),
-          Expanded(
-            child: _buildMetricItem(
-              title: 'Output',
-              value: '$outputUsed/${detail.farm.outputCapacity}',
-              ratio: _inventoryRatio(outputUsed, detail.farm.outputCapacity),
-              color: AppColors.green,
-              icon: Icons.logout,
-            ),
-          ),
-          Container(width: 1, height: 40.h, color: AppColors.border),
-          Expanded(
-            child: _buildMetricItem(
-              title: 'Slotlar',
-              value: '${detail.farm.currentSlotCount}/${detail.farm.maxSlotCount}',
-              ratio: _inventoryRatio(
-                detail.farm.currentSlotCount,
-                detail.farm.maxSlotCount,
-              ),
-              color: Colors.blueAccent,
-              icon: Icons.layers,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricItem({
-    required String title,
-    required String value,
-    required double ratio,
-    required Color color,
-    required IconData icon,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 8.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 12.sp, color: color),
-              SizedBox(width: 4.w),
-              Text(
-                title,
-                style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-              ),
-            ],
-          ),
-          SizedBox(height: 6.h),
-          Text(
-            value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Container(
-            width: double.infinity,
-            height: 6.h,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(999.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: ratio.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(999.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.5),
-                      blurRadius: 4,
-                    )
-                  ]
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildQuickActions(
     BuildContext context,
@@ -985,7 +873,7 @@ class FarmDetailScreen extends ConsumerWidget {
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await ref.refresh(farmDetailProvider(detail.farm.id).future);
+      final _ = await ref.refresh(farmDetailProvider(detail.farm.id).future);
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1016,7 +904,7 @@ class FarmDetailScreen extends ConsumerWidget {
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await ref.refresh(farmDetailProvider(detail.farm.id).future);
+      final _ = await ref.refresh(farmDetailProvider(detail.farm.id).future);
       return;
     }
 
@@ -1209,7 +1097,7 @@ class FarmDetailScreen extends ConsumerWidget {
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await ref.refresh(farmDetailProvider(detail.farm.id).future);
+      final _ = await ref.refresh(farmDetailProvider(detail.farm.id).future);
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1320,7 +1208,7 @@ class FarmDetailScreen extends ConsumerWidget {
                                 );
                             if (!context.mounted) return;
                             if (result['success'] == true) {
-                              await ref.refresh(
+                              final _ = await ref.refresh(
                                 farmDetailProvider(detail.farm.id).future,
                               );
                               return;
@@ -1427,7 +1315,7 @@ class FarmDetailScreen extends ConsumerWidget {
                             );
                         if (!context.mounted) return;
                         if (result['success'] == true) {
-                          await ref.refresh(
+                          final _ = await ref.refresh(
                             farmDetailProvider(detail.farm.id).future,
                           );
                           return;

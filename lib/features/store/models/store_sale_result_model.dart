@@ -91,7 +91,7 @@ class StoreSaleResultModel {
           .whereType<Map>()
           .map(
             (item) => StoreSaleItemModel.fromJson(
-              Map<String, dynamic>.from(item as Map),
+              Map<String, dynamic>.from(item),
             ),
           )
           .toList(),

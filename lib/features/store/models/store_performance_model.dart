@@ -96,7 +96,7 @@ class StorePerformanceResponseModel {
           .whereType<Map>()
           .map(
             (row) => StorePerformanceRowModel.fromJson(
-              Map<String, dynamic>.from(row as Map),
+              Map<String, dynamic>.from(row),
             ),
           )
           .toList(),

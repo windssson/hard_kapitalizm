@@ -21,7 +21,6 @@ class WarehouseScreen extends ConsumerStatefulWidget {
 class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   final int _selectedIndex = 1;
   String _selectedFilter = 'Tümü';
-  bool _isProcessing = false;
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
@@ -401,28 +400,23 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   }
 
   Future<void> _handleQuickFinish(String id) async {
-    setState(() => _isProcessing = true); // Bu state'i ekrana ekleyebiliriz veya basitçe işleyebiliriz
-    try {
-      // 1. Altın ile süreyi sıfırla
-      final finishResult = await ref.read(warehouseActionProvider).finishConstructionWithGold(id);
+    // 1. Altın ile süreyi sıfırla
+    final finishResult = await ref.read(warehouseActionProvider).finishConstructionWithGold(id);
+    
+    if (finishResult['success'] == true) {
+      // 2. İnşaatı tamamla (Depo kaydını oluştur)
+      final completeResult = await ref.read(warehouseActionProvider).completeConstruction(id);
       
-      if (finishResult['success'] == true) {
-        // 2. İnşaatı tamamla (Depo kaydını oluştur)
-        final completeResult = await ref.read(warehouseActionProvider).completeConstruction(id);
-        
-        if (completeResult['success'] == true) {
-          ref.invalidate(warehouseListProvider);
-          if (mounted) {
-            AppSnackbar.show(context, title: 'Başarılı', message: 'Depo inşaatı anında tamamlandı!', type: SnackbarType.success);
-          }
-        } else {
-          if (mounted) AppSnackbar.show(context, title: 'Hata', message: completeResult['message'] ?? 'Tamamlama başarısız.', type: SnackbarType.error);
+      if (completeResult['success'] == true) {
+        ref.invalidate(warehouseListProvider);
+        if (mounted) {
+          AppSnackbar.show(context, title: 'Başarılı', message: 'Depo inşaatı anında tamamlandı!', type: SnackbarType.success);
         }
       } else {
-        if (mounted) AppSnackbar.show(context, title: 'Hata', message: finishResult['message'] ?? 'Altın işlemi başarısız.', type: SnackbarType.error);
+        if (mounted) AppSnackbar.show(context, title: 'Hata', message: completeResult['message'] ?? 'Tamamlama başarısız.', type: SnackbarType.error);
       }
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
+    } else {
+      if (mounted) AppSnackbar.show(context, title: 'Hata', message: finishResult['message'] ?? 'Altın işlemi başarısız.', type: SnackbarType.error);
     }
   }
 
