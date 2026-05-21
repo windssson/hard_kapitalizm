@@ -2,22 +2,98 @@ import 'package:hard_kapitalizm/core/data/production_product_service.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
+import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
 
-// Fabrika Listesi Provider (Stream)
-final factoryListStreamProvider = StreamProvider.autoDispose<List<FactoryModel>>((ref) {
+// Fabrika Listesi Provider
+final factoryListStreamProvider =
+    FutureProvider.autoDispose<List<FactoryListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
-  
-  if (user == null) return const Stream.empty();
 
-  return supabase
+  if (user == null) return const [];
+
+  final factoriesResponse = await supabase
       .from('factories')
-      .stream(primaryKey: ['id'])
+      .select()
       .eq('player_id', user.id)
-      .map((event) => event.map((e) => FactoryModel.fromJson(e)).toList());
+      .order('created_at', ascending: true);
+
+  final factories = (factoriesResponse as List<dynamic>)
+      .map((e) => FactoryModel.fromJson(Map<String, dynamic>.from(e as Map)))
+      .toList();
+
+  if (factories.isEmpty) return const [];
+
+  final factoryTypeIds = factories.map((e) => e.factoryTypeId).toSet().toList();
+  final cityIds = factories.map((e) => e.cityId).toSet().toList();
+  final factoryIds = factories.map((e) => e.id).toList();
+  final productIds = <String>{
+    ...factories
+        .map((e) => e.productId ?? '')
+        .where((e) => e.isNotEmpty),
+  }.toList();
+
+  final factoryTypesResponse = await supabase
+      .from('factory_types')
+      .select('id, name, icon')
+      .inFilter('id', factoryTypeIds);
+  final citiesResponse = await supabase
+      .from('cities')
+      .select('id, name')
+      .inFilter('id', cityIds);
+  final outputInventoriesResponse = await supabase
+      .from('production_inventory')
+      .select('owner_id, quantity')
+      .eq('owner_kind', 'factory')
+      .eq('inventory_type', 'output')
+      .inFilter('owner_id', factoryIds);
+
+  Map<String, ProductModel> productsById = const {};
+  if (productIds.isNotEmpty) {
+    final productsResponse = await supabase
+        .from('products')
+        .select('id, urun_adi, urun_iconu')
+        .inFilter('id', productIds);
+    productsById = {
+      for (final row in productsResponse as List<dynamic>)
+        (row['id'] ?? '').toString(): ProductModel.fromJson(
+          Map<String, dynamic>.from(row as Map),
+        ),
+    };
+  }
+
+  final factoryTypeById = {
+    for (final row in factoryTypesResponse as List<dynamic>)
+      (row['id'] ?? '').toString(): Map<String, dynamic>.from(row as Map),
+  };
+  final cityNameById = {
+    for (final row in citiesResponse as List<dynamic>)
+      (row['id'] ?? '').toString():
+          (row['name'] ?? 'Bilinmeyen Sehir').toString(),
+  };
+  final outputByFactoryId = <String, int>{};
+  for (final row in outputInventoriesResponse as List<dynamic>) {
+    final map = Map<String, dynamic>.from(row as Map);
+    final ownerId = (map['owner_id'] ?? '').toString();
+    final quantity = (map['quantity'] as num?)?.toInt() ?? 0;
+    outputByFactoryId[ownerId] = (outputByFactoryId[ownerId] ?? 0) + quantity;
+  }
+
+  return factories.map((fact) {
+    final type = factoryTypeById[fact.factoryTypeId];
+    return FactoryListItemModel(
+      factory: fact,
+      cityName: cityNameById[fact.cityId] ?? 'Bilinmeyen Sehir',
+      factoryTypeName: (type?['name'] ?? 'Bilinmeyen Fabrika').toString(),
+      factoryTypeIcon: (type?['icon'] ?? 'factory.webp').toString(),
+      outputStockQuantity: outputByFactoryId[fact.id] ?? 0,
+      selectedProduct:
+          fact.productId != null ? productsById[fact.productId!] : null,
+    );
+  }).toList();
 });
 
 // Fabrika Tipleri Provider

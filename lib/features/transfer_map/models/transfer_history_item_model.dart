@@ -70,6 +70,8 @@ class TransferHistoryItemModel {
   final TransferHistoryProductModel product;
   final TransferHistoryWarehouseModel sellerWarehouse;
   final TransferHistoryWarehouseModel buyerWarehouse;
+  final String sellerKind;
+  final String buyerKind;
 
   const TransferHistoryItemModel({
     required this.id,
@@ -84,9 +86,15 @@ class TransferHistoryItemModel {
     required this.product,
     required this.sellerWarehouse,
     required this.buyerWarehouse,
+    required this.sellerKind,
+    required this.buyerKind,
   });
 
   factory TransferHistoryItemModel.fromJson(Map<String, dynamic> json) {
+    final hasSellerWarehouse =
+        (json['seller_warehouse'] as Map<String, dynamic>?) != null;
+    final hasBuyerWarehouse =
+        (json['buyer_warehouse'] as Map<String, dynamic>?) != null;
     return TransferHistoryItemModel(
       id: (json['id'] ?? '').toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
@@ -112,6 +120,8 @@ class TransferHistoryItemModel {
             (json['buyer_store'] as Map<String, dynamic>?) ??
             const {},
       ),
+      sellerKind: hasSellerWarehouse ? 'Depo' : 'Magaza',
+      buyerKind: hasBuyerWarehouse ? 'Depo' : 'Magaza',
     );
   }
 }
