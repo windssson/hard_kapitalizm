@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -39,12 +40,31 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     });
   }
 
+  void _onNavSelected(int index) {
+    if (index == 1) return;
+    switch (index) {
+      case 0:
+        context.go('/home');
+        break;
+      case 2:
+        context.go('/transfer-map');
+        break;
+      case 4:
+        context.go('/profile');
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final storeAsync = ref.watch(storeDetailProvider(widget.storeId));
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: AppBottomNav(
+        selectedIndex: 1,
+        onItemSelected: _onNavSelected,
+      ),
       body: SafeArea(
         child: storeAsync.when(
           data: (store) {
@@ -249,20 +269,20 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         SecondaryTopBar(title: 'Magaza Yonetimi'),
         Expanded(
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 10.h),
-                _buildStoreHeader(store),
                 SizedBox(height: 12.h),
-                _buildSummaryBar(store),
+                _buildImmersiveHeader(store),
                 SizedBox(height: 16.h),
-                _buildMainActionButtons(context, ref, store),
+                _buildQuickActions(context, ref, store),
                 SizedBox(height: 16.h),
-                _buildSlotList(context, ref, store),
+                _buildMetricsGrid(store),
                 SizedBox(height: 24.h),
-                _buildFinancialFooter(store),
+                Text('Magaza Raflari', style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                SizedBox(height: 12.h),
+                _buildSlotList(context, ref, store),
                 SizedBox(height: 32.h),
               ],
             ),
@@ -272,180 +292,146 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  Widget _buildStoreHeader(StoreModel store) {
+  Widget _buildImmersiveHeader(StoreModel store) {
     return Container(
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
       decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.black54,
+            AppColors.navBg.withValues(alpha: 0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.gold.withValues(alpha: 0.05),
+            blurRadius: 20,
+            spreadRadius: 2,
           ),
         ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Row(
-            children: [
-              // Magaza ikonu
-              Container(
-                width: 110.w,
-                height: 110.w,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.gold.withValues(alpha: 0.2),
-                      blurRadius: 15,
-                      spreadRadius: -5,
-                    ),
-                  ],
-                ),
-                child: CachedAssetImage(
-                  fileName: store.storeType.icon,
-                  fit: BoxFit.contain,
-                ),
-              ),
-              SizedBox(width: 16.w),
-              // Bilgiler
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            store.name,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        _buildLevelBadge(store.level),
-                      ],
-                    ),
-                    Text(
-                      store.isActive ? 'Aktif Isletme' : 'Pasif Isletme',
-                      style: TextStyle(
-                        color: store.isActive ? AppColors.green : AppColors.red,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    _buildHeaderInfoRow(
-                      'Sehir:',
-                      store.cityName ?? 'Bilinmiyor',
-                    ),
-                    _buildHeaderInfoRow('Magaza Tipi:', store.storeType.name),
-                    _buildHeaderInfoRow(
-                      'Gunluk Kar:',
-                      '+${_formatValue(store.summary.totalStockSaleValue ?? 0)}',
-                      valueColor: AppColors.green,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryBar(StoreModel store) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.15)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildSummaryItem(
-            Icons.inventory_2,
-            'Stok',
-            '${store.summary.totalQuantity}/${store.summary.totalCapacity}',
-            showProgress: true,
-            progress: store.summary.usedCapacityRatio,
+          Container(
+            width: 80.w,
+            height: 80.w,
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: Colors.black26,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3), width: 2.w),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.gold.withValues(alpha: 0.1),
+                  blurRadius: 15,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: CachedAssetImage(fileName: store.storeType.icon, fit: BoxFit.contain),
           ),
-          _buildVerticalDivider(),
-          _buildSummaryItem(
-            Icons.pie_chart,
-            'Doluluk',
-            '%${(store.summary.usedCapacityRatio * 100).toInt()}',
-            valueColor: AppColors.gold,
-          ),
-          _buildVerticalDivider(),
-          _buildSummaryItem(
-            Icons.grid_view,
-            'Slot',
-            '${store.slots.length}/${store.maxSlotCount}',
+          SizedBox(width: 20.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        store.name,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      width: 10.w,
+                      height: 10.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: store.isActive ? Colors.greenAccent : Colors.redAccent,
+                        boxShadow: [
+                          BoxShadow(
+                            color: store.isActive ? Colors.greenAccent.withValues(alpha: 0.6) : Colors.redAccent.withValues(alpha: 0.6),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: AppColors.textMuted, size: 14.sp),
+                    SizedBox(width: 4.w),
+                    Text(store.cityName ?? 'Bilinmiyor', style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp, fontWeight: FontWeight.w500)),
+                    SizedBox(width: 16.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                      ),
+                      child: Text('Seviye ${store.level}', style: TextStyle(color: AppColors.gold, fontSize: 10.sp, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMainActionButtons(BuildContext context, WidgetRef ref, StoreModel store) {
+  Widget _buildQuickActions(BuildContext context, WidgetRef ref, StoreModel store) {
     final canOpenNewSlot = store.currentSlotCount < store.maxSlotCount;
-    final actions = [
-      (
-        icon: Icons.insights,
-        label: 'Durum',
-        color: AppColors.gold,
-        onTap: () => _showUpgradeInfoSheet(context, store),
-      ),
-      (
-        icon: Icons.bar_chart,
-        label: 'Rapor',
-        color: AppColors.blue,
-        onTap: () => context.push('/store/${store.id}/report'),
-      ),
-      (
-        icon: Icons.add_box,
-        label: 'Slot Ac',
-        color: AppColors.gold,
-        onTap: canOpenNewSlot ? () => _handleOpenSlot(context, ref, store) : null,
-      ),
-      (
-        icon: Icons.history,
-        label: 'Gecmis',
-        color: AppColors.textPrimary,
-        onTap: () => context.push('/store/${store.id}/history'),
-      ),
-    ];
-
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        for (var index = 0; index < actions.length; index++) ...[
-          Expanded(
-            child: _buildActionButton(
-              actions[index].icon,
-              actions[index].label,
-              actions[index].color,
-              onTap: actions[index].onTap,
-            ),
-          ),
-          if (index != actions.length - 1) SizedBox(width: index == 0 ? 10.w : 8.w),
-        ],
+        _buildQuickActionButton(
+          icon: Icons.insights,
+          label: 'Durum',
+          color: Colors.blueAccent,
+          onTap: () => _showUpgradeInfoSheet(context, store),
+        ),
+        _buildQuickActionButton(
+          icon: Icons.bar_chart,
+          label: 'Rapor',
+          color: Colors.purpleAccent,
+          onTap: () => context.push('/store/${store.id}/report'),
+        ),
+        _buildQuickActionButton(
+          icon: Icons.add_box,
+          label: 'Slot Ac',
+          color: AppColors.gold,
+          onTap: canOpenNewSlot ? () => _handleOpenSlot(context, ref, store) : null,
+        ),
+        _buildQuickActionButton(
+          icon: Icons.history,
+          label: 'Gecmis',
+          color: AppColors.textPrimary,
+          onTap: () => context.push('/store/${store.id}/history'),
+        ),
       ],
     );
   }
 
-  Future<void> _handleOpenSlot(
+    Future<void> _handleOpenSlot(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
@@ -456,7 +442,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (context.mounted) {
       if (result['success'] == true) {
-        // Veritabaninin guncellenmesi icin kisa bir sure bekle.
         await Future.delayed(const Duration(milliseconds: 500));
         final _ = ref.refresh(storeDetailProvider(store.id));
         _showSuccess(context, 'Yeni slot basariyla acildi!');
@@ -466,12 +451,97 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     }
   }
 
+  Widget _buildQuickActionButton(
+{required IconData icon, required String label, required Color color, VoidCallback? onTap}) {
+    final isDisabled = onTap == null;
+    final displayColor = isDisabled ? Colors.grey : color;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16.r),
+      child: Container(
+        width: 80.w,
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        decoration: BoxDecoration(
+          color: displayColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: displayColor.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: displayColor, size: 24.sp),
+            SizedBox(height: 6.h),
+            Text(label, style: TextStyle(color: isDisabled ? Colors.grey : Colors.white, fontSize: 10.sp, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricsGrid(StoreModel store) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildCompactMetricCol(
+            title: 'Doluluk',
+            value: '%${(store.summary.usedCapacityRatio * 100).toInt()}',
+            icon: Icons.pie_chart,
+            color: Colors.orangeAccent,
+          ),
+          _buildCompactMetricCol(
+            title: 'Stok',
+            value: '${store.summary.totalQuantity}/${store.summary.totalCapacity}',
+            icon: Icons.inventory_2,
+            color: Colors.blueAccent,
+          ),
+          _buildCompactMetricCol(
+            title: 'Kar',
+            value: '+₺${_formatValue(store.summary.totalStockSaleValue ?? 0)}',
+            icon: Icons.trending_up,
+            color: AppColors.green,
+          ),
+          _buildCompactMetricCol(
+            title: 'Slot',
+            value: '${store.slots.length}/${store.maxSlotCount}',
+            icon: Icons.grid_view,
+            color: AppColors.gold,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactMetricCol({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 20.sp),
+        SizedBox(height: 6.h),
+        Text(value, style: TextStyle(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold), maxLines: 1),
+        SizedBox(height: 2.h),
+        Text(title, style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp), maxLines: 1),
+      ],
+    );
+  }
+
   Widget _buildSlotList(BuildContext context, WidgetRef ref, StoreModel store) {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: store.slots.length,
-      separatorBuilder: (_, __) => SizedBox(height: 10.h),
+      separatorBuilder: (_, __) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
         return _buildProductSlotCard(
           context,
@@ -505,394 +575,260 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     : AppColors.green;
 
     return Container(
-      padding: EdgeInsets.all(14.w),
+      padding: EdgeInsets.all(0),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(12.r),
+        color: AppColors.cardBg.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
           color: slot.isActive 
               ? AppColors.gold.withValues(alpha: 0.3) 
-              : AppColors.borderGold.withValues(alpha: 0.4),
+              : AppColors.border.withValues(alpha: 0.2),
           width: 1.2.w,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-          if (slot.isActive)
-            BoxShadow(
-              color: AppColors.gold.withValues(alpha: 0.05),
-              blurRadius: 12,
-              spreadRadius: 2,
-            ),
-        ],
       ),
-      child: slot.isEmpty
-          ? InkWell(
-              borderRadius: BorderRadius.circular(8.r),
-              onTap: canEditProduct
-                  ? () => _showProductSelectionDialog(context, ref, store, slot)
-                  : () => _showStoreSlotLockedMessage(
-                        context,
-                        'Yolda urun varken slot urunu degistirilemez.',
-                      ),
-              child: Row(
+      child: Padding(
+        padding: EdgeInsets.all(12.w),
+        child: slot.isEmpty
+            ? Row(
                 children: [
                   Container(
-                    width: 64.w,
-                    height: 64.w,
+                    width: 80.w,
+                    height: 80.w,
                     decoration: BoxDecoration(
-                      color: AppColors.cardBgLight,
+                      color: Colors.black26,
                       borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(
-                        color: AppColors.gold.withValues(alpha: 0.15),
-                      ),
+                      border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
                     ),
-                    child: Icon(
-                      Icons.add_shopping_cart,
-                      color: AppColors.gold.withValues(alpha: 0.6),
-                      size: 28.sp,
-                    ),
+                    child: Icon(Icons.add_shopping_cart, color: AppColors.gold.withValues(alpha: 0.4), size: 24.sp),
                   ),
                   SizedBox(width: 16.w),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'Slot $index',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          'Bos Slot',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          'Yeni urun atamak icin dokunun',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11.sp,
-                          ),
-                        ),
+                        Text('Bos Slot', style: TextStyle(color: Colors.white70, fontSize: 15.sp, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: AppColors.gold.withValues(alpha: 0.4),
-                    size: 16.sp,
+                  InkWell(
+                    onTap: canEditProduct
+                        ? () => _showProductSelectionDialog(context, ref, store, slot)
+                        : () => _showStoreSlotLockedMessage(context, 'Yolda urun varken slot urunu degistirilemez.'),
+                    borderRadius: BorderRadius.circular(8.r),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                      ),
+                      child: Text('Urun Sec', style: TextStyle(color: AppColors.gold, fontSize: 12.sp, fontWeight: FontWeight.bold)),
+                    ),
                   ),
                 ],
-              ),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Urun ikonu
-                    Container(
-                      width: 80.w,
-                      height: 80.w,
-                      padding: EdgeInsets.all(10.w),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBgLight,
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: AppColors.gold.withValues(alpha: 0.1),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 80.w,
+                        height: 80.w,
+                        padding: EdgeInsets.all(0),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
                         ),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.cardBgLight,
-                            AppColors.cardBgLight.withValues(alpha: 0.5),
-                          ],
-                        ),
+                        child: CachedAssetImage(fileName: slot.productIcon ?? 'default', fit: BoxFit.contain),
                       ),
-                      child: CachedAssetImage(
-                        fileName: slot.productIcon ?? 'default',
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    SizedBox(width: 14.w),
-                    // Detaylar
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Slot $index',
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.0,
+                      SizedBox(width: 14.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Text(slot.productName ?? '', style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 ),
-                              ),
-                              _buildMiniStatus(slot.isActive),
-                            ],
-                          ),
-                          SizedBox(height: 2.h),
-                          Text(
-                            slot.productName ?? '',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17.sp,
-                              fontWeight: FontWeight.w800,
+                                SizedBox(width: 8.w),
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 8.w,
+                                      height: 8.w,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: slot.isActive ? AppColors.green : AppColors.red,
+                                        boxShadow: [
+                                          BoxShadow(color: (slot.isActive ? AppColors.green : AppColors.red).withValues(alpha: 0.5), blurRadius: 4),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Text(slot.isActive ? 'Aktif' : 'Pasif', style: TextStyle(color: slot.isActive ? AppColors.green : AppColors.red, fontSize: 10.sp)),
+                                  ],
+                                ),
+                              ],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 8.h),
-                          // Kalite Barlari
-                          Row(
-                            children: [
-                              Text(
-                                'KALITE',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 9.sp,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              SizedBox(width: 8.w),
-                              ...List.generate(5, (barIndex) {
-                                return Container(
-                                  width: 12.w,
-                                  height: 6.h,
-                                  margin: EdgeInsets.only(right: 3.w),
-                                  decoration: BoxDecoration(
-                                    color: barIndex < slot.qualityLevel
-                                        ? qColor
-                                        : Colors.white.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(2.r),
-                                    boxShadow: barIndex < slot.qualityLevel ? [
-                                      BoxShadow(
-                                        color: qColor.withValues(alpha: 0.3),
-                                        blurRadius: 4,
-                                      )
-                                    ] : null,
-                                  ),
+                            SizedBox(height: 6.h),
+                            Row(
+                              children: List.generate(5, (barIndex) {
+                                return Icon(
+                                  Icons.star_rounded,
+                                  color: barIndex < slot.qualityLevel ? qColor : Colors.white24,
+                                  size: 12.sp,
                                 );
                               }),
-                            ],
-                          ),
-                          SizedBox(height: 12.h),
-                          // Fiyat ve Kar
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 10.w,
-                                  vertical: 6.h,
-                                ),
+                            ),
+                            SizedBox(height: 8.h),
+                            GestureDetector(
+                              onTap: () => _showPriceEditDialog(context, ref, store, slot),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                                 decoration: BoxDecoration(
-                                  color: AppColors.gold.withValues(alpha: 0.1),
+                                  color: Colors.white.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(8.r),
-                                  border: Border.all(
-                                    color: AppColors.gold.withValues(alpha: 0.25),
-                                  ),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                                 ),
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      '${slot.price?.toStringAsFixed(1) ?? '0'}',
-                                      style: TextStyle(
-                                        color: AppColors.gold,
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                    Text(
-                                      ' TL',
-                                      style: TextStyle(
-                                        color: AppColors.gold.withValues(alpha: 0.7),
-                                        fontSize: 10.sp,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    Text('₺${slot.price?.toStringAsFixed(1) ?? '0'}', style: TextStyle(color: AppColors.gold, fontSize: 13.sp, fontWeight: FontWeight.w900)),
+                                    SizedBox(width: 4.w),
+                                    Icon(Icons.edit, color: AppColors.textMuted, size: 12.sp),
+                                    SizedBox(width: 8.w),
+                                    Container(
+                                      width: 1.w,
+                                      height: 12.h,
+                                      color: Colors.white.withValues(alpha: 0.2),
                                     ),
                                     SizedBox(width: 8.w),
-                                    GestureDetector(
-                                      onTap: () => _showPriceEditDialog(
-                                        context,
-                                        ref,
-                                        store,
-                                        slot,
-                                      ),
-                                      child: Container(
-                                        padding: EdgeInsets.all(2.w),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.gold.withValues(alpha: 0.2),
-                                          borderRadius: BorderRadius.circular(4.r),
-                                        ),
-                                        child: Icon(
-                                          Icons.edit,
-                                          color: AppColors.gold,
-                                          size: 14.sp,
-                                        ),
-                                      ),
+                                    Text(
+                                      _formatStoreSlotMargin(slot), 
+                                      style: TextStyle(color: _storeSlotMarginColor(slot), fontSize: 11.sp, fontWeight: FontWeight.bold)
                                     ),
                                   ],
                                 ),
                               ),
-                              SizedBox(width: 10.w),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                                decoration: BoxDecoration(
-                                  color: _storeSlotMarginColor(slot).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6.r),
-                                  border: Border.all(
-                                    color: _storeSlotMarginColor(slot).withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                child: Text(
-                                  _formatStoreSlotMargin(slot),
-                                  style: TextStyle(
-                                    color: _storeSlotMarginColor(slot),
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            child: Icon(Icons.more_vert, color: AppColors.textPrimary, size: 22.sp),
+                            color: AppColors.cardBg,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                            onSelected: (val) {
+                              if (val == 'send' && canSendStock) {
+                                _startStoreOutboundFlow(context, ref, store, slot);
+                              } else if (val == 'toggle') {
+                                _toggleStoreSlotActive(context, ref, store, slot);
+                              } else if (val == 'clear' && canEditProduct) {
+                                _confirmClearStoreSlot(context, ref, store, slot);
+                              } else if (val == 'change' && canEditProduct) {
+                                _showProductSelectionDialog(context, ref, store, slot);
+                              } else if (!canEditProduct && (val == 'change' || val == 'clear')) {
+                                _showStoreSlotLockedMessage(context, 'Yolda stok varken urun degistirilemez.');
+                              }
+                            },
+                            itemBuilder: (ctx) => [
+                              PopupMenuItem(
+                                value: 'send',
+                                enabled: canSendStock,
+                                child: Row(children: [Icon(Icons.local_shipping, color: AppColors.blue, size: 18.sp), SizedBox(width: 8.w), Text('Depoya Gonder', style: TextStyle(color: Colors.white, fontSize: 12.sp))]),
                               ),
-                              const Spacer(),
-                              // Degistir butonu (Kucuk)
-                              IconButton(
-                                icon: Icon(Icons.swap_horiz, 
-                                  color: canEditProduct ? AppColors.blue : AppColors.textMuted,
-                                  size: 20.sp,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: canEditProduct
-                                    ? () => _showProductSelectionDialog(context, ref, store, slot)
-                                    : () => _showStoreSlotLockedMessage(context, 'Stok varken urun degistirilemez.'),
+                              PopupMenuItem(
+                                value: 'toggle',
+                                child: Row(children: [Icon(slot.isActive ? Icons.pause_circle_outline : Icons.play_circle_outline, color: slot.isActive ? Colors.redAccent : Colors.greenAccent, size: 18.sp), SizedBox(width: 8.w), Text(slot.isActive ? 'Pasif Yap' : 'Aktif Et', style: TextStyle(color: Colors.white, fontSize: 12.sp))]),
+                              ),
+                              PopupMenuItem(
+                                value: 'change',
+                                enabled: canEditProduct,
+                                child: Row(children: [Icon(Icons.swap_horiz, color: AppColors.gold, size: 18.sp), SizedBox(width: 8.w), Text('Urunu Degistir', style: TextStyle(color: Colors.white, fontSize: 12.sp))]),
+                              ),
+                              PopupMenuItem(
+                                value: 'clear',
+                                enabled: canEditProduct,
+                                child: Row(children: [Icon(Icons.cleaning_services, color: AppColors.red, size: 18.sp), SizedBox(width: 8.w), Text('Slotu Temizle', style: TextStyle(color: Colors.white, fontSize: 12.sp))]),
                               ),
                             ],
                           ),
+                          SizedBox(height: 16.h),
+                          InkWell(
+                            onTap: canAddStock ? () => _startStoreTransferFlow(context, ref, store, slot) : null,
+                            borderRadius: BorderRadius.circular(8.r),
+                            child: Container(
+                              padding: EdgeInsets.all(8.w),
+                              decoration: BoxDecoration(
+                                color: canAddStock ? AppColors.green.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8.r),
+                                border: Border.all(color: canAddStock ? AppColors.green.withValues(alpha: 0.5) : Colors.transparent),
+                              ),
+                              child: Icon(Icons.add, color: canAddStock ? AppColors.green : Colors.grey, size: 20.sp),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16.h),
-                // Stok Durumu Başlığı
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'STOK DURUMU',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 9.sp,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Text(
-                      '${slot.quantity}/${slot.capacity}',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 6.h),
-                _buildMiniProgressStacked(
-                  slot.quantity / (slot.capacity > 0 ? slot.capacity : 1),
-                  reservedProgress: slot.pendingQuantity /
-                      (slot.capacity > 0 ? slot.capacity : 1),
-                ),
-                SizedBox(height: 14.h),
-                // Butonlar
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionBtn(
-                        'STOK EKLE',
-                        Icons.add_circle_outline,
-                        canAddStock ? AppColors.green : AppColors.textMuted,
-                        onTap: canAddStock
-                            ? () => _startStoreTransferFlow(context, ref, store, slot)
-                            : null,
-                      ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Expanded(
-                      child: _buildActionBtn(
-                        'GONDER',
-                        Icons.local_shipping,
-                        canSendStock ? AppColors.red : AppColors.textMuted,
-                        onTap: canSendStock
-                            ? () => _startStoreOutboundFlow(context, ref, store, slot)
-                            : null,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionBtn(
-                        slot.isActive ? 'PASIF YAP' : 'AKTIF ET',
-                        slot.isActive
-                            ? Icons.pause_circle_outline
-                            : Icons.play_circle_outline,
-                        slot.isActive ? AppColors.textPrimary : AppColors.green,
-                        onTap: () => _toggleStoreSlotActive(
-                          context,
-                          ref,
-                          store,
-                          slot,
+                    ],
+                  ),
+                  SizedBox(height: 16.h),
+                  Row(
+                    children: [
+                      Text('STOK DURUMU', style: TextStyle(color: AppColors.textSecondary, fontSize: 9.sp, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      const Spacer(),
+                      Text(
+                        '${slot.quantity} stok | ${slot.pendingQuantity} rezerve | ${slot.capacity - slot.quantity - slot.pendingQuantity} bos',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Expanded(
-                      child: _buildActionBtn(
-                        'TEMIZLE',
-                        Icons.cleaning_services_outlined,
-                        canEditProduct ? AppColors.blue : AppColors.textMuted,
-                        onTap: canEditProduct && !slot.isEmpty
-                            ? () => _confirmClearStoreSlot(
-                                  context,
-                                  ref,
-                                  store,
-                                  slot,
-                                )
-                            : null,
+                    ],
+                  ),
+                  SizedBox(height: 6.h),
+                  _buildMiniProgressStacked(
+                    slot.capacity > 0
+                        ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
+                        : 0,
+                    reservedProgress: slot.capacity > 0
+                        ? (slot.pendingQuantity / slot.capacity).clamp(0.0, 1.0)
+                        : 0,
+                  ),
+                  SizedBox(height: 6.h),
+                  Row(
+                    children: [
+                      _buildCapacityLegend(
+                        color: AppColors.gold,
+                        label: 'Stok',
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            )
+                      SizedBox(width: 12.w),
+                      _buildCapacityLegend(
+                        color: AppColors.blue.withValues(alpha: 0.8),
+                        label: 'Rezerve',
+                      ),
+                      SizedBox(width: 12.w),
+                      _buildCapacityLegend(
+                        color: Colors.white24,
+                        label: 'Bos',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+      ),
     );
   }
-
-
 
   Widget _buildMiniStatus(bool isActive) {
     return Container(
@@ -918,7 +854,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
   bool _canAddStockToSlot(StoreSlotModel slot) {
     if (slot.productId == null || slot.productId!.isEmpty) return false;
-    final remainingCapacity = slot.capacity - slot.quantity;
+    final remainingCapacity =
+        slot.capacity - slot.quantity - slot.pendingQuantity;
     return remainingCapacity > 0;
   }
 
@@ -1052,7 +989,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   String _formatStoreSlotMargin(StoreSlotModel slot) {
     final price = slot.price ?? 0;
     final cost = slot.cost ?? 0;
-    if (cost <= 0) return 'M0';
+    if (cost <= 0) return 'Maliyet';
 
     final marginRatio = ((price - cost) / cost) * 100;
     final sign = marginRatio >= 0 ? '+' : '';
@@ -1995,6 +1932,34 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
+  Widget _buildCapacityLegend({
+    required Color color,
+    required String label,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8.w,
+          height: 8.w,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        SizedBox(width: 4.w),
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 9.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildActionBtn(String label, IconData icon, Color color, {VoidCallback? onTap}) {
     final isDisabled = onTap == null;
     return InkWell(
@@ -2223,6 +2188,11 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                         (productSlot['quantity'] as num?)?.toInt() ?? 0;
                     final qualityLevel =
                         (productSlot['quality_level'] as num?)?.toInt() ?? 1;
+                    final sourceCityId =
+                        (warehouse['city_id'] ??
+                                warehouse['city']?['id'] ??
+                                '')
+                            .toString();
                     final cityName =
                         (warehouse['city']?['name'] ?? 'Bilinmeyen Sehir')
                             .toString();
@@ -2256,7 +2226,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                             productSlot['id'].toString(),
                             availableQty,
                             qualityLevel,
-                            cityName,
+                            sourceCityId,
                           );
                         },
                       ),
@@ -2279,7 +2249,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     String warehouseSlotId,
     int availableQty,
     int selectedQualityLevel,
-    String sourceCityName,
+    String sourceCityId,
   ) {
     final controller = TextEditingController(text: '1');
     final maxCanTake = slot.capacity - slot.quantity - slot.pendingQuantity;
@@ -2340,7 +2310,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 warehouseSlotId,
                 qty,
                 selectedQualityLevel,
-                sourceCityName,
+                sourceCityId,
               );
             },
             child: const Text(
@@ -2361,11 +2331,11 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     String warehouseSlotId,
     int quantity,
     int selectedQualityLevel,
-    String sourceCityName,
+    String sourceCityId,
   ) async {
     final isSameCity =
-        (store.cityName ?? '').trim().toLowerCase() ==
-        sourceCityName.trim().toLowerCase();
+        (store.cityId ?? '').isNotEmpty &&
+        store.cityId == sourceCityId;
 
     if (isSameCity) {
       _startWarehouseTransferV2(

@@ -1,6 +1,9 @@
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+const _routeMismatchReason =
+    'Aracin rotasi bu sehir ciftini desteklemiyor.';
+
 class ProductionLogisticsService {
   final SupabaseClient _supabase;
 
@@ -57,6 +60,7 @@ class ProductionLogisticsService {
             Map<String, dynamic>.from(row as Map),
           ),
         )
+        .where((option) => option.disabledReason != _routeMismatchReason)
         .toList();
   }
 
@@ -81,6 +85,7 @@ class ProductionLogisticsService {
             Map<String, dynamic>.from(row as Map),
           ),
         )
+        .where((option) => option.disabledReason != _routeMismatchReason)
         .toList();
   }
 

@@ -181,7 +181,9 @@ class StoreModel {
     return StoreModel(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
-      cityId: json['city_id'] as String?,
+      cityId:
+          json['city_id'] as String? ??
+          (json['city']?['id'] ?? '').toString(),
       cityName: json['city_name'] as String? ?? json['city']?['name'] as String?,
       level: (json['level'] as num?)?.toInt() ?? 1,
       isActive: json['is_active'] as bool? ?? true,

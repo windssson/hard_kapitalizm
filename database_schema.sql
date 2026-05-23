@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- HARD KAPİTALİZM - VERİTABANI ŞEMASI
 -- Proje: kapitalizm (Supabase / PostgreSQL 17)
 -- Dışa Aktarılma: 2026-05-23
@@ -5635,11 +5635,13 @@ begin
       ) as has_enough_input,
 
       (
-        (ij.h1_required * ij.h1_cost)
-        +
-        (ij.h2_required * ij.h2_cost)
-        +
-        (ij.h3_required * ij.h3_cost)
+        (
+          (ij.h1_required * ij.h1_cost)
+          +
+          (ij.h2_required * ij.h2_cost)
+          +
+          (ij.h3_required * ij.h3_cost)
+        ) * 1.05
       ) as total_input_cost
     from input_joined ij
   ),

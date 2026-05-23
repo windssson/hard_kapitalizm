@@ -120,8 +120,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
           _buildCompanyCard(context, company),
           SizedBox(height: 24.h),
           _buildFleetOverview(vehicles, performanceByVehicle, cityMap),
-          SizedBox(height: 20.h),
-          _buildRouteInsights(vehicles, performanceByVehicle, cityMap),
           SizedBox(height: 24.h),
           _buildSectionHeader('FILO YONETIMI', '${vehicles.length} Arac'),
           SizedBox(height: 12.h),
@@ -332,21 +330,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
     final assignedRoutes = vehicles.where((vehicle) => vehicle.hasAssignedRoute).length;
     final onRouteCount = vehicles.where((vehicle) => vehicle.status == 'on_route').length;
     final rentalOpenCount = vehicles.where((vehicle) => vehicle.isAvailableForRent).length;
-    final lowFuelCount = vehicles.where((vehicle) {
-      if (vehicle.fuelCapacity == 0) return false;
-      return (vehicle.currentFuel / vehicle.fuelCapacity) < 0.25;
-    }).length;
-    final avgCondition = vehicles.isEmpty
-        ? 0.0
-        : vehicles.fold<double>(0, (sum, vehicle) => sum + vehicle.condition) /
-            vehicles.length;
-    final avgFuelRatio = vehicles.isEmpty
-        ? 0.0
-        : vehicles.fold<double>(0, (sum, vehicle) {
-            if (vehicle.fuelCapacity == 0) return sum;
-            return sum + (vehicle.currentFuel / vehicle.fuelCapacity);
-          }) /
-            vehicles.length;
     final totalRentalRevenue = performanceByVehicle.values.fold<double>(
       0,
       (sum, performance) => sum + performance.rentalRevenue,
@@ -355,102 +338,37 @@ class LogisticsManagementScreen extends ConsumerWidget {
       0,
       (sum, performance) => sum + performance.totalTrips,
     );
-    final activeRouteLabels = vehicles
-        .where((vehicle) => vehicle.hasAssignedRoute)
-        .map((vehicle) => _buildRouteLabel(vehicle, cityMap))
-        .toSet()
-        .length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader('OPERASYON OZETI', '$totalTrips Sefer'),
         SizedBox(height: 12.h),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatTile(
-                'AKTIF SEVKIYAT',
-                '$onRouteCount',
-                Icons.route,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: _buildStatTile(
-                'ATANMIS ROTA',
-                '$assignedRoutes/${vehicles.length}',
-                Icons.alt_route,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 12.h),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatTile(
-                'KIRA GELIRI',
-                '${totalRentalRevenue.toStringAsFixed(1)} TL',
-                Icons.payments_outlined,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: _buildStatTile(
-                'KIRAYA ACIK',
-                '$rentalOpenCount',
-                Icons.vpn_key_outlined,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 12.h),
         Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(18.r),
-            border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
+            color: AppColors.cardBgLight.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.border),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'FILO SAGLIGI',
-                style: AppTextStyles.titleGold.copyWith(fontSize: 11.sp),
-              ),
-              SizedBox(height: 10.h),
-              _buildMiniProgress(
-                'ORTALAMA YAKIT',
-                avgFuelRatio.clamp(0.0, 1.0),
-                avgFuelRatio < 0.25 ? AppColors.red : AppColors.gold,
-                Icons.local_gas_station_outlined,
-              ),
-              SizedBox(height: 10.h),
-              _buildMiniProgress(
-                'ORTALAMA KONDISYON',
-                (avgCondition / 100).clamp(0.0, 1.0),
-                avgCondition < 35 ? AppColors.red : AppColors.green,
-                Icons.handyman_outlined,
-              ),
-              SizedBox(height: 12.h),
-              Wrap(
-                spacing: 8.w,
-                runSpacing: 8.h,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildSummaryChip(
-                    '$lowFuelCount dusuk yakit',
-                    lowFuelCount > 0 ? AppColors.red : AppColors.green,
-                  ),
-                  _buildSummaryChip(
-                    '$activeRouteLabels rota aktif',
-                    AppColors.blue,
-                  ),
-                  _buildSummaryChip(
-                    '${vehicles.where((v) => v.status == 'inactive').length} pasif arac',
-                    AppColors.textMuted,
-                  ),
+                  _buildCompactStatItem('AKTIF SEVKIYAT', '$onRouteCount', Icons.route),
+                  _buildCompactStatItem('ATANMIS ROTA', '$assignedRoutes/${vehicles.length}', Icons.alt_route),
+                ],
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 12.h),
+                child: Divider(color: AppColors.borderGold.withValues(alpha: 0.2), height: 1),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildCompactStatItem('KIRA GELIRI', '${totalRentalRevenue.toStringAsFixed(0)} TL', Icons.payments_outlined),
+                  _buildCompactStatItem('KIRAYA ACIK', '$rentalOpenCount', Icons.vpn_key_outlined),
                 ],
               ),
             ],
@@ -460,99 +378,18 @@ class LogisticsManagementScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRouteInsights(
-    List<LogisticsVehicleModel> vehicles,
-    Map<String, LogisticsVehiclePerformanceModel> performanceByVehicle,
-    Map<String, CityModel> cityMap,
-  ) {
-    final groupedRoutes = <String, List<LogisticsVehicleModel>>{};
-    for (final vehicle in vehicles.where((vehicle) => vehicle.hasAssignedRoute)) {
-      final routeLabel = _buildRouteLabel(vehicle, cityMap);
-      groupedRoutes.putIfAbsent(routeLabel, () => []).add(vehicle);
-    }
-
-    if (groupedRoutes.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: AppColors.cardBgLight.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(18.r),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Text(
-          'Henuz atanmis rota yok. Sehirler arasi talebi yonetebilmek icin araclara rota ciftleri atayin.',
-          style: AppTextStyles.body,
-        ),
-      );
-    }
-
-    final routeEntries = groupedRoutes.entries.toList()
-      ..sort((a, b) => b.value.length.compareTo(a.value.length));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildCompactStatItem(String label, String value, IconData icon) {
+    return Row(
       children: [
-        _buildSectionHeader('ROTA PANOSU', '${routeEntries.length} Cift'),
-        SizedBox(height: 12.h),
-        ...routeEntries.map((entry) {
-          final vehiclesOnRoute = entry.value;
-          final activeCount =
-              vehiclesOnRoute.where((vehicle) => vehicle.status == 'on_route').length;
-          final rentOpenCount =
-              vehiclesOnRoute.where((vehicle) => vehicle.isAvailableForRent).length;
-          final totalRevenue = vehiclesOnRoute.fold<double>(
-            0,
-            (sum, vehicle) =>
-                sum +
-                (performanceByVehicle[vehicle.id]?.rentalRevenue ?? 0),
-          );
-          final totalTrips = vehiclesOnRoute.fold<int>(
-            0,
-            (sum, vehicle) =>
-                sum + (performanceByVehicle[vehicle.id]?.totalTrips ?? 0),
-          );
-
-          return Container(
-            margin: EdgeInsets.only(bottom: 12.h),
-            padding: EdgeInsets.all(16.w),
-            decoration: BoxDecoration(
-              color: AppColors.cardBg,
-              borderRadius: BorderRadius.circular(18.r),
-              border: Border.all(
-                color: AppColors.blue.withValues(alpha: 0.18),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  entry.key,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                SizedBox(height: 10.h),
-                Wrap(
-                  spacing: 8.w,
-                  runSpacing: 8.h,
-                  children: [
-                    _buildSummaryChip('${vehiclesOnRoute.length} arac', AppColors.gold),
-                    _buildSummaryChip('$activeCount yolda', AppColors.blue),
-                    _buildSummaryChip('$rentOpenCount kiralik', Colors.orange),
-                    _buildSummaryChip('$totalTrips sefer', AppColors.green),
-                    _buildSummaryChip(
-                      '${totalRevenue.toStringAsFixed(1)} TL gelir',
-                      AppColors.green,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        }),
+        Icon(icon, color: AppColors.gold, size: 20.sp),
+        SizedBox(width: 8.w),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp, fontWeight: FontWeight.bold)),
+            Text(value, style: TextStyle(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ],
     );
   }
@@ -633,6 +470,16 @@ class LogisticsManagementScreen extends ConsumerWidget {
                             ),
                           ),
                           _buildVehicleStatusBadge(vehicle.status),
+                          SizedBox(width: 4.w),
+                          _buildVehicleActionMenu(
+                            context,
+                            ref,
+                            vehicle,
+                            cities,
+                            cityMap,
+                            fuelRatio,
+                            conditionRatio,
+                          ),
                         ],
                       ),
                       SizedBox(height: 16.h),
@@ -673,67 +520,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                       ),
                       SizedBox(height: 14.h),
                       _buildVehiclePerformancePanel(performance),
-                      SizedBox(height: 16.h),
-                      Row(
-                        children: [
-                          _buildCompactActionBtn(
-                            Icons.local_gas_station,
-                            'DOLDUR',
-                            () => _handleRefuelAction(context, ref, vehicle),
-                            fuelRatio < 0.95,
-                          ),
-                          SizedBox(width: 8.w),
-                          _buildCompactActionBtn(
-                            Icons.build,
-                            'BAKIM',
-                            () => _handleRepairAction(context, ref, vehicle),
-                            conditionRatio < 0.9,
-                          ),
-                          SizedBox(width: 8.w),
-                          _buildCompactActionBtn(
-                            Icons.alt_route,
-                            'ROTA',
-                            () => _showRouteSheet(
-                              context,
-                              ref,
-                              vehicle,
-                              cities,
-                              cityMap,
-                            ),
-                            vehicle.status != 'on_route',
-                          ),
-                          SizedBox(width: 8.w),
-                          _buildCompactActionBtn(
-                            vehicle.isAvailableForRent
-                                ? Icons.no_meeting_room
-                                : Icons.vpn_key,
-                            vehicle.isAvailableForRent ? 'KAPAT' : 'KIRALA',
-                            () => _handleRentalAction(context, ref, vehicle),
-                            true,
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            onPressed: vehicle.status == 'on_route'
-                                ? null
-                                : () => _handleActiveToggle(
-                                      context,
-                                      ref,
-                                      vehicle,
-                                    ),
-                            icon: Icon(
-                              vehicle.status == 'inactive'
-                                  ? Icons.play_circle_fill
-                                  : Icons.pause_circle_filled,
-                              color: vehicle.status == 'on_route'
-                                  ? AppColors.textMuted
-                                  : AppColors.gold,
-                              size: 32.sp,
-                            ),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
-                      ),
+                      // Aksiyon butonlari sag ust popup menuye tasindi.
                       if (!hasRoute) ...[
                         SizedBox(height: 10.h),
                         Text(
@@ -752,60 +539,158 @@ class LogisticsManagementScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildVehicleActionMenu(
+    BuildContext context,
+    WidgetRef ref,
+    LogisticsVehicleModel vehicle,
+    List<CityModel> cities,
+    Map<String, CityModel> cityMap,
+    double fuelRatio,
+    double conditionRatio,
+  ) {
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert, color: AppColors.gold, size: 24.sp),
+      color: AppColors.cardBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.2)),
+      ),
+      onSelected: (value) {
+        switch (value) {
+          case 'refuel':
+            _handleRefuelAction(context, ref, vehicle);
+            break;
+          case 'repair':
+            _handleRepairAction(context, ref, vehicle);
+            break;
+          case 'route':
+            _showRouteSheet(context, ref, vehicle, cities, cityMap);
+            break;
+          case 'rent':
+            _handleRentalAction(context, ref, vehicle);
+            break;
+          case 'toggle_active':
+            _handleActiveToggle(context, ref, vehicle);
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        if (fuelRatio < 0.95)
+          PopupMenuItem(
+            value: 'refuel',
+            child: Row(
+              children: [
+                Icon(Icons.local_gas_station, color: AppColors.gold, size: 18.sp),
+                SizedBox(width: 10.w),
+                Text('Doldur', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
+              ],
+            ),
+          ),
+        if (conditionRatio < 0.9)
+          PopupMenuItem(
+            value: 'repair',
+            child: Row(
+              children: [
+                Icon(Icons.build, color: AppColors.gold, size: 18.sp),
+                SizedBox(width: 10.w),
+                Text('Bakim Yap', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
+              ],
+            ),
+          ),
+        if (vehicle.status != 'on_route')
+          PopupMenuItem(
+            value: 'route',
+            child: Row(
+              children: [
+                Icon(Icons.alt_route, color: AppColors.gold, size: 18.sp),
+                SizedBox(width: 10.w),
+                Text('Rota Atamasi', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
+              ],
+            ),
+          ),
+        PopupMenuItem(
+          value: 'rent',
+          child: Row(
+            children: [
+              Icon(vehicle.isAvailableForRent ? Icons.no_meeting_room : Icons.vpn_key, color: AppColors.gold, size: 18.sp),
+              SizedBox(width: 10.w),
+              Text(vehicle.isAvailableForRent ? 'Kiralamayi Kapat' : 'Kiraya Ver', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
+            ],
+          ),
+        ),
+        if (vehicle.status != 'on_route')
+          PopupMenuItem(
+            value: 'toggle_active',
+            child: Row(
+              children: [
+                Icon(vehicle.status == 'inactive' ? Icons.play_circle_fill : Icons.pause_circle_filled, color: AppColors.gold, size: 18.sp),
+                SizedBox(width: 10.w),
+                Text(vehicle.status == 'inactive' ? 'Aktif Et' : 'Pasife Al', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+
   Widget _buildRoutePanel(
     LogisticsVehicleModel vehicle,
     Map<String, CityModel> cityMap,
   ) {
     final hasRoute = vehicle.hasAssignedRoute;
+    if (!hasRoute) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: AppColors.cardBgLight.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.alt_route, color: AppColors.textMuted, size: 14.sp),
+            SizedBox(width: 8.w),
+            Text('Rota atanmadi', style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+    }
+
+    final cityAName = cityMap[vehicle.routeCityAId]?.name ?? '?';
+    final cityBName = cityMap[vehicle.routeCityBId]?.name ?? '?';
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: hasRoute
-              ? AppColors.blue.withValues(alpha: 0.45)
-              : AppColors.border,
-        ),
+        color: AppColors.cardBgLight.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: AppColors.blue.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.alt_route,
-            color: hasRoute ? AppColors.blue : AppColors.textMuted,
-            size: 18.sp,
+          Icon(Icons.place, color: AppColors.gold, size: 14.sp),
+          SizedBox(width: 4.w),
+          Flexible(
+            child: Text(
+              cityAName,
+              style: TextStyle(color: AppColors.gold, fontSize: 11.sp, fontWeight: FontWeight.w800),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ROTA CIFTI',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 9.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  _buildRouteLabel(vehicle, cityMap),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  hasRoute
-                      ? 'Bu arac sadece bu iki sehir arasindaki transferlerde secilebilir.'
-                      : 'Rota atanmadi. Sehirler arasi transferlerde secilemez.',
-                  style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-                ),
-              ],
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            child: Icon(Icons.sync_alt, color: AppColors.blue.withValues(alpha: 0.7), size: 14.sp),
+          ),
+          Icon(Icons.place, color: AppColors.gold, size: 14.sp),
+          SizedBox(width: 4.w),
+          Flexible(
+            child: Text(
+              cityBName,
+              style: TextStyle(color: AppColors.gold, fontSize: 11.sp, fontWeight: FontWeight.w800),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -816,51 +701,29 @@ class LogisticsManagementScreen extends ConsumerWidget {
   Widget _buildVehiclePerformancePanel(
     LogisticsVehiclePerformanceModel performance,
   ) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'PERFORMANS',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 9.sp,
-              fontWeight: FontWeight.w700,
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildMiniStat('Sefer', '${performance.totalTrips}', Icons.local_shipping),
+        _buildMiniStat('Aktif', '${performance.activeTrips}', Icons.route),
+        _buildMiniStat('Gelir', '${performance.rentalRevenue.toStringAsFixed(0)}', Icons.payments),
+      ],
+    );
+  }
+
+  Widget _buildMiniStat(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.gold, size: 12.sp),
+        SizedBox(width: 4.w),
+        Text(
+          '$value $label',
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 10.sp,
           ),
-          SizedBox(height: 8.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: [
-              _buildSummaryChip('${performance.totalTrips} sefer', AppColors.gold),
-              _buildSummaryChip(
-                '${performance.completedTrips} tamamlandi',
-                AppColors.green,
-              ),
-              _buildSummaryChip('${performance.activeTrips} aktif', AppColors.blue),
-              _buildSummaryChip(
-                '${performance.rentalRevenue.toStringAsFixed(1)} TL kira',
-                Colors.orange,
-              ),
-            ],
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            performance.lastActivityAt == null
-                ? 'Bu arac icin henuz transfer kaydi yok.'
-                : 'Son hareket: ${_formatCompactDateTime(performance.lastActivityAt!)}',
-            style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

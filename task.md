@@ -8,7 +8,7 @@ Bu dosya, projenin sonuna kadar hem backend hem de frontend entegrasyonlarını 
 
 ### Faz 1: UI Temizlik ve Harita Optimizasyonu 🛠️
 - [x] Tüm kullanılmayan elementlerin, değişkenlerin ve `ref.refresh` uyarılarının giderilmesi.
-- [ ] Canlı transfer haritasında (`TransferMapPainter`) yüksek yoğunlukta araç/transfer çiziminde performansın `RepaintBoundary` ile optimize edilmesi.
+- [x] Canlı transfer haritasında (`TransferMapPainter`) yüksek yoğunlukta araç/transfer çiziminde performansın `RepaintBoundary` ile optimize edilmesi.
 
 ### Faz 2: Lojistik, Transfer ve Araç Sistemleri 🚚
 - [ ] Transfer fonksiyonlarının veritabanında test edilmesi ve UI entegrasyonlarının tamamlanması:
@@ -35,13 +35,13 @@ Bu dosya, projenin sonuna kadar hem backend hem de frontend entegrasyonlarını 
 - [ ] Oyuncu seviye (Level) atlama sistemi: Level yükseldikçe yeni endüstri zincirlerinin ve ürün türlerinin kilitlerinin açılması, veritabanı entegrasyonları.
 
 ### Faz 6: Veritabanı Optimizasyonu ve Temizlik (Cleanup) 💾
-- [ ] Önerilen kalıcı indexlerin PostgreSQL tarafında oluşturulması:
-  - [ ] Production slots active index
-  - [ ] Production inventory field/farm output index
-  - [ ] Production inventory field/farm input index
-  - [ ] Production inventory owner/type index
-  - [ ] Production inventory mine output index
-  - [ ] Mines active product index
+- [x] Önerilen kalıcı indexlerin PostgreSQL tarafında oluşturulması:
+  - [x] Production slots active index
+  - [x] Production inventory field/farm output index
+  - [x] Production inventory field/farm input index
+  - [x] Production inventory owner/type index
+  - [x] Production inventory mine output index
+  - [x] Mines active product index
 - [ ] `cleanup` fonksiyonunun yazılması: `quantity = 0` ve `pending_quantity = 0` olan ve aktif üretimle eşleşmeyen eski kayıtların temizlenmesi.
 
 ---

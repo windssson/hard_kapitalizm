@@ -8,6 +8,9 @@ import 'package:hard_kapitalizm/features/market/models/market_transfer_model.dar
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 
+const _routeMismatchReason =
+    'Aracin rotasi bu sehir ciftini desteklemiyor.';
+
 class MarketVehicleOptionsParams {
   final String? buyerWarehouseId;
   final String? buyerStoreSlotId;
@@ -180,6 +183,7 @@ final marketTransferVehicleOptionsProvider = FutureProvider.family<
           json as Map<String, dynamic>,
         ),
       )
+      .where((option) => option.disabledReason != _routeMismatchReason)
       .toList();
 });
 

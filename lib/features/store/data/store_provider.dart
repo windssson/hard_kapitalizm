@@ -7,6 +7,9 @@ import 'package:hard_kapitalizm/features/store/models/store_performance_model.da
 import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+const _routeMismatchReason =
+    'Aracin rotasi bu sehir ciftini desteklemiyor.';
+
 final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
@@ -521,6 +524,7 @@ class StoreActionNotifier {
             json as Map<String, dynamic>,
           ),
         )
+        .where((option) => option.disabledReason != _routeMismatchReason)
         .toList();
   }
 
@@ -587,6 +591,7 @@ class StoreActionNotifier {
             json as Map<String, dynamic>,
           ),
         )
+        .where((option) => option.disabledReason != _routeMismatchReason)
         .toList();
   }
 

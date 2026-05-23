@@ -476,8 +476,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     return GestureDetector(
       onTap: () => context.go('/store/${store.id}'),
       child: Container(
-        margin: EdgeInsets.only(bottom: 10.h),
-        padding: EdgeInsets.all(8.w),
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(20.r),
@@ -495,66 +495,168 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 80.w,
-              height: 80.w,
-              padding: EdgeInsets.all(4.w),
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(
-                  color: AppColors.gold.withValues(alpha: 0.3),
-                  width: 0.8,
+            // LEFT COLUMN
+            Column(
+              children: [
+                Container(
+                  width: 56.w,
+                  height: 56.w,
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBgLight.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.3),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: CachedAssetImage(
+                    fileName: store.storeType.icon,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-              ),
-              child: CachedAssetImage(
-                fileName: store.storeType.icon,
-                fit: BoxFit.contain,
-              ),
+                SizedBox(height: 6.h),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.location_on, color: AppColors.gold, size: 10.sp),
+                    SizedBox(width: 2.w),
+                    Text(
+                      store.cityName ?? 'Bilinmiyor',
+                      style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ],
             ),
             SizedBox(width: 12.w),
+            // MIDDLE & RIGHT COLUMNS
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: 4.h),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // MIDDLE TOP
                       Expanded(
-                        child: Text(
-                          store.name,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              store.name,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: 4.h),
+                            _buildSmallBadge('Lv. ${store.level}', AppColors.gold),
+                          ],
                         ),
                       ),
-                      Row(
-                        children: [
-                          _buildSmallBadge('Lv. ${store.level}', AppColors.gold),
-                          SizedBox(width: 4.w),
-                          _buildSmallBadge(
-                            store.isActive ? 'Aktif' : 'Pasif',
-                            store.isActive ? AppColors.green : AppColors.red,
-                          ),
-                        ],
+                      // RIGHT TOP
+                      _buildSmallBadge(
+                        store.isActive ? 'Aktif' : 'Pasif',
+                        store.isActive ? AppColors.green : AppColors.red,
                       ),
                     ],
                   ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    store.cityName ?? 'Bilinmiyor',
-                    style: TextStyle(
-                      color: AppColors.gold,
-                      fontSize: 11.sp,
+                  if (store.slots.isNotEmpty) ...[
+                    SizedBox(height: 12.h),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: store.slots.map((slot) => _buildSlotItem(slot)).toList(),
+                      ),
                     ),
-                  ),
+                  ]
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSlotItem(StoreSlotModel slot) {
+    final double fillRatio = slot.capacity > 0 ? (slot.quantity / slot.capacity).clamp(0.0, 1.0) : 0.0;
+    
+    // Color transitions from red to green based on fill ratio
+    final Color progressColor = Color.lerp(AppColors.red, AppColors.green, fillRatio) ?? AppColors.green;
+
+    return Container(
+      margin: EdgeInsets.only(right: 8.w),
+      width: 48.w,
+      height: 48.w,
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: AppColors.borderGoldLight.withValues(alpha: 0.1)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10.r),
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            // Fill Progress Background
+            if (!slot.isEmpty && slot.isActive)
+              FractionallySizedBox(
+                heightFactor: fillRatio,
+                widthFactor: 1.0,
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  color: progressColor.withValues(alpha: 0.3),
+                ),
+              ),
+            // Bottom solid line indicating it's a progress bar
+            if (!slot.isEmpty && slot.isActive)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 3.h,
+                child: FractionallySizedBox(
+                  widthFactor: fillRatio,
+                  alignment: Alignment.bottomLeft,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: progressColor,
+                      boxShadow: [
+                        BoxShadow(color: progressColor.withValues(alpha: 0.5), blurRadius: 4, offset: const Offset(0, -1)),
+                      ]
+                    )
+                  ),
+                ),
+              ),
+            // Icon
+            Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.w),
+                child: slot.isEmpty 
+                  ? Icon(Icons.add, color: AppColors.textMuted.withValues(alpha: 0.3), size: 20.sp) 
+                  : CachedAssetImage(fileName: slot.productIcon ?? 'default.webp'),
+              ),
+            ),
+            // Pasif indicator
+            if (!slot.isEmpty && !slot.isActive)
+              Container(
+                color: Colors.black.withValues(alpha: 0.6),
+                child: Center(
+                  child: Icon(Icons.pause, color: AppColors.red, size: 20.sp),
+                ),
+              ),
           ],
         ),
       ),

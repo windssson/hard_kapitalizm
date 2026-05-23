@@ -5,6 +5,8 @@ import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
@@ -35,12 +37,31 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     });
   }
 
+  void _onNavSelected(int index) {
+    if (index == 1) return;
+    switch (index) {
+      case 0:
+        context.go('/home');
+        break;
+      case 2:
+        context.go('/transfer-map');
+        break;
+      case 4:
+        context.go('/profile');
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(factoryDetailProvider(widget.factoryId));
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: AppBottomNav(
+        selectedIndex: 1,
+        onItemSelected: _onNavSelected,
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -68,51 +89,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 28.h),
                     children: [
-                      _buildHero(detail),
-                      SizedBox(height: 14.h),
-                      _buildOverview(detail),
-                      SizedBox(height: 14.h),
-                      _buildProductionStatusCard(detail),
-                      SizedBox(height: 14.h),
-                      _buildProductSection(context, ref, detail),
-                      SizedBox(height: 18.h),
-                      _buildSectionHeader(
-                        'Input Akisi',
-                        'Birden fazla hammaddeyi depodan cekerek uretimi besle.',
-                      ),
-                      SizedBox(height: 10.h),
-                      _buildInventoryPanel(
-                        context: context,
-                        ref: ref,
-                        detail: detail,
-                        title: 'Input Stoklari',
-                        caption: 'Maks kapasite: ${detail.factory.inputCapacity}',
-                        progressColor: AppColors.blue,
-                        progressValue: _inventoryRatio(
-                          _calculateUsedCapacity(detail.inputInventories),
-                          detail.factory.inputCapacity,
-                        ),
-                        inventories: detail.inputInventories,
-                      ),
-                      SizedBox(height: 18.h),
-                      _buildSectionHeader(
-                        'Output Akisi',
-                        'Uretilen stoklari depoya aktar ve kapasiteyi bosalt.',
-                      ),
-                      SizedBox(height: 10.h),
-                      _buildInventoryPanel(
-                        context: context,
-                        ref: ref,
-                        detail: detail,
-                        title: 'Output Stoklari',
-                        caption: 'Maks kapasite: ${detail.factory.outputCapacity}',
-                        progressColor: AppColors.green,
-                        progressValue: _inventoryRatio(
-                          _calculateUsedCapacity(detail.outputInventories),
-                          detail.factory.outputCapacity,
-                        ),
-                        inventories: detail.outputInventories,
-                      ),
+                      _buildImmersiveHeader(detail),
+                      SizedBox(height: 16.h),
+                      _buildQuickActions(context, ref, detail),
+                      SizedBox(height: 24.h),
+                      _buildProductionFlow(context, ref, detail),
+                      SizedBox(height: 24.h),
+                      _buildMetricsGrid(detail),
                     ],
                   ),
                 ),
@@ -124,565 +107,436 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
   }
 
-  Widget _buildHero(FactoryDetailModel detail) {
+      Widget _buildImmersiveHeader(FactoryDetailModel detail) {
     return Container(
-      padding: EdgeInsets.all(14.w),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24.r),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.cardBgLight,
-            AppColors.cardBg,
-            AppColors.background,
+            Colors.black54,
+            AppColors.navBg.withValues(alpha: 0.8),
           ],
         ),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.28)),
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.05),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 84.w,
-                height: 84.w,
-                padding: EdgeInsets.all(10.w),
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(18.r),
-                  border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.25),
-                  ),
+          Container(
+            width: 80.w,
+            height: 80.w,
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: Colors.black26,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3), width: 2.w),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.gold.withValues(alpha: 0.1),
+                  blurRadius: 15,
+                  spreadRadius: 1,
                 ),
-                child: CachedAssetImage(
-                  fileName: detail.factoryType.icon,
-                  fit: BoxFit.contain,
-                ),
-              ),
-              SizedBox(width: 14.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+            child: CachedAssetImage(fileName: detail.factoryType.icon, fit: BoxFit.contain),
+          ),
+          SizedBox(width: 20.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      detail.factory.name,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        detail.factory.name,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '${detail.cityName} | ${detail.factoryType.name}',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12.sp,
+                    Container(
+                      width: 10.w,
+                      height: 10.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: detail.factory.isActive ? Colors.greenAccent : Colors.redAccent,
+                        boxShadow: [
+                          BoxShadow(
+                            color: detail.factory.isActive ? Colors.greenAccent.withValues(alpha: 0.6) : Colors.redAccent.withValues(alpha: 0.6),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
-                    ),
-                    SizedBox(height: 10.h),
-                    Wrap(
-                      spacing: 8.w,
-                      runSpacing: 8.h,
-                      children: [
-                        _buildTag('Lv. ${detail.factory.level}', AppColors.gold),
-                        _buildTag(
-                          detail.factory.isActive ? 'AKTIF URETIM' : 'PASIF URETIM',
-                          detail.factory.isActive ? AppColors.green : AppColors.red,
-                        ),
-                        _buildTag(
-                          detail.product == null ? 'URUN SECILMEDI' : 'TEK URUN HATTI',
-                          AppColors.blue,
-                        ),
-                      ],
                     ),
                   ],
                 ),
-              ),
-            ],
+                SizedBox(height: 8.h),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, color: AppColors.textMuted, size: 14.sp),
+                    SizedBox(width: 4.w),
+                    Text(detail.cityName, style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp, fontWeight: FontWeight.w500)),
+                    SizedBox(width: 16.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                      ),
+                      child: Text('Seviye ${detail.factory.level}', style: TextStyle(color: AppColors.gold, fontSize: 10.sp, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOverview(FactoryDetailModel detail) {
-    final inputUsed = _calculateUsedCapacity(detail.inputInventories);
-    final outputUsed = _calculateUsedCapacity(detail.outputInventories);
+  Widget _buildQuickActions(BuildContext context, WidgetRef ref, FactoryDetailModel detail) {
+    int outputQty = 0;
+    if (detail.outputInventories.isNotEmpty) {
+      outputQty = detail.outputInventories.first.quantity;
+    }
 
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Input Kapasitesi',
-            value: '$inputUsed/${detail.factory.inputCapacity}',
-            ratio: _inventoryRatio(inputUsed, detail.factory.inputCapacity),
-            color: AppColors.blue,
-            icon: Icons.south_west,
-          ),
+        _buildActionButton(
+          icon: detail.factory.isActive ? Icons.stop_rounded : Icons.play_arrow_rounded,
+          label: detail.factory.isActive ? 'Durdur' : 'Baslat',
+          color: detail.factory.isActive ? Colors.redAccent : Colors.greenAccent,
+          onTap: detail.product != null ? () => _toggleFactoryActive(context, ref, detail) : null,
         ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Output Kapasitesi',
-            value: '$outputUsed/${detail.factory.outputCapacity}',
-            ratio: _inventoryRatio(outputUsed, detail.factory.outputCapacity),
-            color: AppColors.green,
-            icon: Icons.north_east,
-          ),
+        _buildActionButton(
+          icon: Icons.local_shipping_rounded,
+          label: 'Depoya Aktar',
+          color: Colors.blueAccent,
+          onTap: outputQty > 0 ? () => _startInventoryToWarehouseFlow(context, ref, detail, detail.outputInventories.first) : null,
         ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: _buildMetricCard(
-            title: 'Kalite',
-            value: detail.factory.qualityLevel > 0
-                ? 'Kalite ${detail.factory.qualityLevel}'
-                : 'Hazir Degil',
-            ratio: detail.factory.qualityLevel <= 0
-                ? 0
-                : (detail.factory.qualityLevel / 5).clamp(0.0, 1.0),
-            color: AppColors.gold,
-            icon: Icons.workspace_premium,
-          ),
+        _buildActionButton(
+          icon: Icons.upgrade_rounded,
+          label: 'Yukselt',
+          color: AppColors.gold,
+          onTap: null, // Placeholder
         ),
       ],
     );
   }
 
-  Widget _buildMetricCard({
-    required String title,
-    required String value,
-    required double ratio,
-    required Color color,
-    required IconData icon,
-  }) {
+  Widget _buildActionButton({required IconData icon, required String label, required Color color, VoidCallback? onTap}) {
+    final isDisabled = onTap == null;
+    final displayColor = isDisabled ? Colors.grey : color;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16.r),
+      child: Container(
+        width: 100.w,
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        decoration: BoxDecoration(
+          color: displayColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: displayColor.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: displayColor, size: 24.sp),
+            SizedBox(height: 6.h),
+            Text(label, style: TextStyle(color: isDisabled ? Colors.grey : Colors.white, fontSize: 11.sp, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductionFlow(BuildContext context, WidgetRef ref, FactoryDetailModel detail) {
     return Container(
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        color: Colors.black26,
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: EdgeInsets.all(6.w),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Icon(icon, color: color, size: 14.sp),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 10.sp,
+              Text('Uretim Akisi', style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+              InkWell(
+                onTap: () => _showProductDialog(context, ref, detail),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.swap_horiz, color: AppColors.gold, size: 14.sp),
+                      SizedBox(width: 4.w),
+                      Text('Urun Degistir', style: TextStyle(color: AppColors.gold, fontSize: 10.sp, fontWeight: FontWeight.bold)),
+                    ],
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 12.h),
-          Text(
-            value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          _buildProgressBar(
-            ratio: ratio,
-            color: color,
-            label: '%${(ratio * 100).round()}',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductionStatusCard(FactoryDetailModel detail) {
-    final status = _resolveProductionStatus(detail);
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: status.color.withValues(alpha: 0.28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: status.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(status.icon, color: status.color, size: 18.sp),
+          SizedBox(height: 24.h),
+          if (detail.product == null)
+            Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20.h),
+                child: Text('Lutfen uretim icin bir urun secin.', style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp)),
               ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Uretim Durumu',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      status.title,
-                      style: TextStyle(
-                        color: status.color,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            status.description,
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 11.sp,
-              height: 1.4,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: [
-              _buildTag(
-                detail.factory.isActive ? 'AKTIF MAKINE' : 'PASIF MAKINE',
-                detail.factory.isActive ? AppColors.green : AppColors.red,
-              ),
-              _buildTag(
-                detail.product == null ? 'URUN YOK' : 'URUN HAZIR',
-                detail.product == null ? AppColors.gold : AppColors.blue,
-              ),
-              _buildTag(
-                _hasAnyInputStock(detail) ? 'INPUT VAR' : 'INPUT ZAYIF',
-                _hasAnyInputStock(detail) ? AppColors.blue : AppColors.red,
-              ),
-              _buildTag(
-                _isOutputFull(detail) ? 'OUTPUT DOLU' : 'OUTPUT MUSAIT',
-                _isOutputFull(detail) ? AppColors.red : AppColors.green,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductSection(
-    BuildContext context,
-    WidgetRef ref,
-    FactoryDetailModel detail,
-  ) {
-    final product = detail.product;
-    final canToggleActive = product != null;
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionHeader(
-            'Aktif Urun',
-            'Fabrika ayni anda yalnizca tek urun uretir.',
-          ),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              Container(
-                width: 54.w,
-                height: 54.w,
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: product == null
-                    ? Icon(Icons.factory, color: AppColors.textMuted, size: 24.sp)
-                    : CachedAssetImage(
-                        fileName: product.urunIconu,
-                        fit: BoxFit.contain,
-                      ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product?.urunAdi ?? 'Henuz urun secilmedi',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      product == null
-                          ? 'Uretimi baslatmak icin ilk urunu sec.'
-                          : 'Kalite ${detail.factory.qualityLevel} | Saatlik uretim: ${product.uretimAdedi}',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11.sp,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildTag(
-                detail.factory.isActive ? 'AKTIF' : 'PASIF',
-                detail.factory.isActive ? AppColors.green : AppColors.red,
-              ),
-            ],
-          ),
-          SizedBox(height: 14.h),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMiniAction(
-                  product == null ? 'Urun Sec' : 'Urun Degistir',
-                  AppColors.gold,
-                  () => _showProductDialog(context, ref, detail),
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: _buildMiniAction(
-                  detail.factory.isActive ? 'Pasif Yap' : 'Aktif Et',
-                  detail.factory.isActive ? AppColors.red : AppColors.green,
-                  () => _toggleFactoryActive(context, ref, detail),
-                  enabled: canToggleActive,
-                ),
-              ),
-            ],
-          ),
-          if (!canToggleActive) ...[
-            SizedBox(height: 10.h),
-            Text(
-              'Fabrikayi aktif etmek icin once uretilecek urunu belirle.',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInventoryPanel({
-    required BuildContext context,
-    required WidgetRef ref,
-    required FactoryDetailModel detail,
-    required String title,
-    required String caption,
-    required Color progressColor,
-    required double progressValue,
-    required List<FactoryProductionInventoryModel> inventories,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                caption,
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 10.sp,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          _buildProgressBar(
-            ratio: progressValue,
-            color: progressColor,
-            label: '%${(progressValue * 100).round()} dolu',
-          ),
-          SizedBox(height: 12.h),
-          if (inventories.isEmpty)
-            _buildEmptyCard(
-              detail.product == null
-                  ? 'Once urun sec. Secimden sonra gereken input ve output kayitlari burada olusur.'
-                  : 'Bu alanda stok kaydi bulunmuyor.',
             )
           else
-            ...inventories.map(
-              (inv) => _buildInventoryCard(context, ref, detail, inv),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInventoryCard(
-    BuildContext context,
-    WidgetRef ref,
-    FactoryDetailModel detail,
-    FactoryProductionInventoryModel inventory,
-  ) {
-    final title = inventory.product?.urunAdi.isNotEmpty == true
-        ? inventory.product!.urunAdi
-        : inventory.productId;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (inventory.product?.urunIconu != null) ...[
-                Container(
-                  width: 40.w,
-                  height: 40.w,
-                  padding: EdgeInsets.all(6.w),
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: CachedAssetImage(
-                    fileName: inventory.product!.urunIconu,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                SizedBox(width: 10.w),
-              ],
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              _buildTag(
-                inventory.isInput ? 'INPUT' : 'OUTPUT',
-                inventory.isInput ? AppColors.blue : AppColors.green,
-              ),
-            ],
-          ),
-          SizedBox(height: 8.h),
-          _buildProgressBar(
-            ratio: _inventoryRatio(
-              inventory.quantity,
-              inventory.isInput
-                  ? detail.factory.inputCapacity
-                  : detail.factory.outputCapacity,
-            ),
-            color: inventory.isInput ? AppColors.blue : AppColors.green,
-            label:
-                'Miktar ${inventory.quantity} | Pending ${inventory.pendingQuantity.toStringAsFixed(1)}',
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            'Kalite ${inventory.qualityLevel} | Maliyet ${inventory.cost.toStringAsFixed(2)}',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-          ),
-          SizedBox(height: 10.h),
-          if (inventory.isInput)
             Row(
               children: [
+                // Left side: Inputs
                 Expanded(
-                  child: _buildMiniAction(
-                    'Depodan Besle',
-                    AppColors.gold,
-                    () => _startWarehouseToInventoryFlow(
-                      context,
-                      ref,
-                      detail,
-                      inventory,
-                    ),
+                  flex: 3,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: detail.inputInventories.isEmpty
+                        ? [Text('Girdi Yok', style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp))]
+                        : detail.inputInventories.map((inv) {
+                            double req = 0;
+                            if (detail.product!.hammadde1Id == inv.productId) req = detail.product!.hammadde1Miktar ?? 0;
+                            else if (detail.product!.hammadde2Id == inv.productId) req = detail.product!.hammadde2Miktar ?? 0;
+                            else if (detail.product!.hammadde3Id == inv.productId) req = detail.product!.hammadde3Miktar ?? 0;
+                            
+                            double ratio = req > 0 ? (inv.quantity / req) : 0;
+                            if (ratio > 1) ratio = 1.0;
+                            
+                            return _buildFlowItem(
+                              icon: inv.product?.urunIconu ?? '',
+                              title: inv.product?.urunAdi ?? inv.productId,
+                              subtitle: '${inv.quantity} / $req',
+                              progress: ratio,
+                              onAddTap: () => _startWarehouseToInventoryFlow(context, ref, detail, inv),
+                            );
+                          }).toList(),
                   ),
                 ),
-                SizedBox(width: 8.w),
+                // Middle: Processing Arrow -> Circular Product -> Arrow
                 Expanded(
-                  child: _buildMiniAction(
-                    'Depoya Geri Gonder',
-                    AppColors.blue,
-                    () => _startInventoryToWarehouseFlow(
-                      context,
-                      ref,
-                      detail,
-                      inventory,
-                    ),
+                  flex: 4,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.arrow_forward_ios_rounded, color: AppColors.gold.withValues(alpha: 0.5), size: 14.sp),
+                      SizedBox(width: 12.w),
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 64.w,
+                            height: 64.w,
+                            child: CircularProgressIndicator(
+                              value: detail.factory.isActive ? null : 0,
+                              strokeWidth: 3.w,
+                              color: detail.factory.isActive ? Colors.greenAccent : AppColors.border,
+                              backgroundColor: Colors.black45,
+                            ),
+                          ),
+                          Container(
+                            width: 50.w,
+                            height: 50.w,
+                            padding: EdgeInsets.all(8.w),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: CachedAssetImage(fileName: detail.product!.urunIconu, fit: BoxFit.contain),
+                          ),
+                        ],
+                      ),
+                      SizedBox(width: 12.w),
+                      Icon(Icons.arrow_forward_ios_rounded, color: AppColors.gold.withValues(alpha: 0.5), size: 14.sp),
+                    ],
+                  ),
+                ),
+                // Right side: Output
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: detail.outputInventories.isEmpty
+                        ? [Text('Cikti Yok', style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp))]
+                        : [
+                            _buildFlowItem(
+                              icon: detail.product!.urunIconu,
+                              title: detail.product!.urunAdi,
+                              subtitle: '${detail.outputInventories.first.quantity} / ${detail.factory.outputCapacity}',
+                              progress: detail.factory.outputCapacity > 0 ? (detail.outputInventories.first.quantity / detail.factory.outputCapacity).clamp(0.0, 1.0) : 0,
+                              isOutput: true,
+                            )
+                          ],
                   ),
                 ),
               ],
-            )
-          else
-            _buildMiniAction(
-              'Depoya Aktar',
-              AppColors.blue,
-              () => _startInventoryToWarehouseFlow(
-                context,
-                ref,
-                detail,
-                inventory,
-              ),
             ),
         ],
       ),
     );
   }
 
+  Widget _buildFlowItem({
+    required String icon,
+    required String title,
+    required String subtitle,
+    required double progress,
+    bool isOutput = false,
+    VoidCallback? onAddTap,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 4.h),
+      padding: EdgeInsets.all(8.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CachedAssetImage(fileName: icon, width: 20.w, height: 20.w),
+              if (onAddTap != null) ...[
+                SizedBox(width: 4.w),
+                InkWell(
+                  onTap: onAddTap,
+                  child: Icon(Icons.add_circle, color: AppColors.gold, size: 14.sp),
+                ),
+              ],
+            ],
+          ),
+          SizedBox(height: 4.h),
+          Text(title, style: TextStyle(color: Colors.white, fontSize: 9.sp, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+          SizedBox(height: 2.h),
+          Text(subtitle, style: TextStyle(color: isOutput ? Colors.blueAccent : Colors.greenAccent, fontSize: 9.sp)),
+          SizedBox(height: 4.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 2.h,
+              backgroundColor: Colors.black45,
+              color: isOutput ? Colors.blueAccent : Colors.greenAccent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricsGrid(FactoryDetailModel detail) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Detayli Istatistikler', style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+        SizedBox(height: 12.h),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12.h,
+          crossAxisSpacing: 12.w,
+          childAspectRatio: 2.2,
+          children: [
+            _buildGlassMetricCard(
+              title: 'Saatlik Uretim',
+              value: detail.product != null ? '${detail.product!.uretimAdedi}' : '-',
+              icon: Icons.speed,
+              color: Colors.orangeAccent,
+            ),
+            _buildGlassMetricCard(
+              title: 'Tahmini Deger',
+              value: detail.outputInventories.isNotEmpty ? '₺${detail.outputInventories.first.product?.bazSatisFiyati.toInt() ?? 0}' : '-',
+              icon: Icons.attach_money,
+              color: Colors.greenAccent,
+            ),
+            _buildGlassMetricCard(
+              title: 'Kalite Seviyesi',
+              value: '${detail.factory.qualityLevel} Yildiz',
+              icon: Icons.star_rounded,
+              color: AppColors.gold,
+            ),
+            _buildGlassMetricCard(
+              title: 'Birim Maliyet',
+              value: detail.outputInventories.isNotEmpty ? '₺${detail.outputInventories.first.cost.toInt()}' : '-',
+              icon: Icons.money_off,
+              color: Colors.redAccent,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGlassMetricCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8.w),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 16.sp),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(title, style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp)),
+                SizedBox(height: 4.h),
+                Text(value, style: TextStyle(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.bold), maxLines: 1),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   Future<void> _showProductDialog(
     BuildContext context,
     WidgetRef ref,
@@ -1505,227 +1359,4 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, String subtitle) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: 2.h),
-        Text(
-          subtitle,
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 11.sp,
-          ),
-        ),
-      ],
-    );
   }
-
-  Widget _buildProgressBar({
-    required double ratio,
-    required Color color,
-    required String label,
-  }) {
-    return Container(
-      height: 16.h,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.25)),
-      ),
-      child: Stack(
-        children: [
-          FractionallySizedBox(
-            widthFactor: ratio.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999.r),
-                gradient: LinearGradient(
-                  colors: [color.withValues(alpha: 0.55), color],
-                ),
-              ),
-            ),
-          ),
-          Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 8.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTag(String text, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMiniAction(
-    String label,
-    Color color,
-    VoidCallback onTap, {
-    bool enabled = true,
-  }) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 11.h),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: enabled
-              ? color.withValues(alpha: 0.12)
-              : Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color: enabled
-                ? color.withValues(alpha: 0.45)
-                : AppColors.border.withValues(alpha: 0.25),
-          ),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: enabled ? color : AppColors.textMuted,
-            fontSize: 11.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyCard(String message) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        message,
-        style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
-      ),
-    );
-  }
-
-  int _calculateUsedCapacity(List<FactoryProductionInventoryModel> inventories) {
-    var total = 0;
-    for (final inventory in inventories) {
-      total += inventory.quantity;
-    }
-    return total;
-  }
-
-  double _inventoryRatio(int current, int capacity) {
-    if (capacity <= 0) return 0.0;
-    return (current / capacity).clamp(0.0, 1.0);
-  }
-
-  _FactoryProductionStatus _resolveProductionStatus(FactoryDetailModel detail) {
-    if (detail.product == null) {
-      return const _FactoryProductionStatus(
-        title: 'Urun Secimi Bekleniyor',
-        description:
-            'Uretim hattini calistirmak icin once fabrikaya uygun bir urun secmelisin.',
-        color: AppColors.gold,
-        icon: Icons.playlist_add_check_circle_outlined,
-      );
-    }
-
-    if (!detail.factory.isActive) {
-      return const _FactoryProductionStatus(
-        title: 'Fabrika Pasif',
-        description:
-            'Makine kapali oldugu icin input olsa bile uretim yapmaz. Aktif ederek devam edebilirsin.',
-        color: AppColors.red,
-        icon: Icons.pause_circle_outline,
-      );
-    }
-
-    if (_isOutputFull(detail)) {
-      return const _FactoryProductionStatus(
-        title: 'Output Kapasitesi Dolu',
-        description:
-            'Uretilen stoklar cikis deposunu doldurmus. Depoya aktarim yapmadan yeni uretim zorlasir.',
-        color: AppColors.red,
-        icon: Icons.inventory_2_outlined,
-      );
-    }
-
-    if (!_hasAnyInputStock(detail)) {
-      return const _FactoryProductionStatus(
-        title: 'Input Takviyesi Gerekli',
-        description:
-            'Secilen urun icin gerekli girdilerde yeterli stok gorunmuyor. Depodan input beslemesi yapmalisin.',
-        color: AppColors.gold,
-        icon: Icons.south_west,
-      );
-    }
-
-    return const _FactoryProductionStatus(
-      title: 'Uretime Hazir',
-      description:
-          'Urun secili, makine aktif ve stok akisi uygun. Zamanlayici geldikce fabrika uretim yapabilir.',
-      color: AppColors.green,
-      icon: Icons.check_circle_outline,
-    );
-  }
-
-  bool _hasAnyInputStock(FactoryDetailModel detail) {
-    return detail.inputInventories.any(
-      (inventory) => inventory.quantity > 0 || inventory.pendingQuantity > 0,
-    );
-  }
-
-  bool _isOutputFull(FactoryDetailModel detail) {
-    final usedOutput = _calculateUsedCapacity(detail.outputInventories);
-    return detail.factory.outputCapacity > 0 &&
-        usedOutput >= detail.factory.outputCapacity;
-  }
-}
-
-class _FactoryProductionStatus {
-  final String title;
-  final String description;
-  final Color color;
-  final IconData icon;
-
-  const _FactoryProductionStatus({
-    required this.title,
-    required this.description,
-    required this.color,
-    required this.icon,
-  });
-}
