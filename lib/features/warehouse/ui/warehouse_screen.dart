@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -9,7 +10,6 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
-import 'dart:async';
 
 class WarehouseScreen extends ConsumerStatefulWidget {
   const WarehouseScreen({super.key});
@@ -65,28 +65,34 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
 
                   return RefreshIndicator(
                     onRefresh: () => ref.refresh(warehouseListProvider.future),
-                    child: SingleChildScrollView(
+                    child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.symmetric(horizontal: 10.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 12.h),
-                          _buildStatsHeader(warehouses),
-                          SizedBox(height: 16.h),
-                          _buildFilters(),
-                          SizedBox(height: 16.h),
-                          if (filtered.isEmpty)
-                            _buildEmptyState()
-                          else
-                            ...filtered.map(
-                              (warehouse) => warehouse.isUnderConstruction
-                                  ? _buildConstructionCard(warehouse)
-                                  : _buildWarehouseCard(warehouse),
-                            ),
-                          SizedBox(height: 80.h),
-                        ],
-                      ),
+                      slivers: [
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                          sliver: SliverToBoxAdapter(
+                            child: _buildStatsHeader(warehouses),
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
+                          sliver: SliverToBoxAdapter(child: _buildFilters()),
+                        ),
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 80.h),
+                          sliver: filtered.isEmpty
+                              ? SliverToBoxAdapter(child: _buildEmptyState())
+                              : SliverList.builder(
+                                  itemCount: filtered.length,
+                                  itemBuilder: (context, index) {
+                                    final warehouse = filtered[index];
+                                    return warehouse.isUnderConstruction
+                                        ? _buildConstructionCard(warehouse)
+                                        : _buildWarehouseCard(warehouse);
+                                  },
+                                ),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -445,49 +451,47 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   }
 }
 
-class _ConstructionCountdown extends StatefulWidget {
+class _ConstructionCountdown extends ConsumerStatefulWidget {
   final DateTime finishAt;
   final VoidCallback onFinish;
 
   const _ConstructionCountdown({required this.finishAt, required this.onFinish});
 
   @override
-  State<_ConstructionCountdown> createState() => _ConstructionCountdownState();
+  ConsumerState<_ConstructionCountdown> createState() =>
+      _ConstructionCountdownState();
 }
 
-class _ConstructionCountdownState extends State<_ConstructionCountdown> {
-  late Timer _timer;
-  late Duration _timeLeft;
-
-  @override
-  void initState() {
-    super.initState();
-    _timeLeft = widget.finishAt.difference(DateTime.now());
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _timeLeft = widget.finishAt.difference(DateTime.now());
-          if (_timeLeft.isNegative) {
-            _timer.cancel();
-            widget.onFinish();
-          }
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
+class _ConstructionCountdownState
+    extends ConsumerState<_ConstructionCountdown> {
+  bool _triggered = false;
 
   @override
   Widget build(BuildContext context) {
-    if (_timeLeft.isNegative) return const Text('Tamamlanıyor...');
-    final h = _timeLeft.inHours.toString().padLeft(2, '0');
-    final m = (_timeLeft.inMinutes % 60).toString().padLeft(2, '0');
-    final s = (_timeLeft.inSeconds % 60).toString().padLeft(2, '0');
-    return Text('Kalan Süre: $h:$m:$s', style: TextStyle(color: AppColors.gold, fontSize: 12.sp, fontWeight: FontWeight.bold));
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final timeLeft = widget.finishAt.difference(now);
+
+    if (timeLeft.isNegative || timeLeft.inSeconds <= 0) {
+      if (!_triggered) {
+        _triggered = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          widget.onFinish();
+        });
+      }
+      return const Text('Tamamlanıyor...');
+    }
+
+    final h = timeLeft.inHours.toString().padLeft(2, '0');
+    final m = (timeLeft.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (timeLeft.inSeconds % 60).toString().padLeft(2, '0');
+    return Text(
+      'Kalan Süre: $h:$m:$s',
+      style: TextStyle(
+        color: AppColors.gold,
+        fontSize: 12.sp,
+        fontWeight: FontWeight.bold,
+      ),
+    );
   }
 }

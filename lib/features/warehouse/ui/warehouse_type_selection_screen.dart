@@ -216,7 +216,7 @@ class _WarehouseTypeSelectionScreenState
           context.go('/warehouses');
         }
       } else {
-        if (mounted) AppSnackbar.show(context, title: 'Hata', message: result['message'] ?? 'Hata oluştu.', type: SnackbarType.error);
+        if (mounted) AppSnackbar.show(context, title: 'Hata', message: result['message'] ?? 'Islem basarisiz.', type: SnackbarType.error);
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);

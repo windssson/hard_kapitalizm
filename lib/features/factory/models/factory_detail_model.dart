@@ -111,11 +111,34 @@ class FactoryDetailModel {
     required this.inventories,
   });
 
+  Set<String> get _activeInputProductIds {
+    final currentProduct = product;
+    if (currentProduct == null) return const {};
+
+    return {
+      if ((currentProduct.hammadde1Id ?? '').isNotEmpty) currentProduct.hammadde1Id!,
+      if ((currentProduct.hammadde2Id ?? '').isNotEmpty) currentProduct.hammadde2Id!,
+      if ((currentProduct.hammadde3Id ?? '').isNotEmpty) currentProduct.hammadde3Id!,
+    };
+  }
+
   List<FactoryProductionInventoryModel> get inputInventories =>
-      inventories.where((e) => e.isInput).toList()
+      inventories
+          .where(
+            (e) => e.isInput && _activeInputProductIds.contains(e.productId),
+          )
+          .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));
 
   List<FactoryProductionInventoryModel> get outputInventories =>
-      inventories.where((e) => e.isOutput).toList()
+      inventories
+          .where(
+            (e) =>
+                e.isOutput &&
+                product != null &&
+                e.productId == product!.id &&
+                e.qualityLevel == factory.qualityLevel,
+          )
+          .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));
 }

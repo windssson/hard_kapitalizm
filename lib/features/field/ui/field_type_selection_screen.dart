@@ -306,7 +306,7 @@ class _FieldTypeSelectionScreenState
           AppSnackbar.show(
             context,
             title: 'Hata',
-            message: result['message'] ?? 'Hata olustu.',
+            message: result['message'] ?? 'Islem basarisiz.',
             type: SnackbarType.error,
           );
         }

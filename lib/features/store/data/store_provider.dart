@@ -28,22 +28,23 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
           .toList();
     }
 
-    final typesResponse = await supabase.from('store_types').select();
+    final typesResponse = await supabase.rpc('get_store_types_catalog');
     final allTypes = (typesResponse as List)
         .map((json) => StoreTypeModel.fromJson(json))
         .toList();
 
-    final citiesResponse = await supabase.from('cities').select();
+    final citiesResponse = await supabase.rpc('get_cities_catalog');
     final allCities = (citiesResponse as List)
         .map((json) => CityModel.fromJson(json))
         .toList();
 
-    final constructionResponse = await supabase
-        .from('building_constructions')
-        .select('*')
-        .eq('player_id', user.id)
-        .eq('building_kind', 'store')
-        .eq('status', 'in_progress');
+    final constructionResponse = await supabase.rpc(
+      'get_player_building_constructions',
+      params: {
+        'p_building_kind': 'store',
+        'p_status': 'in_progress',
+      },
+    );
 
     if (constructionResponse.isNotEmpty) {
       for (final constr in constructionResponse) {
@@ -187,154 +188,41 @@ final storeHistoryProvider =
         throw Exception('Kullanici girisi yapilmamis.');
       }
 
-      final transfersResponse = await supabase
-          .from('logistics_transfers')
-          .select(
-            'id, quantity, status, total_price, rental_cost, quality_level, started_at, finish_at, completed_at, '
-            'buyer_store_id, seller_store_id, buyer_warehouse_id, seller_warehouse_id, product_id',
-          )
-          .or('buyer_store_id.eq.$storeId,seller_store_id.eq.$storeId')
-          .neq('status', 'in_transit')
-          .order('completed_at', ascending: false)
-          .limit(50);
+      final response = await supabase.rpc(
+        'get_store_history_items',
+        params: {'p_store_id': storeId},
+      );
 
-      final transferRows = (transfersResponse as List<dynamic>)
-          .map((row) => Map<String, dynamic>.from(row as Map))
-          .toList();
-
-      final warehouseIds = <String>{
-        for (final row in transferRows) ...[
-          if ((row['seller_warehouse_id'] ?? '').toString().isNotEmpty)
-            row['seller_warehouse_id'].toString(),
-          if ((row['buyer_warehouse_id'] ?? '').toString().isNotEmpty)
-            row['buyer_warehouse_id'].toString(),
-        ],
-      }.toList();
-
-      final productIds = <String>{
-        for (final row in transferRows)
-          if ((row['product_id'] ?? '').toString().isNotEmpty)
-            row['product_id'].toString(),
-      }.toList();
-
-      final warehouseMap = <String, Map<String, dynamic>>{};
-      if (warehouseIds.isNotEmpty) {
-        final warehouseResponse = await supabase
-            .from('warehouses')
-            .select('id, name, city:cities(name)')
-            .inFilter('id', warehouseIds);
-
-        for (final row in warehouseResponse as List<dynamic>) {
-          final json = Map<String, dynamic>.from(row as Map);
-          warehouseMap[(json['id'] ?? '').toString()] = json;
-        }
-      }
-
-      final productMap = <String, Map<String, dynamic>>{};
-      if (productIds.isNotEmpty) {
-        final productResponse = await supabase
-            .from('products')
-            .select('id, urun_adi')
-            .inFilter('id', productIds);
-
-        for (final row in productResponse as List<dynamic>) {
-          final json = Map<String, dynamic>.from(row as Map);
-          productMap[(json['id'] ?? '').toString()] = json;
-        }
-      }
-
-      final salesResponse = await supabase
-          .from('store_daily_performance')
-          .select(
-            'id, performance_date, product_name, quality_level, sold_quantity, revenue, profit, sale_event_count, last_sale_at',
-          )
-          .eq('player_id', user.id)
-          .eq('store_id', storeId)
-          .gt('sold_quantity', 0)
-          .order('last_sale_at', ascending: false)
-          .limit(50);
-
-      final items = <StoreHistoryItemModel>[
-        ...transferRows.map((json) {
-          final isIncoming = (json['buyer_store_id'] ?? '').toString() == storeId;
-          final happenedAt = DateTime.tryParse(
-                (json['completed_at'] ?? json['finish_at'] ?? json['started_at'] ?? '')
-                    .toString(),
-              ) ??
-              DateTime.now();
-          final sellerWarehouse = warehouseMap[
-              (json['seller_warehouse_id'] ?? '').toString()];
-          final buyerWarehouse = warehouseMap[
-              (json['buyer_warehouse_id'] ?? '').toString()];
-          final product = productMap[(json['product_id'] ?? '').toString()];
-          final productName = (product?['urun_adi'] ?? 'Urun').toString();
-          final sourceWarehouseName = (sellerWarehouse?['name'] ?? 'Depo').toString();
-          final sourceCityName =
-              (sellerWarehouse?['city']?['name'] ?? 'Sehir').toString();
-          final buyerWarehouseName = (buyerWarehouse?['name'] ?? 'Depo').toString();
-          final buyerCityName =
-              (buyerWarehouse?['city']?['name'] ?? 'Sehir').toString();
-          final totalPrice = (json['total_price'] as num?)?.toDouble() ?? 0;
-
-          return StoreHistoryItemModel(
-            id: 'transfer_${json['id']}',
-            type: isIncoming ? 'incoming_transfer' : 'outgoing_transfer',
-            happenedAt: happenedAt,
-            title: isIncoming
-                ? (totalPrice > 0 ? 'Pazardan Geldi' : 'Depodan Geldi')
-                : 'Depoya Gonderildi',
-            subtitle: isIncoming
-                ? '$sourceWarehouseName | $sourceCityName'
-                : '$buyerWarehouseName | $buyerCityName',
-            productName: productName,
-            quantity: (json['quantity'] as num?)?.toInt() ?? 0,
-            amount: totalPrice,
-            secondaryAmount: (json['rental_cost'] as num?)?.toDouble(),
-            qualityLevel: (json['quality_level'] as num?)?.toInt(),
-            status: (json['status'] ?? 'completed').toString(),
-          );
-        }),
-        ...(salesResponse as List<dynamic>).map((row) {
-          final json = Map<String, dynamic>.from(row as Map);
-          final happenedAt = DateTime.tryParse(
-                (json['last_sale_at'] ?? json['performance_date'] ?? '').toString(),
-              ) ??
-              DateTime.now();
-          return StoreHistoryItemModel(
-            id: 'sale_${json['id']}',
-            type: 'sale',
-            happenedAt: happenedAt,
-            title: 'Satis Ozeti',
-            subtitle:
-                '${(json['sale_event_count'] as num?)?.toInt() ?? 0} satis islemi',
-            productName: (json['product_name'] ?? 'Urun').toString(),
-            quantity: (json['sold_quantity'] as num?)?.toInt() ?? 0,
-            amount: (json['revenue'] as num?)?.toDouble() ?? 0,
-            secondaryAmount: (json['profit'] as num?)?.toDouble(),
-            qualityLevel: (json['quality_level'] as num?)?.toInt(),
-            status: 'completed',
-          );
-        }),
-      ];
-
-      items.sort((a, b) => b.happenedAt.compareTo(a.happenedAt));
-      return items;
+      return (response as List<dynamic>).map((row) {
+        final json = Map<String, dynamic>.from(row as Map);
+        return StoreHistoryItemModel(
+          id: (json['id'] ?? '').toString(),
+          type: (json['type'] ?? 'sale').toString(),
+          happenedAt:
+              DateTime.tryParse((json['happened_at'] ?? '').toString()) ??
+              DateTime.now(),
+          title: (json['title'] ?? '').toString(),
+          subtitle: (json['subtitle'] ?? '').toString(),
+          productName: (json['product_name'] ?? 'Urun').toString(),
+          quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+          amount: (json['amount'] as num?)?.toDouble() ?? 0,
+          secondaryAmount: (json['secondary_amount'] as num?)?.toDouble(),
+          qualityLevel: (json['quality_level'] as num?)?.toInt(),
+          status: (json['status'] ?? 'completed').toString(),
+        );
+      }).toList();
     });
 
 final citiesProvider = FutureProvider<List<CityModel>>((ref) async {
   final supabase = Supabase.instance.client;
-  final response = await supabase.from('cities').select().eq('is_active', true);
+  final response = await supabase.rpc('get_active_cities');
 
   return (response as List).map((json) => CityModel.fromJson(json)).toList();
 });
 
 final storeTypesProvider = FutureProvider<List<StoreTypeModel>>((ref) async {
   final supabase = Supabase.instance.client;
-  final response = await supabase
-      .from('store_types')
-      .select()
-      .order('required_level', ascending: true)
-      .order('cost', ascending: true);
+  final response = await supabase.rpc('get_store_types_catalog');
 
   return (response as List)
       .map((json) => StoreTypeModel.fromJson(json))
@@ -553,11 +441,10 @@ class StoreActionNotifier {
     }
 
     try {
-      final response = await _supabase
-          .from('warehouses')
-          .select('*, city:cities(name), warehouse_slots(*, product:products(*))')
-          .eq('player_id', user.id)
-          .eq('is_active', true);
+      final response = await _supabase.rpc(
+        'get_player_active_warehouses_with_slots',
+        params: {'p_city_id': cityId},
+      );
 
       final warehouses = response as List<dynamic>;
 
@@ -643,12 +530,9 @@ class StoreActionNotifier {
       throw Exception('Oturum acilmamis.');
     }
 
-    final response = await _supabase
-        .from('warehouses')
-        .select('id, name, city_id, is_active, city:cities(name)')
-        .eq('player_id', user.id)
-        .eq('is_active', true)
-        .order('created_at', ascending: true);
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_basic',
+    );
 
     return (response as List<dynamic>)
         .map((e) => Map<String, dynamic>.from(e as Map))

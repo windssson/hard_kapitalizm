@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
@@ -9,14 +10,34 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
 
-class FactoryDetailScreen extends ConsumerWidget {
+class FactoryDetailScreen extends ConsumerStatefulWidget {
   final String factoryId;
 
   const FactoryDetailScreen({super.key, required this.factoryId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(factoryDetailProvider(factoryId));
+  ConsumerState<FactoryDetailScreen> createState() =>
+      _FactoryDetailScreenState();
+}
+
+class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _refreshOnEntry();
+  }
+
+  void _refreshOnEntry() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.invalidate(factoryDetailProvider(widget.factoryId));
+      ref.read(factoryDetailProvider(widget.factoryId).future);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detailAsync = ref.watch(factoryDetailProvider(widget.factoryId));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -41,8 +62,8 @@ class FactoryDetailScreen extends ConsumerWidget {
                 ),
                 data: (detail) => RefreshIndicator(
                   onRefresh: () async {
-                    ref.invalidate(factoryDetailProvider(factoryId));
-                    await ref.read(factoryDetailProvider(factoryId).future);
+                    ref.invalidate(factoryDetailProvider(widget.factoryId));
+                    await ref.read(factoryDetailProvider(widget.factoryId).future);
                   },
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 28.h),
@@ -50,6 +71,8 @@ class FactoryDetailScreen extends ConsumerWidget {
                       _buildHero(detail),
                       SizedBox(height: 14.h),
                       _buildOverview(detail),
+                      SizedBox(height: 14.h),
+                      _buildProductionStatusCard(detail),
                       SizedBox(height: 14.h),
                       _buildProductSection(context, ref, detail),
                       SizedBox(height: 18.h),
@@ -280,6 +303,92 @@ class FactoryDetailScreen extends ConsumerWidget {
             ratio: ratio,
             color: color,
             label: '%${(ratio * 100).round()}',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductionStatusCard(FactoryDetailModel detail) {
+    final status = _resolveProductionStatus(detail);
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: status.color.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: status.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(status.icon, color: status.color, size: 18.sp),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Uretim Durumu',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      status.title,
+                      style: TextStyle(
+                        color: status.color,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            status.description,
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 11.sp,
+              height: 1.4,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: [
+              _buildTag(
+                detail.factory.isActive ? 'AKTIF MAKINE' : 'PASIF MAKINE',
+                detail.factory.isActive ? AppColors.green : AppColors.red,
+              ),
+              _buildTag(
+                detail.product == null ? 'URUN YOK' : 'URUN HAZIR',
+                detail.product == null ? AppColors.gold : AppColors.blue,
+              ),
+              _buildTag(
+                _hasAnyInputStock(detail) ? 'INPUT VAR' : 'INPUT ZAYIF',
+                _hasAnyInputStock(detail) ? AppColors.blue : AppColors.red,
+              ),
+              _buildTag(
+                _isOutputFull(detail) ? 'OUTPUT DOLU' : 'OUTPUT MUSAIT',
+                _isOutputFull(detail) ? AppColors.red : AppColors.green,
+              ),
+            ],
           ),
         ],
       ),
@@ -528,17 +637,47 @@ class FactoryDetailScreen extends ConsumerWidget {
             style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
           ),
           SizedBox(height: 10.h),
-          _buildMiniAction(
-            inventory.isInput ? 'Depodan Besle' : 'Depoya Aktar',
-            inventory.isInput ? AppColors.gold : AppColors.blue,
-            () {
-              if (inventory.isInput) {
-                _startWarehouseToInventoryFlow(context, ref, detail, inventory);
-              } else {
-                _startInventoryToWarehouseFlow(context, ref, detail, inventory);
-              }
-            },
-          ),
+          if (inventory.isInput)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMiniAction(
+                    'Depodan Besle',
+                    AppColors.gold,
+                    () => _startWarehouseToInventoryFlow(
+                      context,
+                      ref,
+                      detail,
+                      inventory,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: _buildMiniAction(
+                    'Depoya Geri Gonder',
+                    AppColors.blue,
+                    () => _startInventoryToWarehouseFlow(
+                      context,
+                      ref,
+                      detail,
+                      inventory,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            _buildMiniAction(
+              'Depoya Aktar',
+              AppColors.blue,
+              () => _startInventoryToWarehouseFlow(
+                context,
+                ref,
+                detail,
+                inventory,
+              ),
+            ),
         ],
       ),
     );
@@ -672,11 +811,17 @@ class FactoryDetailScreen extends ConsumerWidget {
     if (!context.mounted) return;
     if (result['success'] == true) {
       final _ = await ref.refresh(factoryDetailProvider(detail.factory.id).future);
+      ref.invalidate(factoryListProvider);
+      final deletedObsoleteCount =
+          (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
+      final cleanupNote = deletedObsoleteCount > 0
+          ? ' Eski bos kayitlardan $deletedObsoleteCount adet temizlendi.'
+          : '';
       AppSnackbar.show(
         context,
         title: 'Basarili',
         message:
-            '${product.urunAdi} otomatik kalite ${selectableProduct.maxQualityLevel} ile ayarlandi.',
+            '${product.urunAdi} otomatik kalite ${selectableProduct.maxQualityLevel} ile ayarlandi.$cleanupNote',
         type: SnackbarType.success,
       );
       return;
@@ -703,6 +848,15 @@ class FactoryDetailScreen extends ConsumerWidget {
     if (!context.mounted) return;
     if (result['success'] == true) {
       final _ = await ref.refresh(factoryDetailProvider(detail.factory.id).future);
+      ref.invalidate(factoryListProvider);
+      AppSnackbar.show(
+        context,
+        title: 'Basarili',
+        message: detail.factory.isActive
+            ? 'Fabrika pasif moda alindi.'
+            : 'Fabrika aktif edildi.',
+        type: SnackbarType.success,
+      );
       return;
     }
 
@@ -722,9 +876,8 @@ class FactoryDetailScreen extends ConsumerWidget {
   ) async {
     final warehouses = await ref
         .read(factoryActionProvider)
-        .getEligibleWarehouseSlotsForInventory(
+        .getEligibleWarehouseSlotsForInventoryAllCities(
           inventory: inventory,
-          cityId: detail.factory.cityId,
         );
 
     if (!context.mounted) return;
@@ -780,7 +933,7 @@ class FactoryDetailScreen extends ConsumerWidget {
                         style: const TextStyle(color: Colors.white),
                       ),
                       subtitle: Text(
-                        'Stok: $qty',
+                        '${(warehouse['city']?['name'] ?? detail.cityName).toString()} | Stok: $qty',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 11.sp,
@@ -795,26 +948,47 @@ class FactoryDetailScreen extends ConsumerWidget {
                           subtitle:
                               '${inventory.product?.urunAdi ?? inventory.productId} inputu doldurulacak',
                           onConfirm: (quantity) async {
-                            final result = await ref
-                                .read(factoryActionProvider)
-                                .transferWarehouseToProductionInventory(
-                                  warehouseSlotId: slot['id'].toString(),
-                                  productionInventoryId: inventory.id,
-                                  quantity: quantity,
+                            final warehouseCityId =
+                                (warehouse['city_id'] ?? '').toString();
+                            if (_isSameCity(warehouseCityId, detail.factory.cityId)) {
+                              final result = await ref
+                                  .read(factoryActionProvider)
+                                  .transferWarehouseToProductionInventory(
+                                    warehouseSlotId: slot['id'].toString(),
+                                    productionInventoryId: inventory.id,
+                                    quantity: quantity,
+                                  );
+                              if (!context.mounted) return;
+                              if (result['success'] == true) {
+                                final _ = await ref.refresh(
+                                  factoryDetailProvider(detail.factory.id).future,
                                 );
-                            if (!context.mounted) return;
-                            if (result['success'] == true) {
-                              final _ = await ref.refresh(
-                                factoryDetailProvider(detail.factory.id).future,
+                                AppSnackbar.show(
+                                  context,
+                                  title: 'Basarili',
+                                  message: 'Ayni sehir input transferi tamamlandi.',
+                                  type: SnackbarType.success,
+                                );
+                                return;
+                              }
+                              AppSnackbar.show(
+                                context,
+                                title: 'Hata',
+                                message:
+                                    result['message'] ?? 'Transfer basarisiz oldu.',
+                                type: SnackbarType.error,
                               );
                               return;
                             }
-                            AppSnackbar.show(
-                              context,
-                              title: 'Hata',
-                              message:
-                                  result['message'] ?? 'Transfer basarisiz oldu.',
-                              type: SnackbarType.error,
+
+                            await _startFactoryLogisticsInputTransfer(
+                              context: context,
+                              ref: ref,
+                              detail: detail,
+                              inventory: inventory,
+                              warehouseSlotId: slot['id'].toString(),
+                              maxQuantity: qty,
+                              quantity: quantity,
                             );
                           },
                         );
@@ -838,7 +1012,9 @@ class FactoryDetailScreen extends ConsumerWidget {
   ) async {
     final warehouses = await ref
         .read(factoryActionProvider)
-        .getPlayerWarehousesByCity(detail.factory.cityId);
+        .getWarehousesForProductionLogistics(
+          productionCityId: detail.factory.cityId,
+        );
 
     if (!context.mounted) return;
     if (warehouses.isEmpty) {
@@ -875,6 +1051,8 @@ class FactoryDetailScreen extends ConsumerWidget {
             ),
             SizedBox(height: 12.h),
             ...warehouses.map((warehouse) {
+              final warehouseId = warehouse.id;
+              final sameCity = warehouse.isSameCity;
               return Container(
                 margin: EdgeInsets.only(bottom: 8.h),
                 child: ListTile(
@@ -883,11 +1061,11 @@ class FactoryDetailScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   title: Text(
-                    (warehouse['name'] ?? 'Depo').toString(),
+                    warehouse.name,
                     style: const TextStyle(color: Colors.white),
                   ),
                   subtitle: Text(
-                    (warehouse['city']?['name'] ?? detail.cityName).toString(),
+                    '${warehouse.cityName} | ${sameCity ? 'Anlik Transfer' : 'Lojistik Transfer'}',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 11.sp,
@@ -902,26 +1080,46 @@ class FactoryDetailScreen extends ConsumerWidget {
                       subtitle:
                           '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarilacak',
                       onConfirm: (quantity) async {
-                        final result = await ref
-                            .read(factoryActionProvider)
-                            .transferProductionInventoryToWarehouse(
-                              productionInventoryId: inventory.id,
-                              warehouseId: warehouse['id'].toString(),
-                              quantity: quantity,
+                        if (sameCity) {
+                          final result = await ref
+                              .read(factoryActionProvider)
+                              .transferProductionInventoryToWarehouse(
+                                productionInventoryId: inventory.id,
+                                warehouseId: warehouseId,
+                                quantity: quantity,
+                              );
+                          if (!context.mounted) return;
+                          if (result['success'] == true) {
+                            final _ = await ref.refresh(
+                              factoryDetailProvider(detail.factory.id).future,
                             );
-                        if (!context.mounted) return;
-                        if (result['success'] == true) {
-                          final _ = await ref.refresh(
-                            factoryDetailProvider(detail.factory.id).future,
+                            AppSnackbar.show(
+                              context,
+                              title: 'Basarili',
+                              message: inventory.isInput
+                                  ? 'Ayni sehir input iadesi tamamlandi.'
+                                  : 'Ayni sehir output transferi tamamlandi.',
+                              type: SnackbarType.success,
+                            );
+                            return;
+                          }
+                          AppSnackbar.show(
+                            context,
+                            title: 'Hata',
+                            message:
+                                result['message'] ?? 'Transfer basarisiz oldu.',
+                            type: SnackbarType.error,
                           );
                           return;
                         }
-                        AppSnackbar.show(
-                          context,
-                          title: 'Hata',
-                          message:
-                              result['message'] ?? 'Transfer basarisiz oldu.',
-                          type: SnackbarType.error,
+
+                        await _startFactoryLogisticsOutputTransfer(
+                          context: context,
+                          ref: ref,
+                          detail: detail,
+                          inventory: inventory,
+                          warehouseId: warehouseId,
+                          quantity: quantity,
                         );
                       },
                     );
@@ -933,6 +1131,305 @@ class FactoryDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _startFactoryLogisticsInputTransfer({
+    required BuildContext context,
+    required WidgetRef ref,
+    required FactoryDetailModel detail,
+    required FactoryProductionInventoryModel inventory,
+    required String warehouseSlotId,
+    required int maxQuantity,
+    required int quantity,
+  }) async {
+    List<ProductionLogisticsVehicleOption> options;
+    try {
+      options = await ref
+          .read(factoryActionProvider)
+          .getProductionInputTransferVehicleOptions(
+            warehouseSlotId: warehouseSlotId,
+            productionInventoryId: inventory.id,
+            quantity: quantity,
+          );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: e.toString().replaceFirst('Exception: ', ''),
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    if (options.isEmpty) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message: 'Bu transfer icin uygun arac bulunamadi.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
+    _showProductionVehicleOptionsSheet(
+      context: context,
+      title: 'Input Lojistigi',
+      subtitle:
+          '$quantity / $maxQuantity adet hammadde icin uygun araci secin',
+      options: options,
+      onSelected: (vehicleId) async {
+        final result = await ref
+            .read(factoryActionProvider)
+            .startWarehouseToProductionTransfer(
+              warehouseSlotId: warehouseSlotId,
+              productionInventoryId: inventory.id,
+              quantity: quantity,
+              vehicleId: vehicleId,
+            );
+        if (!context.mounted) return;
+        if (result.success) {
+          final _ = await ref.refresh(factoryDetailProvider(detail.factory.id).future);
+          AppSnackbar.show(
+            context,
+            title: 'Transfer Baslatildi',
+            message: 'Hammadde transferi icin arac yola cikti.',
+            type: SnackbarType.success,
+          );
+          return;
+        }
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: result.message.isNotEmpty
+              ? result.message
+              : 'Lojistik transferi baslatilamadi.',
+          type: SnackbarType.error,
+        );
+      },
+    );
+  }
+
+  Future<void> _startFactoryLogisticsOutputTransfer({
+    required BuildContext context,
+    required WidgetRef ref,
+    required FactoryDetailModel detail,
+    required FactoryProductionInventoryModel inventory,
+    required String warehouseId,
+    required int quantity,
+  }) async {
+    List<ProductionLogisticsVehicleOption> options;
+    try {
+      options = await ref
+          .read(factoryActionProvider)
+          .getProductionOutputTransferVehicleOptions(
+            productionInventoryId: inventory.id,
+            buyerWarehouseId: warehouseId,
+            quantity: quantity,
+          );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: e.toString().replaceFirst('Exception: ', ''),
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    if (options.isEmpty) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message: 'Bu transfer icin uygun arac bulunamadi.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
+    _showProductionVehicleOptionsSheet(
+      context: context,
+      title: inventory.isInput ? 'Input Iade Lojistigi' : 'Output Lojistigi',
+      subtitle: inventory.isInput
+          ? '$quantity adet input iadesi icin uygun araci secin'
+          : '$quantity adet output icin uygun araci secin',
+      options: options,
+      onSelected: (vehicleId) async {
+        final result = await ref
+            .read(factoryActionProvider)
+            .startProductionToWarehouseTransfer(
+              productionInventoryId: inventory.id,
+              buyerWarehouseId: warehouseId,
+              quantity: quantity,
+              vehicleId: vehicleId,
+            );
+        if (!context.mounted) return;
+        if (result.success) {
+          final _ = await ref.refresh(factoryDetailProvider(detail.factory.id).future);
+          AppSnackbar.show(
+            context,
+            title: 'Transfer Baslatildi',
+            message: inventory.isInput
+                ? 'Input iadesi icin arac yola cikti.'
+                : 'Output transferi icin arac yola cikti.',
+            type: SnackbarType.success,
+          );
+          return;
+        }
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: result.message.isNotEmpty
+              ? result.message
+              : 'Lojistik transferi baslatilamadi.',
+          type: SnackbarType.error,
+        );
+      },
+    );
+  }
+
+  void _showProductionVehicleOptionsSheet({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required List<ProductionLogisticsVehicleOption> options,
+    required Future<void> Function(String? vehicleId) onSelected,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      builder: (sheetContext) => Container(
+        padding: EdgeInsets.all(16.w),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              subtitle,
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            ),
+            SizedBox(height: 16.h),
+            Expanded(
+              child: ListView.separated(
+                itemCount: options.length,
+                separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                itemBuilder: (_, index) {
+                  final option = options[index];
+                  final color =
+                      option.canSelect ? AppColors.green : AppColors.red;
+                  return InkWell(
+                    onTap: option.canSelect
+                        ? () async {
+                            Navigator.pop(sheetContext);
+                            await onSelected(option.vehicleId);
+                          }
+                        : null,
+                    borderRadius: BorderRadius.circular(14.r),
+                    child: Container(
+                      padding: EdgeInsets.all(14.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(color: color.withValues(alpha: 0.35)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.local_shipping, color: color),
+                              SizedBox(width: 10.w),
+                              Expanded(
+                                child: Text(
+                                  option.vehicleName,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                option.isRental ? 'Kiralik' : 'Ozmal',
+                                style: TextStyle(
+                                  color: color,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Kapasite: ${option.capacity} | Mesafe: ${option.distanceKm.toStringAsFixed(0)} km | Sure: ${_formatTransferDuration(option.estimatedDurationSeconds)}',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Kira: ${option.rentalCost.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                          if (!option.canSelect &&
+                              option.disabledReason != null) ...[
+                            SizedBox(height: 6.h),
+                            Text(
+                              option.disabledReason!,
+                              style: TextStyle(
+                                color: AppColors.red,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _isSameCity(String warehouseCityId, String productionCityId) {
+    return warehouseCityId.isNotEmpty &&
+        productionCityId.isNotEmpty &&
+        warehouseCityId == productionCityId;
+  }
+
+  String _formatTransferDuration(int seconds) {
+    final duration = Duration(seconds: seconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    if (hours > 0) return '${hours}s ${minutes}dk';
+    return '${duration.inMinutes}dk';
   }
 
   Future<void> _showQuantityDialog({
@@ -987,8 +1484,11 @@ class FactoryDetailScreen extends ConsumerWidget {
             onPressed: () async {
               final quantity = int.tryParse(controller.text) ?? 0;
               if (quantity <= 0 || quantity > maxQuantity) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Gecersiz miktar!')),
+                AppSnackbar.show(
+                  context,
+                  title: 'Hata',
+                  message: 'Gecersiz miktar!',
+                  type: SnackbarType.error,
                 );
                 return;
               }
@@ -1152,4 +1652,80 @@ class FactoryDetailScreen extends ConsumerWidget {
     if (capacity <= 0) return 0.0;
     return (current / capacity).clamp(0.0, 1.0);
   }
+
+  _FactoryProductionStatus _resolveProductionStatus(FactoryDetailModel detail) {
+    if (detail.product == null) {
+      return const _FactoryProductionStatus(
+        title: 'Urun Secimi Bekleniyor',
+        description:
+            'Uretim hattini calistirmak icin once fabrikaya uygun bir urun secmelisin.',
+        color: AppColors.gold,
+        icon: Icons.playlist_add_check_circle_outlined,
+      );
+    }
+
+    if (!detail.factory.isActive) {
+      return const _FactoryProductionStatus(
+        title: 'Fabrika Pasif',
+        description:
+            'Makine kapali oldugu icin input olsa bile uretim yapmaz. Aktif ederek devam edebilirsin.',
+        color: AppColors.red,
+        icon: Icons.pause_circle_outline,
+      );
+    }
+
+    if (_isOutputFull(detail)) {
+      return const _FactoryProductionStatus(
+        title: 'Output Kapasitesi Dolu',
+        description:
+            'Uretilen stoklar cikis deposunu doldurmus. Depoya aktarim yapmadan yeni uretim zorlasir.',
+        color: AppColors.red,
+        icon: Icons.inventory_2_outlined,
+      );
+    }
+
+    if (!_hasAnyInputStock(detail)) {
+      return const _FactoryProductionStatus(
+        title: 'Input Takviyesi Gerekli',
+        description:
+            'Secilen urun icin gerekli girdilerde yeterli stok gorunmuyor. Depodan input beslemesi yapmalisin.',
+        color: AppColors.gold,
+        icon: Icons.south_west,
+      );
+    }
+
+    return const _FactoryProductionStatus(
+      title: 'Uretime Hazir',
+      description:
+          'Urun secili, makine aktif ve stok akisi uygun. Zamanlayici geldikce fabrika uretim yapabilir.',
+      color: AppColors.green,
+      icon: Icons.check_circle_outline,
+    );
+  }
+
+  bool _hasAnyInputStock(FactoryDetailModel detail) {
+    return detail.inputInventories.any(
+      (inventory) => inventory.quantity > 0 || inventory.pendingQuantity > 0,
+    );
+  }
+
+  bool _isOutputFull(FactoryDetailModel detail) {
+    final usedOutput = _calculateUsedCapacity(detail.outputInventories);
+    return detail.factory.outputCapacity > 0 &&
+        usedOutput >= detail.factory.outputCapacity;
+  }
+}
+
+class _FactoryProductionStatus {
+  final String title;
+  final String description;
+  final Color color;
+  final IconData icon;
+
+  const _FactoryProductionStatus({
+    required this.title,
+    required this.description,
+    required this.color,
+    required this.icon,
+  });
 }

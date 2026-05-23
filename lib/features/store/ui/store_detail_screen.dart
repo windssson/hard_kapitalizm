@@ -25,6 +25,21 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   bool _salesCheckDone = false;
 
   @override
+  void initState() {
+    super.initState();
+    _refreshOnEntry();
+  }
+
+  void _refreshOnEntry() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _salesCheckDone = false;
+      ref.invalidate(storeDetailProvider(widget.storeId));
+      ref.read(storeDetailProvider(widget.storeId).future);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final storeAsync = ref.watch(storeDetailProvider(widget.storeId));
 
@@ -435,9 +450,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     WidgetRef ref,
     StoreModel store,
   ) async {
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   const SnackBar(content: Text('Slot aciliyor...')),
-    // );
 
     final result =
         await ref.read(storeActionProvider).addStoreSlot(store.id);
@@ -1403,7 +1415,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     // Dialog'u kapat
     Navigator.pop(dialogContext);
 
-    // Ä°ÅŸlemi yap
+    // Islemi yap
     final result = await ref.read(storeActionProvider).setStoreSlotProduct(
           slotId: slot.id,
           productId: product['id'],
@@ -1411,7 +1423,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (parentContext.mounted) {
       if (result['success'] == true) {
-        // VeritabanÄ±nÄ±n gÃ¼ncellenmesi iÃ§in Ã§ok kÄ±sa bir sÃ¼re bekle (Race condition Ã¶nleyici)
+        // Veritabaninin guncellenmesi icin cok kisa bir sure bekle
         await Future.delayed(const Duration(milliseconds: 500));
         final _ = ref.refresh(storeDetailProvider(store.id));
         _showSuccess(parentContext, '${product['name']} basariyla eklendi!');
@@ -1745,7 +1757,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
               ),
             ),
           ),
-          // Text (Sadece verilmiÅŸse gÃ¶sterilir)
           if (text != null)
             Text(
               text,
@@ -1800,7 +1811,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           const Icon(Icons.error_outline, color: AppColors.red, size: 48),
           SizedBox(height: 16.h),
           Text(
-            'Bir hata oluÅŸtu: $error',
+            'Bir hata olustu: $error',
             style: const TextStyle(color: Colors.white),
           ),
           SizedBox(height: 16.h),
@@ -2482,7 +2493,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                                 ),
                               ),
                               Text(
-                                option.isRental ? 'Kiralik' : 'Kendi',
+                                option.isRental ? 'Kiralik' : 'Ozmal',
                                 style: TextStyle(
                                   color: color,
                                   fontSize: 11.sp,
@@ -2587,8 +2598,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       _showSuccess(
         context,
         isInstant
-            ? 'Ayni sehir transferi aninda tamamlandi.'
-            : 'Transfer baslatildi. Arac yola cikti.',
+            ? 'Ayni sehir transferi tamamlandi.'
+            : 'Lojistik transfer baslatildi. Arac yola cikti.',
       );
       return;
     }
@@ -2950,7 +2961,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                                 ),
                               ),
                               Text(
-                                option.isRental ? 'Kiralik' : 'Kendi',
+                                option.isRental ? 'Kiralik' : 'Ozmal',
                                 style: TextStyle(
                                   color: color,
                                   fontSize: 11.sp,
@@ -3025,8 +3036,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       _showSuccess(
         context,
         isInstant
-            ? 'Ayni sehir gonderimi aninda tamamlandi.'
-            : 'Transfer baslatildi. Arac yola cikti.',
+            ? 'Ayni sehir gonderimi tamamlandi.'
+            : 'Lojistik transfer baslatildi. Arac yola cikti.',
       );
       return;
     }
@@ -3034,3 +3045,4 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     _showError(context, 'Hata: ${result['message']}');
   }
 }
+

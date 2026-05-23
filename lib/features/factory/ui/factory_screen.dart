@@ -7,6 +7,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
+import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
@@ -38,7 +39,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
   }
 
   Future<void> _refreshAll() async {
-    ref.invalidate(factoryListStreamProvider);
+    ref.invalidate(factoryListProvider);
     ref.invalidate(factoryConstructionProvider);
   }
 
@@ -48,7 +49,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
         .completeConstruction(constructionId);
 
     ref.invalidate(factoryConstructionProvider);
-    ref.invalidate(factoryListStreamProvider);
+    ref.invalidate(factoryListProvider);
 
     if (!mounted) return;
     if (result['success'] != true) {
@@ -67,7 +68,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
         .finishConstructionWithGold(constructionId);
 
     ref.invalidate(factoryConstructionProvider);
-    ref.invalidate(factoryListStreamProvider);
+    ref.invalidate(factoryListProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -90,7 +91,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final factoriesAsync = ref.watch(factoryListStreamProvider);
+    final factoriesAsync = ref.watch(factoryListProvider);
     final constructionAsync = ref.watch(factoryConstructionProvider);
 
     return Scaffold(
@@ -117,33 +118,51 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
             Expanded(
               child: factoriesAsync.when(
                 data: (factories) => constructionAsync.when(
-                  data: (construction) => RefreshIndicator(
-                    onRefresh: _refreshAll,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 12.h,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildStatsHeader(factories),
-                          SizedBox(height: 16.h),
-                          _buildFilters(),
-                          SizedBox(height: 16.h),
+                  data: (construction) {
+                    final filteredFactories = _getFilteredFactories(factories);
+                    return RefreshIndicator(
+                      onRefresh: _refreshAll,
+                      child: CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          SliverPadding(
+                            padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                            sliver: SliverToBoxAdapter(
+                              child: _buildStatsHeader(factories),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
+                            sliver: SliverToBoxAdapter(child: _buildFilters()),
+                          ),
                           if (construction != null)
-                            _buildConstructionCard(construction),
-                          if (_getFilteredFactories(factories).isEmpty &&
-                              construction == null)
-                            _buildEmptyState()
-                          else if (_getFilteredFactories(factories).isNotEmpty)
-                            _buildFactoryList(_getFilteredFactories(factories)),
-                          SizedBox(height: 80.h),
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
+                              sliver: SliverToBoxAdapter(
+                                child: _buildConstructionCard(construction),
+                              ),
+                            ),
+                          SliverPadding(
+                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 80.h),
+                            sliver: filteredFactories.isEmpty
+                                ? SliverToBoxAdapter(
+                                    child: construction == null
+                                        ? _buildEmptyState()
+                                        : const SizedBox.shrink(),
+                                  )
+                                : SliverList.builder(
+                                    itemCount: filteredFactories.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildAdvancedFactoryCard(
+                                        filteredFactories[index],
+                                      );
+                                    },
+                                  ),
+                          ),
                         ],
                       ),
-                    ),
-                  ),
+                    );
+                  },
                   loading: () => const Center(
                     child: CircularProgressIndicator(color: AppColors.gold),
                   ),
@@ -157,7 +176,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
                 ),
                 error: (error, stack) => _buildErrorState(
                   error,
-                  onRetry: () => ref.refresh(factoryListStreamProvider),
+                  onRetry: () => ref.refresh(factoryListProvider),
                 ),
               ),
             ),
@@ -191,27 +210,9 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
         if (starCost > 0)
           Padding(
             padding: EdgeInsets.only(bottom: 12.h),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _finishConstructionWithGold(constructionId),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                ),
-                icon: Icon(Icons.star, size: 16.sp),
-                label: Text(
-                  '$starCost yildiz ile bitir',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            child: GoldFinishButton(
+              starCost: starCost,
+              onPressed: () => _finishConstructionWithGold(constructionId),
             ),
           ),
       ],
@@ -378,7 +379,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
   Widget _buildFilters() {
     return Row(
       children: [
-        _buildFilterChip('Tümü', null),
+        _buildFilterChip('Tumu', null),
         SizedBox(width: 8.w),
         _buildFilterChip('Aktif', AppColors.green),
         SizedBox(width: 8.w),
@@ -388,15 +389,11 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
   }
 
   Widget _buildFilterChip(String label, Color? dotColor) {
-    final isSelected = _selectedFilter == label || (label == 'Tümü' && _selectedFilter == 'Tumu');
+    final isSelected = _selectedFilter == label;
     return GestureDetector(
       onTap: () {
         setState(() {
-          if (label == 'Tümü') {
-            _selectedFilter = 'Tumu';
-          } else {
-            _selectedFilter = label;
-          }
+          _selectedFilter = label;
         });
       },
       child: AnimatedContainer(
@@ -573,6 +570,8 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
                         ],
                       ),
                       SizedBox(height: 12.h),
+                      _buildProductionStateSection(item),
+                      SizedBox(height: 12.h),
                       _buildOutputSection(item),
                       SizedBox(height: 12.h),
                       _buildResourceSection(item),
@@ -704,7 +703,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
                   ),
                   SizedBox(width: 6.w),
                   Text(
-                    'Çıkış Deposu',
+                    'Cikis Deposu',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 11.sp,
@@ -752,6 +751,76 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductionStateSection(FactoryListItemModel item) {
+    final state = _resolveFactoryState(item);
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: state.color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: state.color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8.w),
+            decoration: BoxDecoration(
+              color: state.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(state.icon, color: state.color, size: 16.sp),
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  state.title,
+                  style: TextStyle(
+                    color: state.color,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  state.subtitle,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10.sp,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 10.w),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Input ${_formatCompact(item.inputStockQuantity)}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 2.h),
+              Text(
+                'Output ${_formatCompact(item.outputStockQuantity)}',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 10.sp,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -810,7 +879,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  hasProduct ? 'Üretilen Ürün' : 'Ürün Ayarı Gerekli',
+                  hasProduct ? 'Uretilen Urun' : 'Urun Ayari Gerekli',
                   style: TextStyle(
                     color: hasProduct ? AppColors.textSecondary : AppColors.gold.withValues(alpha: 0.8),
                     fontSize: 11.sp,
@@ -819,7 +888,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  hasProduct ? product!.urunAdi : 'Ürün seçilmedi',
+                  hasProduct ? product!.urunAdi : 'Urun secilmedi',
                   style: TextStyle(
                     color: hasProduct ? Colors.white : AppColors.textMuted,
                     fontSize: 13.sp,
@@ -830,7 +899,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
                 Text(
                   hasProduct
                       ? 'Kalite ${factory.qualityLevel} | Saatlik ${product!.uretimAdedi}'
-                      : 'Detay ekranından ürün seçerek üretimi başlat.',
+                      : 'Detay ekranindan urun secerek uretimi baslat.',
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 10.sp,
@@ -901,4 +970,64 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen> {
       ),
     );
   }
+
+  _FactoryCardState _resolveFactoryState(FactoryListItemModel item) {
+    if (!item.hasSelectedProduct) {
+      return const _FactoryCardState(
+        title: 'Urun Secimi Bekliyor',
+        subtitle: 'Uretim baslamadan once urun tanimlanmali.',
+        color: AppColors.gold,
+        icon: Icons.playlist_add_check_circle_outlined,
+      );
+    }
+
+    if (!item.factory.isActive) {
+      return const _FactoryCardState(
+        title: 'Hat Pasif',
+        subtitle: 'Makine kapali oldugu icin uretim beklemede.',
+        color: AppColors.red,
+        icon: Icons.pause_circle_outline,
+      );
+    }
+
+    if (item.isOutputFull) {
+      return const _FactoryCardState(
+        title: 'Output Dolu',
+        subtitle: 'Depoya aktarim yapilmadan yeni cikis zorlasir.',
+        color: AppColors.red,
+        icon: Icons.inventory_2_outlined,
+      );
+    }
+
+    if (!item.hasInputStock) {
+      return const _FactoryCardState(
+        title: 'Input Takviyesi Gerekli',
+        subtitle: 'Uretimi surdurmek icin girdi stogu cekilmeli.',
+        color: AppColors.gold,
+        icon: Icons.south_west,
+      );
+    }
+
+    return const _FactoryCardState(
+      title: 'Uretime Hazir',
+      subtitle: 'Urun secili, stok var ve hat calismaya uygun.',
+      color: AppColors.green,
+      icon: Icons.check_circle_outline,
+    );
+  }
 }
+
+class _FactoryCardState {
+  final String title;
+  final String subtitle;
+  final Color color;
+  final IconData icon;
+
+  const _FactoryCardState({
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.icon,
+  });
+}
+

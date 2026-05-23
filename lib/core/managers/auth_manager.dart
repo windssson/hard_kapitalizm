@@ -15,20 +15,18 @@ class AuthManager {
 
   AuthManager(this._supabase);
 
-  /// Oyuncu oturumunu kontrol eder. Yoksa cihaz kimliğine özel
-  /// benzersiz bir e-posta/şifre hesabı ile giriş yapar veya oluşturur.
+  /// Oyuncu oturumunu kontrol eder. Yoksa cihaz kimligine ozel
+  /// benzersiz bir e-posta/sifre hesabÄ± ile giris yapar veya olusturur.
   Future<void> signInAnonymouslyIfNeeded() async {
     try {
       final session = _supabase.auth.currentSession;
 
       if (session == null) {
-        // Oturum yok, cihaz kimliği tabanlı hesap ile giriş yap
         final uuid = await _getOrCreateDeviceUUID();
         final email = 'device_$uuid@kapitalizm.com';
         final password = 'pass_${uuid}_secure';
 
         try {
-          // Önce mevcut hesaba giriş yapmayı dene
           final response = await _supabase.auth.signInWithPassword(
             email: email,
             password: password,
@@ -37,7 +35,6 @@ class AuthManager {
             await _ensurePlayerRecordExists(response.user!.id);
           }
         } on AuthException catch (e) {
-          // Eğer hesap yoksa (örn. geçersiz giriş bilgisi) yeni hesap oluştur
           if (e.message.contains('Invalid login credentials') ||
               e.statusCode == '400' ||
               e.message.contains('confirm')) {
@@ -53,17 +50,15 @@ class AuthManager {
           }
         }
       } else {
-        // Zaten aktif oturum var, kayıtlı mı kontrol et
         await _ensurePlayerRecordExists(session.user.id);
       }
     } catch (e) {
       throw Exception(
-        'Giriş işlemi başarısız: $e\nLütfen Supabase Dashboard -> Authentication -> Providers -> Email ayarının açık (ve Confirm email seçeneğinin kapalı) olduğundan emin olun.',
+        'Giris islemi basarisiz: $e\nLutfen Supabase Dashboard -> Authentication -> Providers -> Email ayarinin acik (ve Confirm email seceneginin kapali) oldugundan emin olun.',
       );
     }
   }
 
-  /// Cihaza özel benzersiz bir UUID alır veya oluşturup kaydeder.
   Future<String> _getOrCreateDeviceUUID() async {
     final prefs = await SharedPreferences.getInstance();
     const key = 'device_uuid';
@@ -72,12 +67,10 @@ class AuthManager {
       return uuid;
     }
 
-    // Cihaz donanım bilgisini almaya çalış
     try {
       final deviceInfo = DeviceInfoPlugin();
       if (!kIsWeb) {
         if (Platform.isAndroid) {
-          // shared_preferences silinmediği sürece UUID sabit kalır.
           uuid = const Uuid().v4();
         } else if (Platform.isIOS) {
           final iosInfo = await deviceInfo.iosInfo;
@@ -95,35 +88,18 @@ class AuthManager {
       uuid = const Uuid().v4();
     }
 
-    // fallback durumları için UUID'yi shared_preferences'a kaydet
     await prefs.setString(key, uuid);
     return uuid;
   }
 
-  /// Eğer oyuncunun veritabanında kaydı yoksa varsayılan değerlerle yeni kayıt oluşturur.
   Future<void> _ensurePlayerRecordExists(String userId) async {
     try {
-      final data = await _supabase
-          .from('players')
-          .select('id')
-          .eq('id', userId)
-          .maybeSingle();
-
-      if (data == null) {
-        // Kullanıcı için ilk defa oyuncu kaydı oluşturuluyor
-        await _supabase.from('players').insert({
-          'id': userId,
-          'player_name': 'Oyuncu_${userId.substring(0, 4)}',
-          'company_name': 'Yeni Holding',
-          'avatar_id': 'ae1.webp',
-          'level': 1,
-          'experience': 0,
-          'cash': 100000, // Başlangıç parası
-          'gold': 100, // Başlangıç altını
-        });
-      }
+      await _supabase.rpc(
+        'ensure_player_record_exists',
+        params: {'p_user_id': userId},
+      );
     } catch (e) {
-      throw Exception('Oyuncu kaydı oluşturulamadı veya okunamadı: $e');
+      throw Exception('Oyuncu kaydi olusturulamadi veya okunamadi: $e');
     }
   }
 }

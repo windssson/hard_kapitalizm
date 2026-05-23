@@ -17,7 +17,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  int _selectedIndex = 0;
+  final int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -396,6 +396,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (!mounted) return;
 
         context.go(construction != null ? '/logistics' : '/logistics/setup');
+        return;
+      case 'AR-GE':
+        context.go('/arge');
         return;
     }
   }

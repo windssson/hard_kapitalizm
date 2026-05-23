@@ -1,5 +1,7 @@
+import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/production_product_service.dart';
+import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_detail_model.dart';
@@ -8,90 +10,32 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_model.dart';
 
 // Maden Liste Provider
-final mineListStreamProvider =
+final mineListProvider =
     FutureProvider.autoDispose<List<MineListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
   if (user == null) return const [];
 
-  final minesResponse = await supabase
-      .from('mines')
-      .select()
-      .eq('player_id', user.id)
-      .order('created_at', ascending: true);
+  final response = await supabase.rpc('get_mine_list_items');
+  final rows = response as List<dynamic>;
 
-  final mines = (minesResponse as List<dynamic>)
-      .map((e) => MineModel.fromJson(Map<String, dynamic>.from(e as Map)))
-      .toList();
-
-  if (mines.isEmpty) return const [];
-
-  final mineTypeIds = mines.map((e) => e.mineTypeId).toSet().toList();
-  final cityIds = mines.map((e) => e.cityId).toSet().toList();
-  final mineIds = mines.map((e) => e.id).toList();
-  final productIds = <String>{
-    ...mines
-        .map((e) => e.productId ?? '')
-        .where((e) => e.isNotEmpty),
-  }.toList();
-
-  final mineTypesResponse = await supabase
-      .from('mine_types')
-      .select('id, name, icon')
-      .inFilter('id', mineTypeIds);
-  final citiesResponse = await supabase
-      .from('cities')
-      .select('id, name')
-      .inFilter('id', cityIds);
-  final outputInventoriesResponse = await supabase
-      .from('production_inventory')
-      .select('owner_id, quantity')
-      .eq('owner_kind', 'mine')
-      .eq('inventory_type', 'output')
-      .inFilter('owner_id', mineIds);
-
-  Map<String, ProductModel> productsById = const {};
-  if (productIds.isNotEmpty) {
-    final productsResponse = await supabase
-        .from('products')
-        .select('id, urun_adi, urun_iconu, uretim_adedi')
-        .inFilter('id', productIds);
-    productsById = {
-      for (final row in productsResponse as List<dynamic>)
-        (row['id'] ?? '').toString(): ProductModel.fromJson(
-          Map<String, dynamic>.from(row as Map),
-        ),
-    };
-  }
-
-  final mineTypeById = {
-    for (final row in mineTypesResponse as List<dynamic>)
-      (row['id'] ?? '').toString(): Map<String, dynamic>.from(row as Map),
-  };
-  final cityNameById = {
-    for (final row in citiesResponse as List<dynamic>)
-      (row['id'] ?? '').toString():
-          (row['name'] ?? 'Bilinmeyen Sehir').toString(),
-  };
-  final outputByMineId = <String, int>{};
-  for (final row in outputInventoriesResponse as List<dynamic>) {
+  return rows.map((row) {
     final map = Map<String, dynamic>.from(row as Map);
-    final ownerId = (map['owner_id'] ?? '').toString();
-    final quantity = (map['quantity'] as num?)?.toInt() ?? 0;
-    outputByMineId[ownerId] = (outputByMineId[ownerId] ?? 0) + quantity;
-  }
-
-  return mines.map((mine) {
-    final type = mineTypeById[mine.mineTypeId];
     return MineListItemModel(
-      mine: mine,
-      cityName: cityNameById[mine.cityId] ?? 'Bilinmeyen Sehir',
-      mineTypeName: (type?['name'] ?? 'Bilinmeyen Maden').toString(),
-      mineTypeIcon: (type?['icon'] ?? 'mine.webp').toString(),
-      outputStockQuantity: outputByMineId[mine.id] ?? 0,
-      selectedProduct:
-          mine.productId != null ? productsById[mine.productId!] : null,
+      mine: MineModel.fromJson(
+        Map<String, dynamic>.from(map['mine'] as Map),
+      ),
+      cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+      mineTypeName: (map['mine_type_name'] ?? 'Bilinmeyen Maden').toString(),
+      mineTypeIcon: (map['mine_type_icon'] ?? 'mine.webp').toString(),
+      outputStockQuantity:
+          (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
+      selectedProduct: map['selected_product'] == null
+          ? null
+          : ProductModel.fromJson(
+              Map<String, dynamic>.from(map['selected_product'] as Map),
+            ),
     );
   }).toList();
 });
@@ -99,11 +43,7 @@ final mineListStreamProvider =
 // Maden Tipleri Provider
 final mineTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   final supabase = Supabase.instance.client;
-  return await supabase
-      .from('mine_types')
-      .select()
-      .order('required_level', ascending: true)
-      .order('cost', ascending: true);
+  return await supabase.rpc('get_mine_types_catalog');
 });
 
 final mineConstructionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
@@ -112,14 +52,13 @@ final mineConstructionProvider = FutureProvider.autoDispose<Map<String, dynamic>
 
   if (user == null) return null;
 
-  final response = await supabase
-      .from('building_constructions')
-      .select()
-      .eq('player_id', user.id)
-      .eq('building_kind', 'mine')
-      .eq('status', 'in_progress')
-      .order('started_at')
-      .limit(1);
+  final response = await supabase.rpc(
+    'get_player_building_constructions',
+    params: {
+      'p_building_kind': 'mine',
+      'p_status': 'in_progress',
+    },
+  );
 
   final rows = response as List<dynamic>;
   if (rows.isEmpty) return null;
@@ -137,65 +76,30 @@ final mineDetailProvider = FutureProvider.family<MineDetailModel, String>((
     throw Exception('Kullanici girisi yapilmamis.');
   }
 
-  final mineResponse = await supabase
-      .from('mines')
-      .select('*, city:cities(name)')
-      .eq('id', mineId)
-      .eq('player_id', user.id)
-      .single();
+  final response = await supabase.rpc(
+    'get_mine_detail_data',
+    params: {'p_mine_id': mineId},
+  );
 
-  final mine = MineModel.fromJson(Map<String, dynamic>.from(mineResponse));
-
-  final mineTypeResponse = await supabase
-      .from('mine_types')
-      .select()
-      .eq('id', mine.mineTypeId)
-      .single();
-
-  final inventoryResponse = await supabase
-      .from('production_inventory')
-      .select()
-      .eq('owner_kind', 'mine')
-      .eq('owner_id', mineId);
-
-  final inventoryRows = (inventoryResponse as List<dynamic>)
-      .map((e) => Map<String, dynamic>.from(e as Map))
-      .toList();
-
-  final productIds = <String>{
-    if ((mine.productId ?? '').isNotEmpty) mine.productId!,
-    ...inventoryRows
-        .map((e) => e['product_id']?.toString() ?? '')
-        .where((e) => e.isNotEmpty),
-  }.toList();
-
-  Map<String, ProductModel> productsById = const {};
-  if (productIds.isNotEmpty) {
-    final productsResponse = await supabase
-        .from('products')
-        .select()
-        .inFilter('id', productIds);
-    productsById = {
-      for (final row in productsResponse as List<dynamic>)
-        (row['id'] ?? '').toString(): ProductModel.fromJson(
-          Map<String, dynamic>.from(row as Map),
-        ),
-    };
-  }
-
+  final map = Map<String, dynamic>.from(response as Map);
   return MineDetailModel(
-    mine: mine,
-    mineType: MineTypeDetailModel.fromJson(
-      Map<String, dynamic>.from(mineTypeResponse),
+    mine: MineModel.fromJson(
+      Map<String, dynamic>.from(map['mine'] as Map),
     ),
-    cityName: (mineResponse['city']?['name'] ?? 'Bilinmeyen Sehir').toString(),
-    product: mine.productId != null ? productsById[mine.productId!] : null,
-    inventories: inventoryRows
+    mineType: MineTypeDetailModel.fromJson(
+      Map<String, dynamic>.from(map['mine_type'] as Map),
+    ),
+    cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+    product: map['product'] == null
+        ? null
+        : ProductModel.fromJson(
+            Map<String, dynamic>.from(map['product'] as Map),
+          ),
+    inventories: (map['inventories'] as List<dynamic>? ?? const [])
         .map(
-          (row) => MineProductionInventoryModel.fromJson({
-            ...row,
-            'product': productsById[row['product_id']?.toString() ?? '']?.toJson(),
-          }),
+          (row) => MineProductionInventoryModel.fromJson(
+            Map<String, dynamic>.from(row as Map),
+          ),
         )
         .toList(),
   );
@@ -204,6 +108,8 @@ final mineDetailProvider = FutureProvider.family<MineDetailModel, String>((
 // Maden Aksiyonları
 class MineActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ProductionLogisticsService _productionLogisticsService =
+      ProductionLogisticsService();
 
   Future<Map<String, dynamic>> createMine({
     required String cityId,
@@ -322,15 +228,14 @@ class MineActionNotifier {
     }
 
     try {
-      await _supabase
-          .from('mines')
-          .update({
-            'is_active': isActive,
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
-          })
-          .eq('id', mineId)
-          .eq('player_id', user.id);
-      return {'success': true};
+      final response = await _supabase.rpc(
+        'set_mine_active',
+        params: {
+          'p_mine_id': mineId,
+          'p_is_active': isActive,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -342,17 +247,23 @@ class MineActionNotifier {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Oturum acilmamis.');
 
-    final response = await _supabase
-        .from('warehouses')
-        .select('id, name, city_id, city:cities(name)')
-        .eq('player_id', user.id)
-        .eq('city_id', cityId)
-        .eq('is_active', true)
-        .order('created_at');
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_basic',
+    );
 
     return (response as List<dynamic>)
         .map((e) => Map<String, dynamic>.from(e as Map))
+        .where((warehouse) => warehouse['city_id']?.toString() == cityId)
         .toList();
+  }
+
+  Future<List<ProductionLogisticsWarehouseOption>>
+  getWarehousesForProductionLogistics({
+    required String productionCityId,
+  }) {
+    return _productionLogisticsService.getWarehouseOptions(
+      productionCityId: productionCityId,
+    );
   }
 
   Future<Map<String, dynamic>> transferProductionInventoryToWarehouse({
@@ -379,6 +290,34 @@ class MineActionNotifier {
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
+  }
+
+  Future<List<ProductionLogisticsVehicleOption>>
+  getProductionOutputTransferVehicleOptions({
+    required String productionInventoryId,
+    required String buyerWarehouseId,
+    required int quantity,
+  }) {
+    return _productionLogisticsService
+        .getProductionOutputTransferVehicleOptions(
+          productionInventoryId: productionInventoryId,
+          buyerWarehouseId: buyerWarehouseId,
+          quantity: quantity,
+        );
+  }
+
+  Future<ProductionLogisticsStartResult> startProductionToWarehouseTransfer({
+    required String productionInventoryId,
+    required String buyerWarehouseId,
+    required int quantity,
+    String? vehicleId,
+  }) {
+    return _productionLogisticsService.startProductionToWarehouseTransfer(
+      productionInventoryId: productionInventoryId,
+      buyerWarehouseId: buyerWarehouseId,
+      quantity: quantity,
+      vehicleId: vehicleId,
+    );
   }
 }
 

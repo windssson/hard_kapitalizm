@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
-import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
+import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
-import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
-import 'dart:async';
 
 class StoreScreen extends ConsumerStatefulWidget {
   const StoreScreen({super.key});
@@ -71,28 +72,34 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
                   return RefreshIndicator(
                     onRefresh: () => ref.refresh(storesListProvider.future),
-                    child: SingleChildScrollView(
+                    child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.symmetric(horizontal: 6.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 12.h),
-                          _buildStatsHeader(stores),
-                          SizedBox(height: 16.h),
-                          _buildFilters(),
-                          SizedBox(height: 16.h),
-                          if (filteredStores.isEmpty)
-                            _buildEmptyState()
-                          else
-                            ...filteredStores.map(
-                              (store) => store.isUnderConstruction
-                                  ? _buildConstructionCard(store)
-                                  : _buildAdvancedStoreCard(store),
-                            ),
-                          SizedBox(height: 40.h),
-                        ],
-                      ),
+                      slivers: [
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(6.w, 12.h, 6.w, 0),
+                          sliver: SliverToBoxAdapter(
+                            child: _buildStatsHeader(stores),
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(6.w, 16.h, 6.w, 0),
+                          sliver: SliverToBoxAdapter(child: _buildFilters()),
+                        ),
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(6.w, 16.h, 6.w, 40.h),
+                          sliver: filteredStores.isEmpty
+                              ? SliverToBoxAdapter(child: _buildEmptyState())
+                              : SliverList.builder(
+                                  itemCount: filteredStores.length,
+                                  itemBuilder: (context, index) {
+                                    final store = filteredStores[index];
+                                    return store.isUnderConstruction
+                                        ? _buildConstructionCard(store)
+                                        : _buildAdvancedStoreCard(store);
+                                  },
+                                ),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -135,7 +142,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           _buildStatItem(
             Icons.store,
             AppColors.gold,
-            'Toplam ',
+            'Toplam',
             stores.length.toString(),
             Colors.white,
           ),
@@ -143,7 +150,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           _buildStatItem(
             Icons.trending_up,
             AppColors.green,
-            'Aktif ',
+            'Aktif',
             activeCount.toString(),
             AppColors.green,
           ),
@@ -151,7 +158,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           _buildStatItem(
             Icons.inventory_2,
             Colors.blueAccent,
-            'Toplam Kapasite',
+            'Kapasite',
             formattedCapacity,
             Colors.white,
           ),
@@ -245,7 +252,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               label,
               style: TextStyle(
                 color: isSelected ? AppColors.gold : AppColors.textMuted,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight:
+                    isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 13.sp,
               ),
             ),
@@ -253,6 +261,215 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildConstructionCard(StoreModel store) {
+    final starCost = _calculateStarCost(store.finishAt!.toLocal());
+
+    return Column(
+      children: [
+        Container(
+          margin: EdgeInsets.only(bottom: starCost > 0 ? 0 : 10.h),
+          padding: EdgeInsets.all(8.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 115.w,
+                height: 115.w,
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.3),
+                    width: 0.8,
+                  ),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Opacity(
+                      opacity: 0.8,
+                      child: Padding(
+                        padding: EdgeInsets.all(4.w),
+                        child: CachedAssetImage(
+                          fileName: store.storeType.icon,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.construction,
+                      color: AppColors.gold,
+                      size: 38.sp,
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        width: 12.w,
+                        height: 12.w,
+                        decoration: const BoxDecoration(
+                          color: AppColors.gold,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RichText(
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: store.name,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' - ${store.cityName ?? "Bilinmeyen"}',
+                            style: TextStyle(
+                              color: AppColors.gold.withValues(alpha: 0.7),
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    _ConstructionCountdown(
+                      startedAt: store.startedAt ?? DateTime.now(),
+                      finishAt: store.finishAt!,
+                      onFinish: () async {
+                        await ref
+                            .read(storeActionProvider)
+                            .completeConstruction(store.id);
+                        ref.invalidate(storesListProvider);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (starCost > 0)
+          Padding(
+            padding: EdgeInsets.only(bottom: 10.h),
+            child: GoldFinishButton(
+              starCost: starCost,
+              onPressed: () => _handleQuickFinish(store.id, starCost),
+            ),
+          ),
+      ],
+    );
+  }
+
+  int _calculateStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
+  }
+
+  Future<void> _handleQuickFinish(String constructionId, int starCost) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: const BorderSide(color: AppColors.borderGold),
+        ),
+        title: Text(
+          'Insaati Bitir',
+          style: TextStyle(
+            color: AppColors.goldLight,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '$starCost ⭐ yildiz kullanarak insaati aninda tamamlamak istiyor musunuz?',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Iptal',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Tamamla',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13.sp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final result = await ref
+        .read(storeActionProvider)
+        .finishConstructionWithGold(constructionId);
+    if (result['success'] == true) {
+      ref.invalidate(storesListProvider);
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          title: 'Tamamlandi',
+          message: 'Insaat basariyla tamamlandi!',
+          type: SnackbarType.success,
+        );
+      }
+    } else {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: result['message'] ?? 'Altin ile bitirme islemi basarisiz.',
+          type: SnackbarType.error,
+        );
+      }
+    }
   }
 
   Widget _buildAdvancedStoreCard(StoreModel store) {
@@ -275,126 +492,74 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
           ],
         ),
-        child: Column(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Üst Kısım
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Mağaza Resmi (Altın Çerçeveli)
-                Container(
-                  width: 115.w,
-                  height: 115.w,
-                  padding: EdgeInsets.all(4.w),
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.3),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: CachedAssetImage(
-                    fileName: store.storeType.icon,
-                    fit: BoxFit.contain,
-                  ),
+            Container(
+              width: 80.w,
+              height: 80.w,
+              padding: EdgeInsets.all(4.w),
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.3),
+                  width: 0.8,
                 ),
-                SizedBox(width: 16.w),
-                // Bilgiler
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+              child: CachedAssetImage(
+                fileName: store.storeType.icon,
+                fit: BoxFit.contain,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 4.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      SizedBox(height: 8.h),
-                      // İsim ve Etiketler Satırı
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: RichText(
-                              overflow: TextOverflow.ellipsis,
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: store.name,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text:
-                                        ' - ${store.cityName ?? 'Bilinmiyor'}',
-                                    style: TextStyle(
-                                      color: AppColors.gold,
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                      Expanded(
+                        child: Text(
+                          store.name,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.bold,
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildSmallBadge(
-                                'Lv. ${store.level}',
-                                AppColors.gold,
-                              ),
-                              SizedBox(width: 6.w),
-                              _buildSmallBadge(
-                                store.isActive ? 'Aktif' : 'Pasif',
-                                store.isActive
-                                    ? AppColors.green
-                                    : AppColors.red,
-                              ),
-                            ],
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          _buildSmallBadge('Lv. ${store.level}', AppColors.gold),
+                          SizedBox(width: 4.w),
+                          _buildSmallBadge(
+                            store.isActive ? 'Aktif' : 'Pasif',
+                            store.isActive ? AppColors.green : AppColors.red,
                           ),
                         ],
                       ),
-                      SizedBox(height: 12.h),
-                      // Progress Bar (Artık burada, ikonun yanında)
-                      _buildGradientProgressBar(
-                        store.summary.usedCapacityRatio,
-                      ),
-                      SizedBox(height: 12.h),
-                      // Slotlar (Artık burada, Progress Bar'ın altında)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: List.generate(4, (index) {
-                          final activeSlots = store.slots
-                              .where((s) => !s.isEmpty)
-                              .toList();
-                          Widget slotWidget;
-                          if (index < activeSlots.length) {
-                            slotWidget = _buildAdvancedSlot(activeSlots[index]);
-                          } else {
-                            slotWidget = _buildEmptyOrLockedSlot(
-                              index,
-                              store.maxSlotCount,
-                            );
-                          }
-                          return Padding(
-                            padding: EdgeInsets.only(right: 6.w),
-                            child: slotWidget,
-                          );
-                        }),
-                      ),
                     ],
                   ),
-                ),
-              ],
+                  SizedBox(height: 4.h),
+                  Text(
+                    store.cityName ?? 'Bilinmiyor',
+                    style: TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
-
-
 
   Widget _buildSmallBadge(String label, Color color) {
     return Container(
@@ -415,331 +580,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     );
   }
 
-  Widget _buildGradientProgressBar(double ratio) {
-    return Column(
-      children: [
-        Container(
-          height: 15.h,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(5.r),
-            border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
-          ),
-          child: Stack(
-            children: [
-              FractionallySizedBox(
-                widthFactor: ratio.clamp(0.0, 1.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(5.r),
-                    gradient: LinearGradient(
-                      colors: [
-                        _getRatioColor(ratio).withValues(alpha: 0.6),
-                        _getRatioColor(ratio),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Center(
-                child: Text(
-                  '%${(ratio * 100).toInt()}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 7.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAdvancedSlot(StoreSlotModel slot) {
-    final progress = slot.usedCapacityRatio.clamp(0.0, 1.0);
-    final glowColor = _getRatioColor(progress);
-
-    return CustomPaint(
-      painter: _SlotBorderProgressPainter(
-        progress: progress,
-        glowColor: glowColor,
-        borderRadius: 8.r,
-      ),
-      child: Container(
-        width: 50.w,
-        height: 50.h,
-        padding: EdgeInsets.all(3.w),
-        decoration: BoxDecoration(
-          color: AppColors.cardBgLight.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(8.r),
-          // Border artık CustomPainter ile çiziliyor
-        ),
-        child: Stack(
-          children: [
-            // Ürün Resmi (Bütün alanı kaplayacak şekilde)
-            Positioned.fill(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: 10.h,
-                ), // Alttaki miktar bandı için boşluk
-                child: CachedAssetImage(
-                  fileName: slot.productIcon ?? 'default',
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            // Ürün İsmi
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 2.h, horizontal: 2.w),
-                child: Text(
-                  slot.productName ?? 'Bilinmiyor',
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 7.sp,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: 0.8),
-                        offset: const Offset(0, 1),
-                        blurRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyOrLockedSlot(int index, int maxSlots) {
-    bool isLocked = index >= maxSlots;
-    return Container(
-      width: 50.w,
-      height: 60.h,
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(
-          color: AppColors.border.withValues(alpha: 0.3),
-          style: BorderStyle.solid,
-        ),
-      ),
-      child: Center(
-        child: Icon(
-          isLocked ? Icons.lock : Icons.add,
-          color: Colors.white10,
-          size: 14.sp,
-        ),
-      ),
-    );
-  }
-
-  Color _getRatioColor(double ratio) {
-    if (ratio > 0.8) return AppColors.green;
-    if (ratio > 0.4) return Colors.orange;
-    return AppColors.red;
-  }
-
-  Widget _buildConstructionCard(StoreModel store) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
-      padding: EdgeInsets.all(8.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // 1. KATMANLI İKON (STACK - Altın Çerçeveli)
-          Container(
-            width: 115.w,
-            height: 115.w,
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(
-                color: AppColors.gold.withValues(alpha: 0.3),
-                width: 0.8,
-              ),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Opacity(
-                  opacity: 0.8,
-                  child: Padding(
-                    padding: EdgeInsets.all(4.w),
-                    child: CachedAssetImage(
-                      fileName: store.storeType.icon,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-                Icon(Icons.construction, color: AppColors.gold, size: 38.sp),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Container(
-                    width: 12.w,
-                    height: 12.w,
-                    decoration: const BoxDecoration(
-                      color: AppColors.gold,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: 16.w),
-          // 2. BİLGİ VE GERÇEK ZAMANLI PROGRESS ALANI
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: RichText(
-                        overflow: TextOverflow.ellipsis,
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: store.name,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                            TextSpan(
-                              text: ' - ${store.cityName ?? 'Bilinmeyen'}',
-                              style: TextStyle(
-                                color: AppColors.gold.withValues(alpha: 0.7),
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    GestureDetector(
-                      onTap: () => _handleQuickFinish(store.id),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 6.h,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.amber.shade700,
-                              Colors.amber.shade900,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(10.r),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.amber.withValues(alpha: 0.3),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.star, color: Colors.white, size: 14.sp),
-                            SizedBox(width: 4.w),
-                            Text(
-                              'Hizli Bitir',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12.h),
-                // BURASI ANLIK GÜNCELLENEN KISIM
-                _ConstructionCountdown(
-                  startedAt: store.startedAt ?? DateTime.now(),
-                  finishAt: store.finishAt!,
-                  onFinish: () async {
-                    // Süre bittiğinde dükkanı kur
-                    await ref
-                        .read(storeActionProvider)
-                        .completeConstruction(store.id);
-                    // Listeyi yenile
-                    ref.invalidate(storesListProvider);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _handleQuickFinish(String constructionId) async {
-    final result = await ref
-        .read(storeActionProvider)
-        .finishConstructionWithGold(constructionId);
-    if (result['success'] == true) {
-      ref.invalidate(storesListProvider);
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          title: 'Tamamlandı',
-          message: 'İnşaat başarıyla tamamlandı!',
-          type: SnackbarType.success,
-        );
-      }
-    } else {
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          title: 'Hata',
-          message: result['message'] ?? 'Altın ile bitirme işlemi başarısız.',
-          type: SnackbarType.error,
-        );
-      }
-    }
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -757,7 +597,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 }
 
-class _ConstructionCountdown extends StatefulWidget {
+class _ConstructionCountdown extends ConsumerStatefulWidget {
   final DateTime startedAt;
   final DateTime finishAt;
   final VoidCallback? onFinish;
@@ -769,63 +609,44 @@ class _ConstructionCountdown extends StatefulWidget {
   });
 
   @override
-  State<_ConstructionCountdown> createState() => _ConstructionCountdownState();
+  ConsumerState<_ConstructionCountdown> createState() =>
+      _ConstructionCountdownState();
 }
 
-class _ConstructionCountdownState extends State<_ConstructionCountdown> {
-  Timer? _timer;
-  late DateTime _now;
-
-  @override
-  void initState() {
-    super.initState();
-    _now = DateTime.now();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _now = DateTime.now();
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+class _ConstructionCountdownState extends ConsumerState<_ConstructionCountdown> {
+  bool _triggered = false;
 
   @override
   Widget build(BuildContext context) {
-    final totalDuration = widget.finishAt
-        .difference(widget.startedAt)
-        .inSeconds;
-    final elapsed = _now.difference(widget.startedAt).inSeconds;
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final totalDuration = widget.finishAt.difference(widget.startedAt).inSeconds;
+    final elapsed = now.difference(widget.startedAt).inSeconds;
     final double progress = totalDuration > 0
         ? (elapsed / totalDuration).clamp(0.0, 1.0)
         : 1.0;
 
-    final remaining = widget.finishAt.difference(_now);
+    final remaining = widget.finishAt.difference(now);
 
     String getTimeStr() {
       if (remaining.isNegative || remaining.inSeconds <= 0) {
-        if (_timer?.isActive ?? false) {
-          _timer?.cancel();
-          // Süre bittiğinde callback'i tetikle
-          Future.microtask(() => widget.onFinish?.call());
+        if (!_triggered) {
+          _triggered = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            widget.onFinish?.call();
+          });
         }
-        return 'Tamamlanıyor...';
+        return 'Tamamlaniyor...';
       }
       final minutes = remaining.inMinutes;
       final seconds = (remaining.inSeconds % 60).toString().padLeft(2, '0');
-      return "$minutes:$seconds";
+      return '$minutes:$seconds';
     }
 
     final String timeStr = getTimeStr();
 
     return Column(
       children: [
-        // İlerleme Çubuğu ve Yüzde
         Row(
           children: [
             Expanded(
@@ -853,7 +674,6 @@ class _ConstructionCountdownState extends State<_ConstructionCountdown> {
           ],
         ),
         SizedBox(height: 8.h),
-        // Kalan Süre
         Row(
           children: [
             Icon(Icons.timer_outlined, color: AppColors.textMuted, size: 14.sp),
@@ -876,76 +696,3 @@ class _ConstructionCountdownState extends State<_ConstructionCountdown> {
     );
   }
 }
-
-class _SlotBorderProgressPainter extends CustomPainter {
-  final double progress;
-  final Color glowColor;
-  final double borderRadius;
-
-  _SlotBorderProgressPainter({
-    required this.progress,
-    required this.glowColor,
-    required this.borderRadius,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // 1. Arka plan mat çerçeve
-    final bgPaint = Paint()
-      ..color = AppColors.border.withValues(alpha: 0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    final w = size.width;
-    final h = size.height;
-    final r = borderRadius;
-
-    // Saat yönünde (Top-Center'dan başlayarak) dönen Path
-    final path = Path();
-    path.moveTo(w / 2, 0); // Üst orta noktadan başla
-
-    path.lineTo(w - r, 0);
-    path.arcToPoint(Offset(w, r), radius: Radius.circular(r));
-
-    path.lineTo(w, h - r);
-    path.arcToPoint(Offset(w - r, h), radius: Radius.circular(r));
-
-    path.lineTo(r, h);
-    path.arcToPoint(Offset(0, h - r), radius: Radius.circular(r));
-
-    path.lineTo(0, r);
-    path.arcToPoint(Offset(r, 0), radius: Radius.circular(r));
-
-    path.lineTo(w / 2, 0); // Başlangıca dön
-    path.close();
-
-    canvas.drawPath(path, bgPaint);
-
-    if (progress <= 0) return;
-
-    // 2. Neon (Glow) doluluk çerçevesi
-    final progressPaint = Paint()
-      ..color = glowColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2);
-
-    final pathMetrics = path.computeMetrics().toList();
-    if (pathMetrics.isEmpty) return;
-
-    final metric = pathMetrics.first;
-    // Progress oranına göre çizginin sadece bir kısmını kes
-    final extractPath = metric.extractPath(0.0, metric.length * progress);
-
-    canvas.drawPath(extractPath, progressPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SlotBorderProgressPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.glowColor != glowColor;
-  }
-}
-
-

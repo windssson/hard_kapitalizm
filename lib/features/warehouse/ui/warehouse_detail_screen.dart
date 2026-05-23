@@ -9,14 +9,34 @@ import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart'
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/widgets/product_selection_dialog.dart';
 
-class WarehouseDetailScreen extends ConsumerWidget {
+class WarehouseDetailScreen extends ConsumerStatefulWidget {
   final String warehouseId;
 
   const WarehouseDetailScreen({super.key, required this.warehouseId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final warehouseAsync = ref.watch(warehouseDetailProvider(warehouseId));
+  ConsumerState<WarehouseDetailScreen> createState() =>
+      _WarehouseDetailScreenState();
+}
+
+class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _refreshOnEntry();
+  }
+
+  void _refreshOnEntry() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.invalidate(warehouseDetailProvider(widget.warehouseId));
+      ref.read(warehouseDetailProvider(widget.warehouseId).future);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final warehouseAsync = ref.watch(warehouseDetailProvider(widget.warehouseId));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -42,7 +62,7 @@ class WarehouseDetailScreen extends ConsumerWidget {
               SecondaryTopBar(title: '${warehouse.name} Yonetimi'),
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: () => _refreshWarehouse(ref),
+          onRefresh: () => _refreshWarehouse(ref),
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 96.h),
@@ -76,9 +96,9 @@ class WarehouseDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _refreshWarehouse(WidgetRef ref) async {
-    ref.invalidate(warehouseDetailProvider(warehouseId));
+    ref.invalidate(warehouseDetailProvider(widget.warehouseId));
     ref.invalidate(warehouseListProvider);
-    await ref.read(warehouseDetailProvider(warehouseId).future);
+    await ref.read(warehouseDetailProvider(widget.warehouseId).future);
   }
 
   void _showProductSelection(BuildContext context, WarehouseModel warehouse) {

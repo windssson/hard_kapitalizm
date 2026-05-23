@@ -1,127 +1,48 @@
+import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/data/production_product_service.dart';
+import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_model.dart';
 
-final farmListStreamProvider =
+final farmListProvider =
     FutureProvider.autoDispose<List<FarmListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
   if (user == null) return const [];
 
-  final farmsResponse = await supabase
-      .from('farms')
-      .select()
-      .eq('player_id', user.id)
-      .order('created_at', ascending: true);
+  final response = await supabase.rpc('get_farm_list_items');
+  final rows = response as List<dynamic>;
 
-  final farms = (farmsResponse as List<dynamic>)
-      .map((e) => FarmModel.fromJson(Map<String, dynamic>.from(e as Map)))
-      .toList();
-
-  if (farms.isEmpty) return const [];
-
-  final farmTypeIds = farms.map((e) => e.farmTypeId).toSet().toList();
-  final cityIds = farms.map((e) => e.cityId).toSet().toList();
-  final farmIds = farms.map((e) => e.id).toList();
-
-  final farmTypesResponse = await supabase
-      .from('farm_types')
-      .select('id, name, icon')
-      .inFilter('id', farmTypeIds);
-  final citiesResponse = await supabase
-      .from('cities')
-      .select('id, name')
-      .inFilter('id', cityIds);
-  final slotsResponse = await supabase
-      .from('production_slots')
-      .select('id, owner_id, slot_index, product_id, is_active')
-      .eq('owner_kind', 'farm')
-      .inFilter('owner_id', farmIds)
-      .order('slot_index', ascending: true);
-  final outputInventoriesResponse = await supabase
-      .from('production_inventory')
-      .select('owner_id, quantity')
-      .eq('owner_kind', 'farm')
-      .eq('inventory_type', 'output')
-      .inFilter('owner_id', farmIds);
-
-  final slotRows = (slotsResponse as List<dynamic>)
-      .map((e) => Map<String, dynamic>.from(e as Map))
-      .toList();
-  final productIds = slotRows
-      .map((e) => e['product_id']?.toString() ?? '')
-      .where((e) => e.isNotEmpty)
-      .toSet()
-      .toList();
-
-  Map<String, ProductModel> productsById = const {};
-  if (productIds.isNotEmpty) {
-    final productsResponse = await supabase
-        .from('products')
-        .select('id, urun_adi, urun_iconu')
-        .inFilter('id', productIds);
-    productsById = {
-      for (final row in productsResponse as List<dynamic>)
-        (row['id'] ?? '').toString(): ProductModel.fromJson(
-          Map<String, dynamic>.from(row as Map),
-        ),
-    };
-  }
-
-  final farmTypeById = {
-    for (final row in farmTypesResponse as List<dynamic>)
-      (row['id'] ?? '').toString(): Map<String, dynamic>.from(row as Map),
-  };
-  final cityNameById = {
-    for (final row in citiesResponse as List<dynamic>)
-      (row['id'] ?? '').toString(): (row['name'] ?? 'Bilinmeyen Sehir').toString(),
-  };
-
-  final slotsByFarmId = <String, List<FarmSlotPreviewModel>>{};
-  for (final row in slotRows) {
-    final ownerId = (row['owner_id'] ?? '').toString();
-    final productId = row['product_id']?.toString();
-    final slot = FarmSlotPreviewModel.fromJson({
-      ...row,
-      'product': productId != null ? productsById[productId]?.toJson() : null,
-    });
-    slotsByFarmId.putIfAbsent(ownerId, () => []).add(slot);
-  }
-
-  final outputByFarmId = <String, int>{};
-  for (final row in outputInventoriesResponse as List<dynamic>) {
+  return rows.map((row) {
     final map = Map<String, dynamic>.from(row as Map);
-    final ownerId = (map['owner_id'] ?? '').toString();
-    final quantity = (map['quantity'] as num?)?.toInt() ?? 0;
-    outputByFarmId[ownerId] = (outputByFarmId[ownerId] ?? 0) + quantity;
-  }
-
-  return farms.map((farm) {
-    final type = farmTypeById[farm.farmTypeId];
     return FarmListItemModel(
-      farm: farm,
-      cityName: cityNameById[farm.cityId] ?? 'Bilinmeyen Sehir',
-      farmTypeName: (type?['name'] ?? 'Bilinmeyen Tarla').toString(),
-      farmTypeIcon: (type?['icon'] ?? 'farm.webp').toString(),
-      outputStockQuantity: outputByFarmId[farm.id] ?? 0,
-      slots: slotsByFarmId[farm.id] ?? const [],
+      farm: FarmModel.fromJson(
+        Map<String, dynamic>.from(map['farm'] as Map),
+      ),
+      cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+      farmTypeName: (map['farm_type_name'] ?? 'Bilinmeyen Tarla').toString(),
+      farmTypeIcon: (map['farm_type_icon'] ?? 'farm.webp').toString(),
+      outputStockQuantity:
+          (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
+      slots: (map['slots'] as List<dynamic>? ?? const [])
+          .map(
+            (slot) => FarmSlotPreviewModel.fromJson(
+              Map<String, dynamic>.from(slot as Map),
+            ),
+          )
+          .toList(),
     );
   }).toList();
 });
 
 final farmTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   final supabase = Supabase.instance.client;
-  return await supabase
-      .from('farm_types')
-      .select()
-      .order('required_level', ascending: true)
-      .order('cost', ascending: true);
+  return await supabase.rpc('get_farm_types_catalog');
 });
 
 final farmConstructionProvider =
@@ -131,14 +52,13 @@ final farmConstructionProvider =
 
       if (user == null) return null;
 
-      final response = await supabase
-          .from('building_constructions')
-          .select()
-          .eq('player_id', user.id)
-          .eq('building_kind', 'farm')
-          .eq('status', 'in_progress')
-          .order('started_at')
-          .limit(1);
+      final response = await supabase.rpc(
+        'get_player_building_constructions',
+        params: {
+          'p_building_kind': 'farm',
+          'p_status': 'in_progress',
+        },
+      );
 
       final rows = response as List<dynamic>;
       if (rows.isEmpty) return null;
@@ -201,6 +121,8 @@ final farmDetailProvider = FutureProvider.family<FarmDetailModel, String>((
 
 class FarmActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ProductionLogisticsService _productionLogisticsService =
+      ProductionLogisticsService();
 
   Future<Map<String, dynamic>> createFarm({
     required String cityId,
@@ -388,14 +310,10 @@ class FarmActionNotifier {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Oturum acilmamis.');
 
-    final response = await _supabase
-        .from('warehouses')
-        .select(
-          'id, name, city_id, city:cities(name), warehouse_slots(*, product:products(*))',
-        )
-        .eq('player_id', user.id)
-        .eq('city_id', cityId)
-        .eq('is_active', true);
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_with_slots',
+      params: {'p_city_id': cityId},
+    );
 
     final eligible = <Map<String, dynamic>>[];
 
@@ -422,22 +340,56 @@ class FarmActionNotifier {
     return eligible;
   }
 
+  Future<List<Map<String, dynamic>>> getEligibleWarehouseSlotsForInventoryAllCities({
+    required FarmProductionInventoryModel inventory,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Oturum acilmamis.');
+
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_with_slots',
+    );
+
+    final eligible = <Map<String, dynamic>>[];
+
+    for (final warehouse in response as List<dynamic>) {
+      final warehouseMap = Map<String, dynamic>.from(warehouse as Map);
+      final slots = ((warehouseMap['warehouse_slots'] as List<dynamic>?) ??
+              const [])
+          .where((slot) {
+            final map = Map<String, dynamic>.from(slot as Map);
+            return map['product_id'] == inventory.productId &&
+                (map['quality_level'] as num?)?.toInt() ==
+                    inventory.qualityLevel &&
+                ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
+          })
+          .map((slot) => Map<String, dynamic>.from(slot as Map))
+          .toList();
+
+      if (slots.isNotEmpty) {
+        eligible.add({
+          ...warehouseMap,
+          'warehouse_slots': slots,
+        });
+      }
+    }
+
+    return eligible;
+  }
+
   Future<List<Map<String, dynamic>>> getPlayerWarehousesByCity(
     String cityId,
   ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Oturum acilmamis.');
 
-    final response = await _supabase
-        .from('warehouses')
-        .select('id, name, city_id, city:cities(name)')
-        .eq('player_id', user.id)
-        .eq('city_id', cityId)
-        .eq('is_active', true)
-        .order('created_at');
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_basic',
+    );
 
     return (response as List<dynamic>)
         .map((e) => Map<String, dynamic>.from(e as Map))
+        .where((warehouse) => warehouse['city_id']?.toString() == cityId)
         .toList();
   }
 
@@ -491,6 +443,70 @@ class FarmActionNotifier {
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
+  }
+
+  Future<List<ProductionLogisticsWarehouseOption>>
+  getWarehousesForProductionLogistics({
+    required String productionCityId,
+  }) {
+    return _productionLogisticsService.getWarehouseOptions(
+      productionCityId: productionCityId,
+    );
+  }
+
+  Future<List<ProductionLogisticsVehicleOption>>
+  getProductionInputTransferVehicleOptions({
+    required String warehouseSlotId,
+    required String productionInventoryId,
+    required int quantity,
+  }) {
+    return _productionLogisticsService.getProductionInputTransferVehicleOptions(
+      warehouseSlotId: warehouseSlotId,
+      productionInventoryId: productionInventoryId,
+      quantity: quantity,
+    );
+  }
+
+  Future<List<ProductionLogisticsVehicleOption>>
+  getProductionOutputTransferVehicleOptions({
+    required String productionInventoryId,
+    required String buyerWarehouseId,
+    required int quantity,
+  }) {
+    return _productionLogisticsService
+        .getProductionOutputTransferVehicleOptions(
+          productionInventoryId: productionInventoryId,
+          buyerWarehouseId: buyerWarehouseId,
+          quantity: quantity,
+        );
+  }
+
+  Future<ProductionLogisticsStartResult> startWarehouseToProductionTransfer({
+    required String warehouseSlotId,
+    required String productionInventoryId,
+    required int quantity,
+    String? vehicleId,
+  }) {
+    return _productionLogisticsService.startWarehouseToProductionTransfer(
+      warehouseSlotId: warehouseSlotId,
+      productionInventoryId: productionInventoryId,
+      quantity: quantity,
+      vehicleId: vehicleId,
+    );
+  }
+
+  Future<ProductionLogisticsStartResult> startProductionToWarehouseTransfer({
+    required String productionInventoryId,
+    required String buyerWarehouseId,
+    required int quantity,
+    String? vehicleId,
+  }) {
+    return _productionLogisticsService.startProductionToWarehouseTransfer(
+      productionInventoryId: productionInventoryId,
+      buyerWarehouseId: buyerWarehouseId,
+      quantity: quantity,
+      vehicleId: vehicleId,
+    );
   }
 }
 

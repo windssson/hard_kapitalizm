@@ -108,6 +108,14 @@ class MineDetailModel {
   });
 
   List<MineProductionInventoryModel> get outputInventories =>
-      inventories.where((e) => e.isOutput).toList()
+      inventories
+          .where(
+            (e) =>
+                e.isOutput &&
+                product != null &&
+                e.productId == product!.id &&
+                e.qualityLevel == mine.qualityLevel,
+          )
+          .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));
 }

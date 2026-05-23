@@ -34,6 +34,7 @@ import 'package:hard_kapitalizm/features/transfer_map/ui/transfer_map_screen.dar
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_detail_screen.dart';
+import 'package:hard_kapitalizm/features/arge/ui/arge_screen.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 
@@ -247,6 +248,10 @@ final _router = GoRouter(
         ),
       ],
     ),
+    GoRoute(
+      path: '/arge',
+      builder: (context, state) => const ArgeScreen(),
+    ),
   ],
 );
 
@@ -285,7 +290,7 @@ class HardKapitalizmApp extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (materialChild != null) materialChild,
+                ?materialChild,
               ],
             );
           },

@@ -1,4 +1,6 @@
+import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/data/production_product_service.dart';
+import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
@@ -8,90 +10,34 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
 
 // Fabrika Listesi Provider
-final factoryListStreamProvider =
+final factoryListProvider =
     FutureProvider.autoDispose<List<FactoryListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
   if (user == null) return const [];
 
-  final factoriesResponse = await supabase
-      .from('factories')
-      .select()
-      .eq('player_id', user.id)
-      .order('created_at', ascending: true);
+  final response = await supabase.rpc('get_factory_list_items');
+  final rows = response as List<dynamic>;
 
-  final factories = (factoriesResponse as List<dynamic>)
-      .map((e) => FactoryModel.fromJson(Map<String, dynamic>.from(e as Map)))
-      .toList();
-
-  if (factories.isEmpty) return const [];
-
-  final factoryTypeIds = factories.map((e) => e.factoryTypeId).toSet().toList();
-  final cityIds = factories.map((e) => e.cityId).toSet().toList();
-  final factoryIds = factories.map((e) => e.id).toList();
-  final productIds = <String>{
-    ...factories
-        .map((e) => e.productId ?? '')
-        .where((e) => e.isNotEmpty),
-  }.toList();
-
-  final factoryTypesResponse = await supabase
-      .from('factory_types')
-      .select('id, name, icon')
-      .inFilter('id', factoryTypeIds);
-  final citiesResponse = await supabase
-      .from('cities')
-      .select('id, name')
-      .inFilter('id', cityIds);
-  final outputInventoriesResponse = await supabase
-      .from('production_inventory')
-      .select('owner_id, quantity')
-      .eq('owner_kind', 'factory')
-      .eq('inventory_type', 'output')
-      .inFilter('owner_id', factoryIds);
-
-  Map<String, ProductModel> productsById = const {};
-  if (productIds.isNotEmpty) {
-    final productsResponse = await supabase
-        .from('products')
-        .select('id, urun_adi, urun_iconu')
-        .inFilter('id', productIds);
-    productsById = {
-      for (final row in productsResponse as List<dynamic>)
-        (row['id'] ?? '').toString(): ProductModel.fromJson(
-          Map<String, dynamic>.from(row as Map),
-        ),
-    };
-  }
-
-  final factoryTypeById = {
-    for (final row in factoryTypesResponse as List<dynamic>)
-      (row['id'] ?? '').toString(): Map<String, dynamic>.from(row as Map),
-  };
-  final cityNameById = {
-    for (final row in citiesResponse as List<dynamic>)
-      (row['id'] ?? '').toString():
-          (row['name'] ?? 'Bilinmeyen Sehir').toString(),
-  };
-  final outputByFactoryId = <String, int>{};
-  for (final row in outputInventoriesResponse as List<dynamic>) {
+  return rows.map((row) {
     final map = Map<String, dynamic>.from(row as Map);
-    final ownerId = (map['owner_id'] ?? '').toString();
-    final quantity = (map['quantity'] as num?)?.toInt() ?? 0;
-    outputByFactoryId[ownerId] = (outputByFactoryId[ownerId] ?? 0) + quantity;
-  }
-
-  return factories.map((fact) {
-    final type = factoryTypeById[fact.factoryTypeId];
     return FactoryListItemModel(
-      factory: fact,
-      cityName: cityNameById[fact.cityId] ?? 'Bilinmeyen Sehir',
-      factoryTypeName: (type?['name'] ?? 'Bilinmeyen Fabrika').toString(),
-      factoryTypeIcon: (type?['icon'] ?? 'factory.webp').toString(),
-      outputStockQuantity: outputByFactoryId[fact.id] ?? 0,
-      selectedProduct:
-          fact.productId != null ? productsById[fact.productId!] : null,
+      factory: FactoryModel.fromJson(
+        Map<String, dynamic>.from(map['factory'] as Map),
+      ),
+      cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+      factoryTypeName:
+          (map['factory_type_name'] ?? 'Bilinmeyen Fabrika').toString(),
+      factoryTypeIcon: (map['factory_type_icon'] ?? 'factory.webp').toString(),
+      inputStockQuantity: (map['input_stock_quantity'] as num?)?.toInt() ?? 0,
+      outputStockQuantity:
+          (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
+      selectedProduct: map['selected_product'] == null
+          ? null
+          : ProductModel.fromJson(
+              Map<String, dynamic>.from(map['selected_product'] as Map),
+            ),
     );
   }).toList();
 });
@@ -99,11 +45,7 @@ final factoryListStreamProvider =
 // Fabrika Tipleri Provider
 final factoryTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   final supabase = Supabase.instance.client;
-  return await supabase
-      .from('factory_types')
-      .select()
-      .order('required_level', ascending: true)
-      .order('cost', ascending: true);
+  return await supabase.rpc('get_factory_types_catalog');
 });
 
 final factoryConstructionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
@@ -112,14 +54,13 @@ final factoryConstructionProvider = FutureProvider.autoDispose<Map<String, dynam
 
   if (user == null) return null;
 
-  final response = await supabase
-      .from('building_constructions')
-      .select()
-      .eq('player_id', user.id)
-      .eq('building_kind', 'factory')
-      .eq('status', 'in_progress')
-      .order('started_at')
-      .limit(1);
+  final response = await supabase.rpc(
+    'get_player_building_constructions',
+    params: {
+      'p_building_kind': 'factory',
+      'p_status': 'in_progress',
+    },
+  );
 
   final rows = response as List<dynamic>;
   if (rows.isEmpty) return null;
@@ -137,67 +78,30 @@ final factoryDetailProvider = FutureProvider.family<FactoryDetailModel, String>(
     throw Exception('Kullanici girisi yapilmamis.');
   }
 
-  final factoryResponse = await supabase
-      .from('factories')
-      .select('*, city:cities(name)')
-      .eq('id', factoryId)
-      .eq('player_id', user.id)
-      .single();
-
-  final factory = FactoryModel.fromJson(
-    Map<String, dynamic>.from(factoryResponse),
+  final response = await supabase.rpc(
+    'get_factory_detail_data',
+    params: {'p_factory_id': factoryId},
   );
 
-  final factoryTypeResponse = await supabase
-      .from('factory_types')
-      .select()
-      .eq('id', factory.factoryTypeId)
-      .single();
-
-  final inventoryResponse = await supabase
-      .from('production_inventory')
-      .select()
-      .eq('owner_kind', 'factory')
-      .eq('owner_id', factoryId);
-
-  final inventoryRows = (inventoryResponse as List<dynamic>)
-      .map((e) => Map<String, dynamic>.from(e as Map))
-      .toList();
-
-  final productIds = <String>{
-    if ((factory.productId ?? '').isNotEmpty) factory.productId!,
-    ...inventoryRows
-        .map((e) => e['product_id']?.toString() ?? '')
-        .where((e) => e.isNotEmpty),
-  }.toList();
-
-  Map<String, ProductModel> productsById = const {};
-  if (productIds.isNotEmpty) {
-    final productsResponse = await supabase
-        .from('products')
-        .select()
-        .inFilter('id', productIds);
-    productsById = {
-      for (final row in productsResponse as List<dynamic>)
-        (row['id'] ?? '').toString(): ProductModel.fromJson(
-          Map<String, dynamic>.from(row as Map),
-        ),
-    };
-  }
-
+  final map = Map<String, dynamic>.from(response as Map);
   return FactoryDetailModel(
-    factory: factory,
-    factoryType: FactoryTypeDetailModel.fromJson(
-      Map<String, dynamic>.from(factoryTypeResponse),
+    factory: FactoryModel.fromJson(
+      Map<String, dynamic>.from(map['factory'] as Map),
     ),
-    cityName: (factoryResponse['city']?['name'] ?? 'Bilinmeyen Sehir').toString(),
-    product: factory.productId != null ? productsById[factory.productId!] : null,
-    inventories: inventoryRows
+    factoryType: FactoryTypeDetailModel.fromJson(
+      Map<String, dynamic>.from(map['factory_type'] as Map),
+    ),
+    cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+    product: map['product'] == null
+        ? null
+        : ProductModel.fromJson(
+            Map<String, dynamic>.from(map['product'] as Map),
+          ),
+    inventories: (map['inventories'] as List<dynamic>? ?? const [])
         .map(
-          (row) => FactoryProductionInventoryModel.fromJson({
-            ...row,
-            'product': productsById[row['product_id']?.toString() ?? '']?.toJson(),
-          }),
+          (row) => FactoryProductionInventoryModel.fromJson(
+            Map<String, dynamic>.from(row as Map),
+          ),
         )
         .toList(),
   );
@@ -206,6 +110,8 @@ final factoryDetailProvider = FutureProvider.family<FactoryDetailModel, String>(
 // Fabrika Aksiyonları
 class FactoryActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final ProductionLogisticsService _productionLogisticsService =
+      ProductionLogisticsService();
 
   Future<Map<String, dynamic>> createFactory({
     required String cityId,
@@ -308,15 +214,14 @@ class FactoryActionNotifier {
     }
 
     try {
-      await _supabase
-          .from('factories')
-          .update({
-            'is_active': isActive,
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
-          })
-          .eq('id', factoryId)
-          .eq('player_id', user.id);
-      return {'success': true};
+      final response = await _supabase.rpc(
+        'set_factory_active',
+        params: {
+          'p_factory_id': factoryId,
+          'p_is_active': isActive,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -339,14 +244,47 @@ class FactoryActionNotifier {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Oturum acilmamis.');
 
-    final response = await _supabase
-        .from('warehouses')
-        .select(
-          'id, name, city_id, city:cities(name), warehouse_slots(*, product:products(*))',
-        )
-        .eq('player_id', user.id)
-        .eq('city_id', cityId)
-        .eq('is_active', true);
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_with_slots',
+      params: {'p_city_id': cityId},
+    );
+
+    final eligible = <Map<String, dynamic>>[];
+
+    for (final warehouse in response as List<dynamic>) {
+      final warehouseMap = Map<String, dynamic>.from(warehouse as Map);
+      final slots = ((warehouseMap['warehouse_slots'] as List<dynamic>?) ??
+              const [])
+          .where((slot) {
+            final map = Map<String, dynamic>.from(slot as Map);
+            return map['product_id'] == inventory.productId &&
+                (map['quality_level'] as num?)?.toInt() ==
+                    inventory.qualityLevel &&
+                ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
+          })
+          .map((slot) => Map<String, dynamic>.from(slot as Map))
+          .toList();
+
+      if (slots.isNotEmpty) {
+        eligible.add({
+          ...warehouseMap,
+          'warehouse_slots': slots,
+        });
+      }
+    }
+
+    return eligible;
+  }
+
+  Future<List<Map<String, dynamic>>> getEligibleWarehouseSlotsForInventoryAllCities({
+    required FactoryProductionInventoryModel inventory,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Oturum acilmamis.');
+
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_with_slots',
+    );
 
     final eligible = <Map<String, dynamic>>[];
 
@@ -381,16 +319,13 @@ class FactoryActionNotifier {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Oturum acilmamis.');
 
-    final response = await _supabase
-        .from('warehouses')
-        .select('id, name, city_id, city:cities(name)')
-        .eq('player_id', user.id)
-        .eq('city_id', cityId)
-        .eq('is_active', true)
-        .order('created_at');
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_basic',
+    );
 
     return (response as List<dynamic>)
         .map((e) => Map<String, dynamic>.from(e as Map))
+        .where((warehouse) => warehouse['city_id']?.toString() == cityId)
         .toList();
   }
 
@@ -444,6 +379,70 @@ class FactoryActionNotifier {
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
+  }
+
+  Future<List<ProductionLogisticsWarehouseOption>>
+  getWarehousesForProductionLogistics({
+    required String productionCityId,
+  }) {
+    return _productionLogisticsService.getWarehouseOptions(
+      productionCityId: productionCityId,
+    );
+  }
+
+  Future<List<ProductionLogisticsVehicleOption>>
+  getProductionInputTransferVehicleOptions({
+    required String warehouseSlotId,
+    required String productionInventoryId,
+    required int quantity,
+  }) {
+    return _productionLogisticsService.getProductionInputTransferVehicleOptions(
+      warehouseSlotId: warehouseSlotId,
+      productionInventoryId: productionInventoryId,
+      quantity: quantity,
+    );
+  }
+
+  Future<List<ProductionLogisticsVehicleOption>>
+  getProductionOutputTransferVehicleOptions({
+    required String productionInventoryId,
+    required String buyerWarehouseId,
+    required int quantity,
+  }) {
+    return _productionLogisticsService
+        .getProductionOutputTransferVehicleOptions(
+          productionInventoryId: productionInventoryId,
+          buyerWarehouseId: buyerWarehouseId,
+          quantity: quantity,
+        );
+  }
+
+  Future<ProductionLogisticsStartResult> startWarehouseToProductionTransfer({
+    required String warehouseSlotId,
+    required String productionInventoryId,
+    required int quantity,
+    String? vehicleId,
+  }) {
+    return _productionLogisticsService.startWarehouseToProductionTransfer(
+      warehouseSlotId: warehouseSlotId,
+      productionInventoryId: productionInventoryId,
+      quantity: quantity,
+      vehicleId: vehicleId,
+    );
+  }
+
+  Future<ProductionLogisticsStartResult> startProductionToWarehouseTransfer({
+    required String productionInventoryId,
+    required String buyerWarehouseId,
+    required int quantity,
+    String? vehicleId,
+  }) {
+    return _productionLogisticsService.startProductionToWarehouseTransfer(
+      productionInventoryId: productionInventoryId,
+      buyerWarehouseId: buyerWarehouseId,
+      quantity: quantity,
+      vehicleId: vehicleId,
+    );
   }
 }
 

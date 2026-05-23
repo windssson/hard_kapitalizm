@@ -103,10 +103,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   return GestureDetector(
                     onTap: () async {
                       Navigator.pop(context);
-                      await Supabase.instance.client
-                          .from('players')
-                          .update({'avatar_id': avatar})
-                          .eq('id', player.id);
+                      await Supabase.instance.client.rpc(
+                        'set_player_avatar',
+                        params: {'p_avatar_id': avatar},
+                      );
                     },
                     child: Container(
                       decoration: BoxDecoration(

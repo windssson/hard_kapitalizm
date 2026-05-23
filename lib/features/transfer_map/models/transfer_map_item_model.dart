@@ -27,39 +27,48 @@ class TransferMapCityModel {
   }
 }
 
-class TransferMapWarehouseModel {
+class TransferMapEndpointModel {
   final String id;
   final String name;
+  final String kind;
   final TransferMapCityModel city;
 
-  const TransferMapWarehouseModel({
+  const TransferMapEndpointModel({
     required this.id,
     required this.name,
+    required this.kind,
     required this.city,
   });
 
-  factory TransferMapWarehouseModel.fromJson(Map<String, dynamic> json) {
-    return TransferMapWarehouseModel(
+  factory TransferMapEndpointModel.fromJson(
+    Map<String, dynamic> json, {
+    String defaultKind = 'warehouse',
+  }) {
+    return TransferMapEndpointModel(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? 'Depo').toString(),
+      kind: (json['kind'] ?? defaultKind).toString(),
       city: TransferMapCityModel.fromJson(
         (json['city'] as Map<String, dynamic>?) ?? const {},
       ),
     );
   }
 
-  factory TransferMapWarehouseModel.fromFlatJson(
+  factory TransferMapEndpointModel.fromFlatJson(
     Map<String, dynamic> json, {
-    required String warehouseIdKey,
-    required String warehouseNameKey,
+    required String endpointIdKey,
+    required String endpointNameKey,
     required String cityIdKey,
     required String cityNameKey,
     required String cityXKey,
     required String cityYKey,
+    String? kindKey,
+    String defaultKind = 'warehouse',
   }) {
-    return TransferMapWarehouseModel(
-      id: (json[warehouseIdKey] ?? '').toString(),
-      name: (json[warehouseNameKey] ?? 'Depo').toString(),
+    return TransferMapEndpointModel(
+      id: (json[endpointIdKey] ?? '').toString(),
+      name: (json[endpointNameKey] ?? 'Depo').toString(),
+      kind: (json[kindKey] ?? defaultKind).toString(),
       city: TransferMapCityModel(
         id: (json[cityIdKey] ?? '').toString(),
         name: (json[cityNameKey] ?? 'Sehir').toString(),
@@ -100,8 +109,8 @@ class TransferMapItemModel {
   final DateTime startedAt;
   final DateTime finishAt;
   final TransferMapProductModel product;
-  final TransferMapWarehouseModel sellerWarehouse;
-  final TransferMapWarehouseModel buyerWarehouse;
+  final TransferMapEndpointModel sellerEndpoint;
+  final TransferMapEndpointModel buyerEndpoint;
 
   const TransferMapItemModel({
     required this.id,
@@ -113,9 +122,15 @@ class TransferMapItemModel {
     required this.startedAt,
     required this.finishAt,
     required this.product,
-    required this.sellerWarehouse,
-    required this.buyerWarehouse,
+    required this.sellerEndpoint,
+    required this.buyerEndpoint,
   });
+
+  TransferMapEndpointModel get sellerWarehouse => sellerEndpoint;
+  TransferMapEndpointModel get buyerWarehouse => buyerEndpoint;
+
+  String get sellerKindLabel => _kindLabel(sellerEndpoint.kind);
+  String get buyerKindLabel => _kindLabel(buyerEndpoint.kind);
 
   factory TransferMapItemModel.fromJson(Map<String, dynamic> json) {
     return TransferMapItemModel(
@@ -130,11 +145,29 @@ class TransferMapItemModel {
       product: TransferMapProductModel.fromJson(
         (json['product'] as Map<String, dynamic>?) ?? const {},
       ),
-      sellerWarehouse: TransferMapWarehouseModel.fromJson(
-        (json['seller_warehouse'] as Map<String, dynamic>?) ?? const {},
+      sellerEndpoint: TransferMapEndpointModel.fromJson(
+        (json['seller_warehouse'] as Map<String, dynamic>?) ??
+            (json['seller_store'] as Map<String, dynamic>?) ??
+            (json['seller_production_inventory'] as Map<String, dynamic>?) ??
+            const {},
+        defaultKind: _resolveEndpointKind(
+          explicitKind: json['seller_entity_kind']?.toString(),
+          warehouse: json['seller_warehouse'] as Map<String, dynamic>?,
+          store: json['seller_store'] as Map<String, dynamic>?,
+          production: json['seller_production_inventory'] as Map<String, dynamic>?,
+        ),
       ),
-      buyerWarehouse: TransferMapWarehouseModel.fromJson(
-        (json['buyer_warehouse'] as Map<String, dynamic>?) ?? const {},
+      buyerEndpoint: TransferMapEndpointModel.fromJson(
+        (json['buyer_warehouse'] as Map<String, dynamic>?) ??
+            (json['buyer_store'] as Map<String, dynamic>?) ??
+            (json['buyer_production_inventory'] as Map<String, dynamic>?) ??
+            const {},
+        defaultKind: _resolveEndpointKind(
+          explicitKind: json['buyer_entity_kind']?.toString(),
+          warehouse: json['buyer_warehouse'] as Map<String, dynamic>?,
+          store: json['buyer_store'] as Map<String, dynamic>?,
+          production: json['buyer_production_inventory'] as Map<String, dynamic>?,
+        ),
       ),
     );
   }
@@ -154,25 +187,57 @@ class TransferMapItemModel {
         name: (json['product_name'] ?? 'Urun').toString(),
         icon: (json['product_icon'] ?? 'default.webp').toString(),
       ),
-      sellerWarehouse: TransferMapWarehouseModel.fromFlatJson(
+      sellerEndpoint: TransferMapEndpointModel.fromFlatJson(
         json,
-        warehouseIdKey: 'seller_warehouse_id',
-        warehouseNameKey: 'seller_warehouse_name',
+        endpointIdKey: 'seller_warehouse_id',
+        endpointNameKey: 'seller_warehouse_name',
         cityIdKey: 'seller_city_id',
         cityNameKey: 'seller_city_name',
         cityXKey: 'seller_city_x',
         cityYKey: 'seller_city_y',
+        kindKey: 'seller_entity_kind',
+        defaultKind: 'warehouse',
       ),
-      buyerWarehouse: TransferMapWarehouseModel.fromFlatJson(
+      buyerEndpoint: TransferMapEndpointModel.fromFlatJson(
         json,
-        warehouseIdKey: 'buyer_warehouse_id',
-        warehouseNameKey: 'buyer_warehouse_name',
+        endpointIdKey: 'buyer_warehouse_id',
+        endpointNameKey: 'buyer_warehouse_name',
         cityIdKey: 'buyer_city_id',
         cityNameKey: 'buyer_city_name',
         cityXKey: 'buyer_city_x',
         cityYKey: 'buyer_city_y',
+        kindKey: 'buyer_entity_kind',
+        defaultKind: 'warehouse',
       ),
     );
+  }
+}
+
+String _resolveEndpointKind({
+  required String? explicitKind,
+  required Map<String, dynamic>? warehouse,
+  required Map<String, dynamic>? store,
+  required Map<String, dynamic>? production,
+}) {
+  if (explicitKind != null && explicitKind.isNotEmpty) {
+    return explicitKind;
+  }
+  if (warehouse != null && warehouse.isNotEmpty) return 'warehouse';
+  if (store != null && store.isNotEmpty) return 'store_slot';
+  if (production != null && production.isNotEmpty) return 'production_inventory';
+  return 'warehouse';
+}
+
+String _kindLabel(String kind) {
+  switch (kind) {
+    case 'store':
+    case 'store_slot':
+      return 'Magaza';
+    case 'production':
+    case 'production_inventory':
+      return 'Uretim';
+    default:
+      return 'Depo';
   }
 }
 

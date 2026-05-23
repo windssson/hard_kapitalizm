@@ -44,14 +44,13 @@ class MarketVehicleOptionsParams {
 final marketProductProvider =
     FutureProvider.family<ProductModel?, String>((ref, productId) async {
       final supabase = Supabase.instance.client;
-      final response = await supabase
-          .from('products')
-          .select()
-          .eq('id', productId)
-          .maybeSingle();
+      final response = await supabase.rpc(
+        'get_market_product_detail',
+        params: {'p_product_id': productId},
+      );
 
       if (response == null) return null;
-      return ProductModel.fromJson(response);
+      return ProductModel.fromJson(response as Map<String, dynamic>);
     });
 
 final marketListingsProvider =
@@ -77,14 +76,13 @@ final marketListingsProvider =
 final marketCityProvider =
     FutureProvider.family<Map<String, dynamic>?, String>((ref, cityId) async {
       final supabase = Supabase.instance.client;
-      final response = await supabase
-          .from('cities')
-          .select('id, name, map_position_x, map_position_y')
-          .eq('id', cityId)
-          .maybeSingle();
+      final response = await supabase.rpc(
+        'get_city_map_detail',
+        params: {'p_city_id': cityId},
+      );
 
       if (response == null) return null;
-      return Map<String, dynamic>.from(response);
+      return Map<String, dynamic>.from(response as Map);
     });
 
 final marketBuyerWarehouseProvider =
@@ -93,17 +91,13 @@ final marketBuyerWarehouseProvider =
       warehouseId,
     ) async {
       final supabase = Supabase.instance.client;
-      final response = await supabase
-          .from('warehouses')
-          .select(
-            'id, name, city_id, is_active, city:cities(name, map_position_x, map_position_y), '
-            'warehouse_type:warehouse_types(icon)',
-          )
-          .eq('id', warehouseId)
-          .maybeSingle();
+      final response = await supabase.rpc(
+        'get_market_buyer_warehouse_detail',
+        params: {'p_warehouse_id': warehouseId},
+      );
 
       if (response == null) return null;
-      return MarketBuyerWarehouseModel.fromJson(response);
+      return MarketBuyerWarehouseModel.fromJson(response as Map<String, dynamic>);
     });
 
 final warehouseCapacityStatusProvider =
@@ -132,17 +126,13 @@ final marketBuyerStoreSlotProvider =
       storeSlotId,
     ) async {
       final supabase = Supabase.instance.client;
-      final response = await supabase
-          .from('store_slots')
-          .select(
-            'id, store_id, product_id, quality_level, quantity, pending_quantity, capacity, '
-            'store:stores(id, name, city_id, is_active, city:cities(id, name, map_position_x, map_position_y))',
-          )
-          .eq('id', storeSlotId)
-          .maybeSingle();
+      final response = await supabase.rpc(
+        'get_market_buyer_store_slot_detail',
+        params: {'p_store_slot_id': storeSlotId},
+      );
 
       if (response == null) return null;
-      return MarketBuyerStoreSlotModel.fromJson(response);
+      return MarketBuyerStoreSlotModel.fromJson(response as Map<String, dynamic>);
     });
 
 final buyerActiveMarketTransfersProvider =
@@ -151,14 +141,7 @@ final buyerActiveMarketTransfersProvider =
       final user = supabase.auth.currentUser;
       if (user == null) return const [];
 
-      final response = await supabase
-          .from('logistics_transfers')
-          .select(
-            'id, product_id, quantity, status, started_at, finish_at, is_rental, total_price, rental_cost',
-          )
-          .eq('buyer_player_id', user.id)
-          .eq('status', 'in_transit')
-          .order('finish_at', ascending: true);
+      final response = await supabase.rpc('get_buyer_active_market_transfers');
 
       return (response as List<dynamic>)
           .map(

@@ -1,10 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 
-class ConstructionCountdownCard extends StatefulWidget {
+class ConstructionCountdownCard extends ConsumerStatefulWidget {
   final String title;
   final String subtitle;
   final DateTime finishAt;
@@ -21,33 +21,13 @@ class ConstructionCountdownCard extends StatefulWidget {
   });
 
   @override
-  State<ConstructionCountdownCard> createState() =>
+  ConsumerState<ConstructionCountdownCard> createState() =>
       _ConstructionCountdownCardState();
 }
 
-class _ConstructionCountdownCardState extends State<ConstructionCountdownCard> {
-  Timer? _timer;
-  late Duration _remaining;
+class _ConstructionCountdownCardState
+    extends ConsumerState<ConstructionCountdownCard> {
   bool _triggered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _remaining = widget.finishAt.difference(DateTime.now());
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _remaining = widget.finishAt.difference(DateTime.now());
-      });
-      if (_remaining.inSeconds <= 0) {
-        _timer?.cancel();
-        _fireOnce();
-      }
-    });
-    if (_remaining.inSeconds <= 0) {
-      _fireOnce();
-    }
-  }
 
   void _fireOnce() {
     if (_triggered) return;
@@ -56,14 +36,17 @@ class _ConstructionCountdownCardState extends State<ConstructionCountdownCard> {
   }
 
   @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final safe = _remaining.isNegative ? Duration.zero : _remaining;
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final remaining = widget.finishAt.difference(now);
+    if (remaining.inSeconds <= 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _fireOnce();
+      });
+    }
+
+    final safe = remaining.isNegative ? Duration.zero : remaining;
     final h = safe.inHours.toString().padLeft(2, '0');
     final m = (safe.inMinutes % 60).toString().padLeft(2, '0');
     final s = (safe.inSeconds % 60).toString().padLeft(2, '0');

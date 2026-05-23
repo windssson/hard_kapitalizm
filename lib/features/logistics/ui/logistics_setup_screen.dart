@@ -326,7 +326,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         AppSnackbar.show(context, title: 'Başarılı', message: 'İnşaat başlatıldı.', type: SnackbarType.success);
         context.go('/logistics');
       } else {
-        AppSnackbar.show(context, title: 'Hata', message: res['message'] ?? 'İşlem başarısız.', type: SnackbarType.error);
+        AppSnackbar.show(context, title: 'Hata', message: res['message'] ?? 'Islem basarisiz.', type: SnackbarType.error);
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

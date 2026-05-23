@@ -3,6 +3,8 @@ class LogisticsVehicleModel {
   final String playerId;
   final String logisticsCompanyId;
   final String logisticsVehicleTypeId;
+  final String? routeCityAId;
+  final String? routeCityBId;
   final int capacity;
   final int speedKmh;
   final int fuelCapacity;
@@ -20,6 +22,8 @@ class LogisticsVehicleModel {
     required this.playerId,
     required this.logisticsCompanyId,
     required this.logisticsVehicleTypeId,
+    required this.routeCityAId,
+    required this.routeCityBId,
     required this.capacity,
     required this.speedKmh,
     required this.fuelCapacity,
@@ -39,6 +43,8 @@ class LogisticsVehicleModel {
       playerId: json['player_id'] as String,
       logisticsCompanyId: json['logistics_company_id'] as String,
       logisticsVehicleTypeId: json['logistics_vehicle_type_id'] as String,
+      routeCityAId: json['route_city_a_id'] as String?,
+      routeCityBId: json['route_city_b_id'] as String?,
       capacity: json['capacity'] as int? ?? 0,
       speedKmh: json['speed_kmh'] as int? ?? 0,
       fuelCapacity: json['fuel_capacity'] as int? ?? 0,
@@ -59,6 +65,8 @@ class LogisticsVehicleModel {
       'player_id': playerId,
       'logistics_company_id': logisticsCompanyId,
       'logistics_vehicle_type_id': logisticsVehicleTypeId,
+      'route_city_a_id': routeCityAId,
+      'route_city_b_id': routeCityBId,
       'capacity': capacity,
       'speed_kmh': speedKmh,
       'fuel_capacity': fuelCapacity,
@@ -71,5 +79,17 @@ class LogisticsVehicleModel {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
+  }
+
+  bool get hasAssignedRoute =>
+      routeCityAId != null &&
+      routeCityAId!.isNotEmpty &&
+      routeCityBId != null &&
+      routeCityBId!.isNotEmpty;
+
+  bool servesRoute(String fromCityId, String toCityId) {
+    if (!hasAssignedRoute) return false;
+    return (routeCityAId == fromCityId && routeCityBId == toCityId) ||
+        (routeCityAId == toCityId && routeCityBId == fromCityId);
   }
 }

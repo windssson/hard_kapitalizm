@@ -7,6 +7,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
+import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_list_item_model.dart';
@@ -38,7 +39,7 @@ class _MineScreenState extends ConsumerState<MineScreen> {
   }
 
   Future<void> _refreshAll() async {
-    ref.invalidate(mineListStreamProvider);
+    ref.invalidate(mineListProvider);
     ref.invalidate(mineConstructionProvider);
   }
 
@@ -48,7 +49,7 @@ class _MineScreenState extends ConsumerState<MineScreen> {
         .completeConstruction(constructionId);
 
     ref.invalidate(mineConstructionProvider);
-    ref.invalidate(mineListStreamProvider);
+    ref.invalidate(mineListProvider);
 
     if (!mounted) return;
     if (result['success'] != true) {
@@ -67,7 +68,7 @@ class _MineScreenState extends ConsumerState<MineScreen> {
         .finishConstructionWithGold(constructionId);
 
     ref.invalidate(mineConstructionProvider);
-    ref.invalidate(mineListStreamProvider);
+    ref.invalidate(mineListProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -90,7 +91,7 @@ class _MineScreenState extends ConsumerState<MineScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final minesAsync = ref.watch(mineListStreamProvider);
+    final minesAsync = ref.watch(mineListProvider);
     final constructionAsync = ref.watch(mineConstructionProvider);
 
     return Scaffold(
@@ -117,33 +118,51 @@ class _MineScreenState extends ConsumerState<MineScreen> {
             Expanded(
               child: minesAsync.when(
                 data: (mines) => constructionAsync.when(
-                  data: (construction) => RefreshIndicator(
-                    onRefresh: _refreshAll,
-                    child: SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 12.h,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildStatsHeader(mines),
-                          SizedBox(height: 16.h),
-                          _buildFilters(),
-                          SizedBox(height: 16.h),
+                  data: (construction) {
+                    final filteredMines = _getFilteredMines(mines);
+                    return RefreshIndicator(
+                      onRefresh: _refreshAll,
+                      child: CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          SliverPadding(
+                            padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                            sliver: SliverToBoxAdapter(
+                              child: _buildStatsHeader(mines),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
+                            sliver: SliverToBoxAdapter(child: _buildFilters()),
+                          ),
                           if (construction != null)
-                            _buildConstructionCard(construction),
-                          if (_getFilteredMines(mines).isEmpty &&
-                              construction == null)
-                            _buildEmptyState()
-                          else if (_getFilteredMines(mines).isNotEmpty)
-                            _buildMineList(_getFilteredMines(mines)),
-                          SizedBox(height: 80.h),
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
+                              sliver: SliverToBoxAdapter(
+                                child: _buildConstructionCard(construction),
+                              ),
+                            ),
+                          SliverPadding(
+                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 80.h),
+                            sliver: filteredMines.isEmpty
+                                ? SliverToBoxAdapter(
+                                    child: construction == null
+                                        ? _buildEmptyState()
+                                        : const SizedBox.shrink(),
+                                  )
+                                : SliverList.builder(
+                                    itemCount: filteredMines.length,
+                                    itemBuilder: (context, index) {
+                                      return _buildAdvancedMineCard(
+                                        filteredMines[index],
+                                      );
+                                    },
+                                  ),
+                          ),
                         ],
                       ),
-                    ),
-                  ),
+                    );
+                  },
                   loading: () => const Center(
                     child: CircularProgressIndicator(color: AppColors.gold),
                   ),
@@ -157,7 +176,7 @@ class _MineScreenState extends ConsumerState<MineScreen> {
                 ),
                 error: (error, stack) => _buildErrorState(
                   error,
-                  onRetry: () => ref.refresh(mineListStreamProvider),
+                  onRetry: () => ref.refresh(mineListProvider),
                 ),
               ),
             ),
@@ -191,27 +210,9 @@ class _MineScreenState extends ConsumerState<MineScreen> {
         if (starCost > 0)
           Padding(
             padding: EdgeInsets.only(bottom: 12.h),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _finishConstructionWithGold(constructionId),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(vertical: 12.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                ),
-                icon: Icon(Icons.star, size: 16.sp),
-                label: Text(
-                  '$starCost yildiz ile bitir',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            child: GoldFinishButton(
+              starCost: starCost,
+              onPressed: () => _finishConstructionWithGold(constructionId),
             ),
           ),
       ],

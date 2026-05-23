@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -85,7 +86,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         buyerWarehouseId: _isStoreTarget ? null : widget.warehouseId,
         buyerStoreSlotId: _isStoreTarget ? widget.storeSlotId : null,
         buyerStoreSlot: buyerStoreSlot,
-        fallbackTargetCityId: widget.cityId,
+        targetCityId:
+            _isStoreTarget
+                ? (buyerStoreSlot?.cityId.isNotEmpty ?? false)
+                    ? buyerStoreSlot!.cityId
+                    : widget.cityId
+                : widget.cityId,
         product: product,
         parentContext: context,
         onSuccess: _refreshAll,
@@ -999,7 +1005,7 @@ class _PurchaseSheet extends ConsumerStatefulWidget {
   final String? buyerWarehouseId;
   final String? buyerStoreSlotId;
   final MarketBuyerStoreSlotModel? buyerStoreSlot;
-  final String fallbackTargetCityId;
+  final String targetCityId;
   final ProductModel product;
   final BuildContext parentContext;
   final Future<void> Function() onSuccess;
@@ -1009,7 +1015,7 @@ class _PurchaseSheet extends ConsumerStatefulWidget {
     required this.buyerWarehouseId,
     required this.buyerStoreSlotId,
     required this.buyerStoreSlot,
-    required this.fallbackTargetCityId,
+    required this.targetCityId,
     required this.product,
     required this.parentContext,
     required this.onSuccess,
@@ -1025,17 +1031,12 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   bool _isSubmitting = false;
   String? _selectedVehicleId;
 
-  bool get _isSameCityInstantStorePurchase {
-    final storeSlot = widget.buyerStoreSlot;
-    if (widget.buyerStoreSlotId == null ||
-        widget.buyerStoreSlotId!.isEmpty ||
-        (storeSlot == null && widget.fallbackTargetCityId.isEmpty)) {
-      return false;
-    }
-    final targetCityId = (storeSlot?.cityId.isNotEmpty ?? false)
-        ? storeSlot!.cityId
-        : widget.fallbackTargetCityId;
-    return targetCityId == widget.listing.cityId;
+  bool get _isStoreTarget =>
+      widget.buyerStoreSlotId != null && widget.buyerStoreSlotId!.isNotEmpty;
+
+  bool get _isSameCityInstantPurchase {
+    if (widget.targetCityId.isEmpty) return false;
+    return widget.targetCityId == widget.listing.cityId;
   }
 
   @override
@@ -1081,7 +1082,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   Future<void> _submit(
     List<MarketTransferVehicleOptionModel> options,
   ) async {
-    if (!_isSameCityInstantStorePurchase && _selectedVehicleId == null) {
+    if (!_isSameCityInstantPurchase && _selectedVehicleId == null) {
       AppSnackbar.show(
         context,
         title: 'Secim Gerekli',
@@ -1091,11 +1092,11 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       return;
     }
 
-    final selected = _isSameCityInstantStorePurchase
+    final selected = _isSameCityInstantPurchase
         ? null
         : options.where((e) => e.vehicleId == _selectedVehicleId).firstOrNull;
 
-    if (!_isSameCityInstantStorePurchase &&
+    if (!_isSameCityInstantPurchase &&
         (selected == null || !selected.canSelect)) {
       AppSnackbar.show(
         context,
@@ -1112,8 +1113,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
 
     final targetStoreSlot = widget.buyerStoreSlot;
     final shouldPrepareStoreSlot =
-        widget.buyerStoreSlotId != null &&
-        widget.buyerStoreSlotId!.isNotEmpty &&
+        _isStoreTarget &&
         targetStoreSlot != null &&
         targetStoreSlot.quantity == 0 &&
         targetStoreSlot.pendingQuantity == 0 &&
@@ -1168,7 +1168,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
         title: 'Basarili',
         message: isInstant
             ? 'Satin alma aninda tamamlandi.'
-            : 'Transfer baslatildi. Arac yola cikti.',
+            : 'Lojistik transfer baslatildi. Arac yola cikti.',
         type: SnackbarType.success,
       );
       return;
@@ -1190,7 +1190,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       sellerSlotId: widget.listing.slotId,
       quantity: _quantity,
     );
-    final optionsAsync = _isSameCityInstantStorePurchase
+    final optionsAsync = _isSameCityInstantPurchase
         ? AsyncValue<List<MarketTransferVehicleOptionModel>>.data(const [])
         : ref.watch(marketTransferVehicleOptionsProvider(params));
     final requiredCapacity = _quantity * widget.product.birimHacim;
@@ -1235,7 +1235,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 '${widget.listing.warehouseName} deposundan alim yapacaksiniz.',
                 style: AppTextStyles.body,
               ),
-              if (_isSameCityInstantStorePurchase) ...[
+              if (_isSameCityInstantPurchase) ...[
                 SizedBox(height: 8.h),
                 Text(
                   'Ayni sehir oldugu icin teslimat aninda tamamlanacak.',
@@ -1307,7 +1307,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 ),
               ),
               SizedBox(height: 18.h),
-              if (!_isSameCityInstantStorePurchase) ...[
+              if (!_isSameCityInstantPurchase) ...[
                 Text(
                   'Arac Secimi',
                   style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
@@ -1316,7 +1316,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
               ],
               optionsAsync.when(
                 data: (options) {
-                  if (!_isSameCityInstantStorePurchase && options.isEmpty) {
+                  if (!_isSameCityInstantPurchase && options.isEmpty) {
                     return _buildInfoBox(
                       'Bu transfer icin uygun veya kiralanabilir arac bulunamadi.',
                       AppColors.red,
@@ -1331,7 +1331,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
 
                   return Column(
                     children: [
-                      if (!_isSameCityInstantStorePurchase) ...[
+                      if (!_isSameCityInstantPurchase) ...[
                         ...options.map(_buildVehicleOptionCard),
                         SizedBox(height: 12.h),
                       ],
@@ -1631,7 +1631,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   }
 }
 
-class _MarketTransferCountdownCard extends StatefulWidget {
+class _MarketTransferCountdownCard extends ConsumerStatefulWidget {
   final MarketTransferModel transfer;
   final Future<void> Function() onFinish;
 
@@ -1641,37 +1641,13 @@ class _MarketTransferCountdownCard extends StatefulWidget {
   });
 
   @override
-  State<_MarketTransferCountdownCard> createState() =>
+  ConsumerState<_MarketTransferCountdownCard> createState() =>
       _MarketTransferCountdownCardState();
 }
 
 class _MarketTransferCountdownCardState
-    extends State<_MarketTransferCountdownCard> {
-  late Duration _remaining;
+    extends ConsumerState<_MarketTransferCountdownCard> {
   bool _triggered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _remaining = widget.transfer.finishAt.difference(DateTime.now());
-    _tick();
-  }
-
-  void _tick() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _remaining = widget.transfer.finishAt.difference(DateTime.now());
-      });
-
-      if (_remaining.inSeconds <= 0) {
-        _fireOnce();
-        return;
-      }
-
-      _tick();
-    });
-  }
 
   void _fireOnce() {
     if (_triggered) return;
@@ -1681,7 +1657,16 @@ class _MarketTransferCountdownCardState
 
   @override
   Widget build(BuildContext context) {
-    final safe = _remaining.isNegative ? Duration.zero : _remaining;
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final remaining = widget.transfer.finishAt.difference(now);
+    if (remaining.inSeconds <= 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _fireOnce();
+      });
+    }
+
+    final safe = remaining.isNegative ? Duration.zero : remaining;
     final h = safe.inHours.toString().padLeft(2, '0');
     final m = (safe.inMinutes % 60).toString().padLeft(2, '0');
     final s = (safe.inSeconds % 60).toString().padLeft(2, '0');
@@ -1724,7 +1709,7 @@ class _MarketTransferCountdownCardState
                 Text(
                   widget.transfer.isRental
                       ? 'Kiralik arac yolda'
-                      : 'Kendi araciniz yolda',
+                      : 'Ozmal arac yolda',
                   style: AppTextStyles.body,
                 ),
                 SizedBox(height: 6.h),
