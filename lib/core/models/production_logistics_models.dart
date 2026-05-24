@@ -95,7 +95,7 @@ class ProductionLogisticsVehicleOption {
       estimatedDurationSeconds:
           (json['estimated_duration_seconds'] as num?)?.toInt() ??
           ((json['duration_minutes'] as num?)?.toInt() ?? 0) * 60,
-      canSelect: json['can_select'] as bool? ?? true,
+      canSelect: json['can_select'] as bool? ?? false,
       disabledReason: json['disabled_reason']?.toString(),
     );
   }

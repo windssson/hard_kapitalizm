@@ -5949,55 +5949,84 @@ begin
   producible as (
     select
       ij.*,
-      ((ij.h1_required = 0 or ij.h1_quantity >= ij.h1_required)
-        and (ij.h2_required = 0 or ij.h2_quantity >= ij.h2_required)
-        and (ij.h3_required = 0 or ij.h3_quantity >= ij.h3_required)) as has_enough_input,
-      ((ij.h1_required * ij.h1_cost) + (ij.h2_required * ij.h2_cost) + (ij.h3_required * ij.h3_cost)) as total_input_cost,
-      (((ij.h1_required * ij.h1_cost) + (ij.h2_required * ij.h2_cost) + (ij.h3_required * ij.h3_cost)) * 1.05) as total_production_cost,
-      (ij.h1_required + ij.h2_required + ij.h3_required) as total_required_input_quantity
+      case
+        when ij.h1_required > 0 then floor(ij.h1_quantity / ij.h1_per_unit)::integer
+        else ij.output_to_produce
+      end as h1_producible_output,
+      case
+        when ij.h2_required > 0 then floor(ij.h2_quantity / ij.h2_per_unit)::integer
+        else ij.output_to_produce
+      end as h2_producible_output,
+      case
+        when ij.h3_required > 0 then floor(ij.h3_quantity / ij.h3_per_unit)::integer
+        else ij.output_to_produce
+      end as h3_producible_output
     from input_joined ij
   ),
+  adjusted_output as (
+    select
+      pr.*,
+      greatest(
+        least(
+          pr.output_to_produce,
+          pr.h1_producible_output,
+          pr.h2_producible_output,
+          pr.h3_producible_output
+        ),
+        0
+      )::integer as actual_output_to_produce
+    from producible pr
+  ),
   produced_slots as (
-    select *
-    from producible
-    where has_enough_input = true
-      and total_required_input_quantity > 0
+    select
+      ao.*,
+      case when ao.h1_id is not null and ao.h1_per_unit > 0 then ceil(ao.actual_output_to_produce * ao.h1_per_unit)::integer else 0 end as actual_h1_required,
+      case when ao.h2_id is not null and ao.h2_per_unit > 0 then ceil(ao.actual_output_to_produce * ao.h2_per_unit)::integer else 0 end as actual_h2_required,
+      case when ao.h3_id is not null and ao.h3_per_unit > 0 then ceil(ao.actual_output_to_produce * ao.h3_per_unit)::integer else 0 end as actual_h3_required,
+      ((case when ao.h1_id is not null and ao.h1_per_unit > 0 then ceil(ao.actual_output_to_produce * ao.h1_per_unit)::integer else 0 end) * ao.h1_cost
+        + (case when ao.h2_id is not null and ao.h2_per_unit > 0 then ceil(ao.actual_output_to_produce * ao.h2_per_unit)::integer else 0 end) * ao.h2_cost
+        + (case when ao.h3_id is not null and ao.h3_per_unit > 0 then ceil(ao.actual_output_to_produce * ao.h3_per_unit)::integer else 0 end) * ao.h3_cost) as total_input_cost,
+      (((case when ao.h1_id is not null and ao.h1_per_unit > 0 then ceil(ao.actual_output_to_produce * ao.h1_per_unit)::integer else 0 end) * ao.h1_cost
+        + (case when ao.h2_id is not null and ao.h2_per_unit > 0 then ceil(ao.actual_output_to_produce * ao.h2_per_unit)::integer else 0 end) * ao.h2_cost
+        + (case when ao.h3_id is not null and ao.h3_per_unit > 0 then ceil(ao.actual_output_to_produce * ao.h3_per_unit)::integer else 0 end) * ao.h3_cost) * 1.05) as total_production_cost
+    from adjusted_output ao
+    where ao.actual_output_to_produce > 0
   ),
   consume_h1 as (
     update production_inventory pi
-    set quantity = pi.quantity - ps.h1_required
+    set quantity = pi.quantity - ps.actual_h1_required
     from produced_slots ps
-    where ps.h1_required > 0
+    where ps.actual_h1_required > 0
       and pi.id = ps.h1_inventory_id
     returning pi.id
   ),
   consume_h2 as (
     update production_inventory pi
-    set quantity = pi.quantity - ps.h2_required
+    set quantity = pi.quantity - ps.actual_h2_required
     from produced_slots ps
-    where ps.h2_required > 0
+    where ps.actual_h2_required > 0
       and pi.id = ps.h2_inventory_id
     returning pi.id
   ),
   consume_h3 as (
     update production_inventory pi
-    set quantity = pi.quantity - ps.h3_required
+    set quantity = pi.quantity - ps.actual_h3_required
     from produced_slots ps
-    where ps.h3_required > 0
+    where ps.actual_h3_required > 0
       and pi.id = ps.h3_inventory_id
     returning pi.id
   ),
   update_output as (
     update production_inventory pi
-    set quantity = pi.quantity + ps.output_to_produce,
-        pending_quantity = case when ps.output_to_produce < ps.whole_output then 0 else ps.raw_output - ps.whole_output end,
+    set quantity = pi.quantity + ps.actual_output_to_produce,
+        pending_quantity = case when ps.actual_output_to_produce < ps.whole_output then 0 else ps.raw_output - ps.whole_output end,
         cost = case
-          when pi.quantity + ps.output_to_produce > 0 then (((pi.quantity * pi.cost) + ps.total_production_cost) / (pi.quantity + ps.output_to_produce))
+          when pi.quantity + ps.actual_output_to_produce > 0 then (((pi.quantity * pi.cost) + ps.total_production_cost) / (pi.quantity + ps.actual_output_to_produce))
           else pi.cost
         end
     from produced_slots ps
     where pi.id = ps.output_inventory_id
-    returning pi.id, ps.production_slot_id, ps.output_to_produce
+    returning pi.id, ps.production_slot_id, ps.actual_output_to_produce
   ),
   pending_only as (
     update production_inventory pi
@@ -6014,7 +6043,7 @@ begin
       (select count(*) from output_joined) as processed_count,
       (select count(*) from update_output) as produced_count,
       (select count(*) from pending_only) as pending_only_count,
-      (select coalesce(sum(output_to_produce), 0) from update_output) as total_produced,
+      (select coalesce(sum(actual_output_to_produce), 0) from update_output) as total_produced,
       ((select count(*) from output_joined) - (select count(*) from update_output)) as skipped_count
   )
   select processed_count, produced_count + pending_only_count, skipped_count, total_produced

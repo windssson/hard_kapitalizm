@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
+import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
@@ -19,9 +20,24 @@ class FactoryScreen extends ConsumerStatefulWidget {
   ConsumerState<FactoryScreen> createState() => _FactoryScreenState();
 }
 
-class _FactoryScreenState extends ConsumerState<FactoryScreen> {
+class _FactoryScreenState extends ConsumerState<FactoryScreen>
+    with RouteRefreshMixin<FactoryScreen> {
   final int _selectedIndex = 1;
   String _selectedFilter = 'Tumu';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
+  }
+
+  @override
+  void refreshRouteData() {
+    ref.invalidate(factoryListProvider);
+    ref.invalidate(factoryConstructionProvider);
+    ref.read(factoryListProvider.future);
+    ref.read(factoryConstructionProvider.future);
+  }
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -18,7 +19,20 @@ class WarehouseScreen extends ConsumerStatefulWidget {
   ConsumerState<WarehouseScreen> createState() => _WarehouseScreenState();
 }
 
-class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
+class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
+    with RouteRefreshMixin<WarehouseScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
+  }
+
+  @override
+  void refreshRouteData() {
+    ref.invalidate(warehouseListProvider);
+    ref.read(warehouseListProvider.future);
+  }
+
   final int _selectedIndex = 1;
   String _selectedFilter = 'Tümü';
 

@@ -95,19 +95,26 @@ class ProductionLogisticsService {
     required int quantity,
     String? vehicleId,
   }) async {
-    final response = await _supabase.rpc(
-      'start_warehouse_to_production_transfer',
-      params: {
-        'p_warehouse_slot_id': warehouseSlotId,
-        'p_production_inventory_id': productionInventoryId,
-        'p_quantity': quantity,
-        'p_vehicle_id': vehicleId,
-      },
-    );
+    try {
+      final response = await _supabase.rpc(
+        'start_warehouse_to_production_transfer',
+        params: {
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_production_inventory_id': productionInventoryId,
+          'p_quantity': quantity,
+          'p_vehicle_id': vehicleId,
+        },
+      );
 
-    return ProductionLogisticsStartResult.fromJson(
-      Map<String, dynamic>.from(response as Map),
-    );
+      return ProductionLogisticsStartResult.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    } catch (e) {
+      return ProductionLogisticsStartResult(
+        success: false,
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
   }
 
   Future<ProductionLogisticsStartResult> startProductionToWarehouseTransfer({
@@ -116,18 +123,25 @@ class ProductionLogisticsService {
     required int quantity,
     String? vehicleId,
   }) async {
-    final response = await _supabase.rpc(
-      'start_production_to_warehouse_transfer',
-      params: {
-        'p_production_inventory_id': productionInventoryId,
-        'p_buyer_warehouse_id': buyerWarehouseId,
-        'p_quantity': quantity,
-        'p_vehicle_id': vehicleId,
-      },
-    );
+    try {
+      final response = await _supabase.rpc(
+        'start_production_to_warehouse_transfer',
+        params: {
+          'p_production_inventory_id': productionInventoryId,
+          'p_buyer_warehouse_id': buyerWarehouseId,
+          'p_quantity': quantity,
+          'p_vehicle_id': vehicleId,
+        },
+      );
 
-    return ProductionLogisticsStartResult.fromJson(
-      Map<String, dynamic>.from(response as Map),
-    );
+      return ProductionLogisticsStartResult.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    } catch (e) {
+      return ProductionLogisticsStartResult(
+        success: false,
+        message: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
   }
 }

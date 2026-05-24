@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
+import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -19,9 +20,22 @@ class StoreScreen extends ConsumerStatefulWidget {
   ConsumerState<StoreScreen> createState() => _StoreScreenState();
 }
 
-class _StoreScreenState extends ConsumerState<StoreScreen> {
+class _StoreScreenState extends ConsumerState<StoreScreen>
+    with RouteRefreshMixin<StoreScreen> {
   final int _selectedIndex = 1;
   String _selectedFilter = 'Tumu';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
+  }
+
+  @override
+  void refreshRouteData() {
+    ref.invalidate(storesListProvider);
+    ref.read(storesListProvider.future);
+  }
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
