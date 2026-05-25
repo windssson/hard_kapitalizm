@@ -107,9 +107,23 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                                   itemCount: filteredStores.length,
                                   itemBuilder: (context, index) {
                                     final store = filteredStores[index];
-                                    return store.isUnderConstruction
-                                        ? _buildConstructionCard(store)
-                                        : _buildAdvancedStoreCard(store);
+                                    return TweenAnimationBuilder<double>(
+                                      duration: Duration(milliseconds: 300 + (index * 100).clamp(0, 600)),
+                                      curve: Curves.easeOutCubic,
+                                      tween: Tween<double>(begin: 0, end: 1),
+                                      builder: (context, value, child) {
+                                        return Opacity(
+                                          opacity: value,
+                                          child: Transform.translate(
+                                            offset: Offset(0, 30 * (1 - value)),
+                                            child: child,
+                                          ),
+                                        );
+                                      },
+                                      child: store.isUnderConstruction
+                                          ? _buildConstructionCard(store)
+                                          : _buildAdvancedStoreCard(store),
+                                    );
                                   },
                                 ),
                         ),
@@ -143,13 +157,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: AppColors.borderGoldLight.withValues(alpha: 0.3),
-        ),
-      ),
+      decoration: AppDecorations.premiumCard(null, 12.r),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -158,7 +166,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
             AppColors.gold,
             'Toplam',
             stores.length.toString(),
-            Colors.white,
+            AppColors.textPrimary,
           ),
           Container(width: 1, height: 40.h, color: AppColors.border),
           _buildStatItem(
@@ -174,7 +182,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
             Colors.blueAccent,
             'Kapasite',
             formattedCapacity,
-            Colors.white,
+            AppColors.textPrimary,
           ),
         ],
       ),
@@ -331,18 +339,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
         Container(
           margin: EdgeInsets.only(bottom: starCost > 0 ? 0 : 10.h),
           padding: EdgeInsets.all(8.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(24.r),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+          decoration: AppDecorations.premiumCard(AppColors.gold.withValues(alpha: 0.4), 24.r),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -403,10 +400,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                           TextSpan(
                             text: store.name,
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                               fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Inter',
+                              
                             ),
                           ),
                           TextSpan(
@@ -542,20 +539,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(
-            color: AppColors.borderGoldLight.withValues(alpha: 0.15),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
+        decoration: AppDecorations.premiumCard(null, 20.r),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -617,7 +601,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                             Text(
                               store.name,
                               style: TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -744,7 +728,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
           Text(
             '$label: $value',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontSize: 10.sp,
               fontWeight: FontWeight.w600,
             ),
@@ -878,7 +862,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
           SizedBox(height: 16.h),
           const Text(
             'Henuz bir magazan yok.',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: AppColors.textPrimary),
           ),
         ],
       ),
@@ -943,7 +927,7 @@ class _ConstructionCountdownState extends ConsumerState<_ConstructionCountdown> 
                 borderRadius: BorderRadius.circular(6.r),
                 child: LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: Colors.white10,
+                  backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
                   valueColor: const AlwaysStoppedAnimation<Color>(
                     AppColors.gold,
                   ),
@@ -974,7 +958,7 @@ class _ConstructionCountdownState extends ConsumerState<_ConstructionCountdown> 
             Text(
               timeStr,
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
               ),

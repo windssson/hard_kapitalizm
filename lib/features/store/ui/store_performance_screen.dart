@@ -75,7 +75,23 @@ class _StorePerformanceScreenState
                           ),
                         ),
                         SizedBox(height: 10.h),
-                        ..._sortRows(data.rows).map(_buildRowCard),
+                        ..._sortRows(data.rows).asMap().entries.map(
+                              (entry) => TweenAnimationBuilder<double>(
+                                duration: Duration(milliseconds: 300 + (entry.key * 50).clamp(0, 500)),
+                                curve: Curves.easeOutCubic,
+                                tween: Tween<double>(begin: 0, end: 1),
+                                builder: (context, value, child) {
+                                  return Opacity(
+                                    opacity: value,
+                                    child: Transform.translate(
+                                      offset: Offset(0, 20 * (1 - value)),
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: _buildRowCard(entry.value),
+                              ),
+                            ),
                       ],
                     ],
                   ),
@@ -134,11 +150,7 @@ class _StorePerformanceScreenState
 
     return Container(
       padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.75),
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-      ),
+      decoration: AppDecorations.premiumCard(null, 18.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -245,11 +257,7 @@ class _StorePerformanceScreenState
   }) {
     return Container(
       padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: accentColor.withValues(alpha: 0.25)),
-      ),
+      decoration: AppDecorations.premiumCard(accentColor, 16.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -304,11 +312,7 @@ class _StorePerformanceScreenState
     return Container(
       width: 145.w,
       padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
+      decoration: AppDecorations.premiumCard(AppColors.border, 14.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -338,11 +342,7 @@ class _StorePerformanceScreenState
   Widget _buildEmptyState() {
     return Container(
       padding: EdgeInsets.all(18.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
+      decoration: AppDecorations.premiumCard(AppColors.border, 16.r),
       child: Text(
         'Son 14 gunde performans kaydi yok.',
         style: TextStyle(
@@ -358,11 +358,7 @@ class _StorePerformanceScreenState
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
       padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
+      decoration: AppDecorations.premiumCard(null, 16.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

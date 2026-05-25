@@ -143,9 +143,7 @@ class _ProductSelectionDialogState
       itemBuilder: (context, index) {
         final product = filtered[index];
         return ListTile(
-          onTap: () {
-            debugPrint('Secilen urun: ${product.urunAdi}');
-          },
+          onTap: () => _openMarketForProduct(product),
           contentPadding: EdgeInsets.symmetric(vertical: 8.h),
           leading: Container(
             width: 50.w,
@@ -174,19 +172,7 @@ class _ProductSelectionDialogState
           trailing: SizedBox(
             width: 86.w,
             child: OutlinedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                context.push(
-                  Uri(
-                    path: '/market/${product.id}',
-                    queryParameters: {
-                      'warehouseId': widget.warehouse.id,
-                      'playerId': widget.warehouse.playerId,
-                      'cityId': widget.warehouse.cityId,
-                    },
-                  ).toString(),
-                );
-              },
+              onPressed: () => _openMarketForProduct(product),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(
                   color: AppColors.gold.withValues(alpha: 0.6),
@@ -233,5 +219,19 @@ class _ProductSelectionDialogState
 
   String _normalizeProductId(String value) {
     return value.trim().toUpperCase();
+  }
+
+  void _openMarketForProduct(ProductModel product) {
+    Navigator.pop(context);
+    context.push(
+      Uri(
+        path: '/market/${product.id}',
+        queryParameters: {
+          'warehouseId': widget.warehouse.id,
+          'playerId': widget.warehouse.playerId,
+          'cityId': widget.warehouse.cityId,
+        },
+      ).toString(),
+    );
   }
 }

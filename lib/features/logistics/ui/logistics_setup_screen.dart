@@ -13,7 +13,8 @@ class LogisticsSetupScreen extends ConsumerStatefulWidget {
   const LogisticsSetupScreen({super.key});
 
   @override
-  ConsumerState<LogisticsSetupScreen> createState() => _LogisticsSetupScreenState();
+  ConsumerState<LogisticsSetupScreen> createState() =>
+      _LogisticsSetupScreenState();
 }
 
 class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
@@ -32,24 +33,27 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Lojistik Ağı Kur'),
+            const SecondaryTopBar(title: 'Lojistik Agi Kur'),
             Expanded(
               child: companyAsync.when(
                 data: (company) {
                   if (company != null) {
                     return _buildRedirectState(
                       title: company.name,
-                      message: 'Zaten aktif bir lojistik firmanız bulunuyor.',
+                      message: 'Zaten aktif bir lojistik firmaniz bulunuyor.',
                     );
                   }
 
                   return constructionAsync.when(
                     data: (construction) {
                       if (construction != null) {
-                        final params = construction['params'] as Map<String, dynamic>?;
+                        final params =
+                            construction['params'] as Map<String, dynamic>?;
                         return _buildRedirectState(
-                          title: (params?['name'] ?? 'Lojistik Firması').toString(),
-                          message: 'Lojistik merkezinizin inşaatı devam ediyor.',
+                          title:
+                              (params?['name'] ?? 'Lojistik Firmasi').toString(),
+                          message:
+                              'Lojistik merkezinizin insaati devam ediyor.',
                         );
                       }
 
@@ -61,18 +65,22 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                             playerLevel: player?.level ?? 1,
                           ),
                           loading: _buildLoading,
-                          error: (error, stack) => _buildError('Firma tipleri yüklenemedi.'),
+                          error: (error, stack) =>
+                              _buildError('Firma tipleri yuklenemedi.'),
                         ),
                         loading: _buildLoading,
-                        error: (error, stack) => _buildError('Oyuncu bilgisi okunamadı.'),
+                        error: (error, stack) =>
+                            _buildError('Oyuncu bilgisi okunamadi.'),
                       );
                     },
                     loading: _buildLoading,
-                    error: (error, stack) => _buildError('İnşaat durumu okunamadı.'),
+                    error: (error, stack) =>
+                        _buildError('Insaat durumu okunamadi.'),
                   );
                 },
                 loading: _buildLoading,
-                error: (error, stack) => _buildError('Veri senkronizasyon hatası.'),
+                error: (error, stack) =>
+                    _buildError('Veri senkronizasyon hatasi.'),
               ),
             ),
           ],
@@ -93,7 +101,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         children: [
           _buildPremiumIntro(),
           SizedBox(height: 24.h),
-          _buildSectionTitle('OPERASYON MERKEZİ TİPİ'),
+          _buildSectionTitle('OPERASYON MERKEZI TIPI'),
           SizedBox(height: 12.h),
           ...types.map((type) => _buildTypeCard(type, playerCash, playerLevel)),
           SizedBox(height: 24.h),
@@ -132,10 +140,13 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Lojistik Hub', style: AppTextStyles.h2.copyWith(color: AppColors.gold)),
+                Text(
+                  'Lojistik Hub',
+                  style: AppTextStyles.h2.copyWith(color: AppColors.gold),
+                ),
                 SizedBox(height: 4.h),
                 Text(
-                  'Ticaretin kalbi burada atar. Mal taşıyın, araç kiralayın ve imparatorluğunuzu büyütün.',
+                  'Ticaretin kalbi burada atar. Mal tasiyin, arac kiralayin ve imparatorlugunuzu buyutun.',
                   style: AppTextStyles.body.copyWith(height: 1.4),
                 ),
               ],
@@ -151,12 +162,19 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       padding: EdgeInsets.only(left: 4.w),
       child: Text(
         title,
-        style: AppTextStyles.titleGold.copyWith(fontSize: 12.sp, letterSpacing: 1.2),
+        style: AppTextStyles.titleGold.copyWith(
+          fontSize: 12.sp,
+          letterSpacing: 1.2,
+        ),
       ),
     );
   }
 
-  Widget _buildTypeCard(LogisticsCompanyTypeModel type, double playerCash, int playerLevel) {
+  Widget _buildTypeCard(
+    LogisticsCompanyTypeModel type,
+    double playerCash,
+    int playerLevel,
+  ) {
     final isSelected = _selectedType?.id == type.id;
     final levelLocked = playerLevel < type.requiredLevel;
     final cashLocked = playerCash < type.cost;
@@ -169,13 +187,22 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.gold.withValues(alpha: 0.05) : AppColors.cardBg,
+          color: isSelected
+              ? AppColors.gold.withValues(alpha: 0.05)
+              : AppColors.cardBg,
           borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
             color: isSelected ? AppColors.gold : AppColors.border,
             width: isSelected ? 2 : 1,
           ),
-          boxShadow: isSelected ? [BoxShadow(color: AppColors.gold.withValues(alpha: 0.1), blurRadius: 10)] : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                  ),
+                ]
+              : null,
         ),
         child: Opacity(
           opacity: isLocked ? 0.5 : 1.0,
@@ -188,39 +215,84 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.cardBgLight,
                   borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(color: isSelected ? AppColors.gold.withValues(alpha: 0.3) : AppColors.border),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.gold.withValues(alpha: 0.3)
+                        : AppColors.border,
+                  ),
                 ),
-                child: Icon(Icons.apartment_rounded, color: AppColors.gold, size: 28.sp),
+                child: Icon(
+                  Icons.apartment_rounded,
+                  color: AppColors.gold,
+                  size: 28.sp,
+                ),
               ),
               SizedBox(width: 14.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(type.name, style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.w800)),
+                    Text(
+                      type.name,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     SizedBox(height: 8.h),
                     Wrap(
                       spacing: 6.w,
                       runSpacing: 6.h,
                       children: [
-                        _buildTypeChip(Icons.payments_outlined, _formatMoney(type.cost), cashLocked ? AppColors.red : AppColors.green),
-                        _buildTypeChip(Icons.star_outline, 'Lv. ${type.requiredLevel}', levelLocked ? AppColors.red : AppColors.blue),
-                        _buildTypeChip(Icons.local_shipping_outlined, '${type.maxVehicleCount} Kapasite', AppColors.gold),
+                        _buildTypeChip(
+                          Icons.payments_outlined,
+                          _formatMoney(type.cost),
+                          cashLocked ? AppColors.red : AppColors.green,
+                        ),
+                        _buildTypeChip(
+                          Icons.star_outline,
+                          'Lv. ${type.requiredLevel}',
+                          levelLocked ? AppColors.red : AppColors.blue,
+                        ),
+                        _buildTypeChip(
+                          Icons.local_shipping_outlined,
+                          '${type.maxVehicleCount} Kapasite',
+                          AppColors.gold,
+                        ),
+                        _buildTypeChip(
+                          Icons.gas_meter_outlined,
+                          '${type.fuelCapacity} L Yakit',
+                          Colors.orange,
+                        ),
                       ],
                     ),
                     SizedBox(height: 10.h),
                     Row(
                       children: [
-                        Icon(Icons.timer_outlined, color: AppColors.textMuted, size: 12.sp),
+                        Icon(
+                          Icons.timer_outlined,
+                          color: AppColors.textMuted,
+                          size: 12.sp,
+                        ),
                         SizedBox(width: 4.w),
-                        Text('İnşaat: ${type.constructionTimeMinutes} Dakika', style: AppTextStyles.body.copyWith(fontSize: 11.sp)),
+                        Text(
+                          'Insaat: ${type.constructionTimeMinutes} Dakika',
+                          style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-              if (isSelected) Icon(Icons.check_circle, color: AppColors.gold, size: 24.sp),
-              if (isLocked) Icon(Icons.lock_outline, color: AppColors.red.withValues(alpha: 0.7), size: 20.sp),
+              if (isSelected)
+                Icon(Icons.check_circle, color: AppColors.gold, size: 24.sp),
+              if (isLocked)
+                Icon(
+                  Icons.lock_outline,
+                  color: AppColors.red.withValues(alpha: 0.7),
+                  size: 20.sp,
+                ),
             ],
           ),
         ),
@@ -241,7 +313,14 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         children: [
           Icon(icon, color: color, size: 10.sp),
           SizedBox(width: 4.w),
-          Text(label, style: TextStyle(color: color, fontSize: 9.sp, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 9.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -255,27 +334,52 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       height: 56.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16.r),
-        boxShadow: canSubmit ? [BoxShadow(color: AppColors.gold.withValues(alpha: 0.2), blurRadius: 15, offset: const Offset(0, 5))] : null,
+        boxShadow: canSubmit
+            ? [
+                BoxShadow(
+                  color: AppColors.gold.withValues(alpha: 0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ]
+            : null,
       ),
       child: ElevatedButton(
         onPressed: canSubmit ? _handleSubmit : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.gold,
           disabledBackgroundColor: AppColors.border,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+          ),
           elevation: 0,
         ),
         child: _isSubmitting
-            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.black,
+                  strokeWidth: 2.5,
+                ),
+              )
             : Text(
-                'MERKEZİ KURMAYI BAŞLAT',
-                style: TextStyle(color: Colors.black, fontSize: 14.sp, fontWeight: FontWeight.w900, letterSpacing: 1),
+                'MERKEZI KURMAYI BASLAT',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1,
+                ),
               ),
       ),
     );
   }
 
-  Widget _buildRedirectState({required String title, required String message}) {
+  Widget _buildRedirectState({
+    required String title,
+    required String message,
+  }) {
     return Center(
       child: Container(
         margin: EdgeInsets.all(24.w),
@@ -288,11 +392,19 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.verified_user_outlined, color: AppColors.gold, size: 48.sp),
+            Icon(
+              Icons.verified_user_outlined,
+              color: AppColors.gold,
+              size: 48.sp,
+            ),
             SizedBox(height: 16.h),
             Text(title, style: AppTextStyles.h2, textAlign: TextAlign.center),
             SizedBox(height: 8.h),
-            Text(message, style: AppTextStyles.body, textAlign: TextAlign.center),
+            Text(
+              message,
+              style: AppTextStyles.body,
+              textAlign: TextAlign.center,
+            ),
             SizedBox(height: 24.h),
             SizedBox(
               width: double.infinity,
@@ -301,9 +413,20 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.cardBgLight,
                   padding: EdgeInsets.symmetric(vertical: 14.h),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r), side: BorderSide(color: AppColors.gold.withValues(alpha: 0.5))),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    side: BorderSide(
+                      color: AppColors.gold.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ),
-                child: Text('YÖNETİM EKRANINA GİT', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold)),
+                child: Text(
+                  'YONETIM EKRANINA GIT',
+                  style: TextStyle(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -312,26 +435,56 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
     );
   }
 
-  Widget _buildLoading() => const Center(child: CircularProgressIndicator(color: AppColors.gold));
-  Widget _buildError(String m) => Center(child: Text(m, style: TextStyle(color: AppColors.red)));
+  Widget _buildLoading() =>
+      const Center(child: CircularProgressIndicator(color: AppColors.gold));
+
+  Widget _buildError(String message) =>
+      Center(child: Text(message, style: const TextStyle(color: AppColors.red)));
 
   Future<void> _handleSubmit() async {
     if (_selectedType == null) return;
+
     setState(() => _isSubmitting = true);
     try {
-      final res = await ref.read(logisticsActionProvider).createLogisticsCompany(typeId: _selectedType!.id, name: _selectedType!.name);
+      final res = await ref.read(logisticsActionProvider).createLogisticsCompany(
+            typeId: _selectedType!.id,
+            name: _selectedType!.name,
+          );
+      if (!mounted) return;
+
       if (res['success'] == true) {
         ref.invalidate(playerLogisticsCompanyProvider);
         ref.invalidate(playerLogisticsConstructionProvider);
-        AppSnackbar.show(context, title: 'Başarılı', message: 'İnşaat başlatıldı.', type: SnackbarType.success);
+        ref.invalidate(playerStreamProvider);
+        AppSnackbar.show(
+          context,
+          title: 'Basarili',
+          message: 'Insaat baslatildi.',
+          type: SnackbarType.success,
+        );
         context.go('/logistics');
       } else {
-        AppSnackbar.show(context, title: 'Hata', message: res['message'] ?? 'Islem basarisiz.', type: SnackbarType.error);
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: res['message'] ?? 'Islem basarisiz.',
+          type: SnackbarType.error,
+        );
       }
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
-  String _formatMoney(double a) => a >= 1000000 ? '${(a/1000000).toStringAsFixed(1)}M' : (a >= 1000 ? '${(a/1000).toStringAsFixed(1)}K' : a.toStringAsFixed(0));
+  String _formatMoney(double amount) {
+    if (amount >= 1000000) {
+      return '${(amount / 1000000).toStringAsFixed(1)}M';
+    }
+    if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(1)}K';
+    }
+    return amount.toStringAsFixed(0);
+  }
 }

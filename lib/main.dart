@@ -285,7 +285,7 @@ class HardKapitalizmApp extends StatelessWidget {
                 Container(color: AppColors.background),
                 Positioned.fill(
                   child: Opacity(
-                    opacity: 0.05,
+                    opacity: 0.10,
                     child: Image.asset(
                       'assets/back.png',
                       fit: BoxFit.cover,

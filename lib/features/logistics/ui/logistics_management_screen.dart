@@ -9,6 +9,8 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
+import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_performance_model.dart';
@@ -112,12 +114,14 @@ class LogisticsManagementScreen extends ConsumerWidget {
     final finishAt = construction?['finish_at'] != null
         ? DateTime.tryParse(construction!['finish_at'].toString())
         : null;
+    final constructionDurationMinutes =
+        (constructionParams?['construction_time_minutes'] as num?)?.toInt() ?? 0;
 
     return ListView(
       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 80.h),
       children: [
         if (company != null) ...[
-          _buildCompanyCard(context, company),
+          _buildCompanyCard(context, ref, company, playerCash),
           SizedBox(height: 24.h),
           _buildFleetOverview(vehicles, performanceByVehicle, cityMap),
           SizedBox(height: 24.h),
@@ -136,6 +140,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                     LogisticsVehiclePerformanceModel.empty(vehicle.id),
                 cities,
                 cityMap,
+                playerCash,
               ),
             ),
           _buildPurchaseVehicleEntry(context, ref, company, playerCash),
@@ -150,6 +155,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
             construction,
             constructionParams,
             finishAt,
+            constructionDurationMinutes,
           ),
         ],
       ],
@@ -214,7 +220,12 @@ class LogisticsManagementScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCompanyCard(BuildContext context, LogisticsCompanyModel company) {
+  Widget _buildCompanyCard(
+    BuildContext context,
+    WidgetRef ref,
+    LogisticsCompanyModel company,
+    double playerCash,
+  ) {
     final fuelRatio = company.fuelCapacity == 0
         ? 0.0
         : (company.currentFuel / company.fuelCapacity).clamp(0.0, 1.0);
@@ -291,7 +302,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
               Expanded(
                 child: _buildStatTile(
                   'MERKEZ YAKIT',
-                  '${company.currentFuel} L',
+                  '${company.currentFuel}/${company.fuelCapacity} L',
                   Icons.gas_meter_rounded,
                 ),
               ),
@@ -317,6 +328,37 @@ class LogisticsManagementScreen extends ConsumerWidget {
           ),
           SizedBox(height: 8.h),
           _buildPremiumProgressBar(fuelRatio, AppColors.gold),
+          SizedBox(height: 14.h),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: company.currentFuel >= company.fuelCapacity
+                  ? null
+                  : () => _showFuelSupplySheet(context, ref, company, playerCash),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.cardBgLight,
+                disabledBackgroundColor: AppColors.border,
+                foregroundColor: AppColors.gold,
+                padding: EdgeInsets.symmetric(vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  side: BorderSide(
+                    color: AppColors.gold.withValues(alpha: 0.35),
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.add_circle_outline),
+              label: Text(
+                company.currentFuel >= company.fuelCapacity
+                    ? 'YAKIT DEPOSU DOLU'
+                    : 'YAKIT AL',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12.sp,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -402,6 +444,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     LogisticsVehiclePerformanceModel performance,
     List<CityModel> cities,
     Map<String, CityModel> cityMap,
+    double playerCash,
   ) {
     final fuelRatio = vehicle.fuelCapacity == 0
         ? 0.0
@@ -475,10 +518,12 @@ class LogisticsManagementScreen extends ConsumerWidget {
                             context,
                             ref,
                             vehicle,
+                            type,
                             cities,
                             cityMap,
                             fuelRatio,
                             conditionRatio,
+                            playerCash,
                           ),
                         ],
                       ),
@@ -487,7 +532,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                         children: [
                           _buildVehicleDetailItem(
                             Icons.speed,
-                            '${vehicle.speedKmh} km/s',
+                            '${vehicle.speedKmh} km/h',
                             'Hiz',
                           ),
                           _buildVehicleDetailItem(
@@ -543,10 +588,12 @@ class LogisticsManagementScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     LogisticsVehicleModel vehicle,
+    LogisticsVehicleTypeModel? type,
     List<CityModel> cities,
     Map<String, CityModel> cityMap,
     double fuelRatio,
     double conditionRatio,
+    double playerCash,
   ) {
     return PopupMenuButton<String>(
       icon: Icon(Icons.more_vert, color: AppColors.gold, size: 24.sp),
@@ -561,7 +608,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
             _handleRefuelAction(context, ref, vehicle);
             break;
           case 'repair':
-            _handleRepairAction(context, ref, vehicle);
+            _handleRepairAction(context, ref, vehicle, type, playerCash);
             break;
           case 'route':
             _showRouteSheet(context, ref, vehicle, cities, cityMap);
@@ -575,7 +622,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
-        if (fuelRatio < 0.95)
+        if (vehicle.currentFuel < vehicle.fuelCapacity)
           PopupMenuItem(
             value: 'refuel',
             child: Row(
@@ -586,7 +633,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
               ],
             ),
           ),
-        if (conditionRatio < 0.9)
+        if (vehicle.condition < 100)
           PopupMenuItem(
             value: 'repair',
             child: Row(
@@ -787,6 +834,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     Map<String, dynamic> construction,
     Map<String, dynamic>? params,
     DateTime? finishAt,
+    int constructionDurationMinutes,
   ) {
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -814,6 +862,11 @@ class LogisticsManagementScreen extends ConsumerWidget {
             _ConstructionCountdown(
               constructionId: construction['id'].toString(),
               finishAt: finishAt,
+              totalDuration: Duration(
+                minutes: constructionDurationMinutes > 0
+                    ? constructionDurationMinutes
+                    : 1,
+              ),
               onFinish: () => _handleConstructionFinished(
                 context,
                 ref,
@@ -1166,11 +1219,527 @@ class LogisticsManagementScreen extends ConsumerWidget {
     _handleOpResult(context, ref, result, 'Yakit ikmali yapildi.');
   }
 
+  Future<void> _showFuelSupplySheet(
+    BuildContext context,
+    WidgetRef ref,
+    LogisticsCompanyModel company,
+    double playerCash,
+  ) async {
+    var mode = 'warehouse';
+    final remainingCapacity = company.fuelCapacity - company.currentFuel;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setModalState) => Consumer(
+          builder: (context, ref, _) {
+            final warehouseAsync = ref.watch(
+              playerLogisticsFuelWarehouseSourcesProvider,
+            );
+            final marketAsync = ref.watch(logisticsFuelMarketListingsProvider);
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.82,
+              padding: EdgeInsets.all(20.w),
+              decoration: BoxDecoration(
+                color: AppColors.navBg,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+                border: Border.all(
+                  color: AppColors.borderGold.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: BorderRadius.circular(999.r),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 18.h),
+                  Text('Merkez Yakit Al', style: AppTextStyles.h2),
+                  SizedBox(height: 6.h),
+                  Text(
+                    'Bos kapasite: $remainingCapacity L',
+                    style: AppTextStyles.body,
+                  ),
+                  SizedBox(height: 14.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFuelModeButton(
+                          label: 'Depomdan',
+                          selected: mode == 'warehouse',
+                          onTap: () => setModalState(() => mode = 'warehouse'),
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: _buildFuelModeButton(
+                          label: 'Pazardan',
+                          selected: mode == 'market',
+                          onTap: () => setModalState(() => mode = 'market'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16.h),
+                  Expanded(
+                    child: mode == 'warehouse'
+                        ? warehouseAsync.when(
+                            data: (sources) {
+                              if (sources.isEmpty) {
+                                return _buildEmptyInfoCard(
+                                  'Depolarinizda kullanilabilir yakit bulunmuyor.',
+                                );
+                              }
+                              return ListView.separated(
+                                itemCount: sources.length,
+                                separatorBuilder: (_, __) =>
+                                    SizedBox(height: 10.h),
+                                itemBuilder: (context, index) {
+                                  final source = sources[index];
+                                  final quantity =
+                                      (source['quantity'] as num?)?.toInt() ?? 0;
+                                  final maxQty = quantity < remainingCapacity
+                                      ? quantity
+                                      : remainingCapacity;
+
+                                  return _buildFuelSourceCard(
+                                    title:
+                                        (source['warehouse_name'] ?? 'Depo')
+                                            .toString(),
+                                    subtitle:
+                                        '${source['city_name'] ?? 'Bilinmeyen Sehir'} / $quantity L',
+                                    trailing:
+                                        'Maliyet ${(source['cost'] as num?)?.toStringAsFixed(1) ?? '0'}',
+                                    onTap: maxQty <= 0
+                                        ? null
+                                        : () async {
+                                            final qty =
+                                                await _askFuelQuantity(
+                                              context,
+                                              title: 'Depodan Yakit Aktar',
+                                              subtitle:
+                                                  '${source['warehouse_name']} -> ${company.name}',
+                                              maxQuantity: maxQty,
+                                            );
+                                            if (qty == null) return;
+
+                                            final result = await ref
+                                                .read(logisticsActionProvider)
+                                                .transferWarehouseFuelToCompany(
+                                                  logisticsCompanyId: company.id,
+                                                  warehouseSlotId:
+                                                      source['slot_id']
+                                                          .toString(),
+                                                  quantity: qty,
+                                                );
+                                            if (!context.mounted) return;
+                                            if (result['success'] == true) {
+                                              ref.invalidate(
+                                                playerLogisticsCompanyProvider,
+                                              );
+                                              ref.invalidate(
+                                                playerLogisticsFuelWarehouseSourcesProvider,
+                                              );
+                                              ref.invalidate(
+                                                logisticsFuelMarketListingsProvider,
+                                              );
+                                              ref.invalidate(
+                                                warehouseListProvider,
+                                              );
+                                              Navigator.pop(sheetContext);
+                                              AppSnackbar.show(
+                                                context,
+                                                title: 'Basarili',
+                                                message:
+                                                    '$qty L yakit merkeze aktarildi.',
+                                                type: SnackbarType.success,
+                                              );
+                                            } else {
+                                              AppSnackbar.show(
+                                                context,
+                                                title: 'Hata',
+                                                message:
+                                                    result['message'] ??
+                                                    'Yakit aktarilamadi.',
+                                                type: SnackbarType.error,
+                                              );
+                                            }
+                                          },
+                                  );
+                                },
+                              );
+                            },
+                            loading: _buildLoading,
+                            error: (error, stack) =>
+                                _buildError('Depo yakitlari yuklenemedi.'),
+                          )
+                        : marketAsync.when(
+                            data: (listings) {
+                              if (listings.isEmpty) {
+                                return _buildEmptyInfoCard(
+                                  'Pazarda satista yakit ilani bulunmuyor.',
+                                );
+                              }
+                              return ListView.separated(
+                                itemCount: listings.length,
+                                separatorBuilder: (_, __) =>
+                                    SizedBox(height: 10.h),
+                                itemBuilder: (context, index) {
+                                  final listing = listings[index];
+                                  final maxQty = listing.quantity < remainingCapacity
+                                      ? listing.quantity
+                                      : remainingCapacity;
+                                  return _buildFuelSourceCard(
+                                    title: listing.warehouseName,
+                                    subtitle:
+                                        '${listing.cityName} / ${listing.quantity} L / Q${listing.qualityLevel}',
+                                    trailing:
+                                        '${listing.price.toStringAsFixed(1)} TL/L',
+                                    onTap: maxQty <= 0
+                                        ? null
+                                        : () async {
+                                            final qty =
+                                                await _askFuelQuantity(
+                                              context,
+                                              title: 'Pazardan Yakit Al',
+                                              subtitle:
+                                                  '${listing.warehouseName} -> ${company.name}',
+                                              maxQuantity: maxQty,
+                                            );
+                                            if (qty == null) return;
+
+                                            final totalCost = qty * listing.price;
+                                            if (playerCash < totalCost) {
+                                              AppSnackbar.show(
+                                                context,
+                                                title: 'Nakit Yetersiz',
+                                                message:
+                                                    'Gerekli: ${totalCost.toStringAsFixed(0)} TL',
+                                                type: SnackbarType.error,
+                                              );
+                                              return;
+                                            }
+
+                                            final result = await ref
+                                                .read(logisticsActionProvider)
+                                                .buyMarketFuelForCompany(
+                                                  logisticsCompanyId: company.id,
+                                                  sellerSlotId: listing.slotId,
+                                                  quantity: qty,
+                                                );
+                                            if (!context.mounted) return;
+                                            if (result['success'] == true) {
+                                              ref.invalidate(
+                                                playerLogisticsCompanyProvider,
+                                              );
+                                              ref.invalidate(
+                                                playerLogisticsFuelWarehouseSourcesProvider,
+                                              );
+                                              ref.invalidate(
+                                                logisticsFuelMarketListingsProvider,
+                                              );
+                                              ref.invalidate(
+                                                warehouseListProvider,
+                                              );
+                                              ref.invalidate(playerStreamProvider);
+                                              Navigator.pop(sheetContext);
+                                              AppSnackbar.show(
+                                                context,
+                                                title: 'Basarili',
+                                                message:
+                                                    '$qty L yakit pazardan alindi.',
+                                                type: SnackbarType.success,
+                                              );
+                                            } else {
+                                              AppSnackbar.show(
+                                                context,
+                                                title: 'Hata',
+                                                message:
+                                                    result['message'] ??
+                                                    'Yakit satin alinamadi.',
+                                                type: SnackbarType.error,
+                                              );
+                                            }
+                                          },
+                                  );
+                                },
+                              );
+                            },
+                            loading: _buildLoading,
+                            error: (error, stack) =>
+                                _buildError('Pazar yakit ilanlari yuklenemedi.'),
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFuelModeButton({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor:
+            selected ? AppColors.gold : AppColors.cardBgLight,
+        foregroundColor: selected ? Colors.black : AppColors.textPrimary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          side: BorderSide(
+            color: selected ? AppColors.gold : AppColors.border,
+          ),
+        ),
+      ),
+      child: Text(label),
+    );
+  }
+
+  Widget _buildFuelSourceCard({
+    required String title,
+    required String subtitle,
+    required String trailing,
+    required VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16.r),
+      child: Opacity(
+        opacity: onTap == null ? 0.5 : 1,
+        child: Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40.w,
+                height: 40.w,
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(Icons.local_gas_station, color: AppColors.gold),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(subtitle, style: AppTextStyles.body),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    trailing,
+                    style: TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Icon(Icons.chevron_right, color: AppColors.textMuted),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyInfoCard(String message) {
+    return Center(
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(20.w),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.body,
+        ),
+      ),
+    );
+  }
+
+  Future<int?> _askFuelQuantity(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required int maxQuantity,
+  }) async {
+    final controller = TextEditingController(text: '1');
+
+    return showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        title: Text(title, style: AppTextStyles.h2),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(subtitle, style: AppTextStyles.body),
+            SizedBox(height: 12.h),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Miktar',
+                helperText: 'Maksimum: $maxQuantity L',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Vazgec'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final qty = int.tryParse(controller.text) ?? 0;
+              if (qty <= 0 || qty > maxQuantity) {
+                AppSnackbar.show(
+                  context,
+                  title: 'Gecersiz Miktar',
+                  message: '1 ile $maxQuantity arasinda bir miktar girin.',
+                  type: SnackbarType.warning,
+                );
+                return;
+              }
+              Navigator.pop(dialogContext, qty);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+            child: const Text(
+              'Devam Et',
+              style: TextStyle(color: Colors.black),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleRepairAction(
     BuildContext context,
     WidgetRef ref,
     LogisticsVehicleModel vehicle,
+    LogisticsVehicleTypeModel? type,
+    double playerCash,
   ) async {
+    final missingCondition = (100 - vehicle.condition).clamp(0, 100);
+    final purchasePrice = type?.purchasePrice ?? 0;
+    final missingConditionRatio = missingCondition / 100.0;
+    final repairCost = missingConditionRatio * (purchasePrice / 2);
+
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        title: Text('Bakim Onayi', style: AppTextStyles.h2),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              type?.name ?? 'Arac',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'Eksik kondisyon: $missingCondition (%${(missingConditionRatio * 100).toStringAsFixed(0)})',
+              style: AppTextStyles.body,
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Arac ucreti: ${purchasePrice.toStringAsFixed(0)} TL',
+              style: AppTextStyles.body,
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Bakim maliyeti: ${repairCost.toStringAsFixed(0)} TL',
+              style: TextStyle(
+                color: AppColors.gold,
+                fontSize: 13.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Mevcut nakit: ${playerCash.toStringAsFixed(0)} TL',
+              style: TextStyle(
+                color: playerCash >= repairCost
+                    ? AppColors.textMuted
+                    : AppColors.red,
+                fontSize: 11.sp,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Vazgec'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+            child: const Text(
+              'Bakimi Yap',
+              style: TextStyle(color: Colors.black),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldProceed != true) {
+      return;
+    }
+
     final result = await ref.read(logisticsActionProvider).repairVehicle(
           vehicle.id,
         );
@@ -1205,6 +1774,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     if (result['success'] == true) {
       ref.invalidate(logisticsVehicleListStreamProvider);
       ref.invalidate(playerLogisticsCompanyProvider);
+      ref.invalidate(playerStreamProvider);
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1282,6 +1852,20 @@ class LogisticsManagementScreen extends ConsumerWidget {
     if (result['success'] == true) {
       ref.invalidate(playerLogisticsCompanyProvider);
       ref.invalidate(playerLogisticsConstructionProvider);
+      ref.invalidate(playerStreamProvider);
+      AppSnackbar.show(
+        context,
+        title: 'Basarili',
+        message: 'Lojistik merkezi tamamlandi.',
+        type: SnackbarType.success,
+      );
+    } else {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: result['message'] ?? 'Insaat tamamlanamadi.',
+        type: SnackbarType.error,
+      );
     }
   }
 
@@ -1296,6 +1880,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     if (result['success'] == true) {
       ref.invalidate(playerLogisticsCompanyProvider);
       ref.invalidate(playerLogisticsConstructionProvider);
+      ref.invalidate(playerStreamProvider);
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1369,6 +1954,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                           if (result['success'] == true) {
                             ref.invalidate(playerLogisticsCompanyProvider);
                             ref.invalidate(logisticsVehicleListStreamProvider);
+                            ref.invalidate(playerStreamProvider);
                             if (context.mounted) {
                               Navigator.pop(context);
                               AppSnackbar.show(
@@ -1379,6 +1965,14 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                 type: SnackbarType.success,
                               );
                             }
+                          } else if (context.mounted) {
+                            AppSnackbar.show(
+                              context,
+                              title: 'Hata',
+                              message:
+                                  result['message'] ?? 'Arac satin alinamadi.',
+                              type: SnackbarType.error,
+                            );
                           }
                         },
                       ),
@@ -1639,12 +2233,14 @@ class LogisticsManagementScreen extends ConsumerWidget {
 class _ConstructionCountdown extends ConsumerStatefulWidget {
   final String constructionId;
   final DateTime finishAt;
+  final Duration totalDuration;
   final VoidCallback? onFinish;
   final Future<void> Function(String constructionId)? onFinishWithGold;
 
   const _ConstructionCountdown({
     required this.constructionId,
     required this.finishAt,
+    required this.totalDuration,
     this.onFinish,
     this.onFinishWithGold,
   });
@@ -1657,6 +2253,15 @@ class _ConstructionCountdown extends ConsumerStatefulWidget {
 class _ConstructionCountdownState
     extends ConsumerState<_ConstructionCountdown> {
   bool _triggered = false;
+  late final Duration _totalDuration;
+
+  @override
+  void initState() {
+    super.initState();
+    _totalDuration = widget.totalDuration.inSeconds > 0
+        ? widget.totalDuration
+        : const Duration(seconds: 1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1694,12 +2299,20 @@ class _ConstructionCountdownState
         ),
         SizedBox(height: 12.h),
         LinearProgressIndicator(
-          value: 1 - (remaining.inSeconds / 3600).clamp(0.0, 1.0),
+          value: _buildProgressValue(remaining),
           backgroundColor: AppColors.cardBgLight,
           valueColor: const AlwaysStoppedAnimation(AppColors.gold),
         ),
       ],
     );
+  }
+
+  double _buildProgressValue(Duration remaining) {
+    final totalSeconds = _totalDuration.inSeconds <= 0
+        ? 1
+        : _totalDuration.inSeconds;
+    final remainingSeconds = remaining.inSeconds.clamp(0, totalSeconds);
+    return (1 - (remainingSeconds / totalSeconds)).clamp(0.0, 1.0);
   }
 
   String _formatDuration(Duration duration) {
@@ -1774,7 +2387,7 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _spec(Icons.speed, '${type.speedKmh} km/s'),
+              _spec(Icons.speed, '${type.speedKmh} km/h'),
               _spec(Icons.inventory, '${type.capacity} t'),
               _spec(Icons.gas_meter, '${type.fuelCapacity} L'),
             ],

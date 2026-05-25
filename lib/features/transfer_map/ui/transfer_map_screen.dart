@@ -11,10 +11,13 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
+import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_history_item_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 
 enum _ActiveTransferFilter {
   all('Tumu'),
@@ -111,11 +114,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     final transfers = ref.read(buyerTransferMapProvider).value;
     if (transfers == null || transfers.isEmpty) return;
     final now = DateTime.now();
+    final dueTransfers = transfers
+        .where((transfer) => !transfer.finishAt.isAfter(now))
+        .toList();
 
-    final hasDueTransfer = transfers.any(
-      (transfer) => !transfer.finishAt.isAfter(now),
-    );
-    if (!hasDueTransfer) return;
+    if (dueTransfers.isEmpty) return;
 
     _isCompletingDueTransfers = true;
     try {
@@ -124,6 +127,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           .completeDueMarketTransfers();
       ref.invalidate(buyerTransferMapProvider);
       ref.invalidate(buyerTransferHistoryProvider);
+      ref.invalidate(playerStreamProvider);
+      ref.invalidate(storesListProvider);
+      ref.invalidate(storeDetailProvider);
+      ref.invalidate(warehouseListProvider);
+      ref.invalidate(warehouseDetailProvider);
       if (!mounted) return;
 
       final completedCount = (result['completed_count'] as num?)?.toInt() ?? 0;
@@ -131,7 +139,10 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         AppSnackbar.show(
           context,
           title: 'Teslimat Tamamlandi',
-          message: '$completedCount transfer depoya ulasti.',
+          message: _buildDeliveryCompletionMessage(
+            dueTransfers,
+            completedCount,
+          ),
           type: SnackbarType.success,
         );
       }
@@ -843,6 +854,32 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
   bool _isSameCityTransfer(TransferMapItemModel transfer) {
     return transfer.sellerWarehouse.city.id == transfer.buyerWarehouse.city.id;
+  }
+
+  String _buildDeliveryCompletionMessage(
+    List<TransferMapItemModel> dueTransfers,
+    int completedCount,
+  ) {
+    final buyerKinds = dueTransfers
+        .take(completedCount <= 0 ? dueTransfers.length : completedCount)
+        .map((transfer) => transfer.buyerEndpoint.kind)
+        .toSet();
+
+    if (buyerKinds.length == 1) {
+      final kind = buyerKinds.first;
+      switch (kind) {
+        case 'store':
+        case 'store_slot':
+          return '$completedCount transfer magazaya ulasti.';
+        case 'production':
+        case 'production_inventory':
+          return '$completedCount transfer uretim hattina ulasti.';
+        default:
+          return '$completedCount transfer depoya ulasti.';
+      }
+    }
+
+    return '$completedCount transfer hedeflerine ulasti.';
   }
 
   void _focusTransferCard(

@@ -59,3 +59,73 @@ class AppTextStyles {
     fontWeight: FontWeight.w800,
   );
 }
+
+class AppDecorations {
+  // Standart derinlikli premium kart (Mağaza, Performans kartları vb. için)
+  static BoxDecoration premiumCard([Color? accentColor, double? radius]) {
+    final baseAccent = accentColor ?? AppColors.borderGoldLight;
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppColors.cardBg.withValues(alpha: 0.9),
+          AppColors.cardBgLight.withValues(alpha: 0.5),
+        ],
+      ),
+      borderRadius: BorderRadius.circular(radius ?? 16.r),
+      border: Border.all(
+        color: baseAccent.withValues(alpha: 0.25),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.5),
+          blurRadius: 15,
+          offset: const Offset(0, 8),
+        ),
+      ],
+    );
+  }
+
+  // Parlayan / dikkat çekmesi gereken aksiyon butonları ve kartlar
+  static BoxDecoration glowingAction([Color? accentColor, double? radius]) {
+    final baseAccent = accentColor ?? AppColors.gold;
+    return BoxDecoration(
+      color: AppColors.cardBgLight.withValues(alpha: 0.8),
+      borderRadius: BorderRadius.circular(radius ?? 16.r),
+      border: Border.all(
+        color: baseAccent.withValues(alpha: 0.4),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: baseAccent.withValues(alpha: 0.2),
+          blurRadius: 12,
+          spreadRadius: 2,
+        ),
+      ],
+    );
+  }
+
+  // Alt paneller (City Selection, Type Selection altı) veya Header arka planları
+  static BoxDecoration panelGlass([double? radius]) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppColors.cardBg,
+          AppColors.cardBgLight.withValues(alpha: 0.6),
+        ],
+      ),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(radius ?? 30.r)),
+      border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.5),
+          blurRadius: 20,
+          offset: const Offset(0, -5),
+        ),
+      ],
+    );
+  }
+}

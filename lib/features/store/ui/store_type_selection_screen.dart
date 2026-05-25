@@ -90,34 +90,33 @@ class _StoreTypeSelectionScreenState
         final bool cashLocked = playerCash < type.cost;
         final bool isLocked = levelLocked || cashLocked;
 
-        return GestureDetector(
-          onTap: isLocked ? null : () => setState(() => _selectedType = type),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: EdgeInsets.only(bottom: 12.h),
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.gold.withValues(alpha: 0.1)
-                  : AppColors.cardBg,
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(
-                color: isSelected
+        return TweenAnimationBuilder<double>(
+          duration: Duration(milliseconds: 300 + (index * 50).clamp(0, 500)),
+          curve: Curves.easeOutCubic,
+          tween: Tween<double>(begin: 0, end: 1),
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: child,
+              ),
+            );
+          },
+          child: GestureDetector(
+            onTap: isLocked ? null : () => setState(() => _selectedType = type),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: EdgeInsets.only(bottom: 12.h),
+              padding: EdgeInsets.all(12.w),
+              decoration: AppDecorations.premiumCard(
+                isSelected
                     ? AppColors.gold
                     : (isLocked
-                          ? AppColors.border.withValues(alpha: 0.2)
-                          : AppColors.border.withValues(alpha: 0.5)),
-                width: isSelected ? 2 : 1,
+                        ? AppColors.border.withValues(alpha: 0.2)
+                        : AppColors.border.withValues(alpha: 0.5)),
+                16.r,
               ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: AppColors.gold.withValues(alpha: 0.2),
-                        blurRadius: 10,
-                      ),
-                    ]
-                  : [],
-            ),
             child: Opacity(
               opacity: isLocked ? 0.6 : 1.0,
               child: Row(
@@ -214,8 +213,9 @@ class _StoreTypeSelectionScreenState
               ),
             ),
           ),
-        );
-      },
+        ),
+      );
+    },
     );
   }
 
@@ -236,18 +236,7 @@ class _StoreTypeSelectionScreenState
   Widget _buildActionPanel() {
     return Container(
       padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
+      decoration: AppDecorations.panelGlass(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

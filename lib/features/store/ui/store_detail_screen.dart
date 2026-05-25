@@ -15,6 +15,8 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
+import 'package:hard_kapitalizm/features/store/ui/widgets/store_detail_header.dart';
+import 'package:hard_kapitalizm/features/store/ui/widgets/store_quick_actions.dart';
 
 class StoreDetailScreen extends ConsumerStatefulWidget {
   final String storeId;
@@ -174,7 +176,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         title: Text(
           'Satis Ozeti',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontSize: 18.sp,
             fontWeight: FontWeight.bold,
           ),
@@ -196,12 +198,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 ),
                 _buildSalesSummaryRow(
                   'Toplam Ciro',
-                  '${result.totalRevenue.toStringAsFixed(1)}',
+                  result.totalRevenue.toStringAsFixed(1),
                   valueColor: AppColors.green,
                 ),
                 _buildSalesSummaryRow(
                   'Toplam Kar',
-                  '${result.totalProfit.toStringAsFixed(1)}',
+                  result.totalProfit.toStringAsFixed(1),
                   valueColor: AppColors.gold,
                 ),
                 SizedBox(height: 14.h),
@@ -220,7 +222,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     margin: EdgeInsets.only(bottom: 10.h),
                     padding: EdgeInsets.all(10.w),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.04),
+                      color: AppColors.textPrimary.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(12.r),
                       border: Border.all(
                         color: AppColors.border.withValues(alpha: 0.25),
@@ -232,7 +234,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                         Text(
                           item.productName,
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 13.sp,
                             fontWeight: FontWeight.bold,
                           ),
@@ -291,7 +293,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           Text(
             value,
             style: TextStyle(
-              color: valueColor ?? Colors.white,
+              color: valueColor ?? AppColors.textPrimary,
               fontSize: 12.sp,
               fontWeight: FontWeight.w700,
             ),
@@ -329,14 +331,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: 12.h),
-                _buildImmersiveHeader(store),
+                StoreDetailHeader(store: store),
                 SizedBox(height: 16.h),
-                _buildQuickActions(
-                  context,
-                  ref,
-                  store,
-                  activeUpgrade,
-                  activeBoost,
+                StoreQuickActions(
+                  canOpenNewSlot: store.currentSlotCount < store.maxSlotCount,
+                  onUpgradeTap: () => _showStoreUpgradeSheet(context, ref, store, activeUpgrade),
+                  onBoostTap: () => _showStoreBoostSheet(context, ref, store, activeBoost),
+                  onReportTap: () => context.push('/store/${store.id}/report'),
+                  onOpenSlotTap: () => _handleOpenSlot(context, ref, store),
+                  onHistoryTap: () => context.push('/store/${store.id}/history'),
                 ),
                 if (activeBoost != null) ...[
                   SizedBox(height: 16.h),
@@ -354,7 +357,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 SizedBox(height: 16.h),
                 _buildMetricsGrid(store),
                 SizedBox(height: 24.h),
-                Text('Magaza Raflari', style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                Text('Magaza Raflari', style: TextStyle(color: AppColors.textPrimary, fontSize: 16.sp, fontWeight: FontWeight.bold)),
                 SizedBox(height: 12.h),
                 _buildSlotList(context, ref, store),
                 SizedBox(height: 32.h),
@@ -363,174 +366,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildImmersiveHeader(StoreModel store) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.black54,
-            AppColors.navBg.withValues(alpha: 0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.gold.withValues(alpha: 0.05),
-            blurRadius: 20,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 80.w,
-            height: 80.w,
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: Colors.black26,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3), width: 2.w),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.gold.withValues(alpha: 0.1),
-                  blurRadius: 15,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: CachedAssetImage(fileName: store.storeType.icon, fit: BoxFit.contain),
-          ),
-          SizedBox(width: 20.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        store.name,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Container(
-                      width: 10.w,
-                      height: 10.w,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: store.isActive ? Colors.greenAccent : Colors.redAccent,
-                        boxShadow: [
-                          BoxShadow(
-                            color: store.isActive ? Colors.greenAccent.withValues(alpha: 0.6) : Colors.redAccent.withValues(alpha: 0.6),
-                            blurRadius: 8,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Icon(Icons.location_on, color: AppColors.textMuted, size: 14.sp),
-                    SizedBox(width: 4.w),
-                    Text(store.cityName ?? 'Bilinmiyor', style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp, fontWeight: FontWeight.w500)),
-                    SizedBox(width: 16.w),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8.r),
-                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-                      ),
-                      child: Text('Seviye ${store.level}', style: TextStyle(color: AppColors.gold, fontSize: 10.sp, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions(
-    BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-    BuildingUpgradeModel? activeUpgrade,
-    BuildingBoostModel? activeBoost,
-  ) {
-    final canOpenNewSlot = store.currentSlotCount < store.maxSlotCount;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final itemWidth = ((constraints.maxWidth - (4 * 6.w)) / 5).clamp(
-          56.w,
-          72.w,
-        );
-
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildQuickActionButton(
-              width: itemWidth,
-              icon: Icons.upgrade_rounded,
-              label: 'Yukselt',
-              color: AppColors.green,
-              onTap: () =>
-                  _showStoreUpgradeSheet(context, ref, store, activeUpgrade),
-            ),
-            _buildQuickActionButton(
-              width: itemWidth,
-              icon: Icons.flash_on_rounded,
-              label: 'Boost',
-              color: Colors.orangeAccent,
-              onTap: () => _showStoreBoostSheet(context, ref, store, activeBoost),
-            ),
-            _buildQuickActionButton(
-              width: itemWidth,
-              icon: Icons.bar_chart,
-              label: 'Rapor',
-              color: Colors.purpleAccent,
-              onTap: () => context.push('/store/${store.id}/report'),
-            ),
-            _buildQuickActionButton(
-              width: itemWidth,
-              icon: Icons.add_box,
-              label: 'Slot Ac',
-              color: AppColors.gold,
-              onTap: canOpenNewSlot
-                  ? () => _handleOpenSlot(context, ref, store)
-                  : null,
-            ),
-            _buildQuickActionButton(
-              width: itemWidth,
-              icon: Icons.history,
-              label: 'Gecmis',
-              color: AppColors.textPrimary,
-              onTap: () => context.push('/store/${store.id}/history'),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -543,57 +378,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (context.mounted) {
       if (result['success'] == true) {
-        await ref.refresh(storeDetailProvider(store.id).future);
+        await ref.read(storeDetailProvider(store.id).future);
+        if (!context.mounted) return;
         ref.invalidate(storesListProvider);
         _showSuccess(context, 'Yeni slot basariyla acildi!');
       } else {
+        if (!context.mounted) return;
         _showError(context, result['message'] ?? 'Slot acilirken bir hata olustu.');
       }
     }
   }
-
-  Widget _buildQuickActionButton({
-    required double width,
-    required IconData icon,
-    required String label,
-    required Color color,
-    VoidCallback? onTap,
-  }) {
-    final isDisabled = onTap == null;
-    final displayColor = isDisabled ? Colors.grey : color;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16.r),
-      child: Container(
-        width: width,
-        padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 4.w),
-        decoration: BoxDecoration(
-          color: displayColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: displayColor.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: displayColor, size: 20.sp),
-            SizedBox(height: 5.h),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isDisabled ? Colors.grey : Colors.white,
-                fontSize: 9.sp,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   String _formatCountdown(Duration remaining) {
     if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
     final hours = remaining.inHours;
@@ -625,7 +419,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             Text(
               'Magaza Boostu',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -677,10 +471,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     child: Container(
                       padding: EdgeInsets.all(14.w),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
+                        color: AppColors.textPrimary.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(16.r),
                         border: Border.all(
-                          color: Colors.orangeAccent.withValues(alpha: 0.22),
+                          color: AppColors.goldDark.withValues(alpha: 0.22),
                         ),
                       ),
                       child: Row(
@@ -688,12 +482,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                           Container(
                             padding: EdgeInsets.all(10.w),
                             decoration: BoxDecoration(
-                              color: Colors.orangeAccent.withValues(alpha: 0.12),
+                              color: AppColors.goldDark.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                             child: Icon(
                               Icons.flash_on_rounded,
-                              color: Colors.orangeAccent,
+                              color: AppColors.goldDark,
                               size: 18.sp,
                             ),
                           ),
@@ -705,7 +499,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                                 Text(
                                   '${entry.key} Saat',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -859,7 +653,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             Text(
               'Magaza Yukseltme',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -956,9 +750,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: AppColors.textPrimary.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -967,7 +761,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             title: 'Doluluk',
             value: '%${(store.summary.usedCapacityRatio * 100).toInt()}',
             icon: Icons.pie_chart,
-            color: Colors.orangeAccent,
+            color: AppColors.goldDark,
           ),
           _buildCompactMetricCol(
             title: 'Stok',
@@ -1003,7 +797,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       children: [
         Icon(icon, color: color, size: 20.sp),
         SizedBox(height: 6.h),
-        Text(value, style: TextStyle(color: Colors.white, fontSize: 12.sp, fontWeight: FontWeight.bold), maxLines: 1),
+        Text(value, style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp, fontWeight: FontWeight.bold), maxLines: 1),
         SizedBox(height: 2.h),
         Text(title, style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp), maxLines: 1),
       ],
@@ -1069,7 +863,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     width: 80.w,
                     height: 80.w,
                     decoration: BoxDecoration(
-                      color: Colors.black26,
+                      color: AppColors.cardBg,
                       borderRadius: BorderRadius.circular(12.r),
                       border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
                     ),
@@ -1080,7 +874,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Bos Slot', style: TextStyle(color: Colors.white70, fontSize: 15.sp, fontWeight: FontWeight.bold)),
+                        Text('Bos Slot', style: TextStyle(color: AppColors.textSecondary, fontSize: 15.sp, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -1112,7 +906,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                         height: 80.w,
                         padding: EdgeInsets.all(0),
                         decoration: BoxDecoration(
-                          color: Colors.black26,
+                          color: AppColors.cardBg,
                           borderRadius: BorderRadius.circular(12.r),
                           border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
                         ),
@@ -1127,7 +921,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Expanded(
-                                  child: Text(slot.productName ?? '', style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  child: Text(slot.productName ?? '', style: TextStyle(color: AppColors.textPrimary, fontSize: 16.sp, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 ),
                                 SizedBox(width: 8.w),
                                 Row(
@@ -1154,7 +948,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                               children: List.generate(5, (barIndex) {
                                 return Icon(
                                   Icons.star_rounded,
-                                  color: barIndex < slot.qualityLevel ? qColor : Colors.white24,
+                                  color: barIndex < slot.qualityLevel ? qColor : AppColors.textMuted,
                                   size: 12.sp,
                                 );
                               }),
@@ -1165,9 +959,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                               child: Container(
                                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.05),
+                                  color: AppColors.textPrimary.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(8.r),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                  border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -1179,7 +973,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                                     Container(
                                       width: 1.w,
                                       height: 12.h,
-                                      color: Colors.white.withValues(alpha: 0.2),
+                                      color: AppColors.textPrimary.withValues(alpha: 0.2),
                                     ),
                                     SizedBox(width: 8.w),
                                     Text(
@@ -1219,21 +1013,21 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                               PopupMenuItem(
                                 value: 'send',
                                 enabled: canSendStock,
-                                child: Row(children: [Icon(Icons.local_shipping, color: AppColors.blue, size: 18.sp), SizedBox(width: 8.w), Text('Depoya Gonder', style: TextStyle(color: Colors.white, fontSize: 12.sp))]),
+                                child: Row(children: [Icon(Icons.local_shipping, color: AppColors.blue, size: 18.sp), SizedBox(width: 8.w), Text('Depoya Gonder', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
                               ),
                               PopupMenuItem(
                                 value: 'toggle',
-                                child: Row(children: [Icon(slot.isActive ? Icons.pause_circle_outline : Icons.play_circle_outline, color: slot.isActive ? Colors.redAccent : Colors.greenAccent, size: 18.sp), SizedBox(width: 8.w), Text(slot.isActive ? 'Pasif Yap' : 'Aktif Et', style: TextStyle(color: Colors.white, fontSize: 12.sp))]),
+                                child: Row(children: [Icon(slot.isActive ? Icons.pause_circle_outline : Icons.play_circle_outline, color: slot.isActive ? AppColors.red : AppColors.green, size: 18.sp), SizedBox(width: 8.w), Text(slot.isActive ? 'Pasif Yap' : 'Aktif Et', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
                               ),
                               PopupMenuItem(
                                 value: 'change',
                                 enabled: canEditProduct,
-                                child: Row(children: [Icon(Icons.swap_horiz, color: AppColors.gold, size: 18.sp), SizedBox(width: 8.w), Text('Urunu Degistir', style: TextStyle(color: Colors.white, fontSize: 12.sp))]),
+                                child: Row(children: [Icon(Icons.swap_horiz, color: AppColors.gold, size: 18.sp), SizedBox(width: 8.w), Text('Urunu Degistir', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
                               ),
                               PopupMenuItem(
                                 value: 'clear',
                                 enabled: canEditProduct,
-                                child: Row(children: [Icon(Icons.cleaning_services, color: AppColors.red, size: 18.sp), SizedBox(width: 8.w), Text('Slotu Temizle', style: TextStyle(color: Colors.white, fontSize: 12.sp))]),
+                                child: Row(children: [Icon(Icons.cleaning_services, color: AppColors.red, size: 18.sp), SizedBox(width: 8.w), Text('Slotu Temizle', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
                               ),
                             ],
                           ),
@@ -1263,7 +1057,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                       Text(
                         '${slot.quantity} stok | ${slot.pendingQuantity} rezerve | ${slot.capacity - slot.quantity - slot.pendingQuantity} bos',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 10.sp,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1293,7 +1087,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                       ),
                       SizedBox(width: 12.w),
                       _buildCapacityLegend(
-                        color: Colors.white24,
+                        color: AppColors.textMuted,
                         label: 'Bos',
                       ),
                     ],
@@ -1412,7 +1206,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         title: Text(
           'Slot Temizle',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontSize: 18.sp,
             fontWeight: FontWeight.bold,
           ),
@@ -1433,7 +1227,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.blue,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textPrimary,
             ),
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('Temizle'),
@@ -1550,7 +1344,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             title: Text(
               'Satis Fiyati',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -1577,12 +1371,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: AppColors.textPrimary),
                     decoration: const InputDecoration(
                       labelText: 'Birim satis fiyati',
                       labelStyle: TextStyle(color: AppColors.gold),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white24),
+                        borderSide: BorderSide(color: AppColors.textMuted),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: AppColors.gold),
@@ -1774,7 +1568,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 Container(
                   padding: EdgeInsets.all(16.w),
                   decoration: BoxDecoration(
-                    color: Colors.black26,
+                    color: AppColors.cardBg,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
                   ),
                   child: Row(
@@ -1784,14 +1578,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                       Text(
                         'Urun Secimi',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 18.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
+                        icon: const Icon(Icons.close, color: AppColors.textPrimary),
                         onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ],
@@ -1918,7 +1712,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                   Text(
                     product['name'] ?? 'Bilinmeyen Urun',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 14.sp,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1959,10 +1753,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (parentContext.mounted) {
       if (result['success'] == true) {
-        await ref.refresh(storeDetailProvider(store.id).future);
+        await ref.read(storeDetailProvider(store.id).future);
+        if (!parentContext.mounted) return;
         ref.invalidate(storesListProvider);
         _showSuccess(parentContext, '${product['name']} basariyla eklendi!');
       } else {
+        if (!parentContext.mounted) return;
         _showError(parentContext, result['message'] ?? 'Urun eklenirken hata olustu.');
       }
     }
@@ -1988,7 +1784,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           Text(
             'Finansal Ozet',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontSize: 14.sp,
               fontWeight: FontWeight.bold,
             ),
@@ -2060,7 +1856,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       child: Text(
         'Lv. $level',
         style: TextStyle(
-          color: Colors.white,
+          color: AppColors.textPrimary,
           fontSize: 12.sp,
           fontWeight: FontWeight.bold,
         ),
@@ -2087,7 +1883,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           Text(
             value,
             style: TextStyle(
-              color: valueColor ?? Colors.white,
+              color: valueColor ?? AppColors.textPrimary,
               fontSize: 12.sp,
               fontWeight: FontWeight.bold,
             ),
@@ -2123,7 +1919,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           Text(
             value,
             style: TextStyle(
-              color: valueColor ?? Colors.white,
+              color: valueColor ?? AppColors.textPrimary,
               fontSize: 11.sp,
               fontWeight: FontWeight.bold,
             ),
@@ -2179,7 +1975,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             Text(
               label,
               style: TextStyle(
-                color: isDisabled ? AppColors.textMuted : Colors.white,
+                color: isDisabled ? AppColors.textMuted : AppColors.textPrimary,
                 fontSize: 12.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -2199,7 +1995,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(4.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: Stack(
         alignment: Alignment.center,
@@ -2223,7 +2019,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             Text(
               text,
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 9.sp,
                 fontWeight: FontWeight.bold,
                 shadows: const [
@@ -2274,7 +2070,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           SizedBox(height: 16.h),
           Text(
             'Bir hata olustu: $error',
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: AppColors.textPrimary),
           ),
           SizedBox(height: 16.h),
           ElevatedButton(
@@ -2366,7 +2162,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
               Text(
                 'Kaynak Secin',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontSize: 18.sp,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2418,7 +2214,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(4.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: Stack(
         children: [
@@ -2497,12 +2293,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
           color: isDisabled 
-              ? Colors.white.withValues(alpha: 0.03) 
+              ? AppColors.textPrimary.withValues(alpha: 0.03) 
               : color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10.r),
           border: Border.all(
             color: isDisabled 
-                ? Colors.white.withValues(alpha: 0.05) 
+                ? AppColors.textPrimary.withValues(alpha: 0.05) 
                 : color.withValues(alpha: 0.3),
           ),
         ),
@@ -2540,7 +2336,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       child: Container(
         padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
+          color: AppColors.textPrimary.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(color: color.withValues(alpha: 0.35)),
         ),
@@ -2563,7 +2359,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 15.sp,
                       fontWeight: FontWeight.bold,
                     ),
@@ -2692,7 +2488,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           Text(
             'Kaynak Depo Secin',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontSize: 18.sp,
               fontWeight: FontWeight.bold,
             ),
@@ -2726,13 +2522,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                             .toString();
 
                     return Card(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: AppColors.textPrimary.withValues(alpha: 0.05),
                       margin: EdgeInsets.only(bottom: 10.h),
                       child: ListTile(
                         leading: Icon(Icons.warehouse, color: AppColors.gold),
                         title: Text(
                           (warehouse['name'] ?? 'Depo').toString(),
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: AppColors.textPrimary),
                         ),
                         subtitle: Text(
                           '$cityName | Kalite: $qualityLevel | Mevcut: $availableQty adet',
@@ -2740,9 +2536,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                             color: AppColors.gold.withValues(alpha: 0.7),
                           ),
                         ),
-                        trailing: const Icon(
+                        trailing: Icon(
                           Icons.chevron_right,
-                          color: Colors.white54,
+                          color: AppColors.textSecondary,
                         ),
                         onTap: () {
                           Navigator.pop(context);
@@ -2789,7 +2585,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         backgroundColor: AppColors.background,
         title: Text(
           'Miktar Girin',
-          style: TextStyle(color: Colors.white, fontSize: 18.sp),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 18.sp),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2802,12 +2598,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Miktar (Maks: $limit)',
                 labelStyle: const TextStyle(color: AppColors.gold),
                 enabledBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white24),
+                  borderSide: BorderSide(color: AppColors.textMuted),
                 ),
                 focusedBorder: const OutlineInputBorder(
                   borderSide: BorderSide(color: AppColors.gold),
@@ -2930,7 +2726,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             Text(
               'Arac Secin',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -2969,7 +2765,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     child: Container(
                       padding: EdgeInsets.all(14.w),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
+                        color: AppColors.textPrimary.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(14.r),
                         border: Border.all(color: color.withValues(alpha: 0.35)),
                       ),
@@ -2984,7 +2780,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                                 child: Text(
                                   option.vehicleName,
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -3088,9 +2884,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         );
 
     if (!context.mounted) return;
-
     if (result['success'] == true) {
-      await ref.refresh(storeDetailProvider(store.id).future);
+      await ref.read(storeDetailProvider(store.id).future);
+      if (!context.mounted) return;
       ref.invalidate(storesListProvider);
       ref.invalidate(playerStreamProvider);
       final isInstant = result['mode']?.toString() == 'instant';
@@ -3100,10 +2896,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             ? 'Ayni sehir transferi tamamlandi.'
             : 'Lojistik transfer baslatildi. Arac yola cikti.',
       );
-      return;
+    } else {
+      if (!context.mounted) return;
+      _showError(context, result['message'] ?? 'Transfer basarisiz.');
     }
-
-    _showError(context, 'Hata: ${result['message']}');
   }
 
   Future<void> _startStoreOutboundFlow(
@@ -3198,7 +2994,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           Text(
             'Hedef Depo Secin',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontSize: 18.sp,
               fontWeight: FontWeight.bold,
             ),
@@ -3274,7 +3070,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                   child: Container(
                     padding: EdgeInsets.all(14.w),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: AppColors.textPrimary.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(16.r),
                       border: Border.all(
                         color:
@@ -3308,7 +3104,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                               Text(
                                 (warehouse['name'] ?? 'Depo').toString(),
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.textPrimary,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -3345,7 +3141,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                         ),
                         Icon(
                           Icons.chevron_right,
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: AppColors.textPrimary.withValues(alpha: 0.6),
                         ),
                       ],
                     ),
@@ -3393,7 +3189,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
           title: Text(
             'Miktar Girin',
-            style: TextStyle(color: Colors.white, fontSize: 18.sp),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 18.sp),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -3404,7 +3200,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                   width: double.infinity,
                   padding: EdgeInsets.all(12.w),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.04),
+                    color: AppColors.textPrimary.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(14.r),
                     border: Border.all(
                       color: AppColors.border.withValues(alpha: 0.24),
@@ -3416,7 +3212,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                       Text(
                         slot.productName ?? 'Urun',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
                         ),
@@ -3448,13 +3244,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 TextField(
                   controller: controller,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(
                     labelText: 'Miktar',
                     helperText: 'Depoya gonderilecek urun adedi',
                     labelStyle: const TextStyle(color: AppColors.gold),
                     enabledBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white24),
+                      borderSide: BorderSide(color: AppColors.textMuted),
                     ),
                     focusedBorder: const OutlineInputBorder(
                       borderSide: BorderSide(color: AppColors.gold),
@@ -3539,7 +3335,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           Text(
             '$label: $value',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontSize: 11.sp,
               fontWeight: FontWeight.w600,
             ),
@@ -3572,7 +3368,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
         side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.3)),
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.textPrimary,
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       ),
       onPressed: onPressed,
@@ -3660,7 +3456,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             Text(
               'Arac Secin',
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 18.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -3698,7 +3494,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                     child: Container(
                       padding: EdgeInsets.all(14.w),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
+                        color: AppColors.textPrimary.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(14.r),
                         border: Border.all(color: color.withValues(alpha: 0.35)),
                       ),
@@ -3713,7 +3509,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                                 child: Text(
                                   option.vehicleName,
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -3789,7 +3585,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      await ref.refresh(storeDetailProvider(store.id).future);
+      await ref.read(storeDetailProvider(store.id).future);
+      if (!context.mounted) return;
       ref.invalidate(storesListProvider);
       ref.invalidate(playerStreamProvider);
       final isInstant = result['mode']?.toString() == 'instant';
@@ -3802,6 +3599,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       return;
     }
 
+    if (!context.mounted) return;
     _showError(context, 'Hata: ${result['message']}');
   }
 }
@@ -3825,9 +3623,9 @@ class _ActiveBoostCard extends ConsumerWidget {
       width: double.infinity,
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: Colors.orangeAccent.withValues(alpha: 0.08),
+        color: AppColors.goldDark.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.25)),
+        border: Border.all(color: AppColors.goldDark.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3837,12 +3635,12 @@ class _ActiveBoostCard extends ConsumerWidget {
               Container(
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: Colors.orangeAccent.withValues(alpha: 0.15),
+                  color: AppColors.goldDark.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
                   Icons.flash_on_rounded,
-                  color: Colors.orangeAccent,
+                  color: AppColors.goldDark,
                   size: 18.sp,
                 ),
               ),
@@ -3854,7 +3652,7 @@ class _ActiveBoostCard extends ConsumerWidget {
                     Text(
                       'Boost Aktif',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
                       ),
@@ -3886,9 +3684,9 @@ class _ActiveBoostCard extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8.h,
-              backgroundColor: Colors.white10,
+              backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
               valueColor: const AlwaysStoppedAnimation<Color>(
-                Colors.orangeAccent,
+                AppColors.goldDark,
               ),
             ),
           ),
@@ -3954,7 +3752,7 @@ class _ActiveUpgradeCard extends ConsumerWidget {
                     Text(
                       'Yukseltme Devam Ediyor',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontSize: 14.sp,
                         fontWeight: FontWeight.bold,
                       ),
@@ -3986,7 +3784,7 @@ class _ActiveUpgradeCard extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8.h,
-              backgroundColor: Colors.white10,
+              backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
             ),
           ),

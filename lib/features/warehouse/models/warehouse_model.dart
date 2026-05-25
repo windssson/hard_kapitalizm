@@ -66,6 +66,7 @@ class WarehouseSlotModel {
   final String? productName;
   final String? productIcon;
   final int quantity;
+  final double unitVolume;
   final int qualityLevel;
   final double price;
   final double cost;
@@ -77,6 +78,7 @@ class WarehouseSlotModel {
     this.productName,
     this.productIcon,
     required this.quantity,
+    this.unitVolume = 0,
     required this.qualityLevel,
     this.price = 0,
     this.cost = 0,
@@ -92,6 +94,7 @@ class WarehouseSlotModel {
       productName: json['product_name'] as String? ?? productJson?['urun_adi'] as String?,
       productIcon: productJson?['urun_iconu'] as String?,
       quantity: json['quantity'] as int? ?? 0,
+      unitVolume: (productJson?['birim_hacim'] as num?)?.toDouble() ?? 0.0,
       qualityLevel: json['quality_level'] as int? ?? 0,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       cost: (json['cost'] as num?)?.toDouble() ?? 0.0,

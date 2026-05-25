@@ -10,6 +10,7 @@ import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 
@@ -35,6 +36,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   void refreshRouteData() {
     ref.invalidate(farmListProvider);
     ref.invalidate(farmConstructionProvider);
+    ref.invalidate(playerStreamProvider);
     ref.read(farmListProvider.future);
     ref.read(farmConstructionProvider.future);
   }
@@ -57,6 +59,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(farmListProvider);
     ref.invalidate(farmConstructionProvider);
+    ref.invalidate(playerStreamProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
@@ -66,8 +69,19 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
     ref.invalidate(farmConstructionProvider);
     ref.invalidate(farmListProvider);
+    ref.invalidate(playerStreamProvider);
 
     if (!mounted) return;
+    if (result['success'] == true) {
+      AppSnackbar.show(
+        context,
+        title: 'Tamamlandi',
+        message: 'Tarla insaati tamamlandi.',
+        type: SnackbarType.success,
+      );
+      return;
+    }
+
     if (result['success'] != true) {
       AppSnackbar.show(
         context,
@@ -85,6 +99,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
     ref.invalidate(farmConstructionProvider);
     ref.invalidate(farmListProvider);
+    ref.invalidate(playerStreamProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -393,27 +408,26 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   }
 
   Widget _buildFilters() {
-    return Row(
-      children: [
-        _buildFilterChip('Tümü', null),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+        _buildFilterChip('Tumu', null),
         SizedBox(width: 8.w),
         _buildFilterChip('Aktif', AppColors.green),
         SizedBox(width: 8.w),
         _buildFilterChip('Pasif', AppColors.red),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildFilterChip(String label, Color? dotColor) {
-    final isSelected = _selectedFilter == label || (label == 'Tümü' && _selectedFilter == 'Tumu');
+    final isSelected = _selectedFilter == label;
     return GestureDetector(
       onTap: () {
         setState(() {
-          if (label == 'Tümü') {
-            _selectedFilter = 'Tumu';
-          } else {
-            _selectedFilter = label;
-          }
+          _selectedFilter = label;
         });
       },
       child: AnimatedContainer(
@@ -512,7 +526,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   Widget _buildAdvancedFarmCard(FarmListItemModel item) {
     final farm = item.farm;
     return Container(
-      margin: EdgeInsets.only(bottom: 14.h),
+      margin: EdgeInsets.only(bottom: 10.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20.r),
         color: AppColors.cardBg,
@@ -575,7 +589,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                 splashColor: AppColors.gold.withValues(alpha: 0.1),
                 highlightColor: AppColors.gold.withValues(alpha: 0.05),
                 child: Padding(
-                  padding: EdgeInsets.all(14.w),
+                  padding: EdgeInsets.all(12.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -583,15 +597,15 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildFarmImage(item),
-                          SizedBox(width: 14.w),
+                          SizedBox(width: 10.w),
                           Expanded(
                             child: _buildFarmHeader(item),
                           ),
                         ],
                       ),
-                      SizedBox(height: 12.h),
+                      SizedBox(height: 8.h),
                       _buildOutputSection(item),
-                      SizedBox(height: 12.h),
+                      SizedBox(height: 8.h),
                       _buildSlotsSection(item),
                     ],
                   ),
@@ -606,9 +620,9 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
   Widget _buildFarmImage(FarmListItemModel item) {
     return Container(
-      width: 76.w,
-      height: 76.w,
-      padding: EdgeInsets.all(10.w),
+      width: 64.w,
+      height: 64.w,
+      padding: EdgeInsets.all(8.w),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16.r),
@@ -630,7 +644,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
         errorWidget: Icon(
           Icons.agriculture,
           color: AppColors.green,
-          size: 36.sp,
+          size: 30.sp,
         ),
       ),
     );
@@ -649,7 +663,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                 farm.name,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 15.sp,
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
@@ -662,17 +676,17 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
             ),
           ],
         ),
-        SizedBox(height: 4.h),
+        SizedBox(height: 2.h),
         Row(
           children: [
-            Icon(Icons.location_on, color: AppColors.gold, size: 12.sp),
-            SizedBox(width: 4.w),
+            Icon(Icons.location_on, color: AppColors.gold, size: 11.sp),
+            SizedBox(width: 3.w),
             Expanded(
               child: Text(
                 item.cityName,
                 style: TextStyle(
                   color: AppColors.gold,
-                  fontSize: 11.sp,
+                  fontSize: 10.sp,
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
@@ -682,12 +696,12 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
             _buildSmallBadge('Seviye ${farm.level}', Colors.orangeAccent),
           ],
         ),
-        SizedBox(height: 6.h),
+        SizedBox(height: 4.h),
         Text(
           item.farmTypeName,
           style: TextStyle(
             color: AppColors.textMuted,
-            fontSize: 11.sp,
+            fontSize: 10.sp,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -700,7 +714,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     final ratio = item.outputStockRatio;
     final color = _getRatioColor(ratio);
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12.r),
@@ -717,14 +731,14 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                   Icon(
                     Icons.inventory_2,
                     color: AppColors.textSecondary,
-                    size: 14.sp,
+                    size: 13.sp,
                   ),
-                  SizedBox(width: 6.w),
+                  SizedBox(width: 5.w),
                   Text(
-                    'Depolama Kapasitesi',
+                    'Output',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 11.sp,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -734,15 +748,15 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                 '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.farm.outputCapacity)}',
                 style: TextStyle(
                   color: ratio >= 0.9 ? AppColors.red : Colors.white,
-                  fontSize: 12.sp,
+                    fontSize: 10.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 6.h),
           Container(
-            height: 6.h,
+            height: 5.h,
             width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.4),
@@ -778,7 +792,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   Widget _buildSlotsSection(FarmListItemModel item) {
     final farm = item.farm;
     return Container(
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(14.r),
@@ -793,7 +807,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Üretim Slotları',
+                'Uretim Slotlari',
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 11.sp,
@@ -806,10 +820,10 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
               ),
             ],
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: 8.h),
           Wrap(
-            spacing: 10.w,
-            runSpacing: 10.h,
+            spacing: 8.w,
+            runSpacing: 8.h,
             children: List.generate(
               farm.maxSlotCount,
               (index) => _buildFarmSlotIcon(
@@ -833,8 +847,8 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     final hasProduct = slot?.hasProduct == true;
 
     return Container(
-      width: 48.w,
-      height: 48.w,
+      width: 44.w,
+      height: 44.w,
       decoration: BoxDecoration(
         color: isLocked
             ? Colors.black.withValues(alpha: 0.3)
@@ -859,17 +873,17 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
             : null,
       ),
       child: isLocked
-          ? Center(child: Icon(Icons.lock, color: Colors.white24, size: 20.sp))
+          ? Center(child: Icon(Icons.lock, color: Colors.white24, size: 18.sp))
           : hasProduct
               ? Padding(
-                  padding: EdgeInsets.all(6.w),
+                  padding: EdgeInsets.all(5.w),
                   child: CachedAssetImage(
                     fileName: slot!.product!.urunIconu,
                     fit: BoxFit.contain,
                     errorWidget: Icon(
                       Icons.agriculture,
                       color: AppColors.green,
-                      size: 24.sp,
+                      size: 22.sp,
                     ),
                   ),
                 )
@@ -877,7 +891,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                   child: Icon(
                     Icons.add_circle_outline,
                     color: AppColors.gold.withValues(alpha: 0.3),
-                    size: 24.sp,
+                    size: 22.sp,
                   ),
                 ),
     );
@@ -885,7 +899,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
   Widget _buildSmallBadge(String label, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.h),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         border: Border.all(color: color.withValues(alpha: 0.4)),
@@ -895,7 +909,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
         label,
         style: TextStyle(
           color: color,
-          fontSize: 9.sp,
+          fontSize: 8.sp,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -903,9 +917,9 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   }
 
   Color _getRatioColor(double ratio) {
-    if (ratio >= 0.8) return AppColors.green;
-    if (ratio >= 0.4) return Colors.orange;
-    return AppColors.red;
+    if (ratio >= 0.9) return AppColors.red;
+    if (ratio >= 0.65) return Colors.orange;
+    return AppColors.green;
   }
 
   String _formatCompact(int value) {
@@ -936,3 +950,4 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     );
   }
 }
+

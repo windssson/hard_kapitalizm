@@ -3435,6 +3435,9 @@ AS $function$
       jsonb_build_object(
         'id', lt.id,
         'product_id', lt.product_id,
+        'buyer_warehouse_id', lt.buyer_warehouse_id,
+        'buyer_store_slot_id', lt.buyer_store_slot_id,
+        'transfer_type', lt.transfer_type,
         'quantity', lt.quantity,
         'status', lt.status,
         'started_at', lt.started_at,
@@ -4294,6 +4297,7 @@ declare
   v_product record;
   v_distance_km numeric := 0;
   v_required_capacity numeric := 0;
+  v_available_capacity numeric := 0;
 begin
   if v_buyer_id is null then
     raise exception 'Oturum acilmamis.';
@@ -4343,6 +4347,17 @@ begin
   end if;
 
   v_required_capacity := p_quantity * v_product.birim_hacim;
+  select greatest(
+    coalesce(v_buyer_warehouse.capacity, 0)::numeric
+    - coalesce(sum(ws.quantity::numeric * coalesce(p.birim_hacim, 0)), 0)
+    - coalesce(v_buyer_warehouse.reserved_capacity, 0)::numeric,
+    0
+  )
+  into v_available_capacity
+  from public.warehouse_slots ws
+  left join public.products p on p.id = ws.product_id
+  where ws.warehouse_id = p_buyer_warehouse_id;
+
   v_distance_km := 6371 * 2 * asin(
     sqrt(
       power(sin(radians((v_seller_slot.city_x - v_buyer_warehouse.city_x) / 2)), 2) +
@@ -4408,6 +4423,7 @@ begin
       c.route_matches = true
       and c.status = 'idle'
       and c.company_is_active = true
+      and v_available_capacity >= v_required_capacity
       and c.capacity >= v_required_capacity
       and c.current_fuel >= c.fuel_needed
       and c.condition > c.condition_needed
@@ -4416,6 +4432,7 @@ begin
       when c.route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
       when c.status <> 'idle' then 'Arac su anda uygun degil.'
       when c.company_is_active = false then 'Nakliye firmasi aktif degil.'
+      when v_available_capacity < v_required_capacity then 'Hedef depoda bos kapasite yetersiz.'
       when c.capacity < v_required_capacity then 'Kapasite yetersiz.'
       when c.current_fuel < c.fuel_needed then 'Yakit yetersiz.'
       when c.condition <= c.condition_needed then 'Kondisyon yetersiz.'
@@ -5833,6 +5850,167 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.get_warehouse_to_warehouse_vehicle_options(p_warehouse_slot_id uuid, p_buyer_warehouse_id uuid, p_quantity integer)
+ RETURNS TABLE(vehicle_id uuid, vehicle_owner_player_id uuid, vehicle_name text, is_rental boolean, capacity integer, speed_kmh integer, current_fuel integer, fuel_capacity integer, fuel_rate numeric, condition integer, rental_price numeric, distance_km numeric, fuel_needed numeric, condition_needed numeric, rental_cost numeric, estimated_duration_seconds integer, can_select boolean, disabled_reason text)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_player_id uuid := auth.uid();
+  v_seller_slot record;
+  v_buyer_warehouse record;
+  v_product record;
+  v_required_capacity numeric := 0;
+  v_distance_km numeric := 0;
+  v_available_capacity numeric := 0;
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'Miktar 0''dan buyuk olmalidir.';
+  end if;
+
+  select ws.*, w.player_id, w.id as seller_warehouse_id, w.city_id as seller_city_id,
+         c.map_position_x as city_x, c.map_position_y as city_y
+  into v_seller_slot
+  from public.warehouse_slots ws
+  join public.warehouses w on w.id = ws.warehouse_id
+  join public.cities c on c.id = w.city_id
+  where ws.id = p_warehouse_slot_id;
+
+  if not found or v_seller_slot.player_id <> v_player_id then
+    raise exception 'Kaynak depo slotu bulunamadi veya size ait degil.';
+  end if;
+
+  if p_quantity > coalesce(v_seller_slot.quantity, 0) then
+    raise exception 'Istenen miktar mevcut stoktan fazla.';
+  end if;
+
+  select w.*, c.map_position_x as city_x, c.map_position_y as city_y
+  into v_buyer_warehouse
+  from public.warehouses w
+  join public.cities c on c.id = w.city_id
+  where w.id = p_buyer_warehouse_id
+    and w.player_id = v_player_id;
+
+  if not found then
+    raise exception 'Hedef depo bulunamadi veya size ait degil.';
+  end if;
+
+  if v_buyer_warehouse.id = v_seller_slot.seller_warehouse_id then
+    raise exception 'Kaynak ve hedef depo ayni olamaz.';
+  end if;
+
+  if v_buyer_warehouse.is_active is not true then
+    raise exception 'Hedef depo aktif degil.';
+  end if;
+
+  select * into v_product
+  from public.products
+  where id = v_seller_slot.product_id;
+
+  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then
+    raise exception 'Urun hacim bilgisi gecersiz.';
+  end if;
+
+  v_required_capacity := p_quantity * v_product.birim_hacim;
+  select greatest(
+    coalesce(v_buyer_warehouse.capacity, 0)::numeric
+    - coalesce(sum(ws.quantity::numeric * coalesce(p.birim_hacim, 0)), 0)
+    - coalesce(v_buyer_warehouse.reserved_capacity, 0)::numeric,
+    0
+  )
+  into v_available_capacity
+  from public.warehouse_slots ws
+  left join public.products p on p.id = ws.product_id
+  where ws.warehouse_id = p_buyer_warehouse_id;
+
+  v_distance_km := 6371 * 2 * asin(
+    sqrt(
+      power(sin(radians((v_seller_slot.city_x - v_buyer_warehouse.city_x) / 2)), 2) +
+      cos(radians(v_buyer_warehouse.city_x)) *
+      cos(radians(v_seller_slot.city_x)) *
+      power(sin(radians((v_seller_slot.city_y - v_buyer_warehouse.city_y) / 2)), 2)
+    )
+  );
+
+  return query
+  with candidates as (
+    select
+      lv.id as vehicle_id,
+      lv.player_id as vehicle_owner_player_id,
+      lvt.name as vehicle_name,
+      (lv.player_id <> v_player_id) as is_rental,
+      lv.capacity,
+      lv.speed_kmh,
+      lv.current_fuel,
+      lv.fuel_capacity,
+      lv.fuel_rate,
+      lv.condition,
+      lv.rental_price,
+      v_distance_km as distance_km,
+      ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
+      ceil(v_distance_km * 0.02) as condition_needed,
+      case
+        when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price)
+        else 0
+      end as rental_cost,
+      greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
+      lv.status,
+      lv.is_available_for_rent,
+      lc.is_active as company_is_active,
+      public.logistics_vehicle_matches_route(lv.route_city_a_id, lv.route_city_b_id, v_seller_slot.seller_city_id, v_buyer_warehouse.city_id) as route_matches
+    from public.logistics_vehicles lv
+    join public.logistics_vehicle_types lvt on lvt.id = lv.logistics_vehicle_type_id
+    join public.logistics_companies lc on lc.id = lv.logistics_company_id
+    where lv.player_id = v_player_id
+       or (lv.player_id <> v_player_id and lv.is_available_for_rent = true)
+  )
+  select
+    c.vehicle_id,
+    c.vehicle_owner_player_id,
+    c.vehicle_name,
+    c.is_rental,
+    c.capacity,
+    c.speed_kmh,
+    c.current_fuel,
+    c.fuel_capacity,
+    c.fuel_rate,
+    c.condition,
+    c.rental_price,
+    c.distance_km,
+    c.fuel_needed,
+    c.condition_needed,
+    c.rental_cost,
+    c.estimated_duration_seconds,
+    (
+      c.route_matches = true
+      and c.status = 'idle'
+      and c.company_is_active = true
+      and v_available_capacity >= v_required_capacity
+      and c.capacity >= v_required_capacity
+      and c.current_fuel >= c.fuel_needed
+      and c.condition > c.condition_needed
+    ) as can_select,
+    case
+      when c.route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
+      when c.status <> 'idle' then 'Arac su anda uygun degil.'
+      when c.company_is_active = false then 'Nakliye firmasi aktif degil.'
+      when v_available_capacity < v_required_capacity then 'Hedef depoda bos kapasite yetersiz.'
+      when c.capacity < v_required_capacity then 'Kapasite yetersiz.'
+      when c.current_fuel < c.fuel_needed then 'Yakit yetersiz.'
+      when c.condition <= c.condition_needed then 'Kondisyon yetersiz.'
+      else null
+    end as disabled_reason
+  from candidates c
+  order by c.is_rental asc, can_select desc, c.capacity asc, c.rental_price asc, c.vehicle_name asc;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.get_store_transfer_vehicle_options(p_store_slot_id uuid, p_warehouse_slot_id uuid, p_quantity integer)
  RETURNS TABLE(vehicle_id uuid, vehicle_owner_player_id uuid, vehicle_name text, is_rental boolean, capacity integer, speed_kmh integer, current_fuel integer, fuel_capacity integer, fuel_rate numeric, condition integer, rental_price numeric, distance_km numeric, fuel_needed numeric, condition_needed numeric, rental_cost numeric, estimated_duration_seconds integer, can_select boolean, disabled_reason text)
  LANGUAGE plpgsql
@@ -7203,6 +7381,15 @@ declare
   v_type record;
   v_vehicle_id uuid;
 begin
+  select *
+  into v_vehicle_type
+  from public.logistics_vehicle_types
+  where id = v_vehicle.logistics_vehicle_type_id;
+
+  if not found then
+    raise exception 'Arac tipi bulunamadi.';
+  end if;
+
   select cash
   into v_player_cash
   from public.players
@@ -7300,9 +7487,8 @@ AS $function$
 declare
   v_vehicle record;
   v_company record;
-  v_player_cash numeric;
   v_missing_fuel integer;
-  v_total_cost numeric;
+  v_company_remaining_fuel numeric;
 begin
   select *
   into v_vehicle
@@ -7319,28 +7505,25 @@ begin
   into v_company
   from public.logistics_companies
   where id = v_vehicle.logistics_company_id
-    and player_id = p_player_id;
+    and player_id = p_player_id
+  for update;
 
   if not found then
     raise exception 'Nakliye firması bulunamadı.';
   end if;
 
-  select cash
-  into v_player_cash
-  from public.players
-  where id = p_player_id
-  for update;
-
   v_missing_fuel := greatest(v_vehicle.fuel_capacity - v_vehicle.current_fuel, 0);
-  v_total_cost := coalesce(v_missing_fuel, 0) * coalesce(v_company.fuel_cost, 0);
+  v_company_remaining_fuel :=
+    greatest(coalesce(v_company.current_fuel, 0) - v_missing_fuel, 0);
 
-  if v_total_cost > v_player_cash then
-    raise exception 'Yetersiz nakit. Gerekli: %, mevcut: %', v_total_cost, v_player_cash;
+  if coalesce(v_company.current_fuel, 0) < v_missing_fuel then
+    raise exception 'Merkez yakit rezervi yetersiz. Gerekli: %, mevcut: %', v_missing_fuel, coalesce(v_company.current_fuel, 0);
   end if;
 
-  update public.players
-  set cash = cash - v_total_cost
-  where id = p_player_id;
+  update public.logistics_companies
+  set current_fuel = v_company_remaining_fuel,
+      updated_at = timezone('utc'::text, now())
+  where id = v_company.id;
 
   update public.logistics_vehicles
   set current_fuel = fuel_capacity,
@@ -7351,9 +7534,9 @@ begin
     'success', true,
     'vehicle_id', p_vehicle_id,
     'fuel_added', v_missing_fuel,
-    'total_cost', v_total_cost,
+    'total_cost', 0,
     'current_fuel', v_vehicle.fuel_capacity,
-    'remaining_cash', v_player_cash - v_total_cost
+    'company_remaining_fuel', v_company_remaining_fuel
   );
 end;
 $function$
@@ -7367,8 +7550,10 @@ CREATE OR REPLACE FUNCTION public.repair_logistics_vehicle(p_player_id uuid, p_v
 AS $function$
 declare
   v_vehicle record;
+  v_vehicle_type record;
   v_player_cash numeric;
   v_missing_condition integer;
+  v_missing_condition_ratio numeric;
   v_total_cost numeric;
 begin
   select *
@@ -7382,6 +7567,15 @@ begin
     raise exception 'Araç bulunamadı.';
   end if;
 
+  select *
+  into v_vehicle_type
+  from public.logistics_vehicle_types
+  where id = v_vehicle.logistics_vehicle_type_id;
+
+  if not found then
+    raise exception 'Arac tipi bulunamadi.';
+  end if;
+
   select cash
   into v_player_cash
   from public.players
@@ -7389,7 +7583,9 @@ begin
   for update;
 
   v_missing_condition := greatest(100 - v_vehicle.condition, 0);
-  v_total_cost := v_missing_condition * 100;
+  v_missing_condition_ratio := v_missing_condition / 100.0;
+  v_total_cost :=
+    v_missing_condition_ratio * (coalesce(v_vehicle_type.purchase_price, 0) / 2.0);
 
   if v_total_cost > v_player_cash then
     raise exception 'Yetersiz nakit. Gerekli: %, mevcut: %', v_total_cost, v_player_cash;
@@ -7410,6 +7606,224 @@ begin
     'repair_cost', v_total_cost,
     'condition', 100,
     'remaining_cash', v_player_cash - v_total_cost
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.transfer_warehouse_fuel_to_logistics_company(p_logistics_company_id uuid, p_warehouse_slot_id uuid, p_quantity integer)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_player_id uuid := auth.uid();
+  v_company record;
+  v_slot record;
+  v_available_capacity integer;
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'Miktar 0''dan buyuk olmalidir.';
+  end if;
+
+  select *
+  into v_company
+  from public.logistics_companies
+  where id = p_logistics_company_id
+    and player_id = v_player_id
+  for update;
+
+  if not found then
+    raise exception 'Lojistik merkezi bulunamadi.';
+  end if;
+
+  select
+    ws.*,
+    w.player_id,
+    w.is_active as warehouse_is_active
+  into v_slot
+  from public.warehouse_slots ws
+  join public.warehouses w on w.id = ws.warehouse_id
+  where ws.id = p_warehouse_slot_id
+  for update;
+
+  if not found or v_slot.player_id <> v_player_id then
+    raise exception 'Depo slotu bulunamadi veya size ait degil.';
+  end if;
+
+  if v_slot.warehouse_is_active is not true then
+    raise exception 'Kaynak depo aktif degil.';
+  end if;
+
+  if coalesce(v_slot.product_id, '') <> 'YAKIT' then
+    raise exception 'Bu slotta yakit bulunmuyor.';
+  end if;
+
+  if coalesce(v_slot.quantity, 0) < p_quantity then
+    raise exception 'Depoda yeterli yakit yok.';
+  end if;
+
+  v_available_capacity :=
+    greatest(coalesce(v_company.fuel_capacity, 0) - coalesce(v_company.current_fuel, 0), 0);
+
+  if v_available_capacity <= 0 then
+    raise exception 'Merkez yakit deposu dolu.';
+  end if;
+
+  if p_quantity > v_available_capacity then
+    raise exception 'Merkez yakit kapasitesi yetersiz. Bos kapasite: %', v_available_capacity;
+  end if;
+
+  update public.warehouse_slots
+  set
+    quantity = quantity - p_quantity,
+    is_available_for_sale = case when quantity - p_quantity > 0 then is_available_for_sale else false end,
+    updated_at = timezone('utc'::text, now())
+  where id = p_warehouse_slot_id;
+
+  update public.logistics_companies
+  set
+    current_fuel = current_fuel + p_quantity,
+    updated_at = timezone('utc'::text, now())
+  where id = p_logistics_company_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'company_id', p_logistics_company_id,
+    'warehouse_slot_id', p_warehouse_slot_id,
+    'fuel_added', p_quantity,
+    'company_current_fuel', coalesce(v_company.current_fuel, 0) + p_quantity
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.buy_market_fuel_for_logistics_company(p_logistics_company_id uuid, p_seller_slot_id uuid, p_quantity integer)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_player_id uuid := auth.uid();
+  v_company record;
+  v_seller_slot record;
+  v_player_cash numeric;
+  v_available_capacity integer;
+  v_unit_price numeric;
+  v_total_price numeric;
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'Miktar 0''dan buyuk olmalidir.';
+  end if;
+
+  select *
+  into v_company
+  from public.logistics_companies
+  where id = p_logistics_company_id
+    and player_id = v_player_id
+  for update;
+
+  if not found then
+    raise exception 'Lojistik merkezi bulunamadi.';
+  end if;
+
+  select
+    ws.*,
+    w.player_id as seller_player_id,
+    w.is_active as warehouse_is_active
+  into v_seller_slot
+  from public.warehouse_slots ws
+  join public.warehouses w on w.id = ws.warehouse_id
+  where ws.id = p_seller_slot_id
+  for update;
+
+  if not found then
+    raise exception 'Satici slotu bulunamadi.';
+  end if;
+
+  if v_seller_slot.seller_player_id = v_player_id then
+    raise exception 'Kendi deponuzdan alim icin depo aktarimini kullanin.';
+  end if;
+
+  if v_seller_slot.warehouse_is_active is not true then
+    raise exception 'Satici depo aktif degil.';
+  end if;
+
+  if coalesce(v_seller_slot.product_id, '') <> 'YAKIT' then
+    raise exception 'Bu ilanda yakit bulunmuyor.';
+  end if;
+
+  if coalesce(v_seller_slot.is_available_for_sale, false) is not true then
+    raise exception 'Bu yakit ilani satisa kapali.';
+  end if;
+
+  if coalesce(v_seller_slot.quantity, 0) < p_quantity then
+    raise exception 'Ilan miktari yetersiz.';
+  end if;
+
+  v_available_capacity :=
+    greatest(coalesce(v_company.fuel_capacity, 0) - coalesce(v_company.current_fuel, 0), 0);
+
+  if v_available_capacity <= 0 then
+    raise exception 'Merkez yakit deposu dolu.';
+  end if;
+
+  if p_quantity > v_available_capacity then
+    raise exception 'Merkez yakit kapasitesi yetersiz. Bos kapasite: %', v_available_capacity;
+  end if;
+
+  v_unit_price := coalesce(v_seller_slot.price, 0);
+  v_total_price := v_unit_price * p_quantity;
+
+  select cash
+  into v_player_cash
+  from public.players
+  where id = v_player_id
+  for update;
+
+  if coalesce(v_player_cash, 0) < v_total_price then
+    raise exception 'Yeterli nakit yok.';
+  end if;
+
+  update public.warehouse_slots
+  set
+    quantity = quantity - p_quantity,
+    is_available_for_sale = case when quantity - p_quantity > 0 then is_available_for_sale else false end,
+    updated_at = timezone('utc'::text, now())
+  where id = p_seller_slot_id;
+
+  update public.players
+  set cash = cash - v_total_price
+  where id = v_player_id;
+
+  update public.players
+  set cash = cash + v_total_price
+  where id = v_seller_slot.seller_player_id;
+
+  update public.logistics_companies
+  set
+    current_fuel = current_fuel + p_quantity,
+    updated_at = timezone('utc'::text, now())
+  where id = p_logistics_company_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'company_id', p_logistics_company_id,
+    'seller_slot_id', p_seller_slot_id,
+    'fuel_added', p_quantity,
+    'unit_price', v_unit_price,
+    'total_price', v_total_price,
+    'company_current_fuel', coalesce(v_company.current_fuel, 0) + p_quantity
   );
 end;
 $function$
@@ -10495,6 +10909,371 @@ begin
     'store_slot_id', p_store_slot_id,
     'product_id', v_store_slot.product_id,
     'quality_level', v_store_slot.quality_level,
+    'quantity', p_quantity,
+    'rental_cost', v_rental_cost,
+    'transport_cost', v_transport_cost,
+    'distance_km', round(v_distance_km, 2),
+    'fuel_used', v_fuel_used,
+    'condition_loss', v_condition_loss,
+    'duration_seconds', v_duration_seconds,
+    'finish_at', v_finish_at,
+    'reserve_result', v_reserve_result
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.start_warehouse_to_warehouse_transfer(p_warehouse_slot_id uuid, p_buyer_warehouse_id uuid, p_quantity integer, p_vehicle_id uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_player_id uuid := auth.uid();
+  v_player record;
+  v_seller_slot record;
+  v_buyer_warehouse record;
+  v_product record;
+  v_vehicle record;
+  v_reserve_result jsonb;
+  v_transfer_id uuid;
+  v_distance_km numeric := 0;
+  v_required_capacity numeric := 0;
+  v_fuel_used numeric := 0;
+  v_condition_loss numeric := 0;
+  v_rental_cost numeric := 0;
+  v_transport_cost numeric := 0;
+  v_duration_seconds integer := 0;
+  v_finish_at timestamptz;
+  v_unit_cost numeric := 0;
+  v_add_result jsonb;
+  v_now timestamptz := timezone('utc'::text, now());
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'Miktar 0''dan buyuk olmalidir.';
+  end if;
+
+  select * into v_player
+  from public.players
+  where id = v_player_id
+  for update;
+
+  if not found then
+    raise exception 'Oyuncu bulunamadi.';
+  end if;
+
+  select ws.*, w.player_id, w.id as seller_warehouse_id, w.is_active as warehouse_is_active,
+         w.city_id as warehouse_city_id,
+         c.map_position_x as city_x, c.map_position_y as city_y
+  into v_seller_slot
+  from public.warehouse_slots ws
+  join public.warehouses w on w.id = ws.warehouse_id
+  join public.cities c on c.id = w.city_id
+  where ws.id = p_warehouse_slot_id
+  for update;
+
+  if not found or v_seller_slot.player_id <> v_player_id then
+    raise exception 'Kaynak depo slotu bulunamadi veya size ait degil.';
+  end if;
+
+  if v_seller_slot.warehouse_is_active is not true then
+    raise exception 'Kaynak depo aktif degil.';
+  end if;
+
+  if coalesce(v_seller_slot.product_id, '') = '' or coalesce(v_seller_slot.quality_level, 0) = 0 then
+    raise exception 'Depo slotunda gecerli urun veya kalite yok.';
+  end if;
+
+  if p_quantity > coalesce(v_seller_slot.quantity, 0) then
+    raise exception 'Istenen miktar mevcut stoktan fazla.';
+  end if;
+
+  select w.*, c.map_position_x as city_x, c.map_position_y as city_y
+  into v_buyer_warehouse
+  from public.warehouses w
+  join public.cities c on c.id = w.city_id
+  where w.id = p_buyer_warehouse_id
+    and w.player_id = v_player_id
+  for update;
+
+  if not found then
+    raise exception 'Hedef depo bulunamadi veya size ait degil.';
+  end if;
+
+  if v_buyer_warehouse.id = v_seller_slot.seller_warehouse_id then
+    raise exception 'Kaynak ve hedef depo ayni olamaz.';
+  end if;
+
+  if v_buyer_warehouse.is_active is not true then
+    raise exception 'Hedef depo aktif degil.';
+  end if;
+
+  select * into v_product
+  from public.products
+  where id = v_seller_slot.product_id;
+
+  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then
+    raise exception 'Urun hacim bilgisi gecersiz.';
+  end if;
+
+  v_required_capacity := p_quantity * v_product.birim_hacim;
+  v_unit_cost := coalesce(v_seller_slot.cost, 0);
+
+  if v_seller_slot.warehouse_city_id = v_buyer_warehouse.city_id then
+    update public.warehouse_slots
+    set quantity = quantity - p_quantity,
+        updated_at = v_now
+    where id = p_warehouse_slot_id;
+
+    v_add_result := public.add_product_to_warehouse(
+      v_player_id,
+      p_buyer_warehouse_id,
+      v_seller_slot.product_id,
+      v_seller_slot.quality_level,
+      p_quantity,
+      v_unit_cost,
+      0,
+      false
+    );
+
+    insert into public.logistics_transfers (
+      buyer_player_id,
+      seller_player_id,
+      buyer_warehouse_id,
+      seller_warehouse_id,
+      seller_warehouse_slot_id,
+      logistics_vehicle_id,
+      vehicle_owner_player_id,
+      is_rental,
+      product_id,
+      quality_level,
+      quantity,
+      unit_price,
+      total_price,
+      product_unit_volume,
+      reserved_capacity_amount,
+      distance_km,
+      fuel_used,
+      condition_loss,
+      rental_cost,
+      transport_cost,
+      transfer_type,
+      started_at,
+      finish_at,
+      completed_at,
+      status,
+      updated_at
+    )
+    values (
+      v_player_id,
+      v_player_id,
+      p_buyer_warehouse_id,
+      v_seller_slot.seller_warehouse_id,
+      p_warehouse_slot_id,
+      null,
+      null,
+      false,
+      v_seller_slot.product_id,
+      v_seller_slot.quality_level,
+      p_quantity,
+      v_unit_cost,
+      p_quantity * v_unit_cost,
+      v_product.birim_hacim,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      'warehouse_to_warehouse',
+      v_now,
+      v_now,
+      v_now,
+      'completed',
+      v_now
+    )
+    returning id into v_transfer_id;
+
+    return jsonb_build_object(
+      'success', true,
+      'mode', 'instant',
+      'transfer_id', v_transfer_id,
+      'warehouse_result', v_add_result,
+      'warehouse_id', p_buyer_warehouse_id,
+      'warehouse_slot_id', p_warehouse_slot_id,
+      'product_id', v_seller_slot.product_id,
+      'quality_level', v_seller_slot.quality_level,
+      'quantity', p_quantity
+    );
+  end if;
+
+  if p_vehicle_id is null then
+    raise exception 'Farkli sehir transferi icin arac secilmelidir.';
+  end if;
+
+  v_distance_km := 6371 * 2 * asin(
+    sqrt(
+      power(sin(radians((v_seller_slot.city_x - v_buyer_warehouse.city_x) / 2)), 2) +
+      cos(radians(v_buyer_warehouse.city_x)) *
+      cos(radians(v_seller_slot.city_x)) *
+      power(sin(radians((v_seller_slot.city_y - v_buyer_warehouse.city_y) / 2)), 2)
+    )
+  );
+
+  select lv.*, lc.is_active as company_is_active
+  into v_vehicle
+  from public.logistics_vehicles lv
+  join public.logistics_companies lc on lc.id = lv.logistics_company_id
+  where lv.id = p_vehicle_id
+  for update;
+
+  if not found then
+    raise exception 'Arac bulunamadi.';
+  end if;
+
+  if v_vehicle.status <> 'idle' then
+    raise exception 'Arac su anda uygun degil.';
+  end if;
+
+  if v_vehicle.company_is_active is not true then
+    raise exception 'Aracin firmasi aktif degil.';
+  end if;
+
+  if v_vehicle.player_id <> v_player_id and v_vehicle.is_available_for_rent is not true then
+    raise exception 'Kiralik arac uygun degil.';
+  end if;
+
+  if public.logistics_vehicle_matches_route(v_vehicle.route_city_a_id, v_vehicle.route_city_b_id, v_seller_slot.warehouse_city_id, v_buyer_warehouse.city_id) is not true then
+    raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
+  end if;
+
+  v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
+  v_condition_loss := ceil(v_distance_km * 0.02);
+
+  if v_vehicle.capacity < v_required_capacity then
+    raise exception 'Arac kapasitesi yetersiz.';
+  end if;
+
+  if v_vehicle.current_fuel < v_fuel_used then
+    raise exception 'Aracin yakiti yetersiz.';
+  end if;
+
+  if v_vehicle.condition <= v_condition_loss then
+    raise exception 'Aracin kondisyonu yetersiz.';
+  end if;
+
+  v_rental_cost := case
+    when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0))
+    else 0
+  end;
+  v_transport_cost := v_rental_cost;
+  v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
+  v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
+
+  if coalesce(v_player.cash, 0) < v_rental_cost then
+    raise exception 'Kiralik arac icin yeterli nakit yok.';
+  end if;
+
+  v_reserve_result := public.reserve_warehouse_capacity(
+    v_player_id,
+    p_buyer_warehouse_id,
+    v_seller_slot.product_id,
+    p_quantity
+  );
+
+  update public.warehouse_slots
+  set quantity = quantity - p_quantity,
+      updated_at = timezone('utc'::text, now())
+  where id = p_warehouse_slot_id;
+
+  if v_rental_cost > 0 then
+    update public.players
+    set cash = cash - v_rental_cost
+    where id = v_player_id;
+
+    update public.players
+    set cash = cash + v_rental_cost
+    where id = v_vehicle.player_id;
+  end if;
+
+  update public.logistics_vehicles
+  set
+    current_fuel = greatest(current_fuel - v_fuel_used::integer, 0),
+    condition = greatest(condition - v_condition_loss::integer, 0),
+    status = 'on_route',
+    updated_at = timezone('utc'::text, now())
+  where id = p_vehicle_id;
+
+  insert into public.logistics_transfers (
+    buyer_player_id,
+    seller_player_id,
+    buyer_warehouse_id,
+    seller_warehouse_id,
+    seller_warehouse_slot_id,
+    logistics_vehicle_id,
+    vehicle_owner_player_id,
+    is_rental,
+    product_id,
+    quality_level,
+    quantity,
+    unit_price,
+    total_price,
+    product_unit_volume,
+    reserved_capacity_amount,
+    distance_km,
+    fuel_used,
+    condition_loss,
+    rental_cost,
+    transport_cost,
+    transfer_type,
+    started_at,
+    finish_at,
+    status,
+    updated_at
+  )
+  values (
+    v_player_id,
+    v_player_id,
+    p_buyer_warehouse_id,
+    v_seller_slot.seller_warehouse_id,
+    p_warehouse_slot_id,
+    p_vehicle_id,
+    v_vehicle.player_id,
+    (v_vehicle.player_id <> v_player_id),
+    v_seller_slot.product_id,
+    v_seller_slot.quality_level,
+    p_quantity,
+    v_unit_cost,
+    0,
+    v_product.birim_hacim,
+    p_quantity,
+    v_distance_km,
+    v_fuel_used,
+    v_condition_loss,
+    v_rental_cost,
+    v_transport_cost,
+    'warehouse_to_warehouse',
+    timezone('utc'::text, now()),
+    v_finish_at,
+    'in_transit',
+    timezone('utc'::text, now())
+  )
+  returning id into v_transfer_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'mode', 'transfer',
+    'transfer_id', v_transfer_id,
+    'vehicle_id', p_vehicle_id,
+    'warehouse_id', p_buyer_warehouse_id,
+    'warehouse_slot_id', p_warehouse_slot_id,
+    'product_id', v_seller_slot.product_id,
+    'quality_level', v_seller_slot.quality_level,
     'quantity', p_quantity,
     'rental_cost', v_rental_cost,
     'transport_cost', v_transport_cost,

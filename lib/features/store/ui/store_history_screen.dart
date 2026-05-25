@@ -96,7 +96,21 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
                               if (index == 0) {
                                 return _buildSummaryHeader(filteredItems);
                               }
-                              return _buildHistoryCard(filteredItems[index - 1]);
+                              return TweenAnimationBuilder<double>(
+                                duration: Duration(milliseconds: 300 + (index * 50).clamp(0, 500)),
+                                curve: Curves.easeOutCubic,
+                                tween: Tween<double>(begin: 0, end: 1),
+                                builder: (context, value, child) {
+                                  return Opacity(
+                                    opacity: value,
+                                    child: Transform.translate(
+                                      offset: Offset(0, 20 * (1 - value)),
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: _buildHistoryCard(filteredItems[index - 1]),
+                              );
                             },
                           ),
                   );
@@ -184,13 +198,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
 
     return Container(
       padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(
-          color: AppColors.borderGoldLight.withValues(alpha: 0.22),
-        ),
-      ),
+      decoration: AppDecorations.premiumCard(null, 18.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -269,11 +277,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
     };
     return Container(
       padding: EdgeInsets.all(24.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.border),
-      ),
+      decoration: AppDecorations.premiumCard(AppColors.border, 20.r),
       child: Column(
         children: [
           Icon(Icons.history, color: AppColors.textMuted, size: 52.sp),
@@ -312,11 +316,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
 
     return Container(
       padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: accentColor.withValues(alpha: 0.25)),
-      ),
+      decoration: AppDecorations.premiumCard(accentColor, 18.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

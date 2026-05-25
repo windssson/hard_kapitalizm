@@ -1,6 +1,9 @@
 class MarketTransferModel {
   final String id;
   final String productId;
+  final String? buyerWarehouseId;
+  final String? buyerStoreSlotId;
+  final String transferType;
   final int quantity;
   final String status;
   final DateTime startedAt;
@@ -12,6 +15,9 @@ class MarketTransferModel {
   const MarketTransferModel({
     required this.id,
     required this.productId,
+    required this.buyerWarehouseId,
+    required this.buyerStoreSlotId,
+    required this.transferType,
     required this.quantity,
     required this.status,
     required this.startedAt,
@@ -25,6 +31,10 @@ class MarketTransferModel {
     return MarketTransferModel(
       id: (json['id'] ?? '').toString(),
       productId: (json['product_id'] ?? '').toString(),
+      buyerWarehouseId: json['buyer_warehouse_id']?.toString(),
+      buyerStoreSlotId: json['buyer_store_slot_id']?.toString(),
+      transferType:
+          (json['transfer_type'] ?? 'market_to_warehouse').toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       status: (json['status'] ?? 'in_transit').toString(),
       startedAt: DateTime.parse(json['started_at'].toString()),

@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_type_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_performance_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_type_model.dart';
+
+const logisticsFuelProductId = 'YAKIT';
 
 final logisticsCompanyTypesProvider =
     FutureProvider.autoDispose<List<LogisticsCompanyTypeModel>>((ref) async {
@@ -79,9 +82,13 @@ final logisticsVehicleListStreamProvider =
           .from('logistics_vehicles')
           .stream(primaryKey: ['id'])
           .eq('player_id', user.id)
-          .map(
-            (event) => event.map((e) => LogisticsVehicleModel.fromJson(e)).toList(),
-          );
+          .map((event) {
+            final vehicles = event
+                .map((e) => LogisticsVehicleModel.fromJson(e))
+                .toList();
+            vehicles.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+            return vehicles;
+          });
     });
 
 final logisticsVehiclePerformanceProvider =
@@ -119,6 +126,70 @@ final logisticsVehiclePerformanceProvider =
       }
 
       return stats;
+    });
+
+final playerLogisticsFuelWarehouseSourcesProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) return const [];
+
+      final response = await supabase.rpc(
+        'get_player_active_warehouses_with_slots',
+      );
+
+      final warehouses = (response as List<dynamic>)
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
+
+      final sources = <Map<String, dynamic>>[];
+
+      for (final warehouse in warehouses) {
+        final warehouseId = warehouse['id']?.toString() ?? '';
+        final warehouseName = warehouse['name']?.toString() ?? 'Depo';
+        final city = warehouse['city'] as Map<String, dynamic>?;
+        final cityName = city?['name']?.toString() ?? 'Bilinmeyen Sehir';
+        final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
+
+        for (final rawSlot in slots) {
+          final slot = Map<String, dynamic>.from(rawSlot as Map);
+          if ((slot['product_id']?.toString() ?? '') != logisticsFuelProductId) {
+            continue;
+          }
+          final quantity = (slot['quantity'] as num?)?.toInt() ?? 0;
+          if (quantity <= 0) continue;
+
+          sources.add({
+            'warehouse_id': warehouseId,
+            'warehouse_name': warehouseName,
+            'city_name': cityName,
+            'slot_id': slot['id']?.toString() ?? '',
+            'quantity': quantity,
+            'quality_level': (slot['quality_level'] as num?)?.toInt() ?? 0,
+            'cost': (slot['cost'] as num?)?.toDouble() ?? 0.0,
+          });
+        }
+      }
+
+      return sources;
+    });
+
+final logisticsFuelMarketListingsProvider =
+    FutureProvider.autoDispose<List<MarketListingModel>>((ref) async {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.rpc(
+        'get_market_listings_for_product',
+        params: {'p_product_id': logisticsFuelProductId},
+      );
+
+      return (response as List<dynamic>)
+          .map(
+            (json) => MarketListingModel.fromJson(
+              json as Map<String, dynamic>,
+            ),
+          )
+          .toList();
     });
 
 class LogisticsActionNotifier {
@@ -282,6 +353,48 @@ class LogisticsActionNotifier {
       );
 
       return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> transferWarehouseFuelToCompany({
+    required String logisticsCompanyId,
+    required String warehouseSlotId,
+    required int quantity,
+  }) async {
+    try {
+      final response = await _supabase.rpc(
+        'transfer_warehouse_fuel_to_logistics_company',
+        params: {
+          'p_logistics_company_id': logisticsCompanyId,
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_quantity': quantity,
+        },
+      );
+
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> buyMarketFuelForCompany({
+    required String logisticsCompanyId,
+    required String sellerSlotId,
+    required int quantity,
+  }) async {
+    try {
+      final response = await _supabase.rpc(
+        'buy_market_fuel_for_logistics_company',
+        params: {
+          'p_logistics_company_id': logisticsCompanyId,
+          'p_seller_slot_id': sellerSlotId,
+          'p_quantity': quantity,
+        },
+      );
+
+      return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

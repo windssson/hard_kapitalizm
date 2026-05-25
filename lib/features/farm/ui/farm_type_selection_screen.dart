@@ -293,6 +293,9 @@ class _FarmTypeSelectionScreenState
       );
       if (result['success'] == true) {
         if (mounted) {
+          ref.invalidate(playerStreamProvider);
+          ref.invalidate(farmListProvider);
+          ref.invalidate(farmConstructionProvider);
           AppSnackbar.show(
             context,
             title: 'Basarili',

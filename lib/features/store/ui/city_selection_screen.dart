@@ -164,10 +164,20 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
       left: left.clamp(0.0, mapWidth - markerWidth),
       top: top.clamp(0.0, mapHeight - markerHeight),
       width: markerWidth,
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedCity = city),
-        behavior: HitTestBehavior.opaque,
-        child: Column(
+      child: TweenAnimationBuilder<double>(
+        duration: Duration(milliseconds: 300 + (city.id.hashCode % 500)),
+        curve: Curves.elasticOut,
+        tween: Tween<double>(begin: 0, end: 1),
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: value,
+            child: child,
+          );
+        },
+        child: GestureDetector(
+          onTap: () => setState(() => _selectedCity = city),
+          behavior: HitTestBehavior.opaque,
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
@@ -222,24 +232,14 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
   Widget _buildSelectionPanel() {
     return Container(
       padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
+      decoration: AppDecorations.panelGlass(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

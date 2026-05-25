@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
@@ -66,8 +67,7 @@ final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
 
     return allWarehouses;
   } catch (e) {
-    print('WarehouseListProvider Error: $e');
-    return [];
+    throw Exception('Depo listesi alinamadi: $e');
   }
 });
 
@@ -248,6 +248,74 @@ class WarehouseActionNotifier {
         },
       );
       return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPlayerActiveWarehousesBasic() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      throw Exception('Oturum acilmamis.');
+    }
+
+    final response = await _supabase.rpc('get_player_active_warehouses_basic');
+    return (response as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  Future<List<MarketTransferVehicleOptionModel>>
+      getWarehouseToWarehouseVehicleOptions({
+    required String warehouseSlotId,
+    required String buyerWarehouseId,
+    required int quantity,
+  }) async {
+    final response = await _supabase.rpc(
+      'get_warehouse_to_warehouse_vehicle_options',
+      params: {
+        'p_warehouse_slot_id': warehouseSlotId,
+        'p_buyer_warehouse_id': buyerWarehouseId,
+        'p_quantity': quantity,
+      },
+    );
+
+    return (response as List<dynamic>)
+        .map(
+          (json) => MarketTransferVehicleOptionModel.fromJson(
+            json as Map<String, dynamic>,
+          ),
+        )
+        .where(
+          (option) =>
+              option.disabledReason !=
+              'Aracin rotasi bu sehir ciftini desteklemiyor.',
+        )
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> startWarehouseToWarehouseTransfer({
+    required String warehouseSlotId,
+    required String buyerWarehouseId,
+    required int quantity,
+    String? vehicleId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_warehouse_to_warehouse_transfer',
+        params: {
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_buyer_warehouse_id': buyerWarehouseId,
+          'p_quantity': quantity,
+          'p_vehicle_id': vehicleId,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
