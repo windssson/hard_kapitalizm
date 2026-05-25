@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 
-// Depo Listesi Provider
 final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
@@ -11,104 +11,106 @@ final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
   if (user == null) return [];
 
   try {
-    final response = await supabase
-        .from('warehouses')
-        .select('*, warehouse_slots(*, product:products(*)), city:cities(name), warehouse_type:warehouse_types(icon)')
-        .eq('player_id', user.id);
+    final response = await supabase.rpc('get_player_warehouses_raw');
 
-    List<WarehouseModel> allWarehouses = [];
-    if (response != null) {
-      final List<dynamic> data = response as List<dynamic>;
-      allWarehouses = data.map((json) => WarehouseModel.fromJson(json)).toList();
-    }
+    final List<dynamic> data = response as List<dynamic>;
+    List<WarehouseModel> allWarehouses =
+        data.map((json) => WarehouseModel.fromJson(json)).toList();
 
-    final constructionResponse = await supabase
-        .from('building_constructions')
-        .select('*')
-        .eq('player_id', user.id)
-        .eq('building_kind', 'warehouse')
-        .eq('status', 'in_progress');
+    final constructionResponse = await supabase.rpc(
+      'get_player_building_constructions',
+      params: {
+        'p_building_kind': 'warehouse',
+        'p_status': 'in_progress',
+      },
+    );
 
-    if (constructionResponse != null && (constructionResponse as List).isNotEmpty) {
-      final typesResponse = await supabase.from('warehouse_types').select();
-      final citiesResponse = await supabase.from('cities').select();
+    if (constructionResponse.isNotEmpty) {
+      final typesResponse = await supabase.rpc('get_warehouse_types_catalog');
+      final citiesResponse = await supabase.rpc('get_cities_catalog');
 
-      for (var constr in (constructionResponse as List)) {
+      for (var constr in constructionResponse) {
         final params = constr['params'] as Map<String, dynamic>;
         final typeId = params['warehouse_type_id'] as String?;
         final cityId = params['city_id'] as String?;
 
-        final type = (typesResponse as List).firstWhere((t) => t['id'] == typeId, orElse: () => {'name': 'Depo', 'icon': 'warehouse.webp'});
-        final city = (citiesResponse as List).firstWhere((c) => c['id'] == cityId, orElse: () => {'name': 'Bilinmeyen'});
+        final type = (typesResponse as List).firstWhere(
+          (t) => t['id'] == typeId,
+          orElse: () => {'name': 'Depo', 'icon': 'warehouse.webp'},
+        );
+        final city = (citiesResponse as List).firstWhere(
+          (c) => c['id'] == cityId,
+          orElse: () => {'name': 'Bilinmeyen'},
+        );
 
-        allWarehouses.add(WarehouseModel(
-          id: constr['id'],
-          playerId: user.id,
-          warehouseTypeId: typeId ?? '',
-          typeIcon: type['icon'],
-          cityId: cityId ?? '',
-          cityName: city['name'] ?? 'Bilinmeyen',
-          name: params['name'] ?? type['name'],
-          level: 1,
-          capacity: (params['base_capacity'] ?? 0).toDouble(),
-          reservedCapacity: 0,
-          isActive: false,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          isUnderConstruction: true,
-          finishAt: DateTime.parse(constr['finish_at']),
-        ));
+        allWarehouses.add(
+          WarehouseModel(
+            id: constr['id'],
+            playerId: user.id,
+            warehouseTypeId: typeId ?? '',
+            typeIcon: type['icon'],
+            cityId: cityId ?? '',
+            cityName: city['name'] ?? 'Bilinmeyen',
+            name: params['name'] ?? type['name'],
+            level: 1,
+            capacity: (params['base_capacity'] ?? 0).toDouble(),
+            reservedCapacity: 0,
+            isActive: false,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            isUnderConstruction: true,
+            finishAt: DateTime.parse(constr['finish_at']),
+          ),
+        );
       }
     }
 
     return allWarehouses;
   } catch (e) {
-    print('WarehouseListProvider Error: $e');
-    return [];
+    throw Exception('Depo listesi alinamadi: $e');
   }
 });
 
-// Depo Detay Provider
-final warehouseDetailProvider = FutureProvider.family<WarehouseModel, String>((ref, warehouseId) async {
-  final supabase = Supabase.instance.client;
-  final user = supabase.auth.currentUser;
+final warehouseDetailProvider =
+    FutureProvider.family<WarehouseModel, String>((ref, warehouseId) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
 
-  if (user == null) throw Exception('Oturum açılmamış.');
+      if (user == null) throw Exception('Oturum acilmamis.');
 
-  final response = await supabase
-      .from('warehouses')
-      .select('*, warehouse_slots(*, product:products(*)), city:cities(name), warehouse_type:warehouse_types(*)')
-      .eq('id', warehouseId)
-      .single();
+      final response = await supabase.rpc(
+        'get_player_warehouse_detail',
+        params: {'p_warehouse_id': warehouseId},
+      );
 
-  return WarehouseModel.fromJson(response);
-});
+      if (response == null) {
+        throw Exception('Depo bulunamadi.');
+      }
 
-// Depo Tip Detay Provider
-final warehouseTypeDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, typeId) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase.from('warehouse_types').select().eq('id', typeId).single();
-  return response;
-});
+      return WarehouseModel.fromJson(response as Map<String, dynamic>);
+    });
 
-// Tüm Ürünler Provider
+final warehouseTypeDetailProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, typeId) async {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.rpc(
+        'get_warehouse_type_detail',
+        params: {'p_type_id': typeId},
+      );
+      return Map<String, dynamic>.from(response as Map);
+    });
+
 final allProductsProvider = FutureProvider<List<ProductModel>>((ref) async {
   final supabase = Supabase.instance.client;
-  final response = await supabase.from('products').select().order('urun_adi');
+  final response = await supabase.rpc('get_all_products_catalog');
   return (response as List).map((json) => ProductModel.fromJson(json)).toList();
 });
 
-// Depo Tipleri Provider
 final warehouseTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   final supabase = Supabase.instance.client;
-  return await supabase
-      .from('warehouse_types')
-      .select()
-      .order('required_level', ascending: true)
-      .order('cost', ascending: true);
+  return await supabase.rpc('get_warehouse_types_catalog');
 });
 
-// Depo Aksiyonları
 class WarehouseActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
 
@@ -120,7 +122,7 @@ class WarehouseActionNotifier {
     required double cost,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -146,7 +148,7 @@ class WarehouseActionNotifier {
     required String name,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -165,9 +167,11 @@ class WarehouseActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> finishConstructionWithGold(String constructionId) async {
+  Future<Map<String, dynamic>> finishConstructionWithGold(
+    String constructionId,
+  ) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -185,7 +189,7 @@ class WarehouseActionNotifier {
 
   Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum açılmamış.'};
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -196,6 +200,122 @@ class WarehouseActionNotifier {
         },
       );
       return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> updateWarehouseSlotPrice({
+    required String warehouseSlotId,
+    required double price,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    if (price <= 0) {
+      return {'success': false, 'message': 'Satis fiyati 0 buyuk olmali.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_warehouse_slot_price',
+        params: {
+          'p_player_id': user.id,
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_price': price,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> setWarehouseSlotSaleStatus({
+    required String warehouseSlotId,
+    required bool isAvailableForSale,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'set_warehouse_slot_sale_status',
+        params: {
+          'p_player_id': user.id,
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_is_available_for_sale': isAvailableForSale,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPlayerActiveWarehousesBasic() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      throw Exception('Oturum acilmamis.');
+    }
+
+    final response = await _supabase.rpc('get_player_active_warehouses_basic');
+    return (response as List<dynamic>)
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  Future<List<MarketTransferVehicleOptionModel>>
+      getWarehouseToWarehouseVehicleOptions({
+    required String warehouseSlotId,
+    required String buyerWarehouseId,
+    required int quantity,
+  }) async {
+    final response = await _supabase.rpc(
+      'get_warehouse_to_warehouse_vehicle_options',
+      params: {
+        'p_warehouse_slot_id': warehouseSlotId,
+        'p_buyer_warehouse_id': buyerWarehouseId,
+        'p_quantity': quantity,
+      },
+    );
+
+    return (response as List<dynamic>)
+        .map(
+          (json) => MarketTransferVehicleOptionModel.fromJson(
+            json as Map<String, dynamic>,
+          ),
+        )
+        .where(
+          (option) =>
+              option.disabledReason !=
+              'Aracin rotasi bu sehir ciftini desteklemiyor.',
+        )
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> startWarehouseToWarehouseTransfer({
+    required String warehouseSlotId,
+    required String buyerWarehouseId,
+    required int quantity,
+    String? vehicleId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_warehouse_to_warehouse_transfer',
+        params: {
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_buyer_warehouse_id': buyerWarehouseId,
+          'p_quantity': quantity,
+          'p_vehicle_id': vehicleId,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

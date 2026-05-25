@@ -35,7 +35,9 @@ class _FieldTypeSelectionScreenState
       body: SafeArea(
         child: Column(
           children: [
-            SecondaryTopBar(title: '${widget.selectedCity.name} - Tarla Türü'),
+            SecondaryTopBar(
+              title: '${widget.selectedCity.name} - Ciftlik Turu',
+            ),
             Expanded(
               child: playerAsync.when(
                 data: (player) => typesAsync.when(
@@ -44,11 +46,21 @@ class _FieldTypeSelectionScreenState
                     (player?.cash ?? 0).toDouble(),
                     player?.level ?? 1,
                   ),
-                  loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
-                  error: (error, stack) => Center(child: Text('Hata: $error', style: TextStyle(color: AppColors.red))),
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(color: AppColors.gold),
+                  ),
+                  error: (error, stack) => Center(
+                    child: Text(
+                      'Hata: $error',
+                      style: const TextStyle(color: AppColors.red),
+                    ),
+                  ),
                 ),
-                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
-                error: (error, stack) => const Center(child: Text('Oyuncu bilgisi alınamadı.')),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppColors.gold),
+                ),
+                error: (error, stack) =>
+                    const Center(child: Text('Oyuncu bilgisi alinamadi.')),
               ),
             ),
             _buildActionPanel(),
@@ -77,10 +89,14 @@ class _FieldTypeSelectionScreenState
             margin: EdgeInsets.only(bottom: 12.h),
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.gold.withValues(alpha: 0.1) : AppColors.cardBg,
+              color: isSelected
+                  ? AppColors.gold.withValues(alpha: 0.1)
+                  : AppColors.cardBg,
               borderRadius: BorderRadius.circular(16.r),
               border: Border.all(
-                color: isSelected ? AppColors.gold : AppColors.border.withValues(alpha: isLocked ? 0.2 : 0.5),
+                color: isSelected
+                    ? AppColors.gold
+                    : AppColors.border.withValues(alpha: isLocked ? 0.2 : 0.5),
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -98,16 +114,30 @@ class _FieldTypeSelectionScreenState
                         decoration: BoxDecoration(
                           color: AppColors.cardBgLight,
                           borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(color: isSelected ? AppColors.gold : AppColors.border),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.gold
+                                : AppColors.border,
+                          ),
                         ),
-                        child: CachedAssetImage(fileName: type['icon'] ?? 'field.webp', fit: BoxFit.contain),
+                        child: CachedAssetImage(
+                          fileName: type['icon'] ?? 'field.webp',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                       if (isLocked)
                         Container(
                           width: 65.w,
                           height: 65.w,
-                          decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(12.r)),
-                          child: Icon(Icons.lock, color: AppColors.gold, size: 24.sp),
+                          decoration: BoxDecoration(
+                            color: Colors.black45,
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(
+                            Icons.lock,
+                            color: AppColors.gold,
+                            size: 24.sp,
+                          ),
                         ),
                     ],
                   ),
@@ -117,23 +147,46 @@ class _FieldTypeSelectionScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          type['name'] ?? 'Bilinmeyen Tarla',
-                          style: TextStyle(color: isSelected ? AppColors.gold : Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold),
+                          type['name'] ?? 'Bilinmeyen Ciftlik',
+                          style: TextStyle(
+                            color: isSelected ? AppColors.gold : Colors.white,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         SizedBox(height: 4.h),
                         Row(
                           children: [
-                            _buildDetailChip(Icons.monetization_on, _formatMoney((type['cost'] ?? 0).toDouble()), cashLocked ? AppColors.red : AppColors.gold),
+                            _buildDetailChip(
+                              Icons.monetization_on,
+                              _formatMoney((type['cost'] ?? 0).toDouble()),
+                              cashLocked ? AppColors.red : AppColors.gold,
+                            ),
                             SizedBox(width: 8.w),
-                            _buildDetailChip(Icons.layers, '${type['slot_capacity'] ?? 0} Slot', AppColors.blue),
+                            _buildDetailChip(
+                              Icons.layers,
+                              '${type['max_slot_count'] ?? 5} Slot',
+                              AppColors.blue,
+                            ),
                             SizedBox(width: 8.w),
-                            _buildDetailChip(Icons.stars, 'Lv. ${type['required_level'] ?? 1}', levelLocked ? AppColors.red : Colors.blueAccent),
+                            _buildDetailChip(
+                              Icons.stars,
+                              'Lv. ${type['required_level'] ?? 1}',
+                              levelLocked
+                                  ? AppColors.red
+                                  : Colors.blueAccent,
+                            ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  if (isSelected) Icon(Icons.check_circle, color: AppColors.gold, size: 24.sp),
+                  if (isSelected)
+                    Icon(
+                      Icons.check_circle,
+                      color: AppColors.gold,
+                      size: 24.sp,
+                    ),
                 ],
               ),
             ),
@@ -149,7 +202,10 @@ class _FieldTypeSelectionScreenState
       children: [
         Icon(icon, color: color, size: 10.sp),
         SizedBox(width: 4.w),
-        Text(label, style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp)),
+        Text(
+          label,
+          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+        ),
       ],
     );
   }
@@ -161,14 +217,20 @@ class _FieldTypeSelectionScreenState
         color: AppColors.cardBg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-        boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 20, offset: const Offset(0, -5))],
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 20,
+            offset: Offset(0, -5),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (_selectedType != null) ...[
             Text(
-              '${widget.selectedCity.name} şehrinde ${_selectedType!['name']} inşa edilecek.',
+              '${widget.selectedCity.name} sehrinde ${_selectedType!['name']} insa edilecek.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
               textAlign: TextAlign.center,
             ),
@@ -178,15 +240,35 @@ class _FieldTypeSelectionScreenState
             width: double.infinity,
             height: 55.h,
             child: ElevatedButton(
-              onPressed: (_selectedType != null && !_isProcessing) ? _handleEstablish : null,
+              onPressed: (_selectedType != null && !_isProcessing)
+                  ? _handleEstablish
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
                 disabledBackgroundColor: AppColors.gold.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
               ),
               child: _isProcessing
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                  : Text('TARLAYI İNŞA ET', style: TextStyle(color: _selectedType != null ? Colors.black : Colors.white30, fontSize: 14.sp, fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.black,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'CIFTLIGI INSA ET',
+                      style: TextStyle(
+                        color: _selectedType != null
+                            ? Colors.black
+                            : Colors.white30,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -211,11 +293,23 @@ class _FieldTypeSelectionScreenState
       );
       if (result['success'] == true) {
         if (mounted) {
-          AppSnackbar.show(context, title: 'Başarılı', message: 'Tarla inşaatı başladı!', type: SnackbarType.success);
+          AppSnackbar.show(
+            context,
+            title: 'Basarili',
+            message: 'Ciftlik insaati basladi!',
+            type: SnackbarType.success,
+          );
           context.go('/fields');
         }
       } else {
-        if (mounted) AppSnackbar.show(context, title: 'Hata', message: result['message'] ?? 'Hata oluştu.', type: SnackbarType.error);
+        if (mounted) {
+          AppSnackbar.show(
+            context,
+            title: 'Hata',
+            message: result['message'] ?? 'Islem basarisiz.',
+            type: SnackbarType.error,
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);

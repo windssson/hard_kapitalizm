@@ -1,100 +1,196 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_type_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
+import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_performance_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_type_model.dart';
 
-final logisticsCompanyTypesProvider = FutureProvider.autoDispose<List<LogisticsCompanyTypeModel>>((ref) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase
-      .from('logistics_company_types')
-      .select()
-      .order('required_level', ascending: true)
-      .order('cost', ascending: true);
+const logisticsFuelProductId = 'YAKIT';
 
-  return (response as List)
-      .map((json) => LogisticsCompanyTypeModel.fromJson(json))
-      .toList();
+final logisticsCompanyTypesProvider =
+    FutureProvider.autoDispose<List<LogisticsCompanyTypeModel>>((ref) async {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.rpc('get_logistics_company_types_catalog');
+
+      return (response as List)
+          .map((json) => LogisticsCompanyTypeModel.fromJson(json))
+          .toList();
+    });
+
+final logisticsVehicleTypesProvider =
+    FutureProvider.autoDispose<List<LogisticsVehicleTypeModel>>((ref) async {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.rpc('get_logistics_vehicle_types_catalog');
+
+      return (response as List)
+          .map((json) => LogisticsVehicleTypeModel.fromJson(json))
+          .toList();
+    });
+
+final activeCitiesProvider = FutureProvider.autoDispose<List<CityModel>>((ref) async {
+  final supabase = Supabase.instance.client;
+  final response = await supabase.rpc('get_active_cities');
+
+  return (response as List).map((json) => CityModel.fromJson(json)).toList();
 });
 
-final logisticsVehicleTypesProvider = FutureProvider.autoDispose<List<LogisticsVehicleTypeModel>>((ref) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase
-      .from('logistics_vehicle_types')
-      .select()
-      .order('purchase_price', ascending: true);
+final playerLogisticsCompanyProvider =
+    FutureProvider.autoDispose<LogisticsCompanyModel?>((ref) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
 
-  return (response as List)
-      .map((json) => LogisticsVehicleTypeModel.fromJson(json))
-      .toList();
-});
+      if (user == null) return null;
 
-final playerLogisticsCompanyProvider = FutureProvider.autoDispose<LogisticsCompanyModel?>((ref) async {
-  final supabase = Supabase.instance.client;
-  final user = supabase.auth.currentUser;
+      final response = await supabase.rpc('get_player_logistics_company');
+      if (response == null) return null;
 
-  if (user == null) return null;
+      return LogisticsCompanyModel.fromJson(response as Map<String, dynamic>);
+    });
 
-  final response = await supabase
-      .from('logistics_companies')
-      .select()
-      .eq('player_id', user.id)
-      .order('created_at')
-      .limit(1);
+final playerLogisticsConstructionProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
 
-  final rows = response as List<dynamic>;
-  if (rows.isEmpty) return null;
+      if (user == null) return null;
 
-  return LogisticsCompanyModel.fromJson(rows.first as Map<String, dynamic>);
-});
+      final response = await supabase.rpc(
+        'get_player_building_constructions',
+        params: {
+          'p_building_kind': 'logistics_company',
+          'p_status': 'in_progress',
+        },
+      );
 
-final playerLogisticsConstructionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
-  final supabase = Supabase.instance.client;
-  final user = supabase.auth.currentUser;
+      final rows = response as List<dynamic>;
+      if (rows.isEmpty) return null;
 
-  if (user == null) return null;
+      return rows.first as Map<String, dynamic>;
+    });
 
-  final response = await supabase
-      .from('building_constructions')
-      .select()
-      .eq('player_id', user.id)
-      .eq('building_kind', 'logistics_company')
-      .eq('status', 'in_progress')
-      .order('started_at')
-      .limit(1);
+final logisticsVehicleListStreamProvider =
+    StreamProvider.autoDispose<List<LogisticsVehicleModel>>((ref) {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
 
-  final rows = response as List<dynamic>;
-  if (rows.isEmpty) return null;
+      if (user == null) return const Stream.empty();
 
-  return rows.first as Map<String, dynamic>;
-});
+      return supabase
+          .from('logistics_vehicles')
+          .stream(primaryKey: ['id'])
+          .eq('player_id', user.id)
+          .map((event) {
+            final vehicles = event
+                .map((e) => LogisticsVehicleModel.fromJson(e))
+                .toList();
+            vehicles.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+            return vehicles;
+          });
+    });
 
-final logisticsCompanyListStreamProvider = StreamProvider.autoDispose<List<LogisticsCompanyModel>>((ref) {
-  final supabase = Supabase.instance.client;
-  final user = supabase.auth.currentUser;
-  
-  if (user == null) return const Stream.empty();
+final logisticsVehiclePerformanceProvider =
+    FutureProvider.autoDispose<Map<String, LogisticsVehiclePerformanceModel>>((ref) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
 
-  return supabase
-      .from('logistics_companies')
-      .stream(primaryKey: ['id'])
-      .eq('player_id', user.id)
-      .map((event) => event.map((e) => LogisticsCompanyModel.fromJson(e)).toList());
-});
+      if (user == null) return const {};
 
-final logisticsVehicleListStreamProvider = StreamProvider.autoDispose<List<LogisticsVehicleModel>>((ref) {
-  final supabase = Supabase.instance.client;
-  final user = supabase.auth.currentUser;
-  
-  if (user == null) return const Stream.empty();
+      final response = await supabase.rpc(
+        'get_player_logistics_vehicle_performance',
+      );
 
-  return supabase
-      .from('logistics_vehicles')
-      .stream(primaryKey: ['id'])
-      .eq('player_id', user.id)
-      .map((event) => event.map((e) => LogisticsVehicleModel.fromJson(e)).toList());
-});
+      final rows = (response as List<dynamic>)
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
+
+      final stats = <String, LogisticsVehiclePerformanceModel>{};
+
+      for (final row in rows) {
+        final vehicleId = row['vehicle_id']?.toString();
+        if (vehicleId == null || vehicleId.isEmpty) continue;
+
+        stats[vehicleId] = LogisticsVehiclePerformanceModel(
+          vehicleId: vehicleId,
+          totalTrips: (row['total_trips'] as num?)?.toInt() ?? 0,
+          completedTrips: (row['completed_trips'] as num?)?.toInt() ?? 0,
+          activeTrips: (row['active_trips'] as num?)?.toInt() ?? 0,
+          rentalTrips: (row['rental_trips'] as num?)?.toInt() ?? 0,
+          rentalRevenue: (row['rental_revenue'] as num?)?.toDouble() ?? 0.0,
+          lastActivityAt: DateTime.tryParse(
+            row['last_activity_at']?.toString() ?? '',
+          ),
+        );
+      }
+
+      return stats;
+    });
+
+final playerLogisticsFuelWarehouseSourcesProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) return const [];
+
+      final response = await supabase.rpc(
+        'get_player_active_warehouses_with_slots',
+      );
+
+      final warehouses = (response as List<dynamic>)
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
+
+      final sources = <Map<String, dynamic>>[];
+
+      for (final warehouse in warehouses) {
+        final warehouseId = warehouse['id']?.toString() ?? '';
+        final warehouseName = warehouse['name']?.toString() ?? 'Depo';
+        final city = warehouse['city'] as Map<String, dynamic>?;
+        final cityName = city?['name']?.toString() ?? 'Bilinmeyen Sehir';
+        final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
+
+        for (final rawSlot in slots) {
+          final slot = Map<String, dynamic>.from(rawSlot as Map);
+          if ((slot['product_id']?.toString() ?? '') != logisticsFuelProductId) {
+            continue;
+          }
+          final quantity = (slot['quantity'] as num?)?.toInt() ?? 0;
+          if (quantity <= 0) continue;
+
+          sources.add({
+            'warehouse_id': warehouseId,
+            'warehouse_name': warehouseName,
+            'city_name': cityName,
+            'slot_id': slot['id']?.toString() ?? '',
+            'quantity': quantity,
+            'quality_level': (slot['quality_level'] as num?)?.toInt() ?? 0,
+            'cost': (slot['cost'] as num?)?.toDouble() ?? 0.0,
+          });
+        }
+      }
+
+      return sources;
+    });
+
+final logisticsFuelMarketListingsProvider =
+    FutureProvider.autoDispose<List<MarketListingModel>>((ref) async {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.rpc(
+        'get_market_listings_for_product',
+        params: {'p_product_id': logisticsFuelProductId},
+      );
+
+      return (response as List<dynamic>)
+          .map(
+            (json) => MarketListingModel.fromJson(
+              json as Map<String, dynamic>,
+            ),
+          )
+          .toList();
+    });
 
 class LogisticsActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -145,7 +241,9 @@ class LogisticsActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> finishConstructionWithGold(String constructionId) async {
+  Future<Map<String, dynamic>> finishConstructionWithGold(
+    String constructionId,
+  ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -186,6 +284,186 @@ class LogisticsActionNotifier {
       );
 
       return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> setVehicleRental({
+    required String vehicleId,
+    required bool isAvailableForRent,
+    required double rentalPrice,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_logistics_vehicle_rental',
+        params: {
+          'p_player_id': user.id,
+          'p_vehicle_id': vehicleId,
+          'p_is_available_for_rent': isAvailableForRent,
+          'p_rental_price': rentalPrice,
+        },
+      );
+
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> refuelVehicle(String vehicleId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'refuel_logistics_vehicle',
+        params: {
+          'p_player_id': user.id,
+          'p_vehicle_id': vehicleId,
+        },
+      );
+
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> repairVehicle(String vehicleId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'repair_logistics_vehicle',
+        params: {
+          'p_player_id': user.id,
+          'p_vehicle_id': vehicleId,
+        },
+      );
+
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> transferWarehouseFuelToCompany({
+    required String logisticsCompanyId,
+    required String warehouseSlotId,
+    required int quantity,
+  }) async {
+    try {
+      final response = await _supabase.rpc(
+        'transfer_warehouse_fuel_to_logistics_company',
+        params: {
+          'p_logistics_company_id': logisticsCompanyId,
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_quantity': quantity,
+        },
+      );
+
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> buyMarketFuelForCompany({
+    required String logisticsCompanyId,
+    required String sellerSlotId,
+    required int quantity,
+  }) async {
+    try {
+      final response = await _supabase.rpc(
+        'buy_market_fuel_for_logistics_company',
+        params: {
+          'p_logistics_company_id': logisticsCompanyId,
+          'p_seller_slot_id': sellerSlotId,
+          'p_quantity': quantity,
+        },
+      );
+
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> setVehicleActive({
+    required String vehicleId,
+    required bool isActive,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_logistics_vehicle_active',
+        params: {
+          'p_player_id': user.id,
+          'p_vehicle_id': vehicleId,
+          'p_is_active': isActive,
+        },
+      );
+
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> setVehicleRoute({
+    required String vehicleId,
+    required String cityAId,
+    required String cityBId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    if (cityAId == cityBId) {
+      return {
+        'success': false,
+        'message': 'Bir arac icin iki farkli sehir secmelisiniz.',
+      };
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_logistics_vehicle_route',
+        params: {
+          'p_player_id': user.id,
+          'p_vehicle_id': vehicleId,
+          'p_route_city_a_id': cityAId,
+          'p_route_city_b_id': cityBId,
+        },
+      );
+      final result = Map<String, dynamic>.from(response as Map);
+
+      return {
+        'success': true,
+        'message': result['message'] ?? 'Arac rotasi guncellendi.',
+      };
+    } on PostgrestException catch (e) {
+      final message =
+          e.message.toLowerCase().contains('set_logistics_vehicle_route')
+              ? 'Rota guncelleme islemi su anda tamamlanamadi.'
+              : e.message;
+      return {'success': false, 'message': message};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

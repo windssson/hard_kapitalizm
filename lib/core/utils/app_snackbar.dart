@@ -34,7 +34,6 @@ class AppSnackbar {
         icon = Icons.warning_amber_rounded;
         break;
       case SnackbarType.info:
-      default:
         mainColor = AppColors.gold;
         icon = Icons.info_outline;
         break;
@@ -50,19 +49,26 @@ class AppSnackbar {
         content: Container(
           margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A).withValues(alpha: 0.95),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.cardBg.withValues(alpha: 0.95),
+                AppColors.cardBgLight.withValues(alpha: 0.85),
+              ],
+            ),
             borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: mainColor.withValues(alpha: 0.5), width: 1.5),
+            border: Border.all(color: mainColor.withValues(alpha: 0.4), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
               ),
               BoxShadow(
-                color: mainColor.withValues(alpha: 0.1),
+                color: mainColor.withValues(alpha: 0.15),
                 blurRadius: 20,
-                spreadRadius: -5,
+                spreadRadius: 2,
               ),
             ],
           ),

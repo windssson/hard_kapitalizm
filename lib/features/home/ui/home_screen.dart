@@ -17,7 +17,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  int _selectedIndex = 0;
+  final int _selectedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +53,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     context.go('/home');
                     break;
                   case 2:
-                    context.go('/store');
+                    context.go('/transfer-map');
                     break;
                   case 4:
                     context.go('/profile');
@@ -370,10 +370,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         context.go('/warehouses');
         return;
       case 'Tarlalar':
-        context.go('/fields');
+        context.go('/farms');
         return;
       case 'Ciftlikler':
-        context.go('/farms');
+        context.go('/fields');
         return;
       case 'Fabrikalar':
         context.go('/factories');
@@ -396,6 +396,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (!mounted) return;
 
         context.go(construction != null ? '/logistics' : '/logistics/setup');
+        return;
+      case 'AR-GE':
+        context.go('/arge');
         return;
     }
   }

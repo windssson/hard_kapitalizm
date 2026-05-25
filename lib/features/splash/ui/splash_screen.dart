@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -14,7 +16,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   int _totalFiles = 0;
   int _currentFile = 0;
-  String _currentFileName = '';
+
   String? _error;
 
   @override
@@ -28,6 +30,32 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       final authManager = ref.read(authManagerProvider);
       await authManager.signInAnonymouslyIfNeeded();
 
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        try {
+          await Supabase.instance.client.rpc(
+            'complete_due_building_upgrades',
+            params: {
+              'p_limit': 100,
+            },
+          );
+        } catch (_) {
+          // Gecikmis yukseltmeler basarisiz olsa bile giris akisini bloklamiyoruz.
+        }
+
+        try {
+          await Supabase.instance.client.rpc(
+            'complete_due_market_transfers',
+            params: {
+              'p_buyer_player_id': user.id,
+              'p_limit': 100,
+            },
+          );
+        } catch (_) {
+          // Gecikmis transfer tamamlama basarisiz olsa bile giris akisini bloklamiyoruz.
+        }
+      }
+
       final assetManager = ref.read(assetManagerProvider);
       
       await assetManager.prefetchAssets((current, total, fileName) {
@@ -35,7 +63,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           setState(() {
             _currentFile = current;
             _totalFiles = total;
-            _currentFileName = fileName;
           });
         }
       });
@@ -47,7 +74,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           if (_totalFiles == 0) {
             _totalFiles = 1;
             _currentFile = 1;
-            _currentFileName = 'Tamamlandı';
           } else {
             _currentFile = _totalFiles;
           }
@@ -72,67 +98,146 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.factory_rounded, size: 80, color: Colors.blueGrey),
-              const SizedBox(height: 32),
-              const Text(
-                'Hard Kapitalizm\nYükleniyor...',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 1200),
+          curve: Curves.easeOutExpo,
+          tween: Tween<double>(begin: 0, end: 1),
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value.clamp(0.0, 1.0),
+              child: Transform.scale(
+                scale: 0.95 + (0.05 * value),
+                child: child,
               ),
-              const SizedBox(height: 48),
-              if (_error != null) ...[
-                const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                const SizedBox(height: 16),
-                Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.red),
+            );
+          },
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40.w),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Glowing Logo
+                Container(
+                  padding: EdgeInsets.all(24.w),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.cardBg,
+                        AppColors.cardBgLight,
+                      ],
+                    ),
+                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.5), width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Icon(Icons.monetization_on_rounded, size: 72.sp, color: AppColors.gold),
                 ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _error = null;
-                    });
-                    _startDownload();
-                  },
-                  child: const Text('Tekrar Dene'),
-                )
-              ] else ...[
+                SizedBox(height: 40.h),
+                // Title
                 Text(
-                  '%${(progress * 100).toInt()}',
+                  'HARD',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    fontSize: 36.sp,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 8,
                   ),
                 ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                const SizedBox(height: 16),
                 Text(
-                  progress == 1.0
-                      ? 'Tamamlandı'
-                      : (_totalFiles > 0
-                          ? 'Kaynaklar indiriliyor...'
-                          : 'Sunucu bağlantısı kuruluyor...'),
-                  textAlign: TextAlign.center,
+                  'KAPITALIZM',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    fontSize: 14,
+                    color: AppColors.gold,
+                    fontSize: 32.sp,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 4,
                   ),
                 ),
+                SizedBox(height: 60.h),
+                
+                if (_error != null) ...[
+                  Icon(Icons.error_outline, color: AppColors.red, size: 40.sp),
+                  SizedBox(height: 16.h),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.red, fontSize: 14.sp),
+                  ),
+                  SizedBox(height: 24.h),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.gold,
+                      foregroundColor: Colors.black,
+                      padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 12.h),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                    ),
+                    onPressed: () {
+                      setState(() => _error = null);
+                      _startDownload();
+                    },
+                    child: Text('Tekrar Dene', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                  )
+                ] else ...[
+                  // Progress Info
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        progress == 1.0 ? 'Hazir!' : 'Sunucuya baglaniliyor...',
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                      ),
+                      Text(
+                        '%${(progress * 100).toInt()}',
+                        style: TextStyle(color: AppColors.gold, fontSize: 14.sp, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12.h),
+                  // Custom Progress Bar
+                  Container(
+                    height: 8.h,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(4.r),
+                      border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return Stack(
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOut,
+                              width: constraints.maxWidth * progress,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [AppColors.goldDark, AppColors.goldLight],
+                                ),
+                                borderRadius: BorderRadius.circular(4.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.gold.withValues(alpha: 0.5),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

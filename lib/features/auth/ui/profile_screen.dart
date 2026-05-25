@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
-import 'package:hard_kapitalizm/core/widgets/app_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -29,7 +28,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         context.go('/home');
         break;
       case 2:
-        context.go('/store');
+        context.go('/transfer-map');
         break;
       case 4:
         context.go('/profile');
@@ -104,10 +103,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   return GestureDetector(
                     onTap: () async {
                       Navigator.pop(context);
-                      await Supabase.instance.client
-                          .from('players')
-                          .update({'avatar_id': avatar})
-                          .eq('id', player.id);
+                      await Supabase.instance.client.rpc(
+                        'set_player_avatar',
+                        params: {'p_avatar_id': avatar},
+                      );
                     },
                     child: Container(
                       decoration: BoxDecoration(

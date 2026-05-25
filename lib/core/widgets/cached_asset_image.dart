@@ -36,6 +36,19 @@ class _CachedAssetImageState extends ConsumerState<CachedAssetImage> {
     _loadImage();
   }
 
+  @override
+  void didUpdateWidget(covariant CachedAssetImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.fileName != widget.fileName) {
+      setState(() {
+        _imageFile = null;
+        _error = null;
+        _isLoading = true;
+      });
+      _loadImage();
+    }
+  }
+
   Future<void> _loadImage() async {
     try {
       final manager = ref.read(assetManagerProvider);

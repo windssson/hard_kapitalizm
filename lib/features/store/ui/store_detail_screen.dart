@@ -2,29 +2,103 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
+import 'package:hard_kapitalizm/features/store/ui/widgets/store_detail_header.dart';
+import 'package:hard_kapitalizm/features/store/ui/widgets/store_quick_actions.dart';
 
-class StoreDetailScreen extends ConsumerWidget {
+class StoreDetailScreen extends ConsumerStatefulWidget {
   final String storeId;
 
   const StoreDetailScreen({super.key, required this.storeId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final storeAsync = ref.watch(storeDetailProvider(storeId));
-    final playerAsync = ref.watch(playerStreamProvider);
+  ConsumerState<StoreDetailScreen> createState() => _StoreDetailScreenState();
+}
+
+class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
+  bool _salesCheckDone = false;
+  bool _salesCheckInProgress = false;
+  String? _lastShownSalesResultKey;
+  static const Map<int, int> _storeBoostStarCosts = {
+    6: 3,
+    12: 6,
+    24: 12,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshOnEntry();
+  }
+
+  void _refreshOnEntry() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      _resetSalesCheckState();
+      await ref.read(storeActionProvider).completeDueBuildingUpgrades();
+      if (!mounted) return;
+      _refreshStoreDetail();
+    });
+  }
+
+  void _resetSalesCheckState() {
+    _salesCheckDone = false;
+    _salesCheckInProgress = false;
+    _lastShownSalesResultKey = null;
+  }
+
+  void _refreshStoreDetail() {
+    ref.invalidate(storeDetailProvider(widget.storeId));
+    ref.invalidate(activeStoreBoostProvider(widget.storeId));
+    ref.invalidate(activeStoreUpgradeProvider(widget.storeId));
+    ref.read(storeDetailProvider(widget.storeId).future);
+    ref.read(activeStoreBoostProvider(widget.storeId).future);
+    ref.read(activeStoreUpgradeProvider(widget.storeId).future);
+  }
+
+  void _onNavSelected(int index) {
+    if (index == 1) return;
+    switch (index) {
+      case 0:
+        context.go('/home');
+        break;
+      case 2:
+        context.go('/transfer-map');
+        break;
+      case 4:
+        context.go('/profile');
+        break;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final storeAsync = ref.watch(storeDetailProvider(widget.storeId));
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: AppBottomNav(
+        selectedIndex: 1,
+        onItemSelected: _onNavSelected,
+      ),
       body: SafeArea(
         child: storeAsync.when(
-          data: (store) =>
-              _buildMainContent(context, ref, store, playerAsync.value),
+          data: (store) {
+            _scheduleStoreSalesCheck(store);
+            return _buildMainContent(context, ref, store);
+          },
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.gold),
           ),
@@ -34,207 +108,261 @@ class StoreDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMainContent(
+  void _scheduleStoreSalesCheck(StoreModel store) {
+    if (_salesCheckDone || _salesCheckInProgress) return;
+
+    _salesCheckInProgress = true;
+    _salesCheckDone = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
+      final result = await ref
+          .read(storeActionProvider)
+          .processStoreSalesOnEntry(store.id);
+
+      if (!mounted) return;
+
+      _salesCheckInProgress = false;
+
+      if (result.success != true) {
+        _salesCheckDone = false;
+        if ((result.message ?? '').trim().isNotEmpty) {
+          AppSnackbar.show(
+            context,
+            title: 'Satis Hesaplanamadi',
+            message: result.message!,
+            type: SnackbarType.error,
+          );
+        }
+        return;
+      }
+
+      if (result.processed || result.completedBoostCount > 0) {
+        ref.invalidate(storeDetailProvider(store.id));
+        ref.invalidate(activeStoreBoostProvider(store.id));
+      }
+
+      if (result.processed) {
+        ref.invalidate(storesListProvider);
+        ref.invalidate(storeHistoryProvider(store.id));
+        ref.invalidate(storePerformanceProvider(store.id));
+        ref.invalidate(playerStreamProvider);
+      }
+
+      if (!result.processed || !result.hasVisibleSales) {
+        return;
+      }
+
+      final resultKey =
+          '${store.id}_${result.processedAt?.toIso8601String() ?? 'no_time'}_${result.totalSoldQuantity}_${result.totalRevenue}';
+      if (_lastShownSalesResultKey == resultKey) {
+        return;
+      }
+      _lastShownSalesResultKey = resultKey;
+
+      await _showStoreSalesSummaryDialog(context, result);
+    });
+  }
+
+  Future<void> _showStoreSalesSummaryDialog(
     BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-    dynamic player,
+    StoreSaleResultModel result,
   ) {
-    return Column(
-      children: [
-        SecondaryTopBar(title: 'Mağaza Yönetimi'),
-        Expanded(
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.background,
+        title: Text(
+          'Satis Ozeti',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: 420.h, maxWidth: 340.w),
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 8.w),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildSalesSummaryRow(
+                  'Gecen Sure',
+                  _formatElapsedSalesDuration(result.elapsedMinutes),
+                ),
+                _buildSalesSummaryRow(
+                  'Satilan Adet',
+                  result.totalSoldQuantity.toString(),
+                ),
+                _buildSalesSummaryRow(
+                  'Toplam Ciro',
+                  result.totalRevenue.toStringAsFixed(1),
+                  valueColor: AppColors.green,
+                ),
+                _buildSalesSummaryRow(
+                  'Toplam Kar',
+                  result.totalProfit.toStringAsFixed(1),
+                  valueColor: AppColors.gold,
+                ),
+                SizedBox(height: 14.h),
+                Text(
+                  'Urun Bazli Sonuc',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 SizedBox(height: 10.h),
-                _buildStoreHeader(store),
-                SizedBox(height: 16.h),
-                _buildMainActionButtons(context, ref, store),
-                SizedBox(height: 16.h),
-                _buildSlotList(context, ref, store),
-                SizedBox(height: 24.h),
-                _buildFinancialFooter(store),
-                SizedBox(height: 32.h),
+                ...result.items.map(
+                  (item) => Container(
+                    width: double.infinity,
+                    margin: EdgeInsets.only(bottom: 10.h),
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.textPrimary.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: AppColors.border.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.productName,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 6.h),
+                        Text(
+                          'Slot ${item.slotIndex} | Kalite ${item.qualityLevel}',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          'Satilan: ${item.soldQuantity} | Tutar: ${item.revenue.toStringAsFixed(1)} | Kar: ${item.profit.toStringAsFixed(1)}',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildStoreHeader(StoreModel store) {
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Row(
-            children: [
-              // Mağaza İkonu (Görseldeki gibi hafif taşan ve gölgeli)
-              Container(
-                width: 110.w,
-                height: 110.w,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.gold.withValues(alpha: 0.2),
-                      blurRadius: 15,
-                      spreadRadius: -5,
-                    ),
-                  ],
-                ),
-                child: CachedAssetImage(
-                  fileName: store.storeType.icon,
-                  fit: BoxFit.contain,
-                ),
-              ),
-              SizedBox(width: 16.w),
-              // Bilgiler
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            store.name,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        _buildLevelBadge(store.level),
-                      ],
-                    ),
-                    Text(
-                      'Aktif İşletme',
-                      style: TextStyle(
-                        color: AppColors.green,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    _buildHeaderInfoRow(
-                      'Şehir:',
-                      store.cityName ?? 'Bilinmiyor',
-                    ),
-                    _buildHeaderInfoRow('Mağaza Tipi:', store.storeType.name),
-                    _buildHeaderInfoRow(
-                      'Günlük Kâr:',
-                      '+${_formatValue(store.summary.totalStockSaleValue ?? 0)}',
-                      valueColor: AppColors.green,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Tamam'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryBar(StoreModel store) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.15)),
-      ),
+  Widget _buildSalesSummaryRow(
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 6.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildSummaryItem(
-            Icons.inventory_2,
-            'Stok',
-            '${store.summary.totalQuantity}/${store.summary.totalCapacity}',
-            showProgress: true,
-            progress: store.summary.usedCapacityRatio,
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12.sp,
+            ),
           ),
-          _buildVerticalDivider(),
-          _buildSummaryItem(
-            Icons.pie_chart,
-            'Doluluk',
-            '%${(store.summary.usedCapacityRatio * 100).toInt()}',
-            valueColor: AppColors.gold,
-          ),
-          _buildVerticalDivider(),
-          _buildSummaryItem(
-            Icons.grid_view,
-            'Slot',
-            '${store.slots.length}/${store.maxSlotCount}',
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? AppColors.textPrimary,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMainActionButtons(BuildContext context, WidgetRef ref, StoreModel store) {
-    return Row(
+  String _formatElapsedSalesDuration(int minutes) {
+    if (minutes >= 60) {
+      final hours = minutes ~/ 60;
+      final remainMinutes = minutes % 60;
+      if (remainMinutes == 0) return '${hours}s';
+      return '${hours}s ${remainMinutes}dk';
+    }
+    return '${minutes}dk';
+  }
+
+  Widget _buildMainContent(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+  ) {
+    final activeBoost = ref.watch(activeStoreBoostProvider(store.id)).value;
+    final activeUpgrade = ref.watch(activeStoreUpgradeProvider(store.id)).value;
+
+    return Column(
       children: [
+        SecondaryTopBar(title: 'Magaza Yonetimi'),
         Expanded(
-          child: _buildActionButton(
-            Icons.trending_up,
-            'Yükselt',
-            AppColors.gold,
-            onTap: () {
-              // TODO: Yükseltme mantığı
-            },
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: _buildActionButton(
-            Icons.bar_chart,
-            'Rapor',
-            AppColors.blue,
-            onTap: () {
-              // TODO: Rapor ekranına git
-            },
-          ),
-        ),
-        SizedBox(width: 8.w),
-        Expanded(
-          child: _buildActionButton(
-            Icons.add_box,
-            'Slot Aç',
-            AppColors.gold,
-            onTap: () => _handleOpenSlot(context, ref, store),
-          ),
-        ),
-        SizedBox(width: 8.w),
-        Expanded(
-          child: _buildActionButton(
-            Icons.history,
-            'Geçmiş',
-            AppColors.textPrimary,
-            onTap: () {
-              // TODO: Geçmiş ekranına git
-            },
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 12.h),
+                StoreDetailHeader(store: store),
+                SizedBox(height: 16.h),
+                StoreQuickActions(
+                  canOpenNewSlot: store.currentSlotCount < store.maxSlotCount,
+                  onUpgradeTap: () => _showStoreUpgradeSheet(context, ref, store, activeUpgrade),
+                  onBoostTap: () => _showStoreBoostSheet(context, ref, store, activeBoost),
+                  onReportTap: () => context.push('/store/${store.id}/report'),
+                  onOpenSlotTap: () => _handleOpenSlot(context, ref, store),
+                  onHistoryTap: () => context.push('/store/${store.id}/history'),
+                ),
+                if (activeBoost != null) ...[
+                  SizedBox(height: 16.h),
+                  _ActiveBoostCard(boost: activeBoost),
+                ],
+                if (activeUpgrade != null) ...[
+                  SizedBox(height: 16.h),
+                  _ActiveUpgradeCard(
+                    upgrade: activeUpgrade,
+                    onFinishWithGold: () => _finishStoreUpgradeWithGold(activeUpgrade),
+                    calculateStarCost: _calculateUpgradeStarCost,
+                    formatCountdown: _formatCountdown,
+                  ),
+                ],
+                SizedBox(height: 16.h),
+                _buildMetricsGrid(store),
+                SizedBox(height: 24.h),
+                Text('Magaza Raflari', style: TextStyle(color: AppColors.textPrimary, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                SizedBox(height: 12.h),
+                _buildSlotList(context, ref, store),
+                SizedBox(height: 32.h),
+              ],
+            ),
           ),
         ),
       ],
@@ -246,46 +374,442 @@ class StoreDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     StoreModel store,
   ) async {
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   const SnackBar(content: Text('Slot açılıyor...')),
-    // );
-
-    final result =
-        await ref.read(storeActionProvider).addStoreSlot(store.id);
+    final result = await ref.read(storeActionProvider).addStoreSlot(store.id);
 
     if (context.mounted) {
       if (result['success'] == true) {
-        // Veritabanının güncellenmesi için çok kısa bir süre bekle (Race condition önleyici)
-        await Future.delayed(const Duration(milliseconds: 500));
-        ref.refresh(storeDetailProvider(store.id));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Yeni slot başarıyla açıldı!'),
-            backgroundColor: AppColors.green,
-          ),
-        );
+        await ref.read(storeDetailProvider(store.id).future);
+        if (!context.mounted) return;
+        ref.invalidate(storesListProvider);
+        _showSuccess(context, 'Yeni slot basariyla acildi!');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Slot açılırken bir hata oluştu.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        if (!context.mounted) return;
+        _showError(context, result['message'] ?? 'Slot acilirken bir hata olustu.');
       }
     }
   }
+  String _formatCountdown(Duration remaining) {
+    if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes % 60;
+    if (hours > 0) {
+      return '${hours}s ${minutes}dk';
+    }
+    return '${remaining.inMinutes}dk';
+  }
+
+  Future<void> _showStoreBoostSheet(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    BuildingBoostModel? activeBoost,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.all(18.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Magaza Boostu',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              activeBoost != null
+                  ? 'Bu magazada zaten aktif bir boost var. Sure dolana kadar tum slotlar x${activeBoost.multiplier.toStringAsFixed(1)} hizla calisir.'
+                  : 'Boost basladiginda tum store slotlarinin boost katsayisi 2 olur. Su an gecici varsayimla yildiz maliyeti saat / 2 kuralindan geliyor.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12.sp,
+                height: 1.45,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            if (activeBoost == null)
+              ..._storeBoostStarCosts.entries.map(
+                (entry) => Padding(
+                  padding: EdgeInsets.only(bottom: 10.h),
+                  child: InkWell(
+                    onTap: () async {
+                      Navigator.pop(sheetContext);
+                      final result = await ref
+                          .read(storeActionProvider)
+                          .startStoreBoost(
+                            storeId: store.id,
+                            durationHours: entry.key,
+                            starCost: entry.value,
+                          );
+
+                      if (!context.mounted) return;
+
+                      if (result['success'] == true) {
+                        ref.invalidate(activeStoreBoostProvider(store.id));
+                        ref.invalidate(storeDetailProvider(store.id));
+                        ref.invalidate(storesListProvider);
+                        ref.invalidate(playerStreamProvider);
+                        _showSuccess(context, 'Magaza boostu baslatildi.');
+                      } else {
+                        _showError(
+                          context,
+                          result['message'] ??
+                              'Magaza boostu baslatilamadi.',
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(16.r),
+                    child: Container(
+                      padding: EdgeInsets.all(14.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.textPrimary.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(
+                          color: AppColors.goldDark.withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10.w),
+                            decoration: BoxDecoration(
+                              color: AppColors.goldDark.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Icon(
+                              Icons.flash_on_rounded,
+                              color: AppColors.goldDark,
+                              size: 18.sp,
+                            ),
+                          ),
+                          SizedBox(width: 12.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${entry.key} Saat',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  'Tum slotlar x2 satis hizi kazanir',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${entry.value} ★',
+                            style: TextStyle(
+                              color: AppColors.goldLight,
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: Colors.black,
+                  ),
+                  onPressed: () => Navigator.pop(sheetContext),
+                  child: const Text('Tamam'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _calculateUpgradeStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
+  }
+
+  Future<void> _finishStoreUpgradeWithGold(BuildingUpgradeModel upgrade) async {
+    final starCost = _calculateUpgradeStarCost(upgrade.finishAt);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: const BorderSide(color: AppColors.borderGold),
+        ),
+        title: Text(
+          'Yukseltmeyi Bitir',
+          style: TextStyle(
+            color: AppColors.goldLight,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '$starCost yildiz kullanarak yukseltmeyi aninda tamamlamak istiyor musunuz?',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Iptal',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Tamamla',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13.sp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final result = await ref
+        .read(storeActionProvider)
+        .finishStoreUpgradeWithGold(upgrade.id);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      ref.invalidate(activeStoreUpgradeProvider(widget.storeId));
+      ref.invalidate(storeDetailProvider(widget.storeId));
+      ref.invalidate(storesListProvider);
+      ref.invalidate(playerStreamProvider);
+      _showSuccess(context, 'Magaza yukseltmesi tamamlandi!');
+    } else {
+      _showError(
+        context,
+        result['message'] ?? 'Yildiz ile bitirme islemi basarisiz.',
+      );
+    }
+  }
+
+  Future<void> _showStoreUpgradeSheet(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    BuildingUpgradeModel? activeUpgrade,
+  ) async {
+    final targetLevel = store.level + 1;
+    final durationMinutes = store.storeType.constructionTimeMinutes * targetLevel;
+    final upgradeCost = (store.storeType.cost * targetLevel).toDouble();
+    final slotCapacityIncrease = store.slotCapacity;
+    const maxSlotIncrease = 2;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.all(18.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Magaza Yukseltme',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            if (activeUpgrade != null)
+              Text(
+                '${store.name} icin bir yukseltme zaten devam ediyor. Tamamlaninca seviye ${activeUpgrade.targetLevel} olacak, tum slot kapasiteleri +${activeUpgrade.slotCapacityIncrease} artacak ve max slot sayisi +${activeUpgrade.maxSlotIncrease} yukselecek.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                  height: 1.45,
+                ),
+              )
+            else
+              Text(
+                '${store.name} seviyesi ${store.level} -> $targetLevel olacak. Yukseltme tamamlaninca tum store slot kapasiteleri +$slotCapacityIncrease artar ve max slot sayisi +$maxSlotIncrease olur.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                  height: 1.45,
+                ),
+              ),
+            SizedBox(height: 16.h),
+            _buildSalesSummaryRow('Mevcut Seviye', store.level.toString()),
+            _buildSalesSummaryRow(
+              'Hedef Seviye',
+              (activeUpgrade?.targetLevel ?? targetLevel).toString(),
+            ),
+            _buildSalesSummaryRow(
+              'Yukseltme Suresi',
+              '${activeUpgrade?.durationMinutes ?? durationMinutes} dk',
+            ),
+            _buildSalesSummaryRow(
+              'Yukseltme Maliyeti',
+              'TL ${_formatValue(activeUpgrade?.upgradeCost ?? upgradeCost)}',
+              valueColor: AppColors.red,
+            ),
+            _buildSalesSummaryRow(
+              'Slot Kapasitesi',
+              '${activeUpgrade?.previousSlotCapacity ?? store.slotCapacity} -> ${activeUpgrade?.nextSlotCapacity ?? (store.slotCapacity + slotCapacityIncrease)}',
+              valueColor: AppColors.gold,
+            ),
+            _buildSalesSummaryRow(
+              'Max Slot',
+              '${activeUpgrade?.previousMaxSlotCount ?? store.maxSlotCount} -> ${activeUpgrade?.nextMaxSlotCount ?? (store.maxSlotCount + maxSlotIncrease)}',
+              valueColor: AppColors.green,
+            ),
+            SizedBox(height: 14.h),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: activeUpgrade != null
+                    ? () => Navigator.pop(sheetContext)
+                    : () async {
+                        Navigator.pop(sheetContext);
+                        final result = await ref
+                            .read(storeActionProvider)
+                            .startStoreUpgrade(store.id);
+
+                        if (!context.mounted) return;
+
+                        if (result['success'] == true) {
+                          ref.invalidate(activeStoreUpgradeProvider(store.id));
+                          ref.invalidate(storeDetailProvider(store.id));
+                          ref.invalidate(storesListProvider);
+                          ref.invalidate(playerStreamProvider);
+                          _showSuccess(
+                            context,
+                            'Magaza yukseltmesi baslatildi.',
+                          );
+                        } else {
+                          _showError(
+                            context,
+                            result['message'] ??
+                                'Magaza yukseltmesi baslatilamadi.',
+                          );
+                        }
+                      },
+                child: Text(activeUpgrade != null ? 'Tamam' : 'Yukseltmeyi Baslat'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricsGrid(StoreModel store) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: AppColors.textPrimary.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildCompactMetricCol(
+            title: 'Doluluk',
+            value: '%${(store.summary.usedCapacityRatio * 100).toInt()}',
+            icon: Icons.pie_chart,
+            color: AppColors.goldDark,
+          ),
+          _buildCompactMetricCol(
+            title: 'Stok',
+            value: '${store.summary.totalQuantity}/${store.summary.totalCapacity}',
+            icon: Icons.inventory_2,
+            color: Colors.blueAccent,
+          ),
+          _buildCompactMetricCol(
+            title: 'Kar',
+            value: '+TL ${_formatValue(store.summary.totalStockSaleValue ?? 0)}',
+            icon: Icons.trending_up,
+            color: AppColors.green,
+          ),
+          _buildCompactMetricCol(
+            title: 'Slot',
+            value: '${store.slots.length}/${store.maxSlotCount}',
+            icon: Icons.grid_view,
+            color: AppColors.gold,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactMetricCol({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 20.sp),
+        SizedBox(height: 6.h),
+        Text(value, style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp, fontWeight: FontWeight.bold), maxLines: 1),
+        SizedBox(height: 2.h),
+        Text(title, style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp), maxLines: 1),
+      ],
+    );
+  }
 
   Widget _buildSlotList(BuildContext context, WidgetRef ref, StoreModel store) {
-    return GridView.builder(
+    return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 10.h,
-        crossAxisSpacing: 10.w,
-        childAspectRatio: 0.85, // Butonlar için biraz daha uzun kartlar
-      ),
       itemCount: store.slots.length,
+      separatorBuilder: (_, __) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
         return _buildProductSlotCard(
           context,
@@ -305,242 +829,271 @@ class StoreDetailScreen extends ConsumerWidget {
     int index,
     StoreSlotModel slot,
   ) {
+    final canAddStock = _canAddStockToSlot(slot);
+    final canSendStock = _canSendStockFromSlot(slot);
+    final canEditProduct = _canEditSlotProduct(slot);
+    final qColor = slot.qualityLevel <= 1
+        ? AppColors.red
+        : slot.qualityLevel <= 2
+            ? Colors.orange
+            : slot.qualityLevel <= 3
+                ? Colors.yellow
+                : slot.qualityLevel <= 4
+                    ? Colors.lightGreen
+                    : AppColors.green;
+
     return Container(
+      padding: EdgeInsets.all(0),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.cardBg, AppColors.cardBg.withValues(alpha: 0.6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.cardBg.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: slot.isActive 
+              ? AppColors.gold.withValues(alpha: 0.3) 
+              : AppColors.border.withValues(alpha: 0.2),
+          width: 1.2.w,
+        ),
       ),
-      child: Stack(
-        children: [
-          // 1. ANA İKON (Arka Planı Doldurur)
-          Positioned.fill(
-            child: Opacity(
-              opacity: slot.isEmpty ? 1.0 : 0.5,
-              child: Align(
-                alignment: slot.isEmpty 
-                    ? const Alignment(0, 0) 
-                    : const Alignment(0, -1.2), // Doluyken yukarı kaydır
-                child: slot.isEmpty
-                    ? Icon(Icons.add_shopping_cart,
-                        color: AppColors.gold.withValues(alpha: 0.15), size: 60.sp)
-                    : CachedAssetImage(
-                        fileName: slot.productIcon ?? 'default',
-                        fit: BoxFit.contain,
-                      ),
-              ),
-            ),
-          ),
-
-          // 2. KALİTE (Sol Üst - Renkli Segmentli Bar)
-          if (!slot.isEmpty)
-            Positioned(
-              top: 6,
-              left: 6,
-              child: Builder(
-                builder: (context) {
-                  final qColor = slot.qualityLevel <= 1 
-                      ? AppColors.red 
-                      : slot.qualityLevel <= 2 
-                          ? Colors.orange 
-                          : slot.qualityLevel <= 3 
-                              ? Colors.yellow 
-                              : slot.qualityLevel <= 4 
-                                  ? Colors.lightGreen 
-                                  : AppColors.green;
-                                  
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'KALİTE',
-                        style: TextStyle(
-                          color: qColor.withValues(alpha: 0.8),
-                          fontSize: 8.sp,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      SizedBox(height: 3.h),
-                      Row(
-                        children: List.generate(5, (index) {
-                          return Container(
-                            width: 8.w,
-                            height: 4.h,
-                            margin: EdgeInsets.only(right: 2.w),
-                            decoration: BoxDecoration(
-                              color: index < slot.qualityLevel 
-                                  ? qColor 
-                                  : Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(1.r),
-                              boxShadow: index < slot.qualityLevel ? [
-                                BoxShadow(
-                                  color: qColor.withValues(alpha: 0.4),
-                                  blurRadius: 3,
-                                )
-                              ] : null,
-                            ),
-                          );
-                        }),
-                      ),
-                    ],
-                  );
-                }
-              ),
-            ),
-
-          // 3. FİYAT VE KALEM (Sağ Üst - Chip Tasarımı)
-          if (!slot.isEmpty)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(6.r),
-                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${slot.price?.toStringAsFixed(1) ?? '0'}₺',
-                      style: TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 9.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(width: 4.w),
-                    GestureDetector(
-                      onTap: () {
-                        // Fiyat düzenleme diyaloğu açılabilir
-                      },
-                      child: Icon(
-                        Icons.edit,
-                        color: AppColors.gold.withValues(alpha: 0.8),
-                        size: 10.sp,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // 4. ÜRÜN İSMİ (Alt Ortaya Yakın)
-          if (!slot.isEmpty)
-            Positioned(
-              left: 4,
-              right: 4,
-              bottom: 58.h,
-              child: Text(
-                slot.productName ?? '',
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold,
-                  shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
-                ),
-              ),
-            ),
-
-          // 5. STOK/PROGRESS BAR (Butonların Üstü)
-          if (!slot.isEmpty)
-            Positioned(
-              left: 6,
-              right: 6,
-              bottom: 40.h,
-              child: _buildMiniProgress(
-                slot.quantity / (slot.capacity > 0 ? slot.capacity : 1),
-                '${slot.quantity}/${slot.capacity}',
-              ),
-            ),
-
-          // 6. BUTONLAR (Ekle / Çıkar)
-          if (!slot.isEmpty)
-            Positioned(
-              left: 6,
-              right: 6,
-              bottom: 6,
-              child: Row(
+      child: Padding(
+        padding: EdgeInsets.all(12.w),
+        child: slot.isEmpty
+            ? Row(
                 children: [
+                  Container(
+                    width: 80.w,
+                    height: 80.w,
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBg,
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+                    ),
+                    child: Icon(Icons.add_shopping_cart, color: AppColors.gold.withValues(alpha: 0.4), size: 24.sp),
+                  ),
+                  SizedBox(width: 16.w),
                   Expanded(
-                    child: _buildSmallButton(
-                      'Ekle',
-                      AppColors.green,
-                      onTap: () => _showAddStockDialog(context, ref, store, slot),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Bos Slot', style: TextStyle(color: AppColors.textSecondary, fontSize: 15.sp, fontWeight: FontWeight.bold)),
+                      ],
                     ),
                   ),
-                  SizedBox(width: 6.w),
-                  Expanded(
-                    child: _buildSmallButton(
-                      'Çıkar',
-                      AppColors.red,
-                      onTap: () {
-                        // Stok çıkarma veya ürün kaldırma
-                      },
+                  InkWell(
+                    onTap: canEditProduct
+                        ? () => _showProductSelectionDialog(context, ref, store, slot)
+                        : () => _showStoreSlotLockedMessage(context, 'Yolda urun varken slot urunu degistirilemez.'),
+                    borderRadius: BorderRadius.circular(8.r),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                      ),
+                      child: Text('Urun Sec', style: TextStyle(color: AppColors.gold, fontSize: 12.sp, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
-              ),
-            ),
-
-          // 7. TIKLAMA ALANI (Boşsa ekleme)
-          if (slot.isEmpty)
-            Positioned.fill(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16.r),
-                  onTap: () => _showProductSelectionDialog(context, ref, store, slot),
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 50.h),
-                      child: Text(
-                        'Ürün Ekle',
-                        style: TextStyle(
-                          color: AppColors.gold,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11.sp,
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 80.w,
+                        height: 80.w,
+                        padding: EdgeInsets.all(0),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardBg,
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+                        ),
+                        child: CachedAssetImage(fileName: slot.productIcon ?? 'default', fit: BoxFit.contain),
+                      ),
+                      SizedBox(width: 14.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Text(slot.productName ?? '', style: TextStyle(color: AppColors.textPrimary, fontSize: 16.sp, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                ),
+                                SizedBox(width: 8.w),
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 8.w,
+                                      height: 8.w,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: slot.isActive ? AppColors.green : AppColors.red,
+                                        boxShadow: [
+                                          BoxShadow(color: (slot.isActive ? AppColors.green : AppColors.red).withValues(alpha: 0.5), blurRadius: 4),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(width: 6.w),
+                                    Text(slot.isActive ? 'Aktif' : 'Pasif', style: TextStyle(color: slot.isActive ? AppColors.green : AppColors.red, fontSize: 10.sp)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6.h),
+                            Row(
+                              children: List.generate(5, (barIndex) {
+                                return Icon(
+                                  Icons.star_rounded,
+                                  color: barIndex < slot.qualityLevel ? qColor : AppColors.textMuted,
+                                  size: 12.sp,
+                                );
+                              }),
+                            ),
+                            SizedBox(height: 8.h),
+                            GestureDetector(
+                              onTap: () => _showPriceEditDialog(context, ref, store, slot),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                decoration: BoxDecoration(
+                                  color: AppColors.textPrimary.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('₺${slot.price?.toStringAsFixed(1) ?? '0'}', style: TextStyle(color: AppColors.gold, fontSize: 13.sp, fontWeight: FontWeight.w900)),
+                                    SizedBox(width: 4.w),
+                                    Icon(Icons.edit, color: AppColors.textMuted, size: 12.sp),
+                                    SizedBox(width: 8.w),
+                                    Container(
+                                      width: 1.w,
+                                      height: 12.h,
+                                      color: AppColors.textPrimary.withValues(alpha: 0.2),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Text(
+                                      _formatStoreSlotMargin(slot), 
+                                      style: TextStyle(color: _storeSlotMarginColor(slot), fontSize: 11.sp, fontWeight: FontWeight.bold)
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
+                      SizedBox(width: 12.w),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            child: Icon(Icons.more_vert, color: AppColors.textPrimary, size: 22.sp),
+                            color: AppColors.cardBg,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                            onSelected: (val) {
+                              if (val == 'send' && canSendStock) {
+                                _startStoreOutboundFlow(context, ref, store, slot);
+                              } else if (val == 'toggle') {
+                                _toggleStoreSlotActive(context, ref, store, slot);
+                              } else if (val == 'clear' && canEditProduct) {
+                                _confirmClearStoreSlot(context, ref, store, slot);
+                              } else if (val == 'change' && canEditProduct) {
+                                _showProductSelectionDialog(context, ref, store, slot);
+                              } else if (!canEditProduct && (val == 'change' || val == 'clear')) {
+                                _showStoreSlotLockedMessage(context, 'Yolda stok varken urun degistirilemez.');
+                              }
+                            },
+                            itemBuilder: (ctx) => [
+                              PopupMenuItem(
+                                value: 'send',
+                                enabled: canSendStock,
+                                child: Row(children: [Icon(Icons.local_shipping, color: AppColors.blue, size: 18.sp), SizedBox(width: 8.w), Text('Depoya Gonder', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
+                              ),
+                              PopupMenuItem(
+                                value: 'toggle',
+                                child: Row(children: [Icon(slot.isActive ? Icons.pause_circle_outline : Icons.play_circle_outline, color: slot.isActive ? AppColors.red : AppColors.green, size: 18.sp), SizedBox(width: 8.w), Text(slot.isActive ? 'Pasif Yap' : 'Aktif Et', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
+                              ),
+                              PopupMenuItem(
+                                value: 'change',
+                                enabled: canEditProduct,
+                                child: Row(children: [Icon(Icons.swap_horiz, color: AppColors.gold, size: 18.sp), SizedBox(width: 8.w), Text('Urunu Degistir', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
+                              ),
+                              PopupMenuItem(
+                                value: 'clear',
+                                enabled: canEditProduct,
+                                child: Row(children: [Icon(Icons.cleaning_services, color: AppColors.red, size: 18.sp), SizedBox(width: 8.w), Text('Slotu Temizle', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 16.h),
+                          InkWell(
+                            onTap: canAddStock ? () => _startStoreTransferFlow(context, ref, store, slot) : null,
+                            borderRadius: BorderRadius.circular(8.r),
+                            child: Container(
+                              padding: EdgeInsets.all(8.w),
+                              decoration: BoxDecoration(
+                                color: canAddStock ? AppColors.green.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8.r),
+                                border: Border.all(color: canAddStock ? AppColors.green.withValues(alpha: 0.5) : Colors.transparent),
+                              ),
+                              child: Icon(Icons.add, color: canAddStock ? AppColors.green : Colors.grey, size: 20.sp),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ),
+                  SizedBox(height: 16.h),
+                  Row(
+                    children: [
+                      Text('STOK DURUMU', style: TextStyle(color: AppColors.textSecondary, fontSize: 9.sp, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      const Spacer(),
+                      Text(
+                        '${slot.quantity} stok | ${slot.pendingQuantity} rezerve | ${slot.capacity - slot.quantity - slot.pendingQuantity} bos',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6.h),
+                  _buildMiniProgressStacked(
+                    slot.capacity > 0
+                        ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
+                        : 0,
+                    reservedProgress: slot.capacity > 0
+                        ? (slot.pendingQuantity / slot.capacity).clamp(0.0, 1.0)
+                        : 0,
+                  ),
+                  SizedBox(height: 6.h),
+                  Row(
+                    children: [
+                      _buildCapacityLegend(
+                        color: AppColors.gold,
+                        label: 'Stok',
+                      ),
+                      SizedBox(width: 12.w),
+                      _buildCapacityLegend(
+                        color: AppColors.blue.withValues(alpha: 0.8),
+                        label: 'Rezerve',
+                      ),
+                      SizedBox(width: 12.w),
+                      _buildCapacityLegend(
+                        color: AppColors.textMuted,
+                        label: 'Bos',
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSmallButton(String label, Color color, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 4.h),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(6.r),
-          border: Border.all(color: color.withValues(alpha: 0.5)),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: color,
-            fontSize: 10.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
     );
   }
@@ -563,15 +1116,442 @@ class StoreDetailScreen extends ConsumerWidget {
     );
   }
 
+  bool _canEditSlotProduct(StoreSlotModel slot) {
+    return slot.quantity <= 0 && slot.pendingQuantity <= 0;
+  }
+
+  bool _canAddStockToSlot(StoreSlotModel slot) {
+    if (slot.productId == null || slot.productId!.isEmpty) return false;
+    final remainingCapacity =
+        slot.capacity - slot.quantity - slot.pendingQuantity;
+    return remainingCapacity > 0;
+  }
+
+  bool _canSendStockFromSlot(StoreSlotModel slot) {
+    return slot.quantity > 0;
+  }
+
+  void _showSuccess(BuildContext context, String message) {
+    AppSnackbar.show(
+      context,
+      message: message,
+      type: SnackbarType.success,
+    );
+  }
+
+  void _showError(BuildContext context, String message) {
+    AppSnackbar.show(
+      context,
+      message: message,
+      type: SnackbarType.error,
+    );
+  }
+
+  void _showInfo(BuildContext context, String message) {
+    AppSnackbar.show(
+      context,
+      message: message,
+      type: SnackbarType.info,
+    );
+  }
+
+  void _showWarning(BuildContext context, String message) {
+    AppSnackbar.show(
+      context,
+      message: message,
+      type: SnackbarType.warning,
+    );
+  }
+
+  void _showStoreSlotLockedMessage(BuildContext context, String message) {
+    _showWarning(context, message);
+  }
+
+  Future<void> _toggleStoreSlotActive(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) async {
+    final result = await ref.read(storeActionProvider).setStoreSlotActive(
+          slotId: slot.id,
+          isActive: !slot.isActive,
+        );
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      ref.invalidate(storeDetailProvider(store.id));
+      ref.invalidate(storesListProvider);
+      _showSuccess(
+        context,
+        slot.isActive ? 'Slot pasif yapildi.' : 'Slot aktif edildi.',
+      );
+      return;
+    }
+
+    _showError(context, result['message'] ?? 'Slot durumu guncellenemedi.');
+  }
+
+  Future<void> _confirmClearStoreSlot(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) async {
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.background,
+        title: Text(
+          'Slot Temizle',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '${slot.productName ?? 'Bu urun'} secimini kaldirmak istiyor musun? Fiyat ve bekleyen kesirli satis verisi de sifirlanir.',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 13.sp,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Iptal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.blue,
+              foregroundColor: AppColors.textPrimary,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Temizle'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldClear != true || !context.mounted) return;
+
+    final result = await ref.read(storeActionProvider).clearStoreSlotProduct(
+          slot.id,
+        );
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      ref.invalidate(storeDetailProvider(store.id));
+      ref.invalidate(storesListProvider);
+      _showSuccess(context, 'Slot urun secimi temizlendi.');
+      return;
+    }
+
+    _showError(context, result['message'] ?? 'Slot temizlenemedi.');
+  }
+
+  String _formatStoreSlotMargin(StoreSlotModel slot) {
+    final price = slot.price ?? 0;
+    final cost = slot.cost ?? 0;
+    if (cost <= 0) return 'Maliyet';
+
+    final marginRatio = ((price - cost) / cost) * 100;
+    final sign = marginRatio >= 0 ? '+' : '';
+    return '$sign${marginRatio.toStringAsFixed(0)}%';
+  }
+
+  Color _storeSlotMarginColor(StoreSlotModel slot) {
+    final price = slot.price ?? 0;
+    final cost = slot.cost ?? 0;
+    if (cost <= 0) return AppColors.textMuted;
+    return price >= cost ? AppColors.green : AppColors.red;
+  }
+
+  double _calculateStorePriceDemandMultiplier(
+    double price,
+    double basePrice,
+  ) {
+    if (basePrice <= 0) return 1.0;
+
+    final ratio = price / basePrice;
+    if (ratio <= 1) {
+      return (1 + ((1 - ratio) * 0.75)).clamp(0.05, 1.75).toDouble();
+    }
+
+    return (1 - ((ratio - 1) * 0.95)).clamp(0.05, 1.75).toDouble();
+  }
+
+  String _formatSignedPercent(double value) {
+    final sign = value > 0 ? '+' : '';
+    return '$sign${value.toStringAsFixed(1)}%';
+  }
+
+  String _describeDemandEffect(double multiplier) {
+    if (multiplier >= 1.35) return 'Cok yuksek talep';
+    if (multiplier >= 1.1) return 'Yuksek talep';
+    if (multiplier >= 0.9) return 'Dengeli talep';
+    if (multiplier >= 0.6) return 'Dusuk talep';
+    return 'Cok dusuk talep';
+  }
+
+  Color _demandEffectColor(double multiplier) {
+    if (multiplier >= 1.1) return AppColors.green;
+    if (multiplier >= 0.9) return AppColors.gold;
+    return AppColors.red;
+  }
+
+  void _showPriceEditDialog(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) {
+    final controller = TextEditingController(
+      text: (slot.price ?? 0).toStringAsFixed(1),
+    );
+    final cost = slot.cost ?? 0;
+    final product = slot.product;
+    final basePrice = product?.bazSatisFiyati ?? 0;
+    final averagePrice = product?.ortalamaFiyat ?? 0;
+    final minPrice = product?.enDusukFiyat ?? 0;
+    final maxPrice = product?.enYuksekFiyat ?? 0;
+    final baseHourlyDemand = product?.satisAdedi ?? 0;
+    double previewPrice = slot.price ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (sheetContext, setState) {
+          final marginAmount = previewPrice - cost;
+          final marginRatio = cost > 0 ? (marginAmount / cost) * 100 : null;
+          final vsBasePercent = basePrice > 0
+              ? ((previewPrice - basePrice) / basePrice) * 100
+              : 0.0;
+          final demandMultiplier = _calculateStorePriceDemandMultiplier(
+            previewPrice,
+            basePrice,
+          );
+          final estimatedHourlyDemand =
+              (baseHourlyDemand * demandMultiplier).toDouble();
+          final demandColor = _demandEffectColor(demandMultiplier);
+
+          return AlertDialog(
+            backgroundColor: AppColors.background,
+            title: Text(
+              'Satis Fiyati',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    slot.productName ?? 'Urun',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  TextField(
+                    controller: controller,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    decoration: const InputDecoration(
+                      labelText: 'Birim satis fiyati',
+                      labelStyle: TextStyle(color: AppColors.gold),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.textMuted),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.gold),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        previewPrice =
+                            double.tryParse(value.replaceAll(',', '.')) ?? 0;
+                      });
+                    },
+                  ),
+                  SizedBox(height: 12.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: demandColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14.r),
+                      border: Border.all(
+                        color: demandColor.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSalesSummaryRow(
+                          'Baz Fiyat',
+                          basePrice > 0 ? basePrice.toStringAsFixed(1) : '-',
+                          valueColor: AppColors.gold,
+                        ),
+                        _buildSalesSummaryRow(
+                          'Baz Fiyata Gore',
+                          basePrice > 0
+                              ? _formatSignedPercent(vsBasePercent)
+                              : '-',
+                          valueColor: vsBasePercent <= 0
+                              ? AppColors.green
+                              : AppColors.red,
+                        ),
+                        _buildSalesSummaryRow(
+                          'Tahmini Talep',
+                          'x${demandMultiplier.toStringAsFixed(2)}',
+                          valueColor: demandColor,
+                        ),
+                        if (baseHourlyDemand > 0)
+                          _buildSalesSummaryRow(
+                            'Tahmini Satis',
+                            '${estimatedHourlyDemand.toStringAsFixed(1)} / saat',
+                            valueColor: demandColor,
+                          ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          _describeDemandEffect(demandMultiplier),
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  if (averagePrice > 0 || minPrice > 0 || maxPrice > 0)
+                    Text(
+                      averagePrice > 0
+                          ? 'Pazar ort.: ${averagePrice.toStringAsFixed(1)}'
+                          : 'Pazar araligi: ${minPrice.toStringAsFixed(1)} - ${maxPrice.toStringAsFixed(1)}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  if (averagePrice > 0 && (minPrice > 0 || maxPrice > 0))
+                    Padding(
+                      padding: EdgeInsets.only(top: 2.h),
+                      child: Text(
+                        'Aralik: ${minPrice.toStringAsFixed(1)} - ${maxPrice.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11.sp,
+                        ),
+                      ),
+                    ),
+                  SizedBox(height: 12.h),
+                  _buildSalesSummaryRow(
+                    'Maliyet',
+                    cost.toStringAsFixed(1),
+                    valueColor: AppColors.textPrimary,
+                  ),
+                  _buildSalesSummaryRow(
+                    'Kar Tutari',
+                    marginAmount.toStringAsFixed(1),
+                    valueColor: marginAmount >= 0
+                        ? AppColors.green
+                        : AppColors.red,
+                  ),
+                  _buildSalesSummaryRow(
+                    'Kar Orani',
+                    marginRatio == null
+                        ? cost == 0
+                              ? 'Maliyet 0'
+                              : '-'
+                        : '%${marginRatio.toStringAsFixed(1)}',
+                    valueColor: marginRatio == null
+                        ? AppColors.gold
+                        : marginRatio >= 0
+                        ? AppColors.green
+                        : AppColors.red,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Iptal'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                ),
+                onPressed: () async {
+                  final parsedPrice = double.tryParse(
+                    controller.text.replaceAll(',', '.'),
+                  );
+
+                  if (parsedPrice == null || parsedPrice <= 0) {
+                    _showWarning(context, 'Gecerli bir fiyat girin.');
+                    return;
+                  }
+
+                  final result = await ref
+                      .read(storeActionProvider)
+                      .setStoreSlotPrice(
+                        slotId: slot.id,
+                        price: parsedPrice,
+                      );
+
+                  if (!context.mounted || !dialogContext.mounted) return;
+
+                  if (result['success'] == true) {
+                    Navigator.of(dialogContext).pop();
+                    ref.invalidate(storeDetailProvider(store.id));
+                    _showSuccess(context, 'Satis fiyati kaydedildi.');
+                    return;
+                  }
+
+                  _showError(
+                    context,
+                    result['message'] ?? 'Fiyat kaydedilemedi.',
+                  );
+                },
+                child: const Text(
+                  'Kaydet',
+                  style: TextStyle(color: Colors.black),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _showProductSelectionDialog(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
   ) {
+    final parentContext = context;
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 40.h),
@@ -588,7 +1568,7 @@ class StoreDetailScreen extends ConsumerWidget {
                 Container(
                   padding: EdgeInsets.all(16.w),
                   decoration: BoxDecoration(
-                    color: Colors.black26,
+                    color: AppColors.cardBg,
                     borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
                   ),
                   child: Row(
@@ -596,17 +1576,17 @@ class StoreDetailScreen extends ConsumerWidget {
                       Icon(Icons.inventory, color: AppColors.gold),
                       SizedBox(width: 12.w),
                       Text(
-                        'Ürün Seçimi',
+                        'Urun Secimi',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 18.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, color: AppColors.textPrimary),
+                        onPressed: () => Navigator.pop(dialogContext),
                       ),
                     ],
                   ),
@@ -632,7 +1612,7 @@ class StoreDetailScreen extends ConsumerWidget {
                         return Padding(
                           padding: EdgeInsets.all(20.w),
                           child: Text(
-                            'Ürünler yüklenirken hata oluştu: ${snapshot.data?['message'] ?? 'Bilinmeyen hata'}',
+                            'Urunler yuklenirken hata olustu: ${snapshot.data?['message'] ?? 'Bilinmeyen hata'}',
                             style: const TextStyle(color: AppColors.red),
                           ),
                         );
@@ -651,7 +1631,7 @@ class StoreDetailScreen extends ConsumerWidget {
                                   color: AppColors.textMuted, size: 48.sp),
                               SizedBox(height: 16.h),
                               Text(
-                                'Bu mağaza için uygun veya eklenmemiş ürün bulunamadı.',
+                                'Bu magaza icin uygun veya eklenmemis urun bulunamadi.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: AppColors.textMuted),
                               ),
@@ -669,7 +1649,8 @@ class StoreDetailScreen extends ConsumerWidget {
                         itemBuilder: (context, index) {
                           final product = products[index];
                           return _buildProductSelectionItem(
-                            context,
+                            parentContext,
+                            dialogContext,
                             ref,
                             store,
                             slot,
@@ -690,14 +1671,22 @@ class StoreDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildProductSelectionItem(
-    BuildContext context,
+    BuildContext parentContext,
+    BuildContext dialogContext,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
     Map<String, dynamic> product,
   ) {
     return GestureDetector(
-      onTap: () => _handleProductSelection(context, ref, store, slot, product),
+      onTap: () => _handleProductSelection(
+        parentContext,
+        dialogContext,
+        ref,
+        store,
+        slot,
+        product,
+      ),
       child: Container(
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
@@ -721,15 +1710,15 @@ class StoreDetailScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product['name'] ?? 'Bilinmeyen Ürün',
+                    product['name'] ?? 'Bilinmeyen Urun',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 14.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    'Baz Fiyat: ${product['base_price']}₺',
+                    'Baz Fiyat: ${product['base_price']} TL',
                     style: TextStyle(
                       color: AppColors.gold.withValues(alpha: 0.7),
                       fontSize: 12.sp,
@@ -746,44 +1735,42 @@ class StoreDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _handleProductSelection(
-    BuildContext context,
+    BuildContext parentContext,
+    BuildContext dialogContext,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
     Map<String, dynamic> product,
   ) async {
     // Dialog'u kapat
-    Navigator.pop(context);
+    Navigator.pop(dialogContext);
 
-    // İşlemi yap
+    // Islemi yap
     final result = await ref.read(storeActionProvider).setStoreSlotProduct(
           slotId: slot.id,
           productId: product['id'],
         );
 
-    if (context.mounted) {
+    if (parentContext.mounted) {
       if (result['success'] == true) {
-        // Veritabanının güncellenmesi için çok kısa bir süre bekle (Race condition önleyici)
-        await Future.delayed(const Duration(milliseconds: 500));
-        ref.refresh(storeDetailProvider(store.id));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${product['name']} başarıyla eklendi!'),
-            backgroundColor: AppColors.green,
-          ),
-        );
+        await ref.read(storeDetailProvider(store.id).future);
+        if (!parentContext.mounted) return;
+        ref.invalidate(storesListProvider);
+        _showSuccess(parentContext, '${product['name']} basariyla eklendi!');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Ürün eklenirken hata oluştu.'),
-            backgroundColor: AppColors.red,
-          ),
-        );
+        if (!parentContext.mounted) return;
+        _showError(parentContext, result['message'] ?? 'Urun eklenirken hata olustu.');
       }
     }
   }
 
   Widget _buildFinancialFooter(StoreModel store) {
+    final stockCost = _calculateStoreStockCost(store);
+    final stockSaleValue = _calculateStoreStockSaleValue(store);
+    final pendingSale = _calculatePendingSaleValue(store);
+    final estimatedProfit = stockSaleValue - stockCost;
+    final averageMargin = stockCost > 0 ? (estimatedProfit / stockCost) * 100 : 0.0;
+
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -791,81 +1778,67 @@ class StoreDetailScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.1)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildFooterStat(
-            Icons.payments,
-            'Bugünkü Satış',
-            '+${_formatValue(38600)}',
-            AppColors.green,
-          ),
-          _buildFooterStat(
-            Icons.pending_actions,
-            'Bekleyen Talep',
-            '23',
-            AppColors.gold,
-          ),
-          _buildFooterStat(
-            Icons.trending_up,
-            'Saatlik Satış',
-            '4.8K',
-            AppColors.blue,
-          ),
-          _buildFooterStat(
-            Icons.percent,
-            'Ortalama Marj',
-            '%24.7',
-            AppColors.gold,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // HELPER WIDGETS
-  Widget _buildCircleButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(8.w),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: AppColors.borderGold.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Icon(icon, color: AppColors.gold, size: 20.sp),
-      ),
-    );
-  }
-
-  Widget _buildStatBadge(IconData icon, String value, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 14.sp),
-          SizedBox(width: 4.w),
           Text(
-            value,
+            'Finansal Ozet',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 12.sp,
+              color: AppColors.textPrimary,
+              fontSize: 14.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(width: 4.w),
-          Icon(Icons.add, color: AppColors.gold, size: 12.sp),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.inventory_2,
+                  'Stok Maliyeti',
+                  _formatValue(stockCost),
+                  AppColors.textPrimary,
+                ),
+              ),
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.sell,
+                  'Liste Degeri',
+                  _formatValue(stockSaleValue),
+                  AppColors.gold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.trending_up,
+                  'Tahmini Kar',
+                  _formatSignedValue(estimatedProfit),
+                  estimatedProfit >= 0 ? AppColors.green : AppColors.red,
+                ),
+              ),
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.av_timer,
+                  'Bekleyen Satis',
+                  pendingSale.toStringAsFixed(1),
+                  AppColors.blue,
+                ),
+              ),
+              Expanded(
+                child: _buildFooterStat(
+                  Icons.percent,
+                  'Ort. Marj',
+                  '${averageMargin.toStringAsFixed(1)}%',
+                  averageMargin >= 0 ? AppColors.green : AppColors.red,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -883,7 +1856,7 @@ class StoreDetailScreen extends ConsumerWidget {
       child: Text(
         'Lv. $level',
         style: TextStyle(
-          color: Colors.white,
+          color: AppColors.textPrimary,
           fontSize: 12.sp,
           fontWeight: FontWeight.bold,
         ),
@@ -910,7 +1883,7 @@ class StoreDetailScreen extends ConsumerWidget {
           Text(
             value,
             style: TextStyle(
-              color: valueColor ?? Colors.white,
+              color: valueColor ?? AppColors.textPrimary,
               fontSize: 12.sp,
               fontWeight: FontWeight.bold,
             ),
@@ -946,7 +1919,7 @@ class StoreDetailScreen extends ConsumerWidget {
           Text(
             value,
             style: TextStyle(
-              color: valueColor ?? Colors.white,
+              color: valueColor ?? AppColors.textPrimary,
               fontSize: 11.sp,
               fontWeight: FontWeight.bold,
             ),
@@ -974,24 +1947,35 @@ class StoreDetailScreen extends ConsumerWidget {
     Color color, {
     VoidCallback? onTap,
   }) {
+    final isDisabled = onTap == null;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
-          color: AppColors.cardBg,
+          color: isDisabled
+              ? AppColors.cardBg.withValues(alpha: 0.55)
+              : AppColors.cardBg,
           borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(color: color.withValues(alpha: 0.4)),
+          border: Border.all(
+            color: isDisabled
+                ? AppColors.border.withValues(alpha: 0.2)
+                : color.withValues(alpha: 0.4),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 16.sp),
+            Icon(
+              icon,
+              color: isDisabled ? AppColors.textMuted : color,
+              size: 16.sp,
+            ),
             SizedBox(width: 6.w),
             Text(
               label,
               style: TextStyle(
-                color: Colors.white,
+                color: isDisabled ? AppColors.textMuted : AppColors.textPrimary,
                 fontSize: 12.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -1002,105 +1986,7 @@ class StoreDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Row(
-      children: [
-        Container(
-          width: 4.w,
-          height: 16.h,
-          decoration: BoxDecoration(
-            color: AppColors.gold,
-            borderRadius: BorderRadius.circular(2.r),
-          ),
-        ),
-        SizedBox(width: 8.w),
-        Text(
-          title,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildQualityBadge(int level) {
-    return Container(
-      margin: EdgeInsets.only(top: 4.h),
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-      decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(4.r),
-        border: Border.all(color: Colors.blue.withValues(alpha: 0.5)),
-      ),
-      child: Text(
-        'Kalite $level',
-        style: TextStyle(
-          color: Colors.blue,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPriceBadge(double price) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Satış Fiyatı',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
-          ),
-          SizedBox(width: 6.w),
-          Icon(Icons.monetization_on, color: AppColors.gold, size: 12.sp),
-          SizedBox(width: 2.w),
-          Text(
-            '${price.toStringAsFixed(1)}₺',
-            style: TextStyle(
-              color: AppColors.gold,
-              fontSize: 12.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusTag(bool isActive) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: isActive
-            ? AppColors.green.withValues(alpha: 0.1)
-            : AppColors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6.r),
-        border: Border.all(
-          color: isActive
-              ? AppColors.green.withValues(alpha: 0.5)
-              : AppColors.red.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Text(
-        isActive ? 'Aktif' : 'Pasif',
-        style: TextStyle(
-          color: isActive ? AppColors.green : AppColors.red,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
 
   Widget _buildMiniProgress(double progress, [String? text]) {
     return Container(
@@ -1109,7 +1995,7 @@ class StoreDetailScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(4.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
       child: Stack(
         alignment: Alignment.center,
@@ -1129,12 +2015,11 @@ class StoreDetailScreen extends ConsumerWidget {
               ),
             ),
           ),
-          // Text (Sadece verilmişse gösterilir)
           if (text != null)
             Text(
               text,
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontSize: 9.sp,
                 fontWeight: FontWeight.bold,
                 shadows: const [
@@ -1154,6 +2039,7 @@ class StoreDetailScreen extends ConsumerWidget {
     Color color,
   ) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, color: color, size: 16.sp),
         SizedBox(height: 4.h),
@@ -1173,31 +2059,7 @@ class StoreDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildGridAction(IconData icon, String label) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppColors.gold, size: 24.sp),
-          SizedBox(height: 4.h),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildErrorState(WidgetRef ref, Object error) {
     return Center(
@@ -1207,12 +2069,15 @@ class StoreDetailScreen extends ConsumerWidget {
           const Icon(Icons.error_outline, color: AppColors.red, size: 48),
           SizedBox(height: 16.h),
           Text(
-            'Bir hata oluştu: $error',
-            style: const TextStyle(color: Colors.white),
+            'Bir hata olustu: $error',
+            style: const TextStyle(color: AppColors.textPrimary),
           ),
           SizedBox(height: 16.h),
           ElevatedButton(
-            onPressed: () => ref.refresh(storeDetailProvider(storeId)),
+            onPressed: () {
+              _resetSalesCheckState();
+              ref.refresh(storeDetailProvider(widget.storeId));
+            },
             child: const Text('Tekrar Dene'),
           ),
         ],
@@ -1227,52 +2092,384 @@ class StoreDetailScreen extends ConsumerWidget {
     if (val >= 1000) return '${(val / 1000).toStringAsFixed(1)}K';
     return val.toStringAsFixed(1);
   }
-  // --- STOK EKLEME (EKLE BUTONU) MANTIĞI ---
 
-  void _showAddStockDialog(
+  String _formatSignedValue(double amount) {
+    final prefix = amount >= 0 ? '+' : '-';
+    return '$prefix${_formatValue(amount.abs())}';
+  }
+
+  double _calculateStoreStockCost(StoreModel store) {
+    final summaryCost = store.summary.totalStockCostValue;
+    if (summaryCost != null && summaryCost > 0) {
+      return summaryCost;
+    }
+
+    return store.slots.fold<double>(
+      0,
+      (total, slot) => total + ((slot.cost ?? 0) * slot.quantity),
+    );
+  }
+
+  double _calculateStoreStockSaleValue(StoreModel store) {
+    final summarySaleValue = store.summary.totalStockSaleValue;
+    if (summarySaleValue != null && summarySaleValue > 0) {
+      return summarySaleValue;
+    }
+
+    return store.slots.fold<double>(
+      0,
+      (total, slot) => total + ((slot.price ?? 0) * slot.quantity),
+    );
+  }
+
+  double _calculatePendingSaleValue(StoreModel store) {
+    final summaryPending = store.summary.pendingSaleTotal;
+    if (summaryPending != null && summaryPending > 0) {
+      return summaryPending;
+    }
+
+    return store.slots.fold<double>(
+      0,
+      (total, slot) => total + (slot.pendingSale ?? 0),
+    );
+  }
+  void _startStoreTransferFlow(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) {
+    final productId = slot.productId;
+    if (productId == null || productId.isEmpty) {
+      _showError(context, 'Once gecerli bir urun secin.');
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kaynak Secin',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Text(
+                '${slot.productName ?? 'Urun'} icin tedarik kaynagini secin',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              ),
+              SizedBox(height: 16.h),
+              _buildSourceChoiceTileV2(
+                icon: Icons.warehouse_outlined,
+                title: 'Depolarimdan',
+                subtitle: 'Kendi depolarinizdan lojistik transfer baslatin',
+                color: AppColors.gold,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _openWarehouseSourceFlowV2(context, ref, store, slot);
+                },
+              ),
+              SizedBox(height: 10.h),
+              _buildSourceChoiceTileV2(
+                icon: Icons.public,
+                title: 'Pazardan',
+                subtitle: 'Bu urunu global pazardan satin alin',
+                color: AppColors.blue,
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _openMarketSourceFlowV2(context, store, slot);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniProgressStacked(
+    double progress, {
+    double reservedProgress = 0,
+  }) {
+    final stockRatio = progress.clamp(0.0, 1.0);
+    final totalRatio = (stockRatio + reservedProgress).clamp(0.0, 1.0);
+
+    return Container(
+      width: double.infinity,
+      height: 10.h,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(4.r),
+        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
+      ),
+      child: Stack(
+        children: [
+          if (totalRatio > 0)
+            FractionallySizedBox(
+              widthFactor: totalRatio,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.blue.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
+            ),
+          if (stockRatio > 0)
+            FractionallySizedBox(
+              widthFactor: stockRatio,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.goldDark,
+                      AppColors.gold,
+                      AppColors.goldLight,
+                    ],
+                    stops: const [0.0, 0.7, 1.0],
+                  ),
+                  borderRadius: BorderRadius.circular(4.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.35),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCapacityLegend({
+    required Color color,
+    required String label,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8.w,
+          height: 8.w,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        SizedBox(width: 4.w),
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 9.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionBtn(String label, IconData icon, Color color, {VoidCallback? onTap}) {
+    final isDisabled = onTap == null;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 10.h),
+        decoration: BoxDecoration(
+          color: isDisabled 
+              ? AppColors.textPrimary.withValues(alpha: 0.03) 
+              : color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(
+            color: isDisabled 
+                ? AppColors.textPrimary.withValues(alpha: 0.05) 
+                : color.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: isDisabled ? AppColors.textMuted : color, size: 14.sp),
+            SizedBox(width: 6.w),
+            Text(
+              label,
+              style: TextStyle(
+                color: isDisabled ? AppColors.textMuted : color,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildSourceChoiceTileV2({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16.r),
+      child: Container(
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          color: AppColors.textPrimary.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44.w,
+              height: 44.w,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Icon(icon, color: color),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: color),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _shouldLockStoreSlotQualityV2(StoreSlotModel slot) {
+    return (slot.quantity > 0 || slot.pendingQuantity > 0) &&
+        slot.qualityLevel > 0;
+  }
+
+  Future<void> _openWarehouseSourceFlowV2(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
   ) async {
-    // Yükleniyor göster
+    final productId = slot.productId;
+    if (productId == null || productId.isEmpty) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.gold),
+      ),
     );
 
     final result = await ref.read(storeActionProvider).getEligibleWarehousesForStock(
-          productId: slot.productId!,
-          cityId: store.cityId!,
+          productId: productId,
+          qualityLevel:
+              _shouldLockStoreSlotQualityV2(slot) ? slot.qualityLevel : null,
         );
 
     if (context.mounted) Navigator.pop(context);
 
-    if (result['success'] == true) {
-      final List<dynamic> warehouses = result['warehouses'];
-      if (warehouses.isEmpty) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bu şehirde bu ürünü içeren uygun deponuz bulunamadı.')),
-          );
-        }
-        return;
-      }
-
+    if (result['success'] != true) {
       if (context.mounted) {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: AppColors.background,
-          isScrollControlled: true,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20.r))),
-          builder: (context) => _buildWarehouseSelectionSheet(context, ref, store, slot, warehouses),
-        );
+        _showError(context, result['message'] ?? 'Depolar yuklenemedi.');
       }
+      return;
     }
+
+    final warehouses = result['warehouses'] as List<dynamic>? ?? const [];
+    if (warehouses.isEmpty) {
+      if (context.mounted) {
+        _showInfo(context, 'Bu urunu iceren uygun deponuz bulunamadi.');
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => _buildWarehouseSelectionSheetV2(
+        context,
+        sheetContext,
+        ref,
+        store,
+        slot,
+        warehouses,
+      ),
+    );
   }
 
-  Widget _buildWarehouseSelectionSheet(
+  void _openMarketSourceFlowV2(
+    BuildContext context,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) {
+    final productId = slot.productId;
+    if (productId == null || productId.isEmpty) return;
+
+    context.push(
+      Uri(
+        path: '/market/$productId',
+        queryParameters: {
+          'targetType': 'store',
+          'storeId': store.id,
+          'storeSlotId': slot.id,
+          'cityId': store.cityId ?? '',
+          'playerId': '',
+        },
+      ).toString(),
+    );
+  }
+
+  Widget _buildWarehouseSelectionSheetV2(
+    BuildContext parentContext,
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
@@ -1281,18 +2478,24 @@ class StoreDetailScreen extends ConsumerWidget {
   ) {
     return Container(
       padding: EdgeInsets.all(16.w),
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Kaynak Depo Seçin',
-            style: TextStyle(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.bold),
+            'Kaynak Depo Secin',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 18.sp,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           SizedBox(height: 4.h),
           Text(
-            '${slot.productName} gönderilecek depoyu seçin',
+            '${slot.productName} gonderecek depoyu secin',
             style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
           ),
           SizedBox(height: 16.h),
@@ -1300,24 +2503,59 @@ class StoreDetailScreen extends ConsumerWidget {
             child: ListView.builder(
               itemCount: warehouses.length,
               itemBuilder: (context, index) {
-                final w = warehouses[index];
-                final wSlots = w['warehouse_slots'] as List<dynamic>;
-                final productSlot = wSlots.firstWhere((s) => s['product_id'] == slot.productId);
-                final availableQty = productSlot['quantity'] as int;
+                final warehouse = warehouses[index];
+                final warehouseSlots =
+                    warehouse['warehouse_slots'] as List<dynamic>? ?? const [];
+                return Column(
+                  children: warehouseSlots.map<Widget>((productSlot) {
+                    final availableQty =
+                        (productSlot['quantity'] as num?)?.toInt() ?? 0;
+                    final qualityLevel =
+                        (productSlot['quality_level'] as num?)?.toInt() ?? 1;
+                    final sourceCityId =
+                        (warehouse['city_id'] ??
+                                warehouse['city']?['id'] ??
+                                '')
+                            .toString();
+                    final cityName =
+                        (warehouse['city']?['name'] ?? 'Bilinmeyen Sehir')
+                            .toString();
 
-                return Card(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  margin: EdgeInsets.only(bottom: 10.h),
-                  child: ListTile(
-                    leading: Icon(Icons.warehouse, color: AppColors.gold),
-                    title: Text(w['name'], style: const TextStyle(color: Colors.white)),
-                    subtitle: Text('Mevcut: $availableQty adet', style: TextStyle(color: AppColors.gold.withValues(alpha: 0.7))),
-                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showQuantityTransferDialog(context, ref, store, slot, productSlot['id'], availableQty);
-                    },
-                  ),
+                    return Card(
+                      color: AppColors.textPrimary.withValues(alpha: 0.05),
+                      margin: EdgeInsets.only(bottom: 10.h),
+                      child: ListTile(
+                        leading: Icon(Icons.warehouse, color: AppColors.gold),
+                        title: Text(
+                          (warehouse['name'] ?? 'Depo').toString(),
+                          style: const TextStyle(color: AppColors.textPrimary),
+                        ),
+                        subtitle: Text(
+                          '$cityName | Kalite: $qualityLevel | Mevcut: $availableQty adet',
+                          style: TextStyle(
+                            color: AppColors.gold.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: AppColors.textSecondary,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showQuantityTransferDialogV2(
+                            parentContext,
+                            ref,
+                            store,
+                            slot,
+                            productSlot['id'].toString(),
+                            availableQty,
+                            qualityLevel,
+                            sourceCityId,
+                          );
+                        },
+                      ),
+                    );
+                  }).toList(),
                 );
               },
             ),
@@ -1327,23 +2565,28 @@ class StoreDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showQuantityTransferDialog(
+  void _showQuantityTransferDialogV2(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
     String warehouseSlotId,
     int availableQty,
+    int selectedQualityLevel,
+    String sourceCityId,
   ) {
-    final TextEditingController controller = TextEditingController(text: '1');
-    final maxCanTake = slot.capacity - slot.quantity;
+    final controller = TextEditingController(text: '1');
+    final maxCanTake = slot.capacity - slot.quantity - slot.pendingQuantity;
     final limit = availableQty < maxCanTake ? availableQty : maxCanTake.toInt();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.background,
-        title: Text('Miktar Girin', style: TextStyle(color: Colors.white, fontSize: 18.sp)),
+        title: Text(
+          'Miktar Girin',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 18.sp),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1355,62 +2598,1224 @@ class StoreDetailScreen extends ConsumerWidget {
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Miktar (Maks: $limit)',
                 labelStyle: const TextStyle(color: AppColors.gold),
-                enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppColors.gold)),
+                enabledBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.textMuted),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.gold),
+                ),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Iptal'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            onPressed: () async {
+            onPressed: () {
               final qty = int.tryParse(controller.text) ?? 0;
               if (qty <= 0 || qty > limit) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Geçersiz miktar!')));
+                _showWarning(context, 'Gecersiz miktar!');
                 return;
               }
-              Navigator.pop(context);
-              _executeTransfer(context, ref, store, warehouseSlotId, slot.id, qty);
+              Navigator.pop(dialogContext);
+              _showVehicleSelectionSheetV2(
+                context,
+                ref,
+                store,
+                slot,
+                warehouseSlotId,
+                qty,
+                selectedQualityLevel,
+                sourceCityId,
+              );
             },
-            child: const Text('Transfer Et', style: TextStyle(color: Colors.black)),
+            child: const Text(
+              'Devam Et',
+              style: TextStyle(color: Colors.black),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _executeTransfer(
+  Future<void> _showVehicleSelectionSheetV2(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
-    String wSlotId,
-    String sSlotId,
-    int qty,
+    StoreSlotModel slot,
+    String warehouseSlotId,
+    int quantity,
+    int selectedQualityLevel,
+    String sourceCityId,
   ) async {
-    final result = await ref.read(storeActionProvider).transferStockToStore(
-          warehouseSlotId: wSlotId,
-          storeSlotId: sSlotId,
-          quantity: qty,
-        );
+    final isSameCity =
+        (store.cityId ?? '').isNotEmpty &&
+        store.cityId == sourceCityId;
 
-    if (context.mounted) {
-      if (result['success'] == true) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        ref.refresh(storeDetailProvider(store.id));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transfer başarıyla tamamlandı!'), backgroundColor: AppColors.green),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: ${result['message']}'), backgroundColor: AppColors.red),
-        );
+    if (isSameCity) {
+      _startWarehouseTransferV2(
+        context,
+        ref,
+        store,
+        slot,
+        warehouseSlotId,
+        quantity,
+        selectedQualityLevel,
+        null,
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.gold),
+      ),
+    );
+
+    List<MarketTransferVehicleOptionModel> options = const [];
+    try {
+      options = await ref.read(storeActionProvider).getStoreTransferVehicleOptions(
+            storeSlotId: slot.id,
+            warehouseSlotId: warehouseSlotId,
+            quantity: quantity,
+          );
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        _showError(context, 'Araclar alinamadi: $e');
+      }
+      return;
+    }
+
+    if (context.mounted) Navigator.pop(context);
+
+    if (options.isEmpty) {
+      if (context.mounted) {
+        _showError(context, 'Bu transfer icin uygun arac bulunamadi.');
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => Container(
+        padding: EdgeInsets.all(16.w),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Arac Secin',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              '$quantity adet urun icin uygun araci secin',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            ),
+            SizedBox(height: 16.h),
+            Expanded(
+              child: ListView.separated(
+                itemCount: options.length,
+                separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                itemBuilder: (_, index) {
+                  final option = options[index];
+                  final color =
+                      option.canSelect ? AppColors.green : AppColors.red;
+                  return InkWell(
+                    onTap: option.canSelect
+                        ? () {
+                            Navigator.pop(sheetContext);
+                            _startWarehouseTransferV2(
+                              context,
+                              ref,
+                              store,
+                              slot,
+                              warehouseSlotId,
+                              quantity,
+                              selectedQualityLevel,
+                              option.vehicleId,
+                            );
+                          }
+                        : null,
+                    borderRadius: BorderRadius.circular(14.r),
+                    child: Container(
+                      padding: EdgeInsets.all(14.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.textPrimary.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(color: color.withValues(alpha: 0.35)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.local_shipping, color: color),
+                              SizedBox(width: 10.w),
+                              Expanded(
+                                child: Text(
+                                  option.vehicleName,
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                option.isRental ? 'Kiralik' : 'Ozmal',
+                                style: TextStyle(
+                                  color: color,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Kapasite: ${option.capacity} | Mesafe: ${option.distanceKm.toStringAsFixed(0)} km | Sure: ${_formatTransferDurationV2(option.estimatedDurationSeconds)}',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Kira: ${option.rentalCost.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                          if (!option.canSelect &&
+                              option.disabledReason != null) ...[
+                            SizedBox(height: 6.h),
+                            Text(
+                              option.disabledReason!,
+                              style: TextStyle(
+                                color: AppColors.red,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTransferDurationV2(int seconds) {
+    final duration = Duration(seconds: seconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    if (hours > 0) return '${hours}s ${minutes}dk';
+    return '${duration.inMinutes}dk';
+  }
+
+  Future<void> _startWarehouseTransferV2(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+    String warehouseSlotId,
+    int quantity,
+    int selectedQualityLevel,
+    String? vehicleId,
+  ) async {
+    final productId = slot.productId;
+    final needsSlotSetup =
+        !_shouldLockStoreSlotQualityV2(slot) &&
+        productId != null &&
+        productId.isNotEmpty &&
+        (slot.productId == null || slot.qualityLevel != selectedQualityLevel);
+
+    if (needsSlotSetup) {
+      final setupResult = await ref.read(storeActionProvider).setStoreSlotProduct(
+            slotId: slot.id,
+            productId: productId,
+            qualityLevel: selectedQualityLevel,
+          );
+
+      if (setupResult['success'] != true) {
+        if (!context.mounted) return;
+        _showError(context, 'Hata: ${setupResult['message']}');
+        return;
       }
     }
+
+    final result = await ref.read(storeActionProvider).startWarehouseToStoreTransfer(
+          storeSlotId: slot.id,
+          warehouseSlotId: warehouseSlotId,
+          quantity: quantity,
+          vehicleId: vehicleId,
+        );
+
+    if (!context.mounted) return;
+    if (result['success'] == true) {
+      await ref.read(storeDetailProvider(store.id).future);
+      if (!context.mounted) return;
+      ref.invalidate(storesListProvider);
+      ref.invalidate(playerStreamProvider);
+      final isInstant = result['mode']?.toString() == 'instant';
+      _showSuccess(
+        context,
+        isInstant
+            ? 'Ayni sehir transferi tamamlandi.'
+            : 'Lojistik transfer baslatildi. Arac yola cikti.',
+      );
+    } else {
+      if (!context.mounted) return;
+      _showError(context, result['message'] ?? 'Transfer basarisiz.');
+    }
+  }
+
+  Future<void> _startStoreOutboundFlow(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) async {
+    if ((slot.quantity) <= 0) {
+      _showError(context, 'Gonderilecek stok bulunmuyor.');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.gold),
+      ),
+    );
+
+    List<Map<String, dynamic>> warehouses = const [];
+    try {
+      warehouses = await ref.read(storeActionProvider).getPlayerWarehouses();
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        _showError(context, 'Depolar alinamadi: $e');
+      }
+      return;
+    }
+
+    if (context.mounted) Navigator.pop(context);
+
+    if (warehouses.isEmpty) {
+      if (context.mounted) {
+        _showError(context, 'Uygun hedef deponuz bulunamadi.');
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => _buildOutboundWarehouseSheet(
+        context,
+        sheetContext,
+        ref,
+        store,
+        slot,
+        warehouses,
+      ),
+    );
+  }
+
+  Widget _buildOutboundWarehouseSheet(
+    BuildContext parentContext,
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+    List<Map<String, dynamic>> warehouses,
+  ) {
+    final sortedWarehouses = List<Map<String, dynamic>>.from(warehouses)
+      ..sort((a, b) {
+        final aSameCity =
+            (a['city_id']?.toString() ?? '') == (store.cityId ?? '');
+        final bSameCity =
+            (b['city_id']?.toString() ?? '') == (store.cityId ?? '');
+        if (aSameCity == bSameCity) {
+          return (a['name'] ?? '').toString().compareTo(
+            (b['name'] ?? '').toString(),
+          );
+        }
+        return aSameCity ? -1 : 1;
+      });
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.78,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hedef Depo Secin',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 18.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            '${slot.productName ?? 'Urun'} gondereceginiz depoyu secin',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+          ),
+          SizedBox(height: 12.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBgLight.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: AppColors.borderGoldLight.withValues(alpha: 0.16),
+              ),
+            ),
+            child: Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: [
+                _buildCompactSelectionChip(
+                  Icons.inventory_2_outlined,
+                  'Stok',
+                  '${slot.quantity}',
+                  AppColors.gold,
+                ),
+                _buildCompactSelectionChip(
+                  Icons.storefront_outlined,
+                  'Magaza',
+                  store.cityName ?? 'Bilinmiyor',
+                  AppColors.blue,
+                ),
+                _buildCompactSelectionChip(
+                  Icons.warehouse_outlined,
+                  'Depo',
+                  '${sortedWarehouses.length} secenek',
+                  AppColors.green,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Expanded(
+            child: ListView.separated(
+              itemCount: sortedWarehouses.length,
+              separatorBuilder: (_, __) => SizedBox(height: 10.h),
+              itemBuilder: (context, index) {
+                final warehouse = sortedWarehouses[index];
+                final cityName =
+                    (warehouse['city']?['name'] ?? 'Bilinmeyen Sehir')
+                        .toString();
+                final isSameCity =
+                    (warehouse['city_id']?.toString() ?? '') ==
+                    (store.cityId ?? '');
+
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16.r),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showOutboundQuantityDialog(
+                      parentContext,
+                      ref,
+                      store,
+                      slot,
+                      warehouse,
+                      cityName,
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(14.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.textPrimary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color:
+                            (isSameCity
+                                    ? AppColors.green
+                                    : AppColors.borderGoldLight)
+                                .withValues(alpha: 0.24),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42.w,
+                          height: 42.w,
+                          decoration: BoxDecoration(
+                            color:
+                                (isSameCity ? AppColors.green : AppColors.gold)
+                                    .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(
+                            Icons.warehouse,
+                            color: isSameCity ? AppColors.green : AppColors.gold,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (warehouse['name'] ?? 'Depo').toString(),
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                cityName,
+                                style: TextStyle(
+                                  color: AppColors.gold.withValues(alpha: 0.75),
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                              SizedBox(height: 6.h),
+                              Wrap(
+                                spacing: 8.w,
+                                runSpacing: 6.h,
+                                children: [
+                                  _buildStatusPill(
+                                    isSameCity
+                                        ? 'Ayni sehir'
+                                        : 'Sehirler arasi',
+                                    isSameCity
+                                        ? AppColors.green
+                                        : AppColors.blue,
+                                  ),
+                                  if (isSameCity)
+                                    _buildStatusPill(
+                                      'Aninda teslim',
+                                      AppColors.green,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          color: AppColors.textPrimary.withValues(alpha: 0.6),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOutboundQuantityDialog(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+    Map<String, dynamic> warehouse,
+    String warehouseCityName,
+  ) {
+    final controller = TextEditingController(text: '1');
+    final limit = slot.quantity;
+    final isSameCity =
+        ((store.cityId ?? '').isNotEmpty &&
+            store.cityId == (warehouse['city_id']?.toString() ?? '')) ||
+        ((store.cityName ?? '').trim().toLowerCase() ==
+            warehouseCityName.trim().toLowerCase());
+
+    void applyQuantity(int value, void Function(void Function()) setState) {
+      final clamped = value.clamp(1, limit);
+      setState(() {
+        controller.text = clamped.toString();
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: controller.text.length),
+        );
+      });
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          backgroundColor: AppColors.background,
+          insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
+          title: Text(
+            'Miktar Girin',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 18.sp),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.textPrimary.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(
+                      color: AppColors.border.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        slot.productName ?? 'Urun',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        '${store.name} -> ${(warehouse['name'] ?? 'Depo').toString()}',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 8.h,
+                        children: [
+                          _buildStatusPill(
+                            isSameCity ? 'Ayni sehir' : 'Sehirler arasi',
+                            isSameCity ? AppColors.green : AppColors.blue,
+                          ),
+                          _buildStatusPill('Maksimum $limit', AppColors.gold),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'Miktar',
+                    helperText: 'Depoya gonderilecek urun adedi',
+                    labelStyle: const TextStyle(color: AppColors.gold),
+                    enabledBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.textMuted),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.gold),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Wrap(
+                  spacing: 8.w,
+                  runSpacing: 8.h,
+                  children: [
+                    _buildQuickQuantityButton(
+                      '1/4',
+                      () => applyQuantity((limit / 4).ceil(), setState),
+                    ),
+                    _buildQuickQuantityButton(
+                      'Yari',
+                      () => applyQuantity((limit / 2).ceil(), setState),
+                    ),
+                    _buildQuickQuantityButton(
+                      'Tamami',
+                      () => applyQuantity(limit, setState),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Iptal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+              onPressed: () {
+                final qty = int.tryParse(controller.text) ?? 0;
+                if (qty <= 0 || qty > limit) {
+                  _showWarning(context, 'Gecersiz miktar!');
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                _maybeStartStoreOutboundTransfer(
+                  context,
+                  ref,
+                  store,
+                  slot,
+                  warehouse,
+                  warehouseCityName,
+                  qty,
+                );
+              },
+              child: const Text(
+                'Devam Et',
+                style: TextStyle(color: Colors.black),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactSelectionChip(
+    IconData icon,
+    String label,
+    String value,
+    Color accentColor,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14.sp, color: accentColor),
+          SizedBox(width: 6.w),
+          Text(
+            '$label: $value',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill(String label, Color accentColor) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: accentColor,
+          fontSize: 10.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickQuantityButton(String label, VoidCallback onPressed) {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.3)),
+        foregroundColor: AppColors.textPrimary,
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      ),
+      onPressed: onPressed,
+      child: Text(label),
+    );
+  }
+
+  Future<void> _maybeStartStoreOutboundTransfer(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+    Map<String, dynamic> warehouse,
+    String warehouseCityName,
+    int quantity,
+  ) async {
+    final sameCity =
+        ((store.cityId ?? '').isNotEmpty &&
+            store.cityId == (warehouse['city_id']?.toString() ?? '')) ||
+        (store.cityId == null &&
+            (store.cityName ?? '').trim().toLowerCase() ==
+                warehouseCityName.trim().toLowerCase());
+
+    if (sameCity) {
+      await _startStoreOutboundTransfer(
+        context,
+        ref,
+        store,
+        slot,
+        warehouse['id'].toString(),
+        quantity,
+        null,
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.gold),
+      ),
+    );
+
+    List<MarketTransferVehicleOptionModel> options = const [];
+    try {
+      options = await ref.read(storeActionProvider).getStoreToWarehouseVehicleOptions(
+            storeSlotId: slot.id,
+            warehouseId: warehouse['id'].toString(),
+            quantity: quantity,
+          );
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        _showError(context, 'Araclar alinamadi: $e');
+      }
+      return;
+    }
+
+    if (context.mounted) Navigator.pop(context);
+
+    if (options.isEmpty) {
+      if (context.mounted) {
+        _showError(context, 'Bu transfer icin uygun arac bulunamadi.');
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => Container(
+        padding: EdgeInsets.all(16.w),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Arac Secin',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              '$quantity adet urun icin uygun araci secin',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            ),
+            SizedBox(height: 16.h),
+            Expanded(
+              child: ListView.separated(
+                itemCount: options.length,
+                separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                itemBuilder: (_, index) {
+                  final option = options[index];
+                  final color =
+                      option.canSelect ? AppColors.green : AppColors.red;
+                  return InkWell(
+                    onTap: option.canSelect
+                        ? () {
+                            Navigator.pop(sheetContext);
+                            _startStoreOutboundTransfer(
+                              context,
+                              ref,
+                              store,
+                              slot,
+                              warehouse['id'].toString(),
+                              quantity,
+                              option.vehicleId,
+                            );
+                          }
+                        : null,
+                    borderRadius: BorderRadius.circular(14.r),
+                    child: Container(
+                      padding: EdgeInsets.all(14.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.textPrimary.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(color: color.withValues(alpha: 0.35)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.local_shipping, color: color),
+                              SizedBox(width: 10.w),
+                              Expanded(
+                                child: Text(
+                                  option.vehicleName,
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                option.isRental ? 'Kiralik' : 'Ozmal',
+                                style: TextStyle(
+                                  color: color,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            'Kapasite: ${option.capacity} | Mesafe: ${option.distanceKm.toStringAsFixed(0)} km | Sure: ${_formatTransferDurationV2(option.estimatedDurationSeconds)}',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Kira: ${option.rentalCost.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                          if (!option.canSelect &&
+                              option.disabledReason != null) ...[
+                            SizedBox(height: 6.h),
+                            Text(
+                              option.disabledReason!,
+                              style: TextStyle(
+                                color: AppColors.red,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startStoreOutboundTransfer(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+    String warehouseId,
+    int quantity,
+    String? vehicleId,
+  ) async {
+    final result = await ref.read(storeActionProvider).startStoreToWarehouseTransfer(
+          storeSlotId: slot.id,
+          warehouseId: warehouseId,
+          quantity: quantity,
+          vehicleId: vehicleId,
+        );
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      await ref.read(storeDetailProvider(store.id).future);
+      if (!context.mounted) return;
+      ref.invalidate(storesListProvider);
+      ref.invalidate(playerStreamProvider);
+      final isInstant = result['mode']?.toString() == 'instant';
+      _showSuccess(
+        context,
+        isInstant
+            ? 'Ayni sehir gonderimi tamamlandi.'
+            : 'Lojistik transfer baslatildi. Arac yola cikti.',
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    _showError(context, 'Hata: ${result['message']}');
   }
 }
+
+class _ActiveBoostCard extends ConsumerWidget {
+  final BuildingBoostModel boost;
+
+  const _ActiveBoostCard({required this.boost});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final totalSeconds = boost.finishAt.difference(boost.startedAt).inSeconds;
+    final elapsedSeconds = now.difference(boost.startedAt).inSeconds;
+    final progress = totalSeconds > 0
+        ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
+        : 1.0;
+    final remaining = boost.finishAt.difference(now);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.goldDark.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: AppColors.goldDark.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: AppColors.goldDark.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.flash_on_rounded,
+                  color: AppColors.goldDark,
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Boost Aktif',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '${boost.durationHours} saat | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost} yildiz',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                _formatCountdownLabel(remaining),
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8.h,
+              backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.goldDark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveUpgradeCard extends ConsumerWidget {
+  final BuildingUpgradeModel upgrade;
+  final Future<void> Function() onFinishWithGold;
+  final int Function(DateTime finishAt) calculateStarCost;
+  final String Function(Duration remaining) formatCountdown;
+
+  const _ActiveUpgradeCard({
+    required this.upgrade,
+    required this.onFinishWithGold,
+    required this.calculateStarCost,
+    required this.formatCountdown,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final totalSeconds = upgrade.finishAt.difference(upgrade.startedAt).inSeconds;
+    final elapsedSeconds = now.difference(upgrade.startedAt).inSeconds;
+    final progress = totalSeconds > 0
+        ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
+        : 1.0;
+    final remaining = upgrade.finishAt.difference(now);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: AppColors.green.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: AppColors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.upgrade_rounded,
+                  color: AppColors.green,
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Yukseltme Devam Ediyor',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Seviye ${upgrade.currentLevel} -> ${upgrade.targetLevel} | Slot kapasitesi +${upgrade.slotCapacityIncrease} | Max slot +${upgrade.maxSlotIncrease}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                formatCountdown(remaining),
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8.h,
+              backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: AppColors.gold.withValues(alpha: 0.35),
+                ),
+                foregroundColor: AppColors.goldLight,
+              ),
+              onPressed: onFinishWithGold,
+              icon: const Icon(Icons.star_rounded),
+              label: Text('${calculateStarCost(upgrade.finishAt)} yildiz ile bitir'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatCountdownLabel(Duration remaining) {
+  if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+  final hours = remaining.inHours;
+  final minutes = remaining.inMinutes % 60;
+  if (hours > 0) {
+    return '${hours}s ${minutes}dk';
+  }
+  return '${remaining.inMinutes}dk';
+}
+

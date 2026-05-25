@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,25 +10,34 @@ import 'package:hard_kapitalizm/features/home/ui/home_screen.dart';
 import 'package:hard_kapitalizm/features/splash/ui/splash_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_detail_screen.dart';
+import 'package:hard_kapitalizm/features/store/ui/store_history_screen.dart';
+import 'package:hard_kapitalizm/features/store/ui/store_performance_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/city_selection_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/auth/ui/profile_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_screen.dart';
+import 'package:hard_kapitalizm/features/field/ui/field_detail_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/farm/ui/farm_screen.dart';
+import 'package:hard_kapitalizm/features/farm/ui/farm_detail_screen.dart';
 import 'package:hard_kapitalizm/features/farm/ui/farm_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_screen.dart';
+import 'package:hard_kapitalizm/features/factory/ui/factory_detail_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_screen.dart';
+import 'package:hard_kapitalizm/features/mine/ui/mine_detail_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/market/ui/market_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_setup_screen.dart';
+import 'package:hard_kapitalizm/features/transfer_map/ui/transfer_map_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_detail_screen.dart';
+import 'package:hard_kapitalizm/features/arge/ui/arge_screen.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/core/navigation/app_route_observer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,14 +49,25 @@ Future<void> main() async {
     anonKey: SupabaseConstants.supabaseAnonKey,
   );
 
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   runApp(const ProviderScope(child: HardKapitalizmApp()));
 }
 
 final _router = GoRouter(
   initialLocation: '/',
+  observers: [appRouteObserver],
   routes: [
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      path: '/transfer-map',
+      builder: (context, state) => const TransferMapScreen(),
+    ),
     GoRoute(
       path: '/store',
       builder: (context, state) => const StoreScreen(),
@@ -67,6 +88,20 @@ final _router = GoRouter(
           builder: (context, state) => StoreDetailScreen(
             storeId: state.pathParameters['id']!,
           ),
+          routes: [
+            GoRoute(
+              path: 'history',
+              builder: (context, state) => StoreHistoryScreen(
+                storeId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'report',
+              builder: (context, state) => StorePerformanceScreen(
+                storeId: state.pathParameters['id']!,
+              ),
+            ),
+          ],
         ),
       ],
     ),
@@ -86,6 +121,11 @@ final _router = GoRouter(
             return FieldTypeSelectionScreen(selectedCity: city);
           },
         ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) =>
+              FieldDetailScreen(fieldId: state.pathParameters['id']!),
+        ),
       ],
     ),
     GoRoute(
@@ -102,6 +142,11 @@ final _router = GoRouter(
             final city = state.extra as CityModel;
             return FarmTypeSelectionScreen(selectedCity: city);
           },
+        ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) =>
+              FarmDetailScreen(farmId: state.pathParameters['id']!),
         ),
       ],
     ),
@@ -120,6 +165,12 @@ final _router = GoRouter(
             return FactoryTypeSelectionScreen(selectedCity: city);
           },
         ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) => FactoryDetailScreen(
+            factoryId: state.pathParameters['id']!,
+          ),
+        ),
       ],
     ),
     GoRoute(
@@ -136,6 +187,12 @@ final _router = GoRouter(
             final city = state.extra as CityModel;
             return MineTypeSelectionScreen(selectedCity: city);
           },
+        ),
+        GoRoute(
+          path: ':id',
+          builder: (context, state) => MineDetailScreen(
+            mineId: state.pathParameters['id']!,
+          ),
         ),
       ],
     ),
@@ -154,12 +211,18 @@ final _router = GoRouter(
         final warehouseId = state.uri.queryParameters['warehouseId'] ?? '';
         final playerId = state.uri.queryParameters['playerId'] ?? '';
         final cityId = state.uri.queryParameters['cityId'] ?? '';
+        final targetType = state.uri.queryParameters['targetType'] ?? 'warehouse';
+        final storeId = state.uri.queryParameters['storeId'] ?? '';
+        final storeSlotId = state.uri.queryParameters['storeSlotId'] ?? '';
 
         return MarketScreen(
           productId: productId,
           warehouseId: warehouseId,
           playerId: playerId,
           cityId: cityId,
+          targetType: targetType,
+          storeId: storeId,
+          storeSlotId: storeSlotId,
         );
       },
     ),
@@ -186,6 +249,10 @@ final _router = GoRouter(
           },
         ),
       ],
+    ),
+    GoRoute(
+      path: '/arge',
+      builder: (context, state) => const ArgeScreen(),
     ),
   ],
 );
@@ -218,14 +285,14 @@ class HardKapitalizmApp extends StatelessWidget {
                 Container(color: AppColors.background),
                 Positioned.fill(
                   child: Opacity(
-                    opacity: 0.05,
+                    opacity: 0.10,
                     child: Image.asset(
                       'assets/back.png',
                       fit: BoxFit.cover,
                     ),
                   ),
                 ),
-                if (materialChild != null) materialChild,
+                ?materialChild,
               ],
             );
           },

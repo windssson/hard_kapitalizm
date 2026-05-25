@@ -7,8 +7,12 @@ class MarketListingModel {
   final String cityName;
   final double cityX;
   final double cityY;
+  final String sellerPlayerId;
+  final String sellerPlayerName;
+  final String sellerAvatarId;
   final int quantity;
   final int qualityLevel;
+  final double price;
   final double cost;
   final bool isAvailableForSale;
 
@@ -21,8 +25,12 @@ class MarketListingModel {
     required this.cityName,
     required this.cityX,
     required this.cityY,
+    required this.sellerPlayerId,
+    required this.sellerPlayerName,
+    required this.sellerAvatarId,
     required this.quantity,
     required this.qualityLevel,
+    required this.price,
     required this.cost,
     required this.isAvailableForSale,
   });
@@ -53,8 +61,16 @@ class MarketListingModel {
           .toString(),
       cityX: parseNum(json['city_x'] ?? cityJson['map_position_x']),
       cityY: parseNum(json['city_y'] ?? cityJson['map_position_y']),
+      sellerPlayerId: (json['seller_player_id'] ?? '').toString(),
+      sellerPlayerName:
+          (json['seller_player_name'] ?? json['player_name'] ?? 'Oyuncu')
+              .toString(),
+      sellerAvatarId:
+          (json['seller_avatar_id'] ?? json['avatar_id'] ?? 'ae1.webp')
+              .toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
+      price: (json['price'] as num?)?.toDouble() ?? 0,
       cost: (json['cost'] as num?)?.toDouble() ?? 0,
       isAvailableForSale: json['is_available_for_sale'] as bool? ?? false,
     );
