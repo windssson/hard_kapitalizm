@@ -58,6 +58,7 @@ class StoreSaleResultModel {
   final double totalRevenue;
   final double totalProfit;
   final int totalSoldQuantity;
+  final int completedBoostCount;
   final List<StoreSaleItemModel> items;
 
   const StoreSaleResultModel({
@@ -69,6 +70,7 @@ class StoreSaleResultModel {
     required this.totalRevenue,
     required this.totalProfit,
     required this.totalSoldQuantity,
+    required this.completedBoostCount,
     required this.items,
   });
 
@@ -87,6 +89,8 @@ class StoreSaleResultModel {
       totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
       totalProfit: (json['total_profit'] as num?)?.toDouble() ?? 0,
       totalSoldQuantity: (json['total_sold_quantity'] as num?)?.toInt() ?? 0,
+      completedBoostCount:
+          (json['completed_boost_count'] as num?)?.toInt() ?? 0,
       items: rawItems
           .whereType<Map>()
           .map(

@@ -151,6 +151,7 @@ class StoreModel {
   final bool isActive;
   final int currentSlotCount;
   final int maxSlotCount;
+  final int slotCapacity;
   final StoreTypeModel storeType;
   final StoreSummaryModel summary;
   final List<StoreSlotModel> slots;
@@ -168,6 +169,7 @@ class StoreModel {
     required this.isActive,
     required this.currentSlotCount,
     required this.maxSlotCount,
+    required this.slotCapacity,
     required this.storeType,
     required this.summary,
     required this.slots,
@@ -189,6 +191,7 @@ class StoreModel {
       isActive: json['is_active'] as bool? ?? true,
       currentSlotCount: (json['current_slot_count'] as num?)?.toInt() ?? 0,
       maxSlotCount: (json['max_slot_count'] as num?)?.toInt() ?? 0,
+      slotCapacity: (json['slot_capacity'] as num?)?.toInt() ?? 0,
       storeType: json['store_type'] != null 
           ? StoreTypeModel.fromJson(json['store_type']) 
           : StoreTypeModel(id: '', name: '', icon: ''),

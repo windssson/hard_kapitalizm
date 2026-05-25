@@ -37,6 +37,39 @@ CREATE TABLE IF NOT EXISTS public.building_constructions (
   completed_at timestamp with time zone
 );
 
+CREATE TABLE IF NOT EXISTS public.building_upgrades (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  player_id uuid NOT NULL,
+  building_kind text NOT NULL,
+  entity_id uuid NOT NULL,
+  current_level integer NOT NULL,
+  target_level integer NOT NULL,
+  params jsonb NOT NULL DEFAULT '{}'::jsonb,
+  status text NOT NULL DEFAULT 'in_progress',
+  started_at timestamp with time zone NOT NULL DEFAULT timezone('utc', now()),
+  finish_at timestamp with time zone NOT NULL,
+  completed_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc', now())
+);
+
+CREATE TABLE IF NOT EXISTS public.building_boosts (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  player_id uuid NOT NULL,
+  building_kind text NOT NULL,
+  entity_id uuid NOT NULL,
+  duration_hours integer NOT NULL,
+  star_cost integer NOT NULL DEFAULT 0,
+  multiplier numeric NOT NULL DEFAULT 2.00,
+  params jsonb NOT NULL DEFAULT '{}'::jsonb,
+  status text NOT NULL DEFAULT 'in_progress',
+  started_at timestamp with time zone NOT NULL DEFAULT timezone('utc', now()),
+  finish_at timestamp with time zone NOT NULL,
+  completed_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc', now())
+);
+
 CREATE TABLE IF NOT EXISTS public.cities (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -450,6 +483,8 @@ CREATE TABLE IF NOT EXISTS public.warehouses (
 
 ALTER TABLE public.arge_researches ADD CONSTRAINT arge_researches_pkey PRIMARY KEY (id);
 ALTER TABLE public.building_constructions ADD CONSTRAINT building_constructions_pkey PRIMARY KEY (id);
+ALTER TABLE public.building_boosts ADD CONSTRAINT building_boosts_pkey PRIMARY KEY (id);
+ALTER TABLE public.building_upgrades ADD CONSTRAINT building_upgrades_pkey PRIMARY KEY (id);
 ALTER TABLE public.cities ADD CONSTRAINT cities_pkey PRIMARY KEY (id);
 ALTER TABLE public.factories ADD CONSTRAINT factories_pkey PRIMARY KEY (id);
 ALTER TABLE public.factory_types ADD CONSTRAINT fabrika_types_pkey PRIMARY KEY (id);
@@ -483,6 +518,8 @@ ALTER TABLE public.warehouses ADD CONSTRAINT warehouses_pkey PRIMARY KEY (id);
 
 ALTER TABLE public.arge_researches ADD CONSTRAINT arge_researches_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
 ALTER TABLE public.building_constructions ADD CONSTRAINT building_constructions_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
+ALTER TABLE public.building_boosts ADD CONSTRAINT building_boosts_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
+ALTER TABLE public.building_upgrades ADD CONSTRAINT building_upgrades_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
 ALTER TABLE public.factories ADD CONSTRAINT factories_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
 ALTER TABLE public.factories ADD CONSTRAINT factories_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);
 ALTER TABLE public.factories ADD CONSTRAINT factories_city_id_fkey FOREIGN KEY (city_id) REFERENCES public.cities(id);
@@ -546,6 +583,14 @@ CREATE INDEX IF NOT EXISTS idx_arge_researches_status ON public.arge_researches 
 CREATE INDEX IF NOT EXISTS idx_building_constructions_finish_at ON public.building_constructions USING btree (finish_at);
 CREATE INDEX IF NOT EXISTS idx_building_constructions_player_id ON public.building_constructions USING btree (player_id);
 CREATE INDEX IF NOT EXISTS idx_building_constructions_status ON public.building_constructions USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_building_boosts_finish_at ON public.building_boosts USING btree (finish_at);
+CREATE INDEX IF NOT EXISTS idx_building_boosts_player_id ON public.building_boosts USING btree (player_id);
+CREATE INDEX IF NOT EXISTS idx_building_boosts_entity ON public.building_boosts USING btree (building_kind, entity_id);
+CREATE INDEX IF NOT EXISTS idx_building_boosts_status ON public.building_boosts USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_building_upgrades_finish_at ON public.building_upgrades USING btree (finish_at);
+CREATE INDEX IF NOT EXISTS idx_building_upgrades_player_id ON public.building_upgrades USING btree (player_id);
+CREATE INDEX IF NOT EXISTS idx_building_upgrades_entity ON public.building_upgrades USING btree (building_kind, entity_id);
+CREATE INDEX IF NOT EXISTS idx_building_upgrades_status ON public.building_upgrades USING btree (status);
 CREATE INDEX IF NOT EXISTS idx_factories_city_id ON public.factories USING btree (city_id);
 CREATE INDEX IF NOT EXISTS idx_factories_factory_type_id ON public.factories USING btree (factory_type_id);
 CREATE INDEX IF NOT EXISTS idx_factories_player_id ON public.factories USING btree (player_id);
@@ -612,6 +657,8 @@ CREATE INDEX IF NOT EXISTS idx_warehouses_warehouse_type_id ON public.warehouses
 -- Tüm tablolarda RLS etkinleştirilmiştir
 ALTER TABLE public.arge_researches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.building_constructions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.building_boosts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.building_upgrades ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.factories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.factory_types ENABLE ROW LEVEL SECURITY;
@@ -988,6 +1035,7 @@ declare
   v_store record;
   v_new_slot_index integer;
   v_slot_id uuid;
+  v_boost_multiplier numeric := 1.00;
 begin
   -- Mağazayı kilitleyerek al
   select *
@@ -1014,6 +1062,17 @@ begin
   from public.store_slots
   where store_id = p_store_id;
 
+  select coalesce(bb.multiplier, 1.00)
+  into v_boost_multiplier
+  from public.building_boosts bb
+  where bb.player_id = p_player_id
+    and bb.building_kind = 'store'
+    and bb.entity_id = p_store_id
+    and bb.status = 'in_progress'
+    and coalesce(bb.finish_at, timezone('utc'::text, now())) > timezone('utc'::text, now())
+  order by bb.created_at desc
+  limit 1;
+
   -- Boş slot oluştur
   insert into public.store_slots (
     store_id,
@@ -1037,7 +1096,7 @@ begin
     0,
     0,
     coalesce(v_store.slot_capacity, 0),
-    1.00,
+    coalesce(v_boost_multiplier, 1.00),
     0,
     true
   )
@@ -2129,6 +2188,663 @@ begin
     'completed_count', v_completed_count,
     'failed_count', v_failed_count
   );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_player_active_building_upgrade(p_building_kind text, p_entity_id uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select to_jsonb(bu)
+  from public.building_upgrades bu
+  where bu.player_id = auth.uid()
+    and bu.building_kind = p_building_kind
+    and bu.entity_id = p_entity_id
+    and bu.status = 'in_progress'
+    and coalesce(bu.finish_at, timezone('utc'::text, now())) > timezone('utc'::text, now())
+  order by bu.started_at desc
+  limit 1;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_player_active_building_boost(p_building_kind text, p_entity_id uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select to_jsonb(bb)
+  from public.building_boosts bb
+  where bb.player_id = auth.uid()
+    and bb.building_kind = p_building_kind
+    and bb.entity_id = p_entity_id
+    and bb.status = 'in_progress'
+    and coalesce(bb.finish_at, timezone('utc'::text, now())) > timezone('utc'::text, now())
+  order by bb.started_at desc
+  limit 1;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.start_building_boost(p_player_id uuid, p_building_kind text, p_entity_id uuid, p_duration_hours integer, p_star_cost integer)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_now timestamptz := timezone('utc', now());
+  v_finish_at timestamptz;
+  v_boost_id uuid;
+  v_multiplier numeric := 2.00;
+  v_player_gold numeric;
+begin
+  if p_player_id is null or p_player_id <> auth.uid() then
+    raise exception 'Gecersiz oyuncu.';
+  end if;
+
+  if p_duration_hours not in (6, 12, 24) then
+    raise exception 'Boost suresi yalnizca 6, 12 veya 24 saat olabilir.';
+  end if;
+
+  if coalesce(p_star_cost, 0) < 0 then
+    raise exception 'Boost maliyeti gecersiz.';
+  end if;
+
+  if exists (
+    select 1
+    from public.building_boosts bb
+    where bb.player_id = p_player_id
+      and bb.building_kind = p_building_kind
+      and bb.entity_id = p_entity_id
+      and bb.status = 'in_progress'
+      and coalesce(bb.finish_at, v_now) > v_now
+  ) then
+    raise exception 'Bu isletme icin zaten aktif bir boost var.';
+  end if;
+
+  select gold
+  into v_player_gold
+  from public.players
+  where id = p_player_id
+  for update;
+
+  if not found then
+    raise exception 'Oyuncu bulunamadi.';
+  end if;
+
+  if coalesce(v_player_gold, 0) < p_star_cost then
+    raise exception 'Yetersiz yildiz. Gerekli: %, Mevcut: %', p_star_cost, coalesce(v_player_gold, 0);
+  end if;
+
+  if p_building_kind = 'store' then
+    if not exists (
+      select 1
+      from public.stores s
+      where s.id = p_entity_id
+        and s.player_id = p_player_id
+        and s.is_active = true
+    ) then
+      raise exception 'Magaza bulunamadi veya aktif degil.';
+    end if;
+
+    update public.store_slots
+    set
+      boost_multiplier = v_multiplier,
+      updated_at = v_now
+    where store_id = p_entity_id;
+  elsif p_building_kind in ('field', 'farm') then
+    if not exists (
+      select 1
+      from public.production_slots ps
+      where ps.owner_kind = p_building_kind
+        and ps.owner_id = p_entity_id
+    ) then
+      raise exception 'Uretim slotlari bulunamadi.';
+    end if;
+
+    update public.production_slots
+    set
+      boost_multiplier = v_multiplier,
+      updated_at = v_now
+    where owner_kind = p_building_kind
+      and owner_id = p_entity_id;
+  elsif p_building_kind = 'factory' then
+    update public.factories
+    set
+      boost_multiplier = v_multiplier,
+      updated_at = v_now
+    where id = p_entity_id
+      and player_id = p_player_id
+      and is_active = true;
+
+    if not found then
+      raise exception 'Fabrika bulunamadi veya aktif degil.';
+    end if;
+  elsif p_building_kind = 'mine' then
+    update public.mines
+    set
+      boost_multiplier = v_multiplier,
+      updated_at = v_now
+    where id = p_entity_id
+      and player_id = p_player_id
+      and is_active = true;
+
+    if not found then
+      raise exception 'Maden bulunamadi veya aktif degil.';
+    end if;
+  else
+    raise exception 'Bu building_kind icin boost destegi henuz yok: %', p_building_kind;
+  end if;
+
+  update public.players
+  set gold = gold - p_star_cost
+  where id = p_player_id;
+
+  v_finish_at := v_now + make_interval(hours => p_duration_hours);
+
+  insert into public.building_boosts (
+    player_id,
+    building_kind,
+    entity_id,
+    duration_hours,
+    star_cost,
+    multiplier,
+    params,
+    status,
+    started_at,
+    finish_at,
+    created_at,
+    updated_at
+  )
+  values (
+    p_player_id,
+    p_building_kind,
+    p_entity_id,
+    p_duration_hours,
+    p_star_cost,
+    v_multiplier,
+    jsonb_build_object(
+      'duration_hours', p_duration_hours,
+      'star_cost', p_star_cost,
+      'multiplier', v_multiplier
+    ),
+    'in_progress',
+    v_now,
+    v_finish_at,
+    v_now,
+    v_now
+  )
+  returning id into v_boost_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'boost_id', v_boost_id,
+    'building_kind', p_building_kind,
+    'entity_id', p_entity_id,
+    'duration_hours', p_duration_hours,
+    'star_cost', p_star_cost,
+    'multiplier', v_multiplier,
+    'finish_at', v_finish_at
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.finish_building_boost(p_player_id uuid, p_boost_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_now timestamptz := timezone('utc', now());
+  v_boost public.building_boosts%rowtype;
+begin
+  select *
+  into v_boost
+  from public.building_boosts
+  where id = p_boost_id
+    and player_id = p_player_id
+  for update;
+
+  if not found then
+    raise exception 'Boost bulunamadi.';
+  end if;
+
+  if v_boost.status <> 'in_progress' then
+    raise exception 'Bu boost bitirilemez. Mevcut durum: %', v_boost.status;
+  end if;
+
+  if v_boost.building_kind = 'store' then
+    update public.store_slots
+    set
+      boost_multiplier = 1.00,
+      updated_at = v_now
+    where store_id = v_boost.entity_id;
+  elsif v_boost.building_kind in ('field', 'farm') then
+    update public.production_slots
+    set
+      boost_multiplier = 1.00,
+      updated_at = v_now
+    where owner_kind = v_boost.building_kind
+      and owner_id = v_boost.entity_id;
+  elsif v_boost.building_kind = 'factory' then
+    update public.factories
+    set
+      boost_multiplier = 1.00,
+      updated_at = v_now
+    where id = v_boost.entity_id
+      and player_id = p_player_id;
+  elsif v_boost.building_kind = 'mine' then
+    update public.mines
+    set
+      boost_multiplier = 1.00,
+      updated_at = v_now
+    where id = v_boost.entity_id
+      and player_id = p_player_id;
+  else
+    raise exception 'Bu building_kind icin boost bitirme destegi henuz yok: %', v_boost.building_kind;
+  end if;
+
+  update public.building_boosts
+  set
+    status = 'completed',
+    completed_at = v_now,
+    updated_at = v_now
+  where id = p_boost_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'boost_id', p_boost_id,
+    'building_kind', v_boost.building_kind,
+    'entity_id', v_boost.entity_id,
+    'completed_at', v_now
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.complete_due_building_boosts(p_limit integer DEFAULT 100)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_row record;
+  v_completed_count integer := 0;
+  v_failed_count integer := 0;
+  v_result jsonb;
+begin
+  for v_row in
+    select id, player_id
+    from public.building_boosts
+    where status = 'in_progress'
+      and finish_at <= timezone('utc'::text, now())
+    order by finish_at asc
+    limit p_limit
+    for update skip locked
+  loop
+    begin
+      select public.finish_building_boost(v_row.player_id, v_row.id)
+      into v_result;
+      v_completed_count := v_completed_count + 1;
+    exception when others then
+      v_failed_count := v_failed_count + 1;
+    end;
+  end loop;
+
+  return jsonb_build_object(
+    'success', true,
+    'completed_count', v_completed_count,
+    'failed_count', v_failed_count
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.start_building_upgrade(p_player_id uuid, p_building_kind text, p_entity_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_now timestamptz := timezone('utc', now());
+  v_player record;
+  v_store record;
+  v_current_level integer;
+  v_target_level integer;
+  v_duration_minutes integer;
+  v_slot_capacity_increase integer := 0;
+  v_max_slot_increase integer := 2;
+  v_upgrade_cost numeric := 0;
+  v_upgrade_id uuid;
+  v_finish_at timestamptz;
+begin
+  if p_player_id is null or p_player_id <> auth.uid() then
+    raise exception 'Gecersiz oyuncu.';
+  end if;
+
+  select *
+  into v_player
+  from public.players
+  where id = p_player_id
+  for update;
+
+  if not found then
+    raise exception 'Oyuncu bulunamadi.';
+  end if;
+
+  if exists (
+    select 1
+    from public.building_upgrades bu
+    where bu.player_id = p_player_id
+      and bu.building_kind = p_building_kind
+      and bu.entity_id = p_entity_id
+      and bu.status = 'in_progress'
+      and coalesce(bu.finish_at, v_now) > v_now
+  ) then
+    raise exception 'Bu isletme icin zaten devam eden bir yukseltme var.';
+  end if;
+
+  if p_building_kind = 'store' then
+    select
+      s.*,
+      st.name as store_type_name,
+      st.construction_time_minutes,
+      st.cost as store_type_cost,
+      st.slot_capacity as base_slot_capacity
+    into v_store
+    from public.stores s
+    join public.store_types st on st.id = s.store_type_id
+    where s.id = p_entity_id
+      and s.player_id = p_player_id
+    for update;
+
+    if not found then
+      raise exception 'Magaza bulunamadi veya size ait degil.';
+    end if;
+
+    if coalesce(v_store.is_active, false) = false then
+      raise exception 'Pasif magazada yukseltme baslatilamaz.';
+    end if;
+
+    v_current_level := coalesce(v_store.level, 1);
+    v_target_level := v_current_level + 1;
+    v_slot_capacity_increase := greatest(0, coalesce(v_store.base_slot_capacity, 0));
+    v_duration_minutes := greatest(
+      1,
+      coalesce(v_store.construction_time_minutes, 0) * v_target_level
+    );
+    v_upgrade_cost := greatest(
+      0,
+      coalesce(v_store.store_type_cost, 0) * v_target_level
+    );
+    v_finish_at := v_now + make_interval(mins => v_duration_minutes);
+
+    if coalesce(v_player.cash, 0) < v_upgrade_cost then
+      raise exception 'Yetersiz bakiye. Gerekli: %, Mevcut: %',
+        v_upgrade_cost,
+        coalesce(v_player.cash, 0);
+    end if;
+
+    update public.players
+    set cash = cash - v_upgrade_cost
+    where id = p_player_id;
+
+    insert into public.building_upgrades (
+      player_id,
+      building_kind,
+      entity_id,
+      current_level,
+      target_level,
+      params,
+      status,
+      started_at,
+      finish_at,
+      created_at,
+      updated_at
+    )
+    values (
+      p_player_id,
+      p_building_kind,
+      p_entity_id,
+      v_current_level,
+      v_target_level,
+      jsonb_build_object(
+        'name', v_store.name,
+        'store_type_id', v_store.store_type_id,
+        'store_type_name', v_store.store_type_name,
+        'base_duration_minutes', coalesce(v_store.construction_time_minutes, 0),
+        'duration_minutes', v_duration_minutes,
+        'upgrade_cost', v_upgrade_cost,
+        'slot_capacity_increase', v_slot_capacity_increase,
+        'max_slot_increase', v_max_slot_increase,
+        'previous_slot_capacity', coalesce(v_store.slot_capacity, 0),
+        'next_slot_capacity', coalesce(v_store.slot_capacity, 0) + v_slot_capacity_increase,
+        'previous_max_slot_count', coalesce(v_store.max_slot_count, 0),
+        'next_max_slot_count', coalesce(v_store.max_slot_count, 0) + v_max_slot_increase
+      ),
+      'in_progress',
+      v_now,
+      v_finish_at,
+      v_now,
+      v_now
+    )
+    returning id into v_upgrade_id;
+
+    return jsonb_build_object(
+      'success', true,
+      'upgrade_id', v_upgrade_id,
+      'building_kind', p_building_kind,
+      'entity_id', p_entity_id,
+      'current_level', v_current_level,
+      'target_level', v_target_level,
+      'duration_minutes', v_duration_minutes,
+      'upgrade_cost', v_upgrade_cost,
+      'slot_capacity_increase', v_slot_capacity_increase,
+      'max_slot_increase', v_max_slot_increase,
+      'finish_at', v_finish_at
+    );
+  end if;
+
+  raise exception 'Bu building_kind icin yukseltme destegi henuz yok: %', p_building_kind;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.complete_building_upgrade(p_player_id uuid, p_upgrade_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_now timestamptz := timezone('utc', now());
+  v_upgrade public.building_upgrades%rowtype;
+  v_slot_capacity_increase integer := 0;
+  v_max_slot_increase integer := 0;
+begin
+  select *
+  into v_upgrade
+  from public.building_upgrades
+  where id = p_upgrade_id
+    and player_id = p_player_id
+  for update;
+
+  if not found then
+    raise exception 'Yukseltme bulunamadi.';
+  end if;
+
+  if v_upgrade.status <> 'in_progress' then
+    raise exception 'Bu yukseltme tamamlanabilir durumda degil. Mevcut durum: %', v_upgrade.status;
+  end if;
+
+  if v_upgrade.finish_at > v_now then
+    raise exception 'Yukseltme henuz bitmedi. Bitis zamani: %', v_upgrade.finish_at;
+  end if;
+
+  if v_upgrade.building_kind = 'store' then
+    v_slot_capacity_increase := coalesce((v_upgrade.params->>'slot_capacity_increase')::integer, 0);
+    v_max_slot_increase := coalesce((v_upgrade.params->>'max_slot_increase')::integer, 0);
+
+    update public.stores
+    set
+      level = v_upgrade.target_level,
+      slot_capacity = slot_capacity + v_slot_capacity_increase,
+      max_slot_count = max_slot_count + v_max_slot_increase,
+      updated_at = v_now
+    where id = v_upgrade.entity_id
+      and player_id = p_player_id;
+
+    update public.store_slots
+    set
+      capacity = capacity + v_slot_capacity_increase,
+      updated_at = v_now
+    where store_id = v_upgrade.entity_id;
+  else
+    raise exception 'Bu building_kind icin tamamlama destegi henuz yok: %', v_upgrade.building_kind;
+  end if;
+
+  update public.building_upgrades
+  set
+    status = 'completed',
+    completed_at = v_now,
+    updated_at = v_now
+  where id = p_upgrade_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'upgrade_id', p_upgrade_id,
+    'building_kind', v_upgrade.building_kind,
+    'entity_id', v_upgrade.entity_id,
+    'target_level', v_upgrade.target_level,
+    'slot_capacity_increase', v_slot_capacity_increase,
+    'max_slot_increase', v_max_slot_increase,
+    'completed_at', v_now
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.complete_due_building_upgrades(p_limit integer DEFAULT 100)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_row record;
+  v_completed_count integer := 0;
+  v_failed_count integer := 0;
+  v_result jsonb;
+begin
+  for v_row in
+    select
+      id,
+      player_id
+    from public.building_upgrades
+    where status = 'in_progress'
+      and finish_at <= timezone('utc'::text, now())
+    order by finish_at asc
+    limit p_limit
+    for update skip locked
+  loop
+    begin
+      select public.complete_building_upgrade(
+        v_row.player_id,
+        v_row.id
+      )
+      into v_result;
+
+      v_completed_count := v_completed_count + 1;
+    exception when others then
+      v_failed_count := v_failed_count + 1;
+    end;
+  end loop;
+
+  return jsonb_build_object(
+    'success', true,
+    'completed_count', v_completed_count,
+    'failed_count', v_failed_count
+  );
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.finish_building_upgrade_with_gold(p_player_id uuid, p_upgrade_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_upgrade record;
+  v_player_gold numeric;
+  v_gold_cost integer;
+  v_remaining_minutes numeric;
+  v_result jsonb;
+begin
+  if p_player_id is null or p_player_id <> auth.uid() then
+    raise exception 'Gecersiz oyuncu.';
+  end if;
+
+  select *
+  into v_upgrade
+  from public.building_upgrades
+  where id = p_upgrade_id
+    and player_id = p_player_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('success', false, 'message', 'Yukseltme bulunamadi.');
+  end if;
+
+  if v_upgrade.status <> 'in_progress' then
+    return jsonb_build_object(
+      'success', false,
+      'message', 'Bu yukseltme zaten tamamlanmis veya gecersiz.'
+    );
+  end if;
+
+  v_remaining_minutes := extract(epoch from (v_upgrade.finish_at - timezone('utc'::text, now()))) / 60.0;
+
+  if v_remaining_minutes <= 0 then
+    return public.complete_building_upgrade(p_player_id, p_upgrade_id) || jsonb_build_object('gold_spent', 0);
+  end if;
+
+  v_gold_cost := ceil(v_remaining_minutes / 10.0);
+
+  select gold
+  into v_player_gold
+  from public.players
+  where id = p_player_id
+  for update;
+
+  if coalesce(v_player_gold, 0) < v_gold_cost then
+    return jsonb_build_object(
+      'success', false,
+      'message', format('Yetersiz yildiz. Gerekli: %s, Mevcut: %s.', v_gold_cost, coalesce(v_player_gold, 0)::integer)
+    );
+  end if;
+
+  update public.players
+  set gold = gold - v_gold_cost
+  where id = p_player_id;
+
+  update public.building_upgrades
+  set
+    finish_at = timezone('utc'::text, now()),
+    updated_at = timezone('utc'::text, now())
+  where id = p_upgrade_id;
+
+  v_result := public.complete_building_upgrade(p_player_id, p_upgrade_id);
+
+  return v_result || jsonb_build_object('gold_spent', v_gold_cost);
 end;
 $function$
 ;
@@ -4763,7 +5479,10 @@ AS $function$
             'store_type', jsonb_build_object(
               'id', st.id,
               'name', st.name,
-              'icon', st.icon
+              'icon', st.icon,
+              'cost', st.cost,
+              'required_level', st.required_level,
+              'construction_time_minutes', st.construction_time_minutes
             ),
             'summary', jsonb_build_object(
               'slot_count', coalesce(slot_data.slot_count, 0),
@@ -4895,8 +5614,17 @@ AS $function$
       'title',
         case
           when lt.buyer_store_id = p_store_id then
-            case when coalesce(lt.total_price, 0) > 0 then 'Pazardan Geldi' else 'Depodan Geldi' end
-          else 'Depoya Gonderildi'
+            case
+              when lt.status = 'in_transit' then
+                case when coalesce(lt.total_price, 0) > 0 then 'Pazardan Geliyor' else 'Depodan Geliyor' end
+              else
+                case when coalesce(lt.total_price, 0) > 0 then 'Pazardan Geldi' else 'Depodan Geldi' end
+            end
+          else
+            case
+              when lt.status = 'in_transit' then 'Depoya Gonderiliyor'
+              else 'Depoya Gonderildi'
+            end
         end,
       'subtitle',
         case
@@ -4920,7 +5648,6 @@ AS $function$
     left join public.products p on p.id = lt.product_id
     join public.stores s on s.id = p_store_id and s.player_id = auth.uid()
     where (lt.buyer_store_id = p_store_id or lt.seller_store_id = p_store_id)
-      and lt.status <> 'in_transit'
   ),
   sale_items as (
     select jsonb_build_object(
@@ -5286,6 +6013,8 @@ AS $function$
           'city_name', c.name,
           'level', s.level,
           'is_active', s.is_active,
+          'current_slot_count', s.current_slot_count,
+          'max_slot_count', s.max_slot_count,
           'store_type', jsonb_build_object(
             'id', st.id,
             'name', st.name,
@@ -5311,7 +6040,10 @@ AS $function$
                   4
                 )
               else 0
-            end
+            end,
+            'pending_sale_total', coalesce(slot_summary.pending_sale_total, 0),
+            'total_stock_cost_value', coalesce(slot_summary.total_stock_cost_value, 0),
+            'total_stock_sale_value', coalesce(slot_summary.total_stock_sale_value, 0)
           ),
           'slots', coalesce(slot_summary.slots, '[]'::jsonb)
         )
@@ -5328,6 +6060,9 @@ AS $function$
       coalesce(sum(ss.quantity), 0) as total_quantity,
       coalesce(sum(ss.capacity), 0) as total_capacity,
       coalesce(sum(ss.pending_quantity), 0) as pending_quantity,
+      coalesce(sum(ss.pending_sale), 0) as pending_sale_total,
+      coalesce(sum(ss.quantity * ss.cost), 0) as total_stock_cost_value,
+      coalesce(sum(ss.quantity * ss.price), 0) as total_stock_sale_value,
       coalesce(
         jsonb_agg(
           jsonb_build_object(
@@ -5340,6 +6075,9 @@ AS $function$
             'quantity', ss.quantity,
             'capacity', ss.capacity,
             'pending_quantity', ss.pending_quantity,
+            'price', ss.price,
+            'cost', ss.cost,
+            'pending_sale', ss.pending_sale,
             'is_active', ss.is_active,
             'is_empty', case
               when ss.product_id is null or ss.quality_level = 0 then true
@@ -6188,6 +6926,7 @@ declare
   v_store stores%rowtype;
   v_now timestamptz := now();
   v_processed boolean := false;
+  v_completed_boost_count integer := 0;
   v_total_revenue numeric := 0;
   v_total_profit numeric := 0;
   v_total_sold_quantity integer := 0;
@@ -6195,6 +6934,7 @@ declare
   v_items jsonb := '[]'::jsonb;
   v_slot record;
   v_elapsed_minutes numeric;
+  v_boost_bonus_minutes numeric;
   v_base_demand numeric;
   v_generated_demand numeric;
   v_available_demand numeric;
@@ -6279,8 +7019,32 @@ begin
     end if;
 
     v_base_demand := greatest(0, coalesce(v_slot.satis_adedi, 0)::numeric * v_elapsed_minutes / 60.0);
+    select coalesce(
+      sum(
+        greatest(
+          extract(
+            epoch from least(coalesce(bb.finish_at, v_now), v_now)
+            - greatest(bb.started_at, v_slot.last_sale_processed_at)
+          ) / 60.0,
+          0
+        ) * greatest(coalesce(bb.multiplier, 1) - 1, 0)
+      ),
+      0
+    )
+    into v_boost_bonus_minutes
+    from public.building_boosts bb
+    where bb.player_id = p_player_id
+      and bb.building_kind = 'store'
+      and bb.entity_id = p_store_id
+      and bb.started_at < v_now
+      and coalesce(bb.finish_at, v_now) > v_slot.last_sale_processed_at;
+
     v_generated_demand := v_base_demand
-      * coalesce(v_slot.boost_multiplier, 1)
+      * greatest(
+          0,
+          (v_elapsed_minutes + coalesce(v_boost_bonus_minutes, 0))
+          / greatest(v_elapsed_minutes, 1)
+        )
       * v_quality_multiplier
       * v_price_multiplier;
 
@@ -6369,11 +7133,36 @@ begin
     end if;
   end loop;
 
+  with due_boosts as (
+    update public.building_boosts
+    set
+      status = 'completed',
+      completed_at = coalesce(completed_at, v_now),
+      updated_at = v_now
+    where player_id = p_player_id
+      and building_kind = 'store'
+      and entity_id = p_store_id
+      and status = 'in_progress'
+      and finish_at <= v_now
+    returning id
+  ), reset_slots as (
+    update public.store_slots
+    set
+      boost_multiplier = 1.00,
+      updated_at = v_now
+    where store_id = p_store_id
+      and exists (select 1 from due_boosts)
+    returning id
+  )
+  select count(*) into v_completed_boost_count
+  from due_boosts;
+
   if v_processed = false then
     return jsonb_build_object(
       'success', true,
       'processed', false,
-      'message', 'Satis hesabi icin henuz 10 dakika gecmedi.'
+      'message', 'Satis hesabi icin henuz 10 dakika gecmedi.',
+      'completed_boost_count', v_completed_boost_count
     );
   end if;
 
@@ -6395,6 +7184,7 @@ begin
     'total_revenue', v_total_revenue,
     'total_profit', v_total_profit,
     'total_sold_quantity', v_total_sold_quantity,
+    'completed_boost_count', v_completed_boost_count,
     'items', v_items
   );
 end;
@@ -11351,6 +12141,12 @@ CREATE POLICY "Players can view their own arge researches" ON public.arge_resear
 CREATE POLICY "Users can insert their own building constructions" ON public.building_constructions AS PERMISSIVE FOR INSERT TO {public} WITH CHECK ((auth.uid() = player_id));
 CREATE POLICY "Users can update their own building constructions" ON public.building_constructions AS PERMISSIVE FOR UPDATE TO {public} USING ((auth.uid() = player_id));
 CREATE POLICY "Users can view their own building constructions" ON public.building_constructions AS PERMISSIVE FOR SELECT TO {public} USING ((auth.uid() = player_id));
+CREATE POLICY "Users can insert their own building boosts" ON public.building_boosts AS PERMISSIVE FOR INSERT TO {public} WITH CHECK ((auth.uid() = player_id));
+CREATE POLICY "Users can update their own building boosts" ON public.building_boosts AS PERMISSIVE FOR UPDATE TO {public} USING ((auth.uid() = player_id));
+CREATE POLICY "Users can view their own building boosts" ON public.building_boosts AS PERMISSIVE FOR SELECT TO {public} USING ((auth.uid() = player_id));
+CREATE POLICY "Users can insert their own building upgrades" ON public.building_upgrades AS PERMISSIVE FOR INSERT TO {public} WITH CHECK ((auth.uid() = player_id));
+CREATE POLICY "Users can update their own building upgrades" ON public.building_upgrades AS PERMISSIVE FOR UPDATE TO {public} USING ((auth.uid() = player_id));
+CREATE POLICY "Users can view their own building upgrades" ON public.building_upgrades AS PERMISSIVE FOR SELECT TO {public} USING ((auth.uid() = player_id));
 CREATE POLICY "Allow everyone to read cities" ON public.cities AS PERMISSIVE FOR SELECT TO {public} USING (true);
 CREATE POLICY "Users can view their own factories" ON public.factories AS PERMISSIVE FOR SELECT TO {authenticated} USING ((auth.uid() = player_id));
 CREATE POLICY "Allow everyone to read factory_types" ON public.factory_types AS PERMISSIVE FOR SELECT TO {public} USING (true);

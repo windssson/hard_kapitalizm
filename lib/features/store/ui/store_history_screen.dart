@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -26,8 +27,21 @@ class StoreHistoryScreen extends ConsumerStatefulWidget {
   ConsumerState<StoreHistoryScreen> createState() => _StoreHistoryScreenState();
 }
 
-class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
+class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
+    with RouteRefreshMixin<StoreHistoryScreen> {
   _StoreHistoryFilter _selectedFilter = _StoreHistoryFilter.all;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
+  }
+
+  @override
+  void refreshRouteData() {
+    ref.invalidate(storeHistoryProvider(widget.storeId));
+    ref.read(storeHistoryProvider(widget.storeId).future);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +81,8 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: EdgeInsets.all(24.w),
                             children: [
+                              _buildSummaryHeader(filteredItems),
+                              SizedBox(height: 16.h),
                               SizedBox(height: 120.h),
                               _buildEmptyState(),
                             ],
@@ -74,10 +90,14 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
                         : ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: EdgeInsets.all(16.w),
-                            itemCount: filteredItems.length,
+                            itemCount: filteredItems.length + 1,
                             separatorBuilder: (_, __) => SizedBox(height: 12.h),
-                            itemBuilder: (_, index) =>
-                                _buildHistoryCard(filteredItems[index]),
+                            itemBuilder: (_, index) {
+                              if (index == 0) {
+                                return _buildSummaryHeader(filteredItems);
+                              }
+                              return _buildHistoryCard(filteredItems[index - 1]);
+                            },
                           ),
                   );
                 },
@@ -147,6 +167,82 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
     );
   }
 
+  Widget _buildSummaryHeader(List<StoreHistoryItemModel> items) {
+    final totalQuantity = items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
+    final totalAmount = items.fold<double>(
+      0,
+      (sum, item) => sum + item.amount,
+    );
+    final totalSecondaryAmount = items.fold<double>(
+      0,
+      (sum, item) => sum + (item.secondaryAmount ?? 0),
+    );
+    final saleCount = items.where((item) => item.isSale).length;
+
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(
+          color: AppColors.borderGoldLight.withValues(alpha: 0.22),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _selectedFilter.label,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            '${items.length} kayit icin hizli ozet',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 11.sp,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: [
+              _buildSummaryChip(
+                'Kayit',
+                items.length.toString(),
+                AppColors.gold,
+              ),
+              _buildSummaryChip(
+                'Miktar',
+                _formatCompactNumber(totalQuantity.toDouble()),
+                Colors.white,
+              ),
+              _buildSummaryChip(
+                'Toplam Tutar',
+                _formatCurrency(totalAmount),
+                AppColors.green,
+              ),
+              if (saleCount > 0)
+                _buildSummaryChip(
+                  'Toplam Kar',
+                  _formatCurrency(totalSecondaryAmount),
+                  AppColors.blue,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   List<StoreHistoryItemModel> _applyFilter(List<StoreHistoryItemModel> items) {
     switch (_selectedFilter) {
       case _StoreHistoryFilter.all:
@@ -207,6 +303,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
         : item.isIncomingTransfer
             ? AppColors.gold
             : AppColors.blue;
+    final statusColor = _statusColor(item.status);
     final icon = item.isSale
         ? Icons.point_of_sale
         : item.isIncomingTransfer
@@ -268,6 +365,19 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
             ],
           ),
           SizedBox(height: 12.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: [
+              _buildStatusChip(_statusLabel(item.status), statusColor),
+              if (!item.isSale)
+                _buildStatusChip(
+                  item.isIncomingTransfer ? 'Giris' : 'Cikis',
+                  accentColor,
+                ),
+            ],
+          ),
+          SizedBox(height: 10.h),
           Text(
             item.productName,
             style: TextStyle(
@@ -318,6 +428,96 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
       ),
     );
   }
+
+  Widget _buildStatusChip(String label, Color accentColor) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: accentColor.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: accentColor,
+          fontSize: 10.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'in_transit':
+        return 'Yolda';
+      case 'completed':
+        return 'Tamamlandi';
+      case 'cancelled':
+        return 'Iptal';
+      default:
+        return status;
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'in_transit':
+        return AppColors.blue;
+      case 'completed':
+        return AppColors.green;
+      case 'cancelled':
+        return AppColors.red;
+      default:
+        return AppColors.textMuted;
+    }
+  }
+
+  Widget _buildSummaryChip(String label, String value, Color accentColor) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 10.sp,
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Text(
+            value,
+            style: TextStyle(
+              color: accentColor,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatCompactNumber(double value) {
+    if (value.abs() >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    }
+    if (value.abs() >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    }
+    return value.toStringAsFixed(value % 1 == 0 ? 0 : 1);
+  }
+
+  String _formatCurrency(double value) => 'TL ${_formatCompactNumber(value)}';
 
   String _formatDate(DateTime value) {
     final local = value.toLocal();

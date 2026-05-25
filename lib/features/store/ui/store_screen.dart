@@ -181,6 +181,52 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
     );
   }
 
+  String _formatCompactValue(num value) {
+    if (value.abs() >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    }
+    if (value.abs() >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    }
+    return value.toStringAsFixed(value % 1 == 0 ? 0 : 1);
+  }
+
+  double _calculateStoreStockCost(StoreModel store) {
+    final summaryCost = store.summary.totalStockCostValue;
+    if (summaryCost != null && summaryCost > 0) {
+      return summaryCost;
+    }
+
+    return store.slots.fold<double>(
+      0,
+      (total, slot) => total + ((slot.cost ?? 0) * slot.quantity),
+    );
+  }
+
+  double _calculateStoreStockSaleValue(StoreModel store) {
+    final summarySaleValue = store.summary.totalStockSaleValue;
+    if (summarySaleValue != null && summarySaleValue > 0) {
+      return summarySaleValue;
+    }
+
+    return store.slots.fold<double>(
+      0,
+      (total, slot) => total + ((slot.price ?? 0) * slot.quantity),
+    );
+  }
+
+  double _calculatePendingSaleValue(StoreModel store) {
+    final summaryPending = store.summary.pendingSaleTotal;
+    if (summaryPending != null && summaryPending > 0) {
+      return summaryPending;
+    }
+
+    return store.slots.fold<double>(
+      0,
+      (total, slot) => total + (slot.pendingSale ?? 0),
+    );
+  }
+
   Widget _buildStatItem(
     IconData icon,
     Color iconColor,
@@ -487,6 +533,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
   }
 
   Widget _buildAdvancedStoreCard(StoreModel store) {
+    final stockCost = _calculateStoreStockCost(store);
+    final stockSaleValue = _calculateStoreStockSaleValue(store);
+    final pendingSaleValue = _calculatePendingSaleValue(store);
+
     return GestureDetector(
       onTap: () => context.go('/store/${store.id}'),
       child: Container(
@@ -586,6 +636,75 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                       ),
                     ],
                   ),
+                  SizedBox(height: 10.h),
+                  Wrap(
+                    spacing: 8.w,
+                    runSpacing: 8.h,
+                    children: [
+                      _buildInfoPill(
+                        icon: Icons.grid_view_rounded,
+                        label: 'Slot',
+                        value: '${store.currentSlotCount}/${store.maxSlotCount}',
+                        color: AppColors.gold,
+                      ),
+                      _buildInfoPill(
+                        icon: Icons.inventory_2_rounded,
+                        label: 'Doluluk',
+                        value: '%${(store.summary.usedCapacityRatio * 100).round()}',
+                        color: store.summary.usedCapacityRatio >= 0.85
+                            ? AppColors.red
+                            : AppColors.green,
+                      ),
+                      _buildInfoPill(
+                        icon: Icons.schedule_rounded,
+                        label: 'Bekleyen',
+                        value: _formatCompactValue(pendingSaleValue),
+                        color: AppColors.blue,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 8.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: AppColors.borderGoldLight.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildValueColumn(
+                            'Maliyet',
+                            'TL ${_formatCompactValue(stockCost)}',
+                            AppColors.textSecondary,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildValueColumn(
+                            'Liste Degeri',
+                            'TL ${_formatCompactValue(stockSaleValue)}',
+                            AppColors.green,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildValueColumn(
+                            'Bos Kap.',
+                            _formatCompactValue(
+                              store.summary.availableCapacity,
+                            ),
+                            AppColors.gold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   if (store.slots.isNotEmpty) ...[
                     SizedBox(height: 12.h),
                     SingleChildScrollView(
@@ -601,6 +720,60 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoPill({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12.sp, color: color),
+          SizedBox(width: 4.w),
+          Text(
+            '$label: $value',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildValueColumn(String label, String value, Color valueColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: valueColor,
+            fontSize: 11.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 

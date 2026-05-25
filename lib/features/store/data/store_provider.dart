@@ -1,4 +1,6 @@
+import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
@@ -17,10 +19,21 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
   if (user == null) return [];
 
   try {
-    final response = await supabase.rpc(
-      'get_stores_list',
-      params: {'p_player_id': user.id},
-    );
+    final results = await Future.wait([
+      supabase.rpc(
+        'get_stores_list',
+        params: {'p_player_id': user.id},
+      ),
+      supabase.rpc(
+        'get_player_building_constructions',
+        params: {
+          'p_building_kind': 'store',
+          'p_status': 'in_progress',
+        },
+      ),
+    ]);
+    final response = results[0];
+    final constructionResponse = results[1] as List<dynamic>;
 
     List<StoreModel> allStores = [];
 
@@ -31,25 +44,18 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
           .toList();
     }
 
-    final typesResponse = await supabase.rpc('get_store_types_catalog');
-    final allTypes = (typesResponse as List)
-        .map((json) => StoreTypeModel.fromJson(json))
-        .toList();
-
-    final citiesResponse = await supabase.rpc('get_cities_catalog');
-    final allCities = (citiesResponse as List)
-        .map((json) => CityModel.fromJson(json))
-        .toList();
-
-    final constructionResponse = await supabase.rpc(
-      'get_player_building_constructions',
-      params: {
-        'p_building_kind': 'store',
-        'p_status': 'in_progress',
-      },
-    );
-
     if (constructionResponse.isNotEmpty) {
+      final catalogResults = await Future.wait([
+        supabase.rpc('get_store_types_catalog'),
+        supabase.rpc('get_cities_catalog'),
+      ]);
+      final allTypes = (catalogResults[0] as List)
+          .map((json) => StoreTypeModel.fromJson(json))
+          .toList();
+      final allCities = (catalogResults[1] as List)
+          .map((json) => CityModel.fromJson(json))
+          .toList();
+
       for (final constr in constructionResponse) {
         final params = constr['params'] as Map<String, dynamic>;
         final storeTypeId = params['store_type_id'] as String?;
@@ -97,6 +103,7 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
             isActive: false,
             currentSlotCount: 0,
             maxSlotCount: params['max_slot_count'] as int? ?? 0,
+            slotCapacity: params['slot_capacity'] as int? ?? 0,
             storeType: type,
             summary: StoreSummaryModel(
               totalQuantity: 0,
@@ -117,7 +124,6 @@ final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
 
     return allStores;
   } catch (e) {
-    print('StoreListProvider Error: $e');
     return [];
   }
 });
@@ -214,6 +220,58 @@ final storeHistoryProvider =
           status: (json['status'] ?? 'completed').toString(),
         );
       }).toList();
+    });
+
+final activeStoreUpgradeProvider =
+    FutureProvider.family<BuildingUpgradeModel?, String>((ref, storeId) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        return null;
+      }
+
+      final response = await supabase.rpc(
+        'get_player_active_building_upgrade',
+        params: {
+          'p_building_kind': 'store',
+          'p_entity_id': storeId,
+        },
+      );
+
+      if (response == null) {
+        return null;
+      }
+
+      return BuildingUpgradeModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    });
+
+final activeStoreBoostProvider =
+    FutureProvider.family<BuildingBoostModel?, String>((ref, storeId) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        return null;
+      }
+
+      final response = await supabase.rpc(
+        'get_player_active_building_boost',
+        params: {
+          'p_building_kind': 'store',
+          'p_entity_id': storeId,
+        },
+      );
+
+      if (response == null) {
+        return null;
+      }
+
+      return BuildingBoostModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
     });
 
 final citiesProvider = FutureProvider<List<CityModel>>((ref) async {
@@ -317,6 +375,95 @@ class StoreActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_store_id': storeId,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> startStoreUpgrade(String storeId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_building_upgrade',
+        params: {
+          'p_player_id': user.id,
+          'p_building_kind': 'store',
+          'p_entity_id': storeId,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'complete_due_building_upgrades',
+        params: {
+          'p_limit': 100,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> finishStoreUpgradeWithGold(
+    String upgradeId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'finish_building_upgrade_with_gold',
+        params: {
+          'p_player_id': user.id,
+          'p_upgrade_id': upgradeId,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> startStoreBoost({
+    required String storeId,
+    required int durationHours,
+    required int starCost,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_building_boost',
+        params: {
+          'p_player_id': user.id,
+          'p_building_kind': 'store',
+          'p_entity_id': storeId,
+          'p_duration_hours': durationHours,
+          'p_star_cost': starCost,
         },
       );
       return response as Map<String, dynamic>;
@@ -634,6 +781,7 @@ class StoreActionNotifier {
         totalRevenue: 0,
         totalProfit: 0,
         totalSoldQuantity: 0,
+        completedBoostCount: 0,
         items: [],
       );
     }
@@ -660,6 +808,7 @@ class StoreActionNotifier {
         totalRevenue: 0,
         totalProfit: 0,
         totalSoldQuantity: 0,
+        completedBoostCount: 0,
         items: const [],
       );
     }

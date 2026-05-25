@@ -33,6 +33,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (user != null) {
         try {
           await Supabase.instance.client.rpc(
+            'complete_due_building_upgrades',
+            params: {
+              'p_limit': 100,
+            },
+          );
+        } catch (_) {
+          // Gecikmis yukseltmeler basarisiz olsa bile giris akisini bloklamiyoruz.
+        }
+
+        try {
+          await Supabase.instance.client.rpc(
             'complete_due_market_transfers',
             params: {
               'p_buyer_player_id': user.id,

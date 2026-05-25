@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -24,6 +27,13 @@ class StoreDetailScreen extends ConsumerStatefulWidget {
 
 class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   bool _salesCheckDone = false;
+  bool _salesCheckInProgress = false;
+  String? _lastShownSalesResultKey;
+  static const Map<int, int> _storeBoostStarCosts = {
+    6: 3,
+    12: 6,
+    24: 12,
+  };
 
   @override
   void initState() {
@@ -32,12 +42,28 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   }
 
   void _refreshOnEntry() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      _salesCheckDone = false;
-      ref.invalidate(storeDetailProvider(widget.storeId));
-      ref.read(storeDetailProvider(widget.storeId).future);
+      _resetSalesCheckState();
+      await ref.read(storeActionProvider).completeDueBuildingUpgrades();
+      if (!mounted) return;
+      _refreshStoreDetail();
     });
+  }
+
+  void _resetSalesCheckState() {
+    _salesCheckDone = false;
+    _salesCheckInProgress = false;
+    _lastShownSalesResultKey = null;
+  }
+
+  void _refreshStoreDetail() {
+    ref.invalidate(storeDetailProvider(widget.storeId));
+    ref.invalidate(activeStoreBoostProvider(widget.storeId));
+    ref.invalidate(activeStoreUpgradeProvider(widget.storeId));
+    ref.read(storeDetailProvider(widget.storeId).future);
+    ref.read(activeStoreBoostProvider(widget.storeId).future);
+    ref.read(activeStoreUpgradeProvider(widget.storeId).future);
   }
 
   void _onNavSelected(int index) {
@@ -81,7 +107,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   }
 
   void _scheduleStoreSalesCheck(StoreModel store) {
-    if (_salesCheckDone) return;
+    if (_salesCheckDone || _salesCheckInProgress) return;
+
+    _salesCheckInProgress = true;
     _salesCheckDone = true;
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -93,19 +121,43 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
       if (!mounted) return;
 
+      _salesCheckInProgress = false;
+
       if (result.success != true) {
         _salesCheckDone = false;
+        if ((result.message ?? '').trim().isNotEmpty) {
+          AppSnackbar.show(
+            context,
+            title: 'Satis Hesaplanamadi',
+            message: result.message!,
+            type: SnackbarType.error,
+          );
+        }
         return;
       }
 
-      if (result.processed) {
+      if (result.processed || result.completedBoostCount > 0) {
         ref.invalidate(storeDetailProvider(store.id));
+        ref.invalidate(activeStoreBoostProvider(store.id));
+      }
+
+      if (result.processed) {
+        ref.invalidate(storesListProvider);
+        ref.invalidate(storeHistoryProvider(store.id));
+        ref.invalidate(storePerformanceProvider(store.id));
         ref.invalidate(playerStreamProvider);
       }
 
       if (!result.processed || !result.hasVisibleSales) {
         return;
       }
+
+      final resultKey =
+          '${store.id}_${result.processedAt?.toIso8601String() ?? 'no_time'}_${result.totalSoldQuantity}_${result.totalRevenue}';
+      if (_lastShownSalesResultKey == resultKey) {
+        return;
+      }
+      _lastShownSalesResultKey = resultKey;
 
       await _showStoreSalesSummaryDialog(context, result);
     });
@@ -264,6 +316,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     WidgetRef ref,
     StoreModel store,
   ) {
+    final activeBoost = ref.watch(activeStoreBoostProvider(store.id)).value;
+    final activeUpgrade = ref.watch(activeStoreUpgradeProvider(store.id)).value;
+
     return Column(
       children: [
         SecondaryTopBar(title: 'Magaza Yonetimi'),
@@ -276,7 +331,26 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 SizedBox(height: 12.h),
                 _buildImmersiveHeader(store),
                 SizedBox(height: 16.h),
-                _buildQuickActions(context, ref, store),
+                _buildQuickActions(
+                  context,
+                  ref,
+                  store,
+                  activeUpgrade,
+                  activeBoost,
+                ),
+                if (activeBoost != null) ...[
+                  SizedBox(height: 16.h),
+                  _ActiveBoostCard(boost: activeBoost),
+                ],
+                if (activeUpgrade != null) ...[
+                  SizedBox(height: 16.h),
+                  _ActiveUpgradeCard(
+                    upgrade: activeUpgrade,
+                    onFinishWithGold: () => _finishStoreUpgradeWithGold(activeUpgrade),
+                    calculateStarCost: _calculateUpgradeStarCost,
+                    formatCountdown: _formatCountdown,
+                  ),
+                ],
                 SizedBox(height: 16.h),
                 _buildMetricsGrid(store),
                 SizedBox(height: 24.h),
@@ -398,52 +472,79 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  Widget _buildQuickActions(BuildContext context, WidgetRef ref, StoreModel store) {
+  Widget _buildQuickActions(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    BuildingUpgradeModel? activeUpgrade,
+    BuildingBoostModel? activeBoost,
+  ) {
     final canOpenNewSlot = store.currentSlotCount < store.maxSlotCount;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildQuickActionButton(
-          icon: Icons.insights,
-          label: 'Durum',
-          color: Colors.blueAccent,
-          onTap: () => _showUpgradeInfoSheet(context, store),
-        ),
-        _buildQuickActionButton(
-          icon: Icons.bar_chart,
-          label: 'Rapor',
-          color: Colors.purpleAccent,
-          onTap: () => context.push('/store/${store.id}/report'),
-        ),
-        _buildQuickActionButton(
-          icon: Icons.add_box,
-          label: 'Slot Ac',
-          color: AppColors.gold,
-          onTap: canOpenNewSlot ? () => _handleOpenSlot(context, ref, store) : null,
-        ),
-        _buildQuickActionButton(
-          icon: Icons.history,
-          label: 'Gecmis',
-          color: AppColors.textPrimary,
-          onTap: () => context.push('/store/${store.id}/history'),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth = ((constraints.maxWidth - (4 * 6.w)) / 5).clamp(
+          56.w,
+          72.w,
+        );
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildQuickActionButton(
+              width: itemWidth,
+              icon: Icons.upgrade_rounded,
+              label: 'Yukselt',
+              color: AppColors.green,
+              onTap: () =>
+                  _showStoreUpgradeSheet(context, ref, store, activeUpgrade),
+            ),
+            _buildQuickActionButton(
+              width: itemWidth,
+              icon: Icons.flash_on_rounded,
+              label: 'Boost',
+              color: Colors.orangeAccent,
+              onTap: () => _showStoreBoostSheet(context, ref, store, activeBoost),
+            ),
+            _buildQuickActionButton(
+              width: itemWidth,
+              icon: Icons.bar_chart,
+              label: 'Rapor',
+              color: Colors.purpleAccent,
+              onTap: () => context.push('/store/${store.id}/report'),
+            ),
+            _buildQuickActionButton(
+              width: itemWidth,
+              icon: Icons.add_box,
+              label: 'Slot Ac',
+              color: AppColors.gold,
+              onTap: canOpenNewSlot
+                  ? () => _handleOpenSlot(context, ref, store)
+                  : null,
+            ),
+            _buildQuickActionButton(
+              width: itemWidth,
+              icon: Icons.history,
+              label: 'Gecmis',
+              color: AppColors.textPrimary,
+              onTap: () => context.push('/store/${store.id}/history'),
+            ),
+          ],
+        );
+      },
     );
   }
 
-    Future<void> _handleOpenSlot(
+  Future<void> _handleOpenSlot(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
   ) async {
-
-    final result =
-        await ref.read(storeActionProvider).addStoreSlot(store.id);
+    final result = await ref.read(storeActionProvider).addStoreSlot(store.id);
 
     if (context.mounted) {
       if (result['success'] == true) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        final _ = ref.refresh(storeDetailProvider(store.id));
+        await ref.refresh(storeDetailProvider(store.id).future);
+        ref.invalidate(storesListProvider);
         _showSuccess(context, 'Yeni slot basariyla acildi!');
       } else {
         _showError(context, result['message'] ?? 'Slot acilirken bir hata olustu.');
@@ -451,8 +552,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     }
   }
 
-  Widget _buildQuickActionButton(
-{required IconData icon, required String label, required Color color, VoidCallback? onTap}) {
+  Widget _buildQuickActionButton({
+    required double width,
+    required IconData icon,
+    required String label,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
     final isDisabled = onTap == null;
     final displayColor = isDisabled ? Colors.grey : color;
 
@@ -460,8 +566,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16.r),
       child: Container(
-        width: 80.w,
-        padding: EdgeInsets.symmetric(vertical: 12.h),
+        width: width,
+        padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 4.w),
         decoration: BoxDecoration(
           color: displayColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16.r),
@@ -469,9 +575,377 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         ),
         child: Column(
           children: [
-            Icon(icon, color: displayColor, size: 24.sp),
-            SizedBox(height: 6.h),
-            Text(label, style: TextStyle(color: isDisabled ? Colors.grey : Colors.white, fontSize: 10.sp, fontWeight: FontWeight.w600)),
+            Icon(icon, color: displayColor, size: 20.sp),
+            SizedBox(height: 5.h),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDisabled ? Colors.grey : Colors.white,
+                fontSize: 9.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatCountdown(Duration remaining) {
+    if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes % 60;
+    if (hours > 0) {
+      return '${hours}s ${minutes}dk';
+    }
+    return '${remaining.inMinutes}dk';
+  }
+
+  Future<void> _showStoreBoostSheet(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    BuildingBoostModel? activeBoost,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.all(18.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Magaza Boostu',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              activeBoost != null
+                  ? 'Bu magazada zaten aktif bir boost var. Sure dolana kadar tum slotlar x${activeBoost.multiplier.toStringAsFixed(1)} hizla calisir.'
+                  : 'Boost basladiginda tum store slotlarinin boost katsayisi 2 olur. Su an gecici varsayimla yildiz maliyeti saat / 2 kuralindan geliyor.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12.sp,
+                height: 1.45,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            if (activeBoost == null)
+              ..._storeBoostStarCosts.entries.map(
+                (entry) => Padding(
+                  padding: EdgeInsets.only(bottom: 10.h),
+                  child: InkWell(
+                    onTap: () async {
+                      Navigator.pop(sheetContext);
+                      final result = await ref
+                          .read(storeActionProvider)
+                          .startStoreBoost(
+                            storeId: store.id,
+                            durationHours: entry.key,
+                            starCost: entry.value,
+                          );
+
+                      if (!context.mounted) return;
+
+                      if (result['success'] == true) {
+                        ref.invalidate(activeStoreBoostProvider(store.id));
+                        ref.invalidate(storeDetailProvider(store.id));
+                        ref.invalidate(storesListProvider);
+                        ref.invalidate(playerStreamProvider);
+                        _showSuccess(context, 'Magaza boostu baslatildi.');
+                      } else {
+                        _showError(
+                          context,
+                          result['message'] ??
+                              'Magaza boostu baslatilamadi.',
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(16.r),
+                    child: Container(
+                      padding: EdgeInsets.all(14.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(
+                          color: Colors.orangeAccent.withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10.w),
+                            decoration: BoxDecoration(
+                              color: Colors.orangeAccent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Icon(
+                              Icons.flash_on_rounded,
+                              color: Colors.orangeAccent,
+                              size: 18.sp,
+                            ),
+                          ),
+                          SizedBox(width: 12.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${entry.key} Saat',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  'Tum slotlar x2 satis hizi kazanir',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${entry.value} ★',
+                            style: TextStyle(
+                              color: AppColors.goldLight,
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: Colors.black,
+                  ),
+                  onPressed: () => Navigator.pop(sheetContext),
+                  child: const Text('Tamam'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _calculateUpgradeStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
+  }
+
+  Future<void> _finishStoreUpgradeWithGold(BuildingUpgradeModel upgrade) async {
+    final starCost = _calculateUpgradeStarCost(upgrade.finishAt);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: const BorderSide(color: AppColors.borderGold),
+        ),
+        title: Text(
+          'Yukseltmeyi Bitir',
+          style: TextStyle(
+            color: AppColors.goldLight,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '$starCost yildiz kullanarak yukseltmeyi aninda tamamlamak istiyor musunuz?',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Iptal',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Tamamla',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13.sp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final result = await ref
+        .read(storeActionProvider)
+        .finishStoreUpgradeWithGold(upgrade.id);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      ref.invalidate(activeStoreUpgradeProvider(widget.storeId));
+      ref.invalidate(storeDetailProvider(widget.storeId));
+      ref.invalidate(storesListProvider);
+      ref.invalidate(playerStreamProvider);
+      _showSuccess(context, 'Magaza yukseltmesi tamamlandi!');
+    } else {
+      _showError(
+        context,
+        result['message'] ?? 'Yildiz ile bitirme islemi basarisiz.',
+      );
+    }
+  }
+
+  Future<void> _showStoreUpgradeSheet(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    BuildingUpgradeModel? activeUpgrade,
+  ) async {
+    final targetLevel = store.level + 1;
+    final durationMinutes = store.storeType.constructionTimeMinutes * targetLevel;
+    final upgradeCost = (store.storeType.cost * targetLevel).toDouble();
+    final slotCapacityIncrease = store.slotCapacity;
+    const maxSlotIncrease = 2;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.all(18.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Magaza Yukseltme',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            if (activeUpgrade != null)
+              Text(
+                '${store.name} icin bir yukseltme zaten devam ediyor. Tamamlaninca seviye ${activeUpgrade.targetLevel} olacak, tum slot kapasiteleri +${activeUpgrade.slotCapacityIncrease} artacak ve max slot sayisi +${activeUpgrade.maxSlotIncrease} yukselecek.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                  height: 1.45,
+                ),
+              )
+            else
+              Text(
+                '${store.name} seviyesi ${store.level} -> $targetLevel olacak. Yukseltme tamamlaninca tum store slot kapasiteleri +$slotCapacityIncrease artar ve max slot sayisi +$maxSlotIncrease olur.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                  height: 1.45,
+                ),
+              ),
+            SizedBox(height: 16.h),
+            _buildSalesSummaryRow('Mevcut Seviye', store.level.toString()),
+            _buildSalesSummaryRow(
+              'Hedef Seviye',
+              (activeUpgrade?.targetLevel ?? targetLevel).toString(),
+            ),
+            _buildSalesSummaryRow(
+              'Yukseltme Suresi',
+              '${activeUpgrade?.durationMinutes ?? durationMinutes} dk',
+            ),
+            _buildSalesSummaryRow(
+              'Yukseltme Maliyeti',
+              'TL ${_formatValue(activeUpgrade?.upgradeCost ?? upgradeCost)}',
+              valueColor: AppColors.red,
+            ),
+            _buildSalesSummaryRow(
+              'Slot Kapasitesi',
+              '${activeUpgrade?.previousSlotCapacity ?? store.slotCapacity} -> ${activeUpgrade?.nextSlotCapacity ?? (store.slotCapacity + slotCapacityIncrease)}',
+              valueColor: AppColors.gold,
+            ),
+            _buildSalesSummaryRow(
+              'Max Slot',
+              '${activeUpgrade?.previousMaxSlotCount ?? store.maxSlotCount} -> ${activeUpgrade?.nextMaxSlotCount ?? (store.maxSlotCount + maxSlotIncrease)}',
+              valueColor: AppColors.green,
+            ),
+            SizedBox(height: 14.h),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: activeUpgrade != null
+                    ? () => Navigator.pop(sheetContext)
+                    : () async {
+                        Navigator.pop(sheetContext);
+                        final result = await ref
+                            .read(storeActionProvider)
+                            .startStoreUpgrade(store.id);
+
+                        if (!context.mounted) return;
+
+                        if (result['success'] == true) {
+                          ref.invalidate(activeStoreUpgradeProvider(store.id));
+                          ref.invalidate(storeDetailProvider(store.id));
+                          ref.invalidate(storesListProvider);
+                          ref.invalidate(playerStreamProvider);
+                          _showSuccess(
+                            context,
+                            'Magaza yukseltmesi baslatildi.',
+                          );
+                        } else {
+                          _showError(
+                            context,
+                            result['message'] ??
+                                'Magaza yukseltmesi baslatilamadi.',
+                          );
+                        }
+                      },
+                child: Text(activeUpgrade != null ? 'Tamam' : 'Yukseltmeyi Baslat'),
+              ),
+            ),
           ],
         ),
       ),
@@ -503,7 +977,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           ),
           _buildCompactMetricCol(
             title: 'Kar',
-            value: '+₺${_formatValue(store.summary.totalStockSaleValue ?? 0)}',
+            value: '+TL ${_formatValue(store.summary.totalStockSaleValue ?? 0)}',
             icon: Icons.trending_up,
             color: AppColors.green,
           ),
@@ -1003,6 +1477,39 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     return price >= cost ? AppColors.green : AppColors.red;
   }
 
+  double _calculateStorePriceDemandMultiplier(
+    double price,
+    double basePrice,
+  ) {
+    if (basePrice <= 0) return 1.0;
+
+    final ratio = price / basePrice;
+    if (ratio <= 1) {
+      return (1 + ((1 - ratio) * 0.75)).clamp(0.05, 1.75).toDouble();
+    }
+
+    return (1 - ((ratio - 1) * 0.95)).clamp(0.05, 1.75).toDouble();
+  }
+
+  String _formatSignedPercent(double value) {
+    final sign = value > 0 ? '+' : '';
+    return '$sign${value.toStringAsFixed(1)}%';
+  }
+
+  String _describeDemandEffect(double multiplier) {
+    if (multiplier >= 1.35) return 'Cok yuksek talep';
+    if (multiplier >= 1.1) return 'Yuksek talep';
+    if (multiplier >= 0.9) return 'Dengeli talep';
+    if (multiplier >= 0.6) return 'Dusuk talep';
+    return 'Cok dusuk talep';
+  }
+
+  Color _demandEffectColor(double multiplier) {
+    if (multiplier >= 1.1) return AppColors.green;
+    if (multiplier >= 0.9) return AppColors.gold;
+    return AppColors.red;
+  }
+
   void _showPriceEditDialog(
     BuildContext context,
     WidgetRef ref,
@@ -1013,6 +1520,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       text: (slot.price ?? 0).toStringAsFixed(1),
     );
     final cost = slot.cost ?? 0;
+    final product = slot.product;
+    final basePrice = product?.bazSatisFiyati ?? 0;
+    final averagePrice = product?.ortalamaFiyat ?? 0;
+    final minPrice = product?.enDusukFiyat ?? 0;
+    final maxPrice = product?.enYuksekFiyat ?? 0;
+    final baseHourlyDemand = product?.satisAdedi ?? 0;
     double previewPrice = slot.price ?? 0;
 
     showDialog(
@@ -1021,6 +1534,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         builder: (sheetContext, setState) {
           final marginAmount = previewPrice - cost;
           final marginRatio = cost > 0 ? (marginAmount / cost) * 100 : null;
+          final vsBasePercent = basePrice > 0
+              ? ((previewPrice - basePrice) / basePrice) * 100
+              : 0.0;
+          final demandMultiplier = _calculateStorePriceDemandMultiplier(
+            previewPrice,
+            basePrice,
+          );
+          final estimatedHourlyDemand =
+              (baseHourlyDemand * demandMultiplier).toDouble();
+          final demandColor = _demandEffectColor(demandMultiplier);
 
           return AlertDialog(
             backgroundColor: AppColors.background,
@@ -1032,70 +1555,146 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  slot.productName ?? 'Urun',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                TextField(
-                  controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    labelText: 'Birim satis fiyati',
-                    labelStyle: TextStyle(color: AppColors.gold),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white24),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.gold),
+            content: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    slot.productName ?? 'Urun',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      previewPrice =
-                          double.tryParse(value.replaceAll(',', '.')) ??
-                          0;
-                    });
-                  },
-                ),
-                SizedBox(height: 12.h),
-                _buildSalesSummaryRow(
-                  'Maliyet',
-                  cost.toStringAsFixed(1),
-                  valueColor: AppColors.textPrimary,
-                ),
-                _buildSalesSummaryRow(
-                  'Kar Tutari',
-                  marginAmount.toStringAsFixed(1),
-                  valueColor: marginAmount >= 0
-                      ? AppColors.green
-                      : AppColors.red,
-                ),
-                _buildSalesSummaryRow(
-                  'Kar Orani',
-                  marginRatio == null
-                      ? cost == 0
-                            ? 'Maliyet 0'
-                            : '-'
-                      : '%${marginRatio.toStringAsFixed(1)}',
-                  valueColor: marginRatio == null
-                      ? AppColors.gold
-                      : marginRatio >= 0
-                      ? AppColors.green
-                      : AppColors.red,
-                ),
-              ],
+                  SizedBox(height: 12.h),
+                  TextField(
+                    controller: controller,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Birim satis fiyati',
+                      labelStyle: TextStyle(color: AppColors.gold),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.gold),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        previewPrice =
+                            double.tryParse(value.replaceAll(',', '.')) ?? 0;
+                      });
+                    },
+                  ),
+                  SizedBox(height: 12.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: demandColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14.r),
+                      border: Border.all(
+                        color: demandColor.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSalesSummaryRow(
+                          'Baz Fiyat',
+                          basePrice > 0 ? basePrice.toStringAsFixed(1) : '-',
+                          valueColor: AppColors.gold,
+                        ),
+                        _buildSalesSummaryRow(
+                          'Baz Fiyata Gore',
+                          basePrice > 0
+                              ? _formatSignedPercent(vsBasePercent)
+                              : '-',
+                          valueColor: vsBasePercent <= 0
+                              ? AppColors.green
+                              : AppColors.red,
+                        ),
+                        _buildSalesSummaryRow(
+                          'Tahmini Talep',
+                          'x${demandMultiplier.toStringAsFixed(2)}',
+                          valueColor: demandColor,
+                        ),
+                        if (baseHourlyDemand > 0)
+                          _buildSalesSummaryRow(
+                            'Tahmini Satis',
+                            '${estimatedHourlyDemand.toStringAsFixed(1)} / saat',
+                            valueColor: demandColor,
+                          ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          _describeDemandEffect(demandMultiplier),
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  if (averagePrice > 0 || minPrice > 0 || maxPrice > 0)
+                    Text(
+                      averagePrice > 0
+                          ? 'Pazar ort.: ${averagePrice.toStringAsFixed(1)}'
+                          : 'Pazar araligi: ${minPrice.toStringAsFixed(1)} - ${maxPrice.toStringAsFixed(1)}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  if (averagePrice > 0 && (minPrice > 0 || maxPrice > 0))
+                    Padding(
+                      padding: EdgeInsets.only(top: 2.h),
+                      child: Text(
+                        'Aralik: ${minPrice.toStringAsFixed(1)} - ${maxPrice.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11.sp,
+                        ),
+                      ),
+                    ),
+                  SizedBox(height: 12.h),
+                  _buildSalesSummaryRow(
+                    'Maliyet',
+                    cost.toStringAsFixed(1),
+                    valueColor: AppColors.textPrimary,
+                  ),
+                  _buildSalesSummaryRow(
+                    'Kar Tutari',
+                    marginAmount.toStringAsFixed(1),
+                    valueColor: marginAmount >= 0
+                        ? AppColors.green
+                        : AppColors.red,
+                  ),
+                  _buildSalesSummaryRow(
+                    'Kar Orani',
+                    marginRatio == null
+                        ? cost == 0
+                              ? 'Maliyet 0'
+                              : '-'
+                        : '%${marginRatio.toStringAsFixed(1)}',
+                    valueColor: marginRatio == null
+                        ? AppColors.gold
+                        : marginRatio >= 0
+                        ? AppColors.green
+                        : AppColors.red,
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -1360,9 +1959,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (parentContext.mounted) {
       if (result['success'] == true) {
-        // Veritabaninin guncellenmesi icin cok kisa bir sure bekle
-        await Future.delayed(const Duration(milliseconds: 500));
-        final _ = ref.refresh(storeDetailProvider(store.id));
+        await ref.refresh(storeDetailProvider(store.id).future);
+        ref.invalidate(storesListProvider);
         _showSuccess(parentContext, '${product['name']} basariyla eklendi!');
       } else {
         _showError(parentContext, result['message'] ?? 'Urun eklenirken hata olustu.');
@@ -1449,79 +2047,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       ),
     );
   }
-
-  void _showUpgradeInfoSheet(BuildContext context, StoreModel store) {
-    final slotUsage = store.maxSlotCount > 0
-        ? (store.currentSlotCount / store.maxSlotCount) * 100
-        : 0.0;
-    final storageUsage = (store.summary.usedCapacityRatio * 100).clamp(0.0, 100.0);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
-      ),
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.all(18.w),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Magaza Seviyesi',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              '${store.name} su an seviye ${store.level}. Bu panel slot ve stok kapasitesini hizlica takip etmen icin hazirlandi.',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 12.sp,
-                height: 1.45,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            _buildSalesSummaryRow(
-              'Kullanilan Slot',
-              '${store.currentSlotCount}/${store.maxSlotCount}',
-            ),
-            _buildSalesSummaryRow(
-              'Slot Doluluk',
-              '%${slotUsage.toStringAsFixed(0)}',
-            ),
-            _buildSalesSummaryRow(
-              'Stok Doluluk',
-              '%${storageUsage.toStringAsFixed(0)}',
-            ),
-            _buildSalesSummaryRow(
-              'Bos Kapasite',
-              store.summary.availableCapacity.toString(),
-              valueColor: AppColors.gold,
-            ),
-            SizedBox(height: 14.h),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
-                ),
-                onPressed: () => Navigator.pop(sheetContext),
-                child: const Text('Tamam'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
 
   Widget _buildLevelBadge(int level) {
     return Container(
@@ -1753,7 +2278,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           ),
           SizedBox(height: 16.h),
           ElevatedButton(
-            onPressed: () => ref.refresh(storeDetailProvider(widget.storeId)),
+            onPressed: () {
+              _resetSalesCheckState();
+              ref.refresh(storeDetailProvider(widget.storeId));
+            },
             child: const Text('Tekrar Dene'),
           ),
         ],
@@ -2562,8 +3090,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      ref.invalidate(storeDetailProvider(store.id));
+      await ref.refresh(storeDetailProvider(store.id).future);
+      ref.invalidate(storesListProvider);
+      ref.invalidate(playerStreamProvider);
       final isInstant = result['mode']?.toString() == 'instant';
       _showSuccess(
         context,
@@ -2643,10 +3172,24 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     StoreSlotModel slot,
     List<Map<String, dynamic>> warehouses,
   ) {
+    final sortedWarehouses = List<Map<String, dynamic>>.from(warehouses)
+      ..sort((a, b) {
+        final aSameCity =
+            (a['city_id']?.toString() ?? '') == (store.cityId ?? '');
+        final bSameCity =
+            (b['city_id']?.toString() ?? '') == (store.cityId ?? '');
+        if (aSameCity == bSameCity) {
+          return (a['name'] ?? '').toString().compareTo(
+            (b['name'] ?? '').toString(),
+          );
+        }
+        return aSameCity ? -1 : 1;
+      });
+
     return Container(
       padding: EdgeInsets.all(16.w),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
+        maxHeight: MediaQuery.of(context).size.height * 0.78,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2665,44 +3208,147 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             '${slot.productName ?? 'Urun'} gondereceginiz depoyu secin',
             style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
           ),
+          SizedBox(height: 12.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBgLight.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: AppColors.borderGoldLight.withValues(alpha: 0.16),
+              ),
+            ),
+            child: Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: [
+                _buildCompactSelectionChip(
+                  Icons.inventory_2_outlined,
+                  'Stok',
+                  '${slot.quantity}',
+                  AppColors.gold,
+                ),
+                _buildCompactSelectionChip(
+                  Icons.storefront_outlined,
+                  'Magaza',
+                  store.cityName ?? 'Bilinmiyor',
+                  AppColors.blue,
+                ),
+                _buildCompactSelectionChip(
+                  Icons.warehouse_outlined,
+                  'Depo',
+                  '${sortedWarehouses.length} secenek',
+                  AppColors.green,
+                ),
+              ],
+            ),
+          ),
           SizedBox(height: 16.h),
           Expanded(
             child: ListView.separated(
-              itemCount: warehouses.length,
+              itemCount: sortedWarehouses.length,
               separatorBuilder: (_, __) => SizedBox(height: 10.h),
               itemBuilder: (context, index) {
-                final warehouse = warehouses[index];
+                final warehouse = sortedWarehouses[index];
                 final cityName =
                     (warehouse['city']?['name'] ?? 'Bilinmeyen Sehir')
                         .toString();
+                final isSameCity =
+                    (warehouse['city_id']?.toString() ?? '') ==
+                    (store.cityId ?? '');
 
-                return Card(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  child: ListTile(
-                    leading: Icon(Icons.warehouse, color: AppColors.gold),
-                    title: Text(
-                      (warehouse['name'] ?? 'Depo').toString(),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    subtitle: Text(
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16.r),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showOutboundQuantityDialog(
+                      parentContext,
+                      ref,
+                      store,
+                      slot,
+                      warehouse,
                       cityName,
-                      style: TextStyle(
-                        color: AppColors.gold.withValues(alpha: 0.7),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(14.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color:
+                            (isSameCity
+                                    ? AppColors.green
+                                    : AppColors.borderGoldLight)
+                                .withValues(alpha: 0.24),
                       ),
                     ),
-                    trailing:
-                        const Icon(Icons.chevron_right, color: Colors.white54),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showOutboundQuantityDialog(
-                        parentContext,
-                        ref,
-                        store,
-                        slot,
-                        warehouse,
-                        cityName,
-                      );
-                    },
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42.w,
+                          height: 42.w,
+                          decoration: BoxDecoration(
+                            color:
+                                (isSameCity ? AppColors.green : AppColors.gold)
+                                    .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(
+                            Icons.warehouse,
+                            color: isSameCity ? AppColors.green : AppColors.gold,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (warehouse['name'] ?? 'Depo').toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                cityName,
+                                style: TextStyle(
+                                  color: AppColors.gold.withValues(alpha: 0.75),
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                              SizedBox(height: 6.h),
+                              Wrap(
+                                spacing: 8.w,
+                                runSpacing: 6.h,
+                                children: [
+                                  _buildStatusPill(
+                                    isSameCity
+                                        ? 'Ayni sehir'
+                                        : 'Sehirler arasi',
+                                    isSameCity
+                                        ? AppColors.green
+                                        : AppColors.blue,
+                                  ),
+                                  if (isSameCity)
+                                    _buildStatusPill(
+                                      'Aninda teslim',
+                                      AppColors.green,
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -2723,71 +3369,214 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   ) {
     final controller = TextEditingController(text: '1');
     final limit = slot.quantity;
+    final isSameCity =
+        ((store.cityId ?? '').isNotEmpty &&
+            store.cityId == (warehouse['city_id']?.toString() ?? '')) ||
+        ((store.cityName ?? '').trim().toLowerCase() ==
+            warehouseCityName.trim().toLowerCase());
+
+    void applyQuantity(int value, void Function(void Function()) setState) {
+      final clamped = value.clamp(1, limit);
+      setState(() {
+        controller.text = clamped.toString();
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: controller.text.length),
+        );
+      });
+    }
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.background,
-        title: Text(
-          'Miktar Girin',
-          style: TextStyle(color: Colors.white, fontSize: 18.sp),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${slot.productName} -> ${(warehouse['name'] ?? 'Depo').toString()}',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          backgroundColor: AppColors.background,
+          insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
+          title: Text(
+            'Miktar Girin',
+            style: TextStyle(color: Colors.white, fontSize: 18.sp),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(
+                      color: AppColors.border.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        slot.productName ?? 'Urun',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        '${store.name} -> ${(warehouse['name'] ?? 'Depo').toString()}',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 8.h,
+                        children: [
+                          _buildStatusPill(
+                            isSameCity ? 'Ayni sehir' : 'Sehirler arasi',
+                            isSameCity ? AppColors.green : AppColors.blue,
+                          ),
+                          _buildStatusPill('Maksimum $limit', AppColors.gold),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Miktar',
+                    helperText: 'Depoya gonderilecek urun adedi',
+                    labelStyle: const TextStyle(color: AppColors.gold),
+                    enabledBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.gold),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Wrap(
+                  spacing: 8.w,
+                  runSpacing: 8.h,
+                  children: [
+                    _buildQuickQuantityButton(
+                      '1/4',
+                      () => applyQuantity((limit / 4).ceil(), setState),
+                    ),
+                    _buildQuickQuantityButton(
+                      'Yari',
+                      () => applyQuantity((limit / 2).ceil(), setState),
+                    ),
+                    _buildQuickQuantityButton(
+                      'Tamami',
+                      () => applyQuantity(limit, setState),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            SizedBox(height: 16.h),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Miktar (Maks: $limit)',
-                labelStyle: const TextStyle(color: AppColors.gold),
-                enabledBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white24),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.gold),
-                ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Iptal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+              onPressed: () {
+                final qty = int.tryParse(controller.text) ?? 0;
+                if (qty <= 0 || qty > limit) {
+                  _showWarning(context, 'Gecersiz miktar!');
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                _maybeStartStoreOutboundTransfer(
+                  context,
+                  ref,
+                  store,
+                  slot,
+                  warehouse,
+                  warehouseCityName,
+                  qty,
+                );
+              },
+              child: const Text(
+                'Devam Et',
+                style: TextStyle(color: Colors.black),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Iptal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            onPressed: () {
-              final qty = int.tryParse(controller.text) ?? 0;
-              if (qty <= 0 || qty > limit) {
-                _showWarning(context, 'Gecersiz miktar!');
-                return;
-              }
-              Navigator.pop(dialogContext);
-              _maybeStartStoreOutboundTransfer(
-                context,
-                ref,
-                store,
-                slot,
-                warehouse,
-                warehouseCityName,
-                qty,
-              );
-            },
-            child: const Text(
-              'Devam Et',
-              style: TextStyle(color: Colors.black),
+      ),
+    );
+  }
+
+  Widget _buildCompactSelectionChip(
+    IconData icon,
+    String label,
+    String value,
+    Color accentColor,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14.sp, color: accentColor),
+          SizedBox(width: 6.w),
+          Text(
+            '$label: $value',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatusPill(String label, Color accentColor) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: accentColor,
+          fontSize: 10.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickQuantityButton(String label, VoidCallback onPressed) {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.3)),
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      ),
+      onPressed: onPressed,
+      child: Text(label),
     );
   }
 
@@ -3000,8 +3789,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      ref.invalidate(storeDetailProvider(store.id));
+      await ref.refresh(storeDetailProvider(store.id).future);
+      ref.invalidate(storesListProvider);
+      ref.invalidate(playerStreamProvider);
       final isInstant = result['mode']?.toString() == 'instant';
       _showSuccess(
         context,
@@ -3014,5 +3804,220 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     _showError(context, 'Hata: ${result['message']}');
   }
+}
+
+class _ActiveBoostCard extends ConsumerWidget {
+  final BuildingBoostModel boost;
+
+  const _ActiveBoostCard({required this.boost});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final totalSeconds = boost.finishAt.difference(boost.startedAt).inSeconds;
+    final elapsedSeconds = now.difference(boost.startedAt).inSeconds;
+    final progress = totalSeconds > 0
+        ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
+        : 1.0;
+    final remaining = boost.finishAt.difference(now);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: Colors.orangeAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.orangeAccent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.flash_on_rounded,
+                  color: Colors.orangeAccent,
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Boost Aktif',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '${boost.durationHours} saat | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost} yildiz',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                _formatCountdownLabel(remaining),
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8.h,
+              backgroundColor: Colors.white10,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Colors.orangeAccent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveUpgradeCard extends ConsumerWidget {
+  final BuildingUpgradeModel upgrade;
+  final Future<void> Function() onFinishWithGold;
+  final int Function(DateTime finishAt) calculateStarCost;
+  final String Function(Duration remaining) formatCountdown;
+
+  const _ActiveUpgradeCard({
+    required this.upgrade,
+    required this.onFinishWithGold,
+    required this.calculateStarCost,
+    required this.formatCountdown,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final totalSeconds = upgrade.finishAt.difference(upgrade.startedAt).inSeconds;
+    final elapsedSeconds = now.difference(upgrade.startedAt).inSeconds;
+    final progress = totalSeconds > 0
+        ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
+        : 1.0;
+    final remaining = upgrade.finishAt.difference(now);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: AppColors.green.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: AppColors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.upgrade_rounded,
+                  color: AppColors.green,
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Yukseltme Devam Ediyor',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Seviye ${upgrade.currentLevel} -> ${upgrade.targetLevel} | Slot kapasitesi +${upgrade.slotCapacityIncrease} | Max slot +${upgrade.maxSlotIncrease}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                formatCountdown(remaining),
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8.h,
+              backgroundColor: Colors.white10,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: AppColors.gold.withValues(alpha: 0.35),
+                ),
+                foregroundColor: AppColors.goldLight,
+              ),
+              onPressed: onFinishWithGold,
+              icon: const Icon(Icons.star_rounded),
+              label: Text('${calculateStarCost(upgrade.finishAt)} yildiz ile bitir'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatCountdownLabel(Duration remaining) {
+  if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+  final hours = remaining.inHours;
+  final minutes = remaining.inMinutes % 60;
+  if (hours > 0) {
+    return '${hours}s ${minutes}dk';
+  }
+  return '${remaining.inMinutes}dk';
 }
 
