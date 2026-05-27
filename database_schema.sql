@@ -5053,6 +5053,557 @@ AS $function$
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.get_transfer_vehicle_options(p_source_kind text, p_source_id uuid, p_target_kind text, p_target_id uuid, p_quantity integer)
+ RETURNS TABLE(vehicle_id uuid, vehicle_owner_player_id uuid, vehicle_name text, is_rental boolean, capacity integer, speed_kmh integer, current_fuel integer, fuel_capacity integer, fuel_rate numeric, condition integer, rental_price numeric, distance_km numeric, fuel_needed numeric, condition_needed numeric, rental_cost numeric, estimated_duration_seconds integer, can_select boolean, disabled_reason text, fuel_cost numeric, total_price numeric)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_player_id uuid := auth.uid();
+  v_source_city_id uuid;
+  v_source_city_x numeric;
+  v_source_city_y numeric;
+  v_target_city_id uuid;
+  v_target_city_x numeric;
+  v_target_city_y numeric;
+  v_source_product_id text;
+  v_source_quality_level integer;
+  v_required_capacity numeric := 0;
+  v_distance_km numeric := 0;
+  v_available_target_capacity numeric := 0;
+  v_check_target_capacity boolean := false;
+  v_excluded_vehicle_owner_player_id uuid;
+  v_source_warehouse_id uuid;
+  v_owner_player_id uuid;
+  v_owner_city_id uuid;
+  v_product record;
+  v_warehouse_slot record;
+  v_store_slot record;
+  v_warehouse record;
+  v_inventory record;
+  v_city record;
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'Miktar 0''dan buyuk olmalidir.';
+  end if;
+
+  case p_source_kind
+    when 'market_slot' then
+      select
+        ws.*,
+        w.player_id as seller_player_id,
+        w.city_id as seller_city_id,
+        c.map_position_x as city_x,
+        c.map_position_y as city_y
+      into v_warehouse_slot
+      from public.warehouse_slots ws
+      join public.warehouses w on w.id = ws.warehouse_id
+      join public.cities c on c.id = w.city_id
+      where ws.id = p_source_id
+        and ws.is_available_for_sale = true;
+
+      if not found then
+        raise exception 'Satici slotu bulunamadi.';
+      end if;
+
+      if v_warehouse_slot.seller_player_id = v_player_id then
+        raise exception 'Kendi ilaninizi satin alamazsiniz.';
+      end if;
+
+      if p_quantity > coalesce(v_warehouse_slot.quantity, 0) then
+        raise exception 'Istenen miktar mevcut stoktan fazla.';
+      end if;
+
+      v_source_city_id := v_warehouse_slot.seller_city_id;
+      v_source_city_x := v_warehouse_slot.city_x;
+      v_source_city_y := v_warehouse_slot.city_y;
+      v_source_product_id := v_warehouse_slot.product_id;
+      v_source_quality_level := coalesce(v_warehouse_slot.quality_level, 0);
+      v_excluded_vehicle_owner_player_id := v_warehouse_slot.seller_player_id;
+
+    when 'warehouse_slot' then
+      select
+        ws.*,
+        w.player_id,
+        w.id as warehouse_id,
+        w.city_id as warehouse_city_id,
+        w.is_active as warehouse_is_active,
+        c.map_position_x as city_x,
+        c.map_position_y as city_y
+      into v_warehouse_slot
+      from public.warehouse_slots ws
+      join public.warehouses w on w.id = ws.warehouse_id
+      join public.cities c on c.id = w.city_id
+      where ws.id = p_source_id;
+
+      if not found or v_warehouse_slot.player_id <> v_player_id then
+        raise exception 'Depo slotu bulunamadi veya size ait degil.';
+      end if;
+
+      if p_quantity > coalesce(v_warehouse_slot.quantity, 0) then
+        raise exception 'Istenen miktar mevcut stoktan fazla.';
+      end if;
+
+      v_source_city_id := v_warehouse_slot.warehouse_city_id;
+      v_source_city_x := v_warehouse_slot.city_x;
+      v_source_city_y := v_warehouse_slot.city_y;
+      v_source_product_id := v_warehouse_slot.product_id;
+      v_source_quality_level := coalesce(v_warehouse_slot.quality_level, 0);
+      v_source_warehouse_id := v_warehouse_slot.warehouse_id;
+
+    when 'store_slot' then
+      select
+        ss.*,
+        s.player_id,
+        s.is_active as store_is_active,
+        s.city_id as store_city_id,
+        c.map_position_x as city_x,
+        c.map_position_y as city_y
+      into v_store_slot
+      from public.store_slots ss
+      join public.stores s on s.id = ss.store_id
+      join public.cities c on c.id = s.city_id
+      where ss.id = p_source_id;
+
+      if not found or v_store_slot.player_id <> v_player_id then
+        raise exception 'Magaza slotu bulunamadi veya size ait degil.';
+      end if;
+
+      if v_store_slot.store_is_active is not true then
+        raise exception 'Magaza aktif degil.';
+      end if;
+
+      if coalesce(v_store_slot.product_id, '') = '' or coalesce(v_store_slot.quality_level, 0) = 0 then
+        raise exception 'Magaza slotunda gecerli urun veya kalite yok.';
+      end if;
+
+      if p_quantity > coalesce(v_store_slot.quantity, 0) then
+        raise exception 'Istenen miktar mevcut stoktan fazla.';
+      end if;
+
+      v_source_city_id := v_store_slot.store_city_id;
+      v_source_city_x := v_store_slot.city_x;
+      v_source_city_y := v_store_slot.city_y;
+      v_source_product_id := v_store_slot.product_id;
+      v_source_quality_level := coalesce(v_store_slot.quality_level, 0);
+
+    when 'production_inventory' then
+      if p_target_kind <> 'warehouse' then
+        raise exception 'Production inventory kaynagi sadece depoya transfer icin desteklenir.';
+      end if;
+
+      select *
+      into v_inventory
+      from public.production_inventory
+      where id = p_source_id;
+
+      if not found then
+        raise exception 'Production inventory bulunamadi.';
+      end if;
+
+      if v_inventory.inventory_type <> 'output' then
+        raise exception 'Sadece output inventory icin output lojistigi desteklenir.';
+      end if;
+
+      if v_inventory.owner_kind not in ('factory', 'field', 'farm', 'mine') then
+        raise exception 'Bu owner_kind icin output lojistigi desteklenmiyor: %', v_inventory.owner_kind;
+      end if;
+
+      if coalesce(v_inventory.quantity, 0) < p_quantity then
+        raise exception 'Istenen miktar mevcut output stoktan fazla.';
+      end if;
+
+      if v_inventory.owner_kind = 'factory' then
+        select player_id, city_id into v_owner_player_id, v_owner_city_id
+        from public.factories
+        where id = v_inventory.owner_id;
+      elsif v_inventory.owner_kind = 'field' then
+        select player_id, city_id into v_owner_player_id, v_owner_city_id
+        from public.fields
+        where id = v_inventory.owner_id;
+      elsif v_inventory.owner_kind = 'farm' then
+        select player_id, city_id into v_owner_player_id, v_owner_city_id
+        from public.farms
+        where id = v_inventory.owner_id;
+      else
+        select player_id, city_id into v_owner_player_id, v_owner_city_id
+        from public.mines
+        where id = v_inventory.owner_id;
+      end if;
+
+      if v_owner_player_id is null then
+        raise exception 'Kaynak uretim birimi bulunamadi.';
+      end if;
+
+      if v_owner_player_id <> v_player_id then
+        raise exception 'Kaynak uretim birimi size ait degil.';
+      end if;
+
+      select * into v_city
+      from public.cities
+      where id = v_owner_city_id;
+
+      if not found then
+        raise exception 'Kaynak sehir bulunamadi.';
+      end if;
+
+      v_source_city_id := v_owner_city_id;
+      v_source_city_x := v_city.map_position_x;
+      v_source_city_y := v_city.map_position_y;
+      v_source_product_id := v_inventory.product_id;
+      v_source_quality_level := coalesce(v_inventory.quality_level, 0);
+
+    else
+      raise exception 'Desteklenmeyen kaynak tipi: %', p_source_kind;
+  end case;
+
+  case p_target_kind
+    when 'warehouse' then
+      select
+        w.*,
+        c.map_position_x as city_x,
+        c.map_position_y as city_y
+      into v_warehouse
+      from public.warehouses w
+      join public.cities c on c.id = w.city_id
+      where w.id = p_target_id
+        and w.player_id = v_player_id;
+
+      if not found then
+        raise exception 'Hedef depo bulunamadi veya size ait degil.';
+      end if;
+
+      if v_warehouse.is_active is not true then
+        raise exception 'Hedef depo aktif degil.';
+      end if;
+
+      if p_source_kind = 'warehouse_slot' and v_warehouse.id = v_source_warehouse_id then
+        raise exception 'Kaynak ve hedef depo ayni olamaz.';
+      end if;
+
+      v_target_city_id := v_warehouse.city_id;
+      v_target_city_x := v_warehouse.city_x;
+      v_target_city_y := v_warehouse.city_y;
+      v_check_target_capacity := p_source_kind = any (
+        array['market_slot', 'warehouse_slot']
+      );
+
+    when 'store_slot' then
+      if p_source_kind not in ('market_slot', 'warehouse_slot') then
+        raise exception 'Hedef magaza slotu bu transfer tipi icin desteklenmiyor.';
+      end if;
+
+      select
+        ss.*,
+        s.player_id,
+        s.is_active as store_is_active,
+        s.city_id as store_city_id,
+        c.map_position_x as city_x,
+        c.map_position_y as city_y
+      into v_store_slot
+      from public.store_slots ss
+      join public.stores s on s.id = ss.store_id
+      join public.cities c on c.id = s.city_id
+      where ss.id = p_target_id;
+
+      if not found or v_store_slot.player_id <> v_player_id then
+        raise exception 'Magaza slotu bulunamadi veya size ait degil.';
+      end if;
+
+      if v_store_slot.store_is_active is not true then
+        raise exception 'Magaza aktif degil.';
+      end if;
+
+      if v_store_slot.product_id is not null
+         and v_store_slot.quality_level > 0
+         and (
+           v_store_slot.product_id <> v_source_product_id
+           or v_store_slot.quality_level <> v_source_quality_level
+         )
+         and (
+           coalesce(v_store_slot.quantity, 0) > 0
+           or coalesce(v_store_slot.pending_quantity, 0) > 0
+         ) then
+        raise exception 'Slotta farkli urun veya kalite icin aktif stok/rezerve var.';
+      end if;
+
+      if (
+        coalesce(v_store_slot.quantity, 0)
+        + coalesce(v_store_slot.pending_quantity, 0)
+        + p_quantity
+      ) > coalesce(v_store_slot.capacity, 0) then
+        raise exception 'Magaza slot kapasitesi yetersiz.';
+      end if;
+
+      v_target_city_id := v_store_slot.store_city_id;
+      v_target_city_x := v_store_slot.city_x;
+      v_target_city_y := v_store_slot.city_y;
+
+    when 'production_inventory' then
+      if p_source_kind <> 'warehouse_slot' then
+        raise exception 'Hedef production inventory bu transfer tipi icin desteklenmiyor.';
+      end if;
+
+      if coalesce(v_warehouse_slot.warehouse_is_active, false) is not true then
+        raise exception 'Kaynak depo aktif degil.';
+      end if;
+
+      select *
+      into v_inventory
+      from public.production_inventory
+      where id = p_target_id;
+
+      if not found then
+        raise exception 'Production inventory bulunamadi.';
+      end if;
+
+      if v_inventory.inventory_type <> 'input' then
+        raise exception 'Sadece input inventory icin hammadde lojistigi desteklenir.';
+      end if;
+
+      if v_inventory.owner_kind not in ('factory', 'field', 'farm') then
+        raise exception 'Bu owner_kind icin input lojistigi desteklenmiyor: %', v_inventory.owner_kind;
+      end if;
+
+      if v_inventory.owner_kind = 'factory' then
+        select player_id, city_id into v_owner_player_id, v_owner_city_id
+        from public.factories
+        where id = v_inventory.owner_id;
+      elsif v_inventory.owner_kind = 'field' then
+        select player_id, city_id into v_owner_player_id, v_owner_city_id
+        from public.fields
+        where id = v_inventory.owner_id;
+      else
+        select player_id, city_id into v_owner_player_id, v_owner_city_id
+        from public.farms
+        where id = v_inventory.owner_id;
+      end if;
+
+      if v_owner_player_id is null then
+        raise exception 'Hedef uretim birimi bulunamadi.';
+      end if;
+
+      if v_owner_player_id <> v_player_id then
+        raise exception 'Hedef uretim birimi size ait degil.';
+      end if;
+
+      if v_inventory.product_id <> v_source_product_id then
+        raise exception 'Depo slotundaki urun ile input inventory urunu ayni olmalidir.';
+      end if;
+
+      if coalesce(v_inventory.quality_level, 0) <> v_source_quality_level then
+        raise exception 'Depo slotundaki kalite ile input inventory kalitesi ayni olmalidir.';
+      end if;
+
+      select * into v_city
+      from public.cities
+      where id = v_owner_city_id;
+
+      if not found then
+        raise exception 'Hedef sehir bulunamadi.';
+      end if;
+
+      v_target_city_id := v_owner_city_id;
+      v_target_city_x := v_city.map_position_x;
+      v_target_city_y := v_city.map_position_y;
+
+    else
+      raise exception 'Desteklenmeyen hedef tipi: %', p_target_kind;
+  end case;
+
+  select *
+  into v_product
+  from public.products
+  where id = v_source_product_id;
+
+  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then
+    raise exception 'Urun hacim bilgisi gecersiz.';
+  end if;
+
+  v_required_capacity := p_quantity * v_product.birim_hacim;
+
+  if v_check_target_capacity then
+    select greatest(
+      coalesce(v_warehouse.capacity, 0)::numeric
+      - coalesce(sum(ws.quantity::numeric * coalesce(p.birim_hacim, 0)), 0)
+      - coalesce(v_warehouse.reserved_capacity, 0)::numeric,
+      0
+    )
+    into v_available_target_capacity
+    from public.warehouse_slots ws
+    left join public.products p on p.id = ws.product_id
+    where ws.warehouse_id = v_warehouse.id;
+  end if;
+
+  v_distance_km := 6371 * 2 * asin(
+    sqrt(
+      power(sin(radians((v_source_city_x - v_target_city_x) / 2)), 2) +
+      cos(radians(v_target_city_x)) *
+      cos(radians(v_source_city_x)) *
+      power(sin(radians((v_source_city_y - v_target_city_y) / 2)), 2)
+    )
+  );
+
+  return query
+  with candidates as (
+    select
+      lv.id as vehicle_id,
+      lv.player_id as vehicle_owner_player_id,
+      lvt.name as vehicle_name,
+      (lv.player_id <> v_player_id) as is_rental,
+      lv.capacity,
+      lv.speed_kmh,
+      lv.current_fuel,
+      lv.fuel_capacity,
+      lv.fuel_rate,
+      lv.condition,
+      lv.rental_price,
+      v_distance_km as distance_km,
+      ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
+      ceil(v_distance_km * 0.02) as condition_needed,
+      case
+        when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price)
+        else 0
+      end as rental_cost,
+      greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
+      lv.status,
+      lc.is_active as company_is_active,
+      public.logistics_vehicle_matches_route(
+        lv.route_city_a_id,
+        lv.route_city_b_id,
+        v_source_city_id,
+        v_target_city_id
+      ) as route_matches
+    from public.logistics_vehicles lv
+    join public.logistics_vehicle_types lvt on lvt.id = lv.logistics_vehicle_type_id
+    join public.logistics_companies lc on lc.id = lv.logistics_company_id
+    where (
+        lv.player_id = v_player_id
+        or (lv.player_id <> v_player_id and lv.is_available_for_rent = true)
+      )
+      and (
+        v_excluded_vehicle_owner_player_id is null
+        or lv.player_id <> v_excluded_vehicle_owner_player_id
+      )
+  ),
+  evaluated as (
+    select
+      c.vehicle_id,
+      c.vehicle_owner_player_id,
+      c.vehicle_name,
+      c.is_rental,
+      c.capacity,
+      c.speed_kmh,
+      c.current_fuel,
+      c.fuel_capacity,
+      c.fuel_rate,
+      c.condition,
+      c.rental_price,
+      c.distance_km,
+      c.fuel_needed,
+      c.condition_needed,
+      c.rental_cost,
+      c.estimated_duration_seconds,
+      (
+        c.route_matches = true
+        and c.status = 'idle'
+        and c.company_is_active = true
+        and (v_check_target_capacity = false or v_available_target_capacity >= v_required_capacity)
+        and c.capacity >= v_required_capacity
+        and c.current_fuel >= c.fuel_needed
+        and c.condition > c.condition_needed
+      ) as can_select,
+      case
+        when c.route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
+        when c.status <> 'idle' then 'Arac su anda uygun degil.'
+        when c.company_is_active = false then 'Nakliye firmasi aktif degil.'
+        when v_check_target_capacity = true and v_available_target_capacity < v_required_capacity then 'Hedef depoda bos kapasite yetersiz.'
+        when c.capacity < v_required_capacity then 'Kapasite yetersiz.'
+        when c.current_fuel < c.fuel_needed then 'Yakit yetersiz.'
+        when c.condition <= c.condition_needed then 'Kondisyon yetersiz.'
+        else null
+      end as disabled_reason,
+      0::numeric as fuel_cost,
+      c.rental_cost as total_price
+    from candidates c
+  ),
+  selectable_exists as (
+    select exists(select 1 from evaluated where can_select) as has_selectable
+  ),
+  no_option_reason as (
+    select
+      case
+        when v_check_target_capacity = true and v_available_target_capacity < v_required_capacity then 'Hedef depoda bos kapasite yetersiz.'
+        when exists(select 1 from evaluated where disabled_reason = 'Hedef depoda bos kapasite yetersiz.') then 'Hedef depoda bos kapasite yetersiz.'
+        when exists(select 1 from evaluated where disabled_reason = 'Kapasite yetersiz.') then 'Bu miktar icin yeterli kapasiteye sahip arac yok.'
+        when exists(select 1 from evaluated where disabled_reason = 'Yakit yetersiz.') then 'Yeterli yakiti olan uygun arac yok.'
+        when exists(select 1 from evaluated where disabled_reason = 'Kondisyon yetersiz.') then 'Kondisyonu yeterli uygun arac yok.'
+        when exists(select 1 from evaluated where disabled_reason = 'Arac su anda uygun degil.') then 'Tum uygun araclar su anda mesgul veya kullanilamaz durumda.'
+        when exists(select 1 from evaluated where disabled_reason = 'Nakliye firmasi aktif degil.') then 'Uygun araclarin bagli oldugu nakliye firmalari aktif degil.'
+        when exists(select 1 from evaluated where disabled_reason = 'Aracin rotasi bu sehir ciftini desteklemiyor.') then 'Bu rota icin uygun arac yok.'
+        else 'Bu transfer icin uygun veya kiralanabilir arac bulunamadi.'
+      end as disabled_reason
+  )
+  select
+    e.vehicle_id,
+    e.vehicle_owner_player_id,
+    e.vehicle_name,
+    e.is_rental,
+    e.capacity,
+    e.speed_kmh,
+    e.current_fuel,
+    e.fuel_capacity,
+    e.fuel_rate,
+    e.condition,
+    e.rental_price,
+    e.distance_km,
+    e.fuel_needed,
+    e.condition_needed,
+    e.rental_cost,
+    e.estimated_duration_seconds,
+    e.can_select,
+    e.disabled_reason,
+    e.fuel_cost,
+    e.total_price
+  from evaluated e
+  where e.can_select
+
+  union all
+
+  select
+    null::uuid as vehicle_id,
+    null::uuid as vehicle_owner_player_id,
+    null::text as vehicle_name,
+    false as is_rental,
+    0 as capacity,
+    0 as speed_kmh,
+    0 as current_fuel,
+    0 as fuel_capacity,
+    0::numeric as fuel_rate,
+    0 as condition,
+    0::numeric as rental_price,
+    0::numeric as distance_km,
+    0::numeric as fuel_needed,
+    0::numeric as condition_needed,
+    0::numeric as rental_cost,
+    0 as estimated_duration_seconds,
+    false as can_select,
+    nr.disabled_reason,
+    0::numeric as fuel_cost,
+    0::numeric as total_price
+  from no_option_reason nr
+  where not (select has_selectable from selectable_exists)
+
+  order by is_rental asc, can_select desc, capacity asc, rental_price asc, vehicle_name asc nulls last;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.get_market_transfer_vehicle_options(p_buyer_warehouse_id uuid, p_seller_slot_id uuid, p_quantity integer)
  RETURNS TABLE(vehicle_id uuid, vehicle_owner_player_id uuid, vehicle_name text, is_rental boolean, capacity integer, speed_kmh integer, current_fuel integer, fuel_capacity integer, fuel_rate numeric, condition integer, rental_price numeric, distance_km numeric, fuel_needed numeric, condition_needed numeric, rental_cost numeric, estimated_duration_seconds integer, can_select boolean, disabled_reason text)
  LANGUAGE plpgsql
@@ -8008,6 +8559,17 @@ begin
         )
       * v_quality_multiplier
       * v_price_multiplier;
+
+    if coalesce(v_slot.quantity, 0) <= 0 then
+      update store_slots
+      set
+        pending_sale = 0,
+        last_sale_processed_at = v_now,
+        updated_at = v_now
+      where id = v_slot.id;
+
+      continue;
+    end if;
 
     v_available_demand := greatest(0, coalesce(v_slot.pending_sale, 0) + v_generated_demand);
     v_sold_qty := least(coalesce(v_slot.quantity, 0), floor(v_available_demand)::int);

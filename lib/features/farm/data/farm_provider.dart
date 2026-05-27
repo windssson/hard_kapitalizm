@@ -1,3 +1,4 @@
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -663,7 +664,7 @@ class FarmActionNotifier {
         .toList();
   }
 
-  Future<List<ProductionLogisticsVehicleOption>>
+  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
   getProductionInputTransferVehicleOptions({
     required String warehouseSlotId,
     required String productionInventoryId,
@@ -676,7 +677,7 @@ class FarmActionNotifier {
     );
   }
 
-  Future<List<ProductionLogisticsVehicleOption>>
+  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
   getProductionOutputTransferVehicleOptions({
     required String productionInventoryId,
     required String buyerWarehouseId,

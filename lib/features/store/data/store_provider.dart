@@ -2,15 +2,13 @@ import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_history_item_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_performance_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-const _routeMismatchReason =
-    'Aracin rotasi bu sehir ciftini desteklemiyor.';
 
 final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
   final supabase = Supabase.instance.client;
@@ -292,6 +290,8 @@ final storeTypesProvider = FutureProvider<List<StoreTypeModel>>((ref) async {
 
 class StoreActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final TransferVehicleOptionsService _vehicleOptionsService =
+      TransferVehicleOptionsService();
 
   Future<Map<String, dynamic>> createStore({
     required String cityId,
@@ -651,28 +651,26 @@ class StoreActionNotifier {
     }
   }
 
-  Future<List<MarketTransferVehicleOptionModel>> getStoreTransferVehicleOptions({
+  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
+      getStoreTransferVehicleOptions({
     required String storeSlotId,
     required String warehouseSlotId,
     required int quantity,
   }) async {
-    final response = await _supabase.rpc(
-      'get_store_transfer_vehicle_options',
-      params: {
-        'p_store_slot_id': storeSlotId,
-        'p_warehouse_slot_id': warehouseSlotId,
-        'p_quantity': quantity,
-      },
+    final response = await _vehicleOptionsService.getOptions(
+      TransferVehicleOptionsRequest(
+        sourceKind: 'warehouse_slot',
+        sourceId: warehouseSlotId,
+        targetKind: 'store_slot',
+        targetId: storeSlotId,
+        quantity: quantity,
+      ),
     );
 
-    return (response as List<dynamic>)
-        .map(
-          (json) => MarketTransferVehicleOptionModel.fromJson(
-            json as Map<String, dynamic>,
-          ),
-        )
-        .where((option) => option.disabledReason != _routeMismatchReason)
-        .toList();
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: MarketTransferVehicleOptionModel.fromJson,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getPlayerWarehouses() async {
@@ -717,29 +715,26 @@ class StoreActionNotifier {
     }
   }
 
-  Future<List<MarketTransferVehicleOptionModel>>
+  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
       getStoreToWarehouseVehicleOptions({
     required String storeSlotId,
     required String warehouseId,
     required int quantity,
   }) async {
-    final response = await _supabase.rpc(
-      'get_store_to_warehouse_vehicle_options',
-      params: {
-        'p_store_slot_id': storeSlotId,
-        'p_buyer_warehouse_id': warehouseId,
-        'p_quantity': quantity,
-      },
+    final response = await _vehicleOptionsService.getOptions(
+      TransferVehicleOptionsRequest(
+        sourceKind: 'store_slot',
+        sourceId: storeSlotId,
+        targetKind: 'warehouse',
+        targetId: warehouseId,
+        quantity: quantity,
+      ),
     );
 
-    return (response as List<dynamic>)
-        .map(
-          (json) => MarketTransferVehicleOptionModel.fromJson(
-            json as Map<String, dynamic>,
-          ),
-        )
-        .where((option) => option.disabledReason != _routeMismatchReason)
-        .toList();
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: MarketTransferVehicleOptionModel.fromJson,
+    );
   }
 
   Future<Map<String, dynamic>> startStoreToWarehouseTransfer({

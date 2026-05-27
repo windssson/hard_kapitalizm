@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
@@ -1403,13 +1404,19 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       quantity: _quantity,
     );
     final optionsAsync = _isSameCityInstantPurchase
-        ? AsyncValue<List<MarketTransferVehicleOptionModel>>.data(const [])
+        ? const AsyncValue<
+            TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>
+          >.data(
+            TransferVehicleOptionsResult(
+              options: [],
+              unavailableReason: null,
+            ),
+          )
         : ref.watch(marketTransferVehicleOptionsProvider(params));
     final totalPrice = _quantity * widget.listing.price;
+    final currentOptions = optionsAsync.asData?.value.options ?? const [];
     final selectedOption = !_isSameCityInstantPurchase
-        ? optionsAsync.asData?.value
-              .where((e) => e.vehicleId == _selectedVehicleId)
-              .firstOrNull
+        ? currentOptions.where((e) => e.vehicleId == _selectedVehicleId).firstOrNull
         : null;
     final rentalCost = selectedOption?.rentalCost ?? 0.0;
     final totalCost = totalPrice + rentalCost;
@@ -1627,10 +1634,12 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 SizedBox(height: 8.h),
               ],
               optionsAsync.when(
-                data: (options) {
+                data: (result) {
+                  final options = result.options;
                   if (!_isSameCityInstantPurchase && options.isEmpty) {
                     return _buildInfoBox(
-                      'Bu transfer icin uygun veya kiralanabilir arac bulunamadi.',
+                      result.unavailableReason ??
+                          'Bu transfer icin uygun veya kiralanabilir arac bulunamadi.',
                       AppColors.red,
                     );
                   }

@@ -1,14 +1,16 @@
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-const _routeMismatchReason =
-    'Aracin rotasi bu sehir ciftini desteklemiyor.';
-
 class ProductionLogisticsService {
   final SupabaseClient _supabase;
+  final TransferVehicleOptionsService _vehicleOptionsService;
 
   ProductionLogisticsService({SupabaseClient? supabase})
-    : _supabase = supabase ?? Supabase.instance.client;
+    : _supabase = supabase ?? Supabase.instance.client,
+      _vehicleOptionsService = TransferVehicleOptionsService(
+        supabase: supabase,
+      );
 
   Future<List<Map<String, dynamic>>> getPlayerWarehouses() async {
     final user = _supabase.auth.currentUser;
@@ -39,54 +41,48 @@ class ProductionLogisticsService {
         .toList();
   }
 
-  Future<List<ProductionLogisticsVehicleOption>>
+  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
   getProductionInputTransferVehicleOptions({
     required String warehouseSlotId,
     required String productionInventoryId,
     required int quantity,
   }) async {
-    final response = await _supabase.rpc(
-      'get_production_input_transfer_vehicle_options',
-      params: {
-        'p_warehouse_slot_id': warehouseSlotId,
-        'p_production_inventory_id': productionInventoryId,
-        'p_quantity': quantity,
-      },
+    final response = await _vehicleOptionsService.getOptions(
+      TransferVehicleOptionsRequest(
+        sourceKind: 'warehouse_slot',
+        sourceId: warehouseSlotId,
+        targetKind: 'production_inventory',
+        targetId: productionInventoryId,
+        quantity: quantity,
+      ),
     );
 
-    return (response as List<dynamic>)
-        .map(
-          (row) => ProductionLogisticsVehicleOption.fromJson(
-            Map<String, dynamic>.from(row as Map),
-          ),
-        )
-        .where((option) => option.disabledReason != _routeMismatchReason)
-        .toList();
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: ProductionLogisticsVehicleOption.fromJson,
+    );
   }
 
-  Future<List<ProductionLogisticsVehicleOption>>
+  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
   getProductionOutputTransferVehicleOptions({
     required String productionInventoryId,
     required String buyerWarehouseId,
     required int quantity,
   }) async {
-    final response = await _supabase.rpc(
-      'get_production_output_transfer_vehicle_options',
-      params: {
-        'p_production_inventory_id': productionInventoryId,
-        'p_buyer_warehouse_id': buyerWarehouseId,
-        'p_quantity': quantity,
-      },
+    final response = await _vehicleOptionsService.getOptions(
+      TransferVehicleOptionsRequest(
+        sourceKind: 'production_inventory',
+        sourceId: productionInventoryId,
+        targetKind: 'warehouse',
+        targetId: buyerWarehouseId,
+        quantity: quantity,
+      ),
     );
 
-    return (response as List<dynamic>)
-        .map(
-          (row) => ProductionLogisticsVehicleOption.fromJson(
-            Map<String, dynamic>.from(row as Map),
-          ),
-        )
-        .where((option) => option.disabledReason != _routeMismatchReason)
-        .toList();
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: ProductionLogisticsVehicleOption.fromJson,
+    );
   }
 
   Future<ProductionLogisticsStartResult> startWarehouseToProductionTransfer({

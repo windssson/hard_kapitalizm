@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_store_slot_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
@@ -7,9 +8,6 @@ import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart
 import 'package:hard_kapitalizm/features/market/models/market_transfer_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
-
-const _routeMismatchReason =
-    'Aracin rotasi bu sehir ciftini desteklemiyor.';
 
 class MarketVehicleOptionsParams {
   final String? buyerWarehouseId;
@@ -156,35 +154,26 @@ final buyerActiveMarketTransfersProvider =
     });
 
 final marketTransferVehicleOptionsProvider = FutureProvider.family<
-  List<MarketTransferVehicleOptionModel>,
+  TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>,
   MarketVehicleOptionsParams
 >((ref, params) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase.rpc(
-    params.isStoreTarget
-        ? 'get_market_transfer_vehicle_options_for_store'
-        : 'get_market_transfer_vehicle_options',
-    params: params.isStoreTarget
-        ? {
-            'p_store_slot_id': params.buyerStoreSlotId,
-            'p_seller_slot_id': params.sellerSlotId,
-            'p_quantity': params.quantity,
-          }
-        : {
-            'p_buyer_warehouse_id': params.buyerWarehouseId,
-            'p_seller_slot_id': params.sellerSlotId,
-            'p_quantity': params.quantity,
-          },
+  final service = TransferVehicleOptionsService();
+  final response = await service.getOptions(
+    TransferVehicleOptionsRequest(
+      sourceKind: 'market_slot',
+      sourceId: params.sellerSlotId,
+      targetKind: params.isStoreTarget ? 'store_slot' : 'warehouse',
+      targetId: params.isStoreTarget
+          ? params.buyerStoreSlotId!
+          : params.buyerWarehouseId!,
+      quantity: params.quantity,
+    ),
   );
 
-  return (response as List<dynamic>)
-      .map(
-        (json) => MarketTransferVehicleOptionModel.fromJson(
-          json as Map<String, dynamic>,
-        ),
-      )
-      .where((option) => option.disabledReason != _routeMismatchReason)
-      .toList();
+  return mapTransferVehicleOptions(
+    rows: response,
+    mapper: MarketTransferVehicleOptionModel.fromJson,
+  );
 });
 
 class MarketActionNotifier {

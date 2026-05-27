@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
@@ -1547,9 +1548,13 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     required String warehouseId,
     required int quantity,
   }) async {
-    List<ProductionLogisticsVehicleOption> options;
+    TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>
+    vehicleResult = const TransferVehicleOptionsResult(
+      options: [],
+      unavailableReason: null,
+    );
     try {
-      options = await ref
+      vehicleResult = await ref
           .read(mineActionProvider)
           .getProductionOutputTransferVehicleOptions(
             productionInventoryId: inventory.id,
@@ -1568,11 +1573,13 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     }
 
     if (!context.mounted) return;
-    if (options.isEmpty) {
+    if (vehicleResult.options.isEmpty) {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu transfer icin uygun arac bulunamadi.',
+        message:
+            vehicleResult.unavailableReason ??
+            'Bu transfer icin uygun arac bulunamadi.',
         type: SnackbarType.info,
       );
       return;
@@ -1582,7 +1589,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       context: context,
       title: 'Maden Lojistigi',
       subtitle: '$quantity adet urun icin uygun araci secin',
-      options: options,
+      options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
             .read(mineActionProvider)

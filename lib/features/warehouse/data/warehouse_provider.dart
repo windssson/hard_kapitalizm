@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
@@ -113,6 +114,8 @@ final warehouseTypesProvider = FutureProvider<List<dynamic>>((ref) async {
 
 class WarehouseActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final TransferVehicleOptionsService _vehicleOptionsService =
+      TransferVehicleOptionsService();
 
   Future<Map<String, dynamic>> addProductToWarehouse({
     required String warehouseId,
@@ -265,33 +268,26 @@ class WarehouseActionNotifier {
         .toList();
   }
 
-  Future<List<MarketTransferVehicleOptionModel>>
+  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
       getWarehouseToWarehouseVehicleOptions({
     required String warehouseSlotId,
     required String buyerWarehouseId,
     required int quantity,
   }) async {
-    final response = await _supabase.rpc(
-      'get_warehouse_to_warehouse_vehicle_options',
-      params: {
-        'p_warehouse_slot_id': warehouseSlotId,
-        'p_buyer_warehouse_id': buyerWarehouseId,
-        'p_quantity': quantity,
-      },
+    final response = await _vehicleOptionsService.getOptions(
+      TransferVehicleOptionsRequest(
+        sourceKind: 'warehouse_slot',
+        sourceId: warehouseSlotId,
+        targetKind: 'warehouse',
+        targetId: buyerWarehouseId,
+        quantity: quantity,
+      ),
     );
 
-    return (response as List<dynamic>)
-        .map(
-          (json) => MarketTransferVehicleOptionModel.fromJson(
-            json as Map<String, dynamic>,
-          ),
-        )
-        .where(
-          (option) =>
-              option.disabledReason !=
-              'Aracin rotasi bu sehir ciftini desteklemiyor.',
-        )
-        .toList();
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: MarketTransferVehicleOptionModel.fromJson,
+    );
   }
 
   Future<Map<String, dynamic>> startWarehouseToWarehouseTransfer({

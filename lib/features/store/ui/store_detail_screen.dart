@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
@@ -2683,9 +2684,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       ),
     );
 
-    List<MarketTransferVehicleOptionModel> options = const [];
+    TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>
+    vehicleResult = const TransferVehicleOptionsResult(
+      options: [],
+      unavailableReason: null,
+    );
     try {
-      options = await ref.read(storeActionProvider).getStoreTransferVehicleOptions(
+      vehicleResult = await ref
+          .read(storeActionProvider)
+          .getStoreTransferVehicleOptions(
             storeSlotId: slot.id,
             warehouseSlotId: warehouseSlotId,
             quantity: quantity,
@@ -2700,9 +2707,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (context.mounted) Navigator.pop(context);
 
-    if (options.isEmpty) {
+    if (vehicleResult.options.isEmpty) {
       if (context.mounted) {
-        _showError(context, 'Bu transfer icin uygun arac bulunamadi.');
+        _showError(
+          context,
+          vehicleResult.unavailableReason ??
+              'Bu transfer icin uygun arac bulunamadi.',
+        );
       }
       return;
     }
@@ -2739,10 +2750,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             SizedBox(height: 16.h),
             Expanded(
               child: ListView.separated(
-                itemCount: options.length,
+                itemCount: vehicleResult.options.length,
                 separatorBuilder: (_, __) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
-                  final option = options[index];
+                  final option = vehicleResult.options[index];
                   final color =
                       option.canSelect ? AppColors.green : AppColors.red;
                   return InkWell(
@@ -3413,9 +3424,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       ),
     );
 
-    List<MarketTransferVehicleOptionModel> options = const [];
+    TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>
+    vehicleResult = const TransferVehicleOptionsResult(
+      options: [],
+      unavailableReason: null,
+    );
     try {
-      options = await ref.read(storeActionProvider).getStoreToWarehouseVehicleOptions(
+      vehicleResult = await ref
+          .read(storeActionProvider)
+          .getStoreToWarehouseVehicleOptions(
             storeSlotId: slot.id,
             warehouseId: warehouse['id'].toString(),
             quantity: quantity,
@@ -3430,9 +3447,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (context.mounted) Navigator.pop(context);
 
-    if (options.isEmpty) {
+    if (vehicleResult.options.isEmpty) {
       if (context.mounted) {
-        _showError(context, 'Bu transfer icin uygun arac bulunamadi.');
+        _showError(
+          context,
+          vehicleResult.unavailableReason ??
+              'Bu transfer icin uygun arac bulunamadi.',
+        );
       }
       return;
     }
@@ -3469,10 +3490,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
             SizedBox(height: 16.h),
             Expanded(
               child: ListView.separated(
-                itemCount: options.length,
+                itemCount: vehicleResult.options.length,
                 separatorBuilder: (_, __) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
-                  final option = options[index];
+                  final option = vehicleResult.options[index];
                   final color =
                       option.canSelect ? AppColors.green : AppColors.red;
                   return InkWell(

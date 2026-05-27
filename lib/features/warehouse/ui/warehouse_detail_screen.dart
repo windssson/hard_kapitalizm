@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -1378,9 +1379,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       ),
     );
 
-    List<MarketTransferVehicleOptionModel> options = const [];
+    TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>
+    vehicleResult = const TransferVehicleOptionsResult(
+      options: [],
+      unavailableReason: null,
+    );
     try {
-      options = await ref
+      vehicleResult = await ref
           .read(warehouseActionProvider)
           .getWarehouseToWarehouseVehicleOptions(
             warehouseSlotId: slot.id,
@@ -1402,11 +1407,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     if (context.mounted) Navigator.pop(context);
 
-    if (options.isEmpty) {
+    if (vehicleResult.options.isEmpty) {
       AppSnackbar.show(
         context,
         title: 'Arac Yok',
-        message: 'Bu transfer icin uygun arac bulunamadi.',
+        message:
+            vehicleResult.unavailableReason ??
+            'Bu transfer icin uygun arac bulunamadi.',
         type: SnackbarType.warning,
       );
       return;
@@ -1444,10 +1451,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             SizedBox(height: 16.h),
             Expanded(
               child: ListView.separated(
-                itemCount: options.length,
+                itemCount: vehicleResult.options.length,
                 separatorBuilder: (_, __) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
-                  final option = options[index];
+                  final option = vehicleResult.options[index];
                   final color =
                       option.canSelect ? AppColors.green : AppColors.red;
                   return InkWell(
