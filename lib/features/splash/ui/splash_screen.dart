@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -16,6 +17,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   int _totalFiles = 0;
   int _currentFile = 0;
+  bool _isStarting = false;
 
   String? _error;
 
@@ -26,12 +28,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _startDownload() async {
+    if (_isStarting) return;
+    _isStarting = true;
     try {
       final authManager = ref.read(authManagerProvider);
       await authManager.signInAnonymouslyIfNeeded();
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
+        ref.invalidate(playerStreamProvider);
+        try {
+          await ref
+              .read(playerStreamProvider.future)
+              .timeout(const Duration(seconds: 3));
+        } catch (_) {
+          // Oyuncu verisi gec gelse bile splash akisini bloklamiyoruz.
+        }
+
         try {
           await Supabase.instance.client.rpc(
             'complete_due_building_upgrades',
@@ -80,6 +93,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         });
         // %100 doluluk animasyonunun görünmesi için yarım saniye bekle
         await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
         context.go('/home');
       }
     } catch (e) {
@@ -88,6 +102,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           _error = e.toString();
         });
       }
+    } finally {
+      _isStarting = false;
     }
   }
 
@@ -138,7 +154,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                       ),
                     ],
                   ),
-                  child: Icon(Icons.monetization_on_rounded, size: 72.sp, color: AppColors.gold),
+                  child: Image.asset('assets/logo.png', width: 80.sp, height: 80.sp, fit: BoxFit.contain),
                 ),
                 SizedBox(height: 40.h),
                 // Title

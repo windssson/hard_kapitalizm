@@ -7,6 +7,8 @@ class MineTypeDetailModel {
   final String icon;
   final List<String> acceptedProductIds;
   final int outputCapacity;
+  final int cost;
+  final int constructionTimeMinutes;
 
   const MineTypeDetailModel({
     required this.id,
@@ -14,6 +16,8 @@ class MineTypeDetailModel {
     required this.icon,
     required this.acceptedProductIds,
     required this.outputCapacity,
+    required this.cost,
+    required this.constructionTimeMinutes,
   });
 
   factory MineTypeDetailModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +27,9 @@ class MineTypeDetailModel {
       icon: (json['icon'] ?? 'mine.webp').toString(),
       acceptedProductIds: _parseAcceptedProductIds(json['accepted_product_ids']),
       outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
+      cost: (json['cost'] as num?)?.toInt() ?? 0,
+      constructionTimeMinutes:
+          (json['construction_time_minutes'] as num?)?.toInt() ?? 0,
     );
   }
 

@@ -53,11 +53,8 @@ class TransferHistoryEndpointModel {
     String defaultKind = 'warehouse',
   }) {
     final resolvedKind = (json['kind'] ?? defaultKind).toString();
-    final inventoryType = (json['inventory_type'] ?? '').toString();
     final fallbackName = switch (resolvedKind) {
-      'production' || 'production_inventory' => inventoryType == 'input'
-          ? 'Uretim Input'
-          : 'Uretim Output',
+      'production' || 'production_inventory' => 'Uretim',
       'store' || 'store_slot' => 'Magaza',
       _ => 'Depo',
     };

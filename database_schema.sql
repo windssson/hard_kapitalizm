@@ -26,6 +26,18 @@ CREATE TABLE IF NOT EXISTS public.arge_researches (
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc', now())
 );
 
+CREATE TABLE IF NOT EXISTS public.arge_centers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  player_id uuid NOT NULL,
+  name text NOT NULL DEFAULT 'AR-GE Merkezi'::text,
+  level integer NOT NULL DEFAULT 1,
+  max_concurrent_researches integer NOT NULL DEFAULT 1,
+  duration_reduction_pct numeric NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc', now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc', now())
+);
+
 CREATE TABLE IF NOT EXISTS public.building_constructions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   player_id uuid NOT NULL,
@@ -482,6 +494,7 @@ CREATE TABLE IF NOT EXISTS public.warehouses (
 -- ============================================================
 
 ALTER TABLE public.arge_researches ADD CONSTRAINT arge_researches_pkey PRIMARY KEY (id);
+ALTER TABLE public.arge_centers ADD CONSTRAINT arge_centers_pkey PRIMARY KEY (id);
 ALTER TABLE public.building_constructions ADD CONSTRAINT building_constructions_pkey PRIMARY KEY (id);
 ALTER TABLE public.building_boosts ADD CONSTRAINT building_boosts_pkey PRIMARY KEY (id);
 ALTER TABLE public.building_upgrades ADD CONSTRAINT building_upgrades_pkey PRIMARY KEY (id);
@@ -500,6 +513,29 @@ ALTER TABLE public.logistics_vehicles ADD CONSTRAINT logistics_vehicles_pkey PRI
 ALTER TABLE public.mine_types ADD CONSTRAINT maden_types_pkey PRIMARY KEY (id);
 ALTER TABLE public.mines ADD CONSTRAINT mines_pkey PRIMARY KEY (id);
 ALTER TABLE public.player_product_quality_levels ADD CONSTRAINT player_product_quality_levels_pkey PRIMARY KEY (id);
+
+ALTER TABLE public.building_constructions DROP CONSTRAINT IF EXISTS building_constructions_kind_check;
+ALTER TABLE public.building_constructions
+  ADD CONSTRAINT building_constructions_kind_check
+  CHECK (
+    building_kind = ANY (
+      ARRAY[
+        'store'::text,
+        'warehouse'::text,
+        'factory'::text,
+        'field'::text,
+        'farm'::text,
+        'mine'::text,
+        'logistics_company'::text,
+        'arge_center'::text
+      ]
+    )
+  );
+
+DROP INDEX IF EXISTS public.uq_arge_researches_one_active_per_player;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_arge_researches_one_active_per_player_product
+  ON public.arge_researches USING btree (player_id, product_id)
+  WHERE (status = 'in_progress'::text);
 ALTER TABLE public.players ADD CONSTRAINT players_pkey PRIMARY KEY (id);
 ALTER TABLE public.production_inventory ADD CONSTRAINT production_inventory_pkey PRIMARY KEY (id);
 ALTER TABLE public.production_slots ADD CONSTRAINT production_slots_pkey PRIMARY KEY (id);
@@ -517,6 +553,7 @@ ALTER TABLE public.warehouses ADD CONSTRAINT warehouses_pkey PRIMARY KEY (id);
 -- ============================================================
 
 ALTER TABLE public.arge_researches ADD CONSTRAINT arge_researches_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
+ALTER TABLE public.arge_centers ADD CONSTRAINT arge_centers_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
 ALTER TABLE public.building_constructions ADD CONSTRAINT building_constructions_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
 ALTER TABLE public.building_boosts ADD CONSTRAINT building_boosts_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
 ALTER TABLE public.building_upgrades ADD CONSTRAINT building_upgrades_player_id_fkey FOREIGN KEY (player_id) REFERENCES public.players(id);
@@ -580,6 +617,7 @@ ALTER TABLE public.warehouses ADD CONSTRAINT warehouses_city_id_fkey FOREIGN KEY
 
 CREATE INDEX IF NOT EXISTS idx_arge_researches_player_id ON public.arge_researches USING btree (player_id);
 CREATE INDEX IF NOT EXISTS idx_arge_researches_status ON public.arge_researches USING btree (status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_arge_centers_player_id ON public.arge_centers USING btree (player_id);
 CREATE INDEX IF NOT EXISTS idx_building_constructions_finish_at ON public.building_constructions USING btree (finish_at);
 CREATE INDEX IF NOT EXISTS idx_building_constructions_player_id ON public.building_constructions USING btree (player_id);
 CREATE INDEX IF NOT EXISTS idx_building_constructions_status ON public.building_constructions USING btree (status);
@@ -656,6 +694,7 @@ CREATE INDEX IF NOT EXISTS idx_warehouses_warehouse_type_id ON public.warehouses
 
 -- Tüm tablolarda RLS etkinleştirilmiştir
 ALTER TABLE public.arge_researches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.arge_centers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.building_constructions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.building_boosts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.building_upgrades ENABLE ROW LEVEL SECURITY;
@@ -911,6 +950,9 @@ declare
   v_slot_id uuid;
   v_current_slot_count integer;
   v_max_slot_count integer;
+  v_input_capacity_gain integer := 0;
+  v_output_capacity_gain integer := 0;
+  v_capacity_multiplier numeric := 1;
 begin
   if p_owner_kind not in ('field', 'farm') then
     raise exception 'Geçersiz owner_kind. Sadece field veya farm olabilir. Gelen: %',
@@ -943,9 +985,13 @@ begin
   -- FARM
   elsif p_owner_kind = 'farm' then
 
-    select *
+    select
+      f.*,
+      ft.input_capacity as base_input_capacity,
+      ft.output_capacity as base_output_capacity
     into v_owner
-    from public.farms
+    from public.farms f
+    join public.farm_types ft on ft.id = f.farm_type_id
     where id = p_owner_id
       and player_id = p_player_id
     for update;
@@ -962,6 +1008,25 @@ begin
         v_current_slot_count,
         v_max_slot_count;
     end if;
+
+    v_capacity_multiplier := power(
+      2::numeric,
+      greatest(coalesce(v_owner.level, 1) - 1, 0)
+    );
+    v_input_capacity_gain := ceil(
+      (
+        coalesce(v_owner.base_input_capacity, 0)::numeric
+        /
+        greatest(coalesce(v_owner.max_slot_count, 1), 1)
+      ) * v_capacity_multiplier
+    )::integer;
+    v_output_capacity_gain := ceil(
+      (
+        coalesce(v_owner.base_output_capacity, 0)::numeric
+        /
+        greatest(coalesce(v_owner.max_slot_count, 1), 1)
+      ) * v_capacity_multiplier
+    )::integer;
 
   end if;
 
@@ -1007,6 +1072,8 @@ begin
     update public.farms
     set
       current_slot_count = current_slot_count + 1,
+      input_capacity = input_capacity + v_input_capacity_gain,
+      output_capacity = output_capacity + v_output_capacity_gain,
       updated_at = timezone('utc'::text, now())
     where id = p_owner_id;
 
@@ -1019,7 +1086,9 @@ begin
     'owner_id', p_owner_id,
     'slot_index', v_new_slot_index,
     'current_slot_count', v_current_slot_count + 1,
-    'max_slot_count', v_max_slot_count
+    'max_slot_count', v_max_slot_count,
+    'input_capacity_gain', v_input_capacity_gain,
+    'output_capacity_gain', v_output_capacity_gain
   );
 end;
 $function$
@@ -1131,6 +1200,7 @@ AS $function$
 declare
   v_slot public.production_slots%rowtype;
   v_product public.products%rowtype;
+  v_old_product public.products%rowtype;
 
   v_owner_player_id uuid;
   v_owner_type_id uuid;
@@ -1437,6 +1507,7 @@ AS $function$
 declare
   v_slot public.production_slots%rowtype;
   v_product public.products%rowtype;
+  v_old_product public.products%rowtype;
 
   v_owner_player_id uuid;
   v_owner_type_id uuid;
@@ -1449,8 +1520,10 @@ declare
   v_duplicate_slot_index integer;
 
   v_max_quality integer;
+  v_existing_input_quantity integer := 0;
+  v_existing_input_pending numeric := 0;
   v_existing_output_quantity integer := 0;
-  v_cleared_output_pending numeric := 0;
+  v_existing_output_pending numeric := 0;
 
   v_created_input_count integer := 0;
   v_created_output_count integer := 0;
@@ -1494,6 +1567,11 @@ begin
 
   v_old_product_id := v_slot.product_id;
   v_old_quality_level := v_slot.quality_level;
+
+  select *
+  into v_old_product
+  from public.products
+  where id = v_old_product_id;
 
   if v_slot.owner_kind = 'field' then
     select f.player_id, f.field_type_id, ft.accepted_product_ids
@@ -1573,8 +1651,26 @@ begin
   v_same_setting := v_old_product_id = p_product_id and v_old_quality_level = p_quality_level;
 
   if not v_same_setting then
+    select coalesce(sum(pi.quantity), 0), coalesce(sum(pi.pending_quantity), 0)
+    into v_existing_input_quantity, v_existing_input_pending
+    from public.production_inventory pi
+    where pi.owner_kind = v_slot.owner_kind
+      and pi.owner_id = v_slot.owner_id
+      and pi.inventory_type = 'input'
+      and pi.product_id in (
+        select unnest(array[
+          nullif(v_old_product.hammadde_1_id, ''),
+          nullif(v_old_product.hammadde_2_id, ''),
+          nullif(v_old_product.hammadde_3_id, '')
+        ])
+      );
+
+    if v_existing_input_quantity > 0 or coalesce(v_existing_input_pending, 0) > 0 then
+      raise exception 'Mevcut urune ait hammadde stogu veya yoldaki hammaddeler var. Urun degistirmeden once bu hammaddeleri depoya aktar.';
+    end if;
+
     select coalesce(quantity, 0), coalesce(pending_quantity, 0)
-    into v_existing_output_quantity, v_cleared_output_pending
+    into v_existing_output_quantity, v_existing_output_pending
     from public.production_inventory pi
     where pi.owner_kind = v_slot.owner_kind
       and pi.owner_id = v_slot.owner_id
@@ -1583,22 +1679,14 @@ begin
       and pi.quality_level = v_old_quality_level
     for update;
 
-    if v_existing_output_quantity > 0 then
-      raise exception 'Mevcut urunun output stogu var. Urun degistirmeden once bu urune ait outputu depoya aktar.';
-    end if;
-
-    if coalesce(v_cleared_output_pending, 0) > 0 then
-      update public.production_inventory pi
-      set pending_quantity = 0
-      where pi.owner_kind = v_slot.owner_kind
-        and pi.owner_id = v_slot.owner_id
-        and pi.inventory_type = 'output'
-        and pi.product_id = v_old_product_id
-        and pi.quality_level = v_old_quality_level;
+    if v_existing_output_quantity > 0 or coalesce(v_existing_output_pending, 0) > 0 then
+      raise exception 'Mevcut urunun output stogu veya yoldaki urunleri var. Urun degistirmeden once bu urune ait stoklari depoya aktar.';
     end if;
   else
+    v_existing_input_quantity := 0;
+    v_existing_input_pending := 0;
     v_existing_output_quantity := 0;
-    v_cleared_output_pending := 0;
+    v_existing_output_pending := 0;
   end if;
 
   update public.production_slots
@@ -1750,7 +1838,7 @@ begin
     'player_max_quality_level', v_max_quality,
     'same_setting', v_same_setting,
     'existing_output_quantity', coalesce(v_existing_output_quantity, 0),
-    'cleared_output_pending_quantity', coalesce(v_cleared_output_pending, 0),
+    'cleared_output_pending_quantity', coalesce(v_existing_output_pending, 0),
     'created_input_count', v_created_input_count,
     'created_output_count', v_created_output_count,
     'deleted_obsolete_inventory_count', v_deleted_obsolete_count,
@@ -2088,6 +2176,27 @@ begin
       coalesce((v_construction.params->>'fuel_capacity')::integer, 0),
       coalesce((v_construction.params->>'current_fuel')::integer, 0),
       coalesce((v_construction.params->>'fuel_cost')::numeric, 0),
+      true
+    )
+    returning id into v_created_id;
+
+  -- ARGE CENTER
+  elsif v_construction.building_kind = 'arge_center' then
+
+    insert into public.arge_centers (
+      player_id,
+      name,
+      level,
+      max_concurrent_researches,
+      duration_reduction_pct,
+      is_active
+    )
+    values (
+      p_player_id,
+      coalesce(v_construction.params->>'name', 'AR-GE Merkezi'),
+      coalesce((v_construction.params->>'level')::integer, 1),
+      coalesce((v_construction.params->>'max_concurrent_researches')::integer, 1),
+      coalesce((v_construction.params->>'duration_reduction_pct')::numeric, 0),
       true
     )
     returning id into v_created_id;
@@ -2516,11 +2625,18 @@ declare
   v_now timestamptz := timezone('utc', now());
   v_player record;
   v_store record;
+  v_arge_center record;
+  v_field record;
+  v_farm record;
+  v_factory record;
+  v_mine record;
   v_current_level integer;
   v_target_level integer;
   v_duration_minutes integer;
   v_slot_capacity_increase integer := 0;
   v_max_slot_increase integer := 2;
+  v_input_capacity_increase integer := 0;
+  v_output_capacity_increase integer := 0;
   v_upgrade_cost numeric := 0;
   v_upgrade_id uuid;
   v_finish_at timestamptz;
@@ -2650,6 +2766,538 @@ begin
       'max_slot_increase', v_max_slot_increase,
       'finish_at', v_finish_at
     );
+  elsif p_building_kind = 'field' then
+    select
+      f.*,
+      ft.name as field_type_name,
+      ft.construction_time_minutes,
+      ft.cost as field_type_cost
+    into v_field
+    from public.fields f
+    join public.field_types ft on ft.id = f.field_type_id
+    where f.id = p_entity_id
+      and f.player_id = p_player_id
+    for update;
+
+    if not found then
+      raise exception 'Ciftlik bulunamadi veya size ait degil.';
+    end if;
+
+    if coalesce(v_field.is_active, false) = false then
+      raise exception 'Pasif ciftlikte yukseltme baslatilamaz.';
+    end if;
+
+    v_current_level := coalesce(v_field.level, 1);
+    v_target_level := v_current_level + 1;
+    v_input_capacity_increase := greatest(0, coalesce(v_field.input_capacity, 0));
+    v_output_capacity_increase := greatest(0, coalesce(v_field.output_capacity, 0));
+    v_duration_minutes := greatest(
+      1,
+      coalesce(v_field.construction_time_minutes, 0) * v_target_level
+    );
+    v_upgrade_cost := greatest(
+      0,
+      coalesce(v_field.field_type_cost, 0) * v_target_level
+    );
+    v_finish_at := v_now + make_interval(mins => v_duration_minutes);
+
+    if coalesce(v_player.cash, 0) < v_upgrade_cost then
+      raise exception 'Yetersiz bakiye. Gerekli: %, Mevcut: %',
+        v_upgrade_cost,
+        coalesce(v_player.cash, 0);
+    end if;
+
+    update public.players
+    set cash = cash - v_upgrade_cost
+    where id = p_player_id;
+
+    insert into public.building_upgrades (
+      player_id,
+      building_kind,
+      entity_id,
+      current_level,
+      target_level,
+      params,
+      status,
+      started_at,
+      finish_at,
+      created_at,
+      updated_at
+    )
+    values (
+      p_player_id,
+      p_building_kind,
+      p_entity_id,
+      v_current_level,
+      v_target_level,
+      jsonb_build_object(
+        'name', v_field.name,
+        'field_type_id', v_field.field_type_id,
+        'field_type_name', v_field.field_type_name,
+        'base_duration_minutes', coalesce(v_field.construction_time_minutes, 0),
+        'duration_minutes', v_duration_minutes,
+        'upgrade_cost', v_upgrade_cost,
+        'slot_capacity_increase', 0,
+        'max_slot_increase', 0,
+        'previous_slot_capacity', 0,
+        'next_slot_capacity', 0,
+        'previous_max_slot_count', coalesce(v_field.max_slot_count, 0),
+        'next_max_slot_count', coalesce(v_field.max_slot_count, 0),
+        'input_capacity_increase', v_input_capacity_increase,
+        'output_capacity_increase', v_output_capacity_increase,
+        'previous_input_capacity', coalesce(v_field.input_capacity, 0),
+        'next_input_capacity', coalesce(v_field.input_capacity, 0) + v_input_capacity_increase,
+        'previous_output_capacity', coalesce(v_field.output_capacity, 0),
+        'next_output_capacity', coalesce(v_field.output_capacity, 0) + v_output_capacity_increase
+      ),
+      'in_progress',
+      v_now,
+      v_finish_at,
+      v_now,
+      v_now
+    )
+    returning id into v_upgrade_id;
+
+    return jsonb_build_object(
+      'success', true,
+      'upgrade_id', v_upgrade_id,
+      'building_kind', p_building_kind,
+      'entity_id', p_entity_id,
+      'current_level', v_current_level,
+      'target_level', v_target_level,
+      'duration_minutes', v_duration_minutes,
+      'upgrade_cost', v_upgrade_cost,
+      'input_capacity_increase', v_input_capacity_increase,
+      'output_capacity_increase', v_output_capacity_increase,
+      'finish_at', v_finish_at
+    );
+  elsif p_building_kind = 'farm' then
+    select
+      f.*,
+      ft.name as farm_type_name,
+      ft.construction_time_minutes,
+      ft.cost as farm_type_cost
+    into v_farm
+    from public.farms f
+    join public.farm_types ft on ft.id = f.farm_type_id
+    where f.id = p_entity_id
+      and f.player_id = p_player_id
+    for update;
+
+    if not found then
+      raise exception 'Tarla bulunamadi veya size ait degil.';
+    end if;
+
+    if coalesce(v_farm.is_active, false) = false then
+      raise exception 'Pasif tarlada yukseltme baslatilamaz.';
+    end if;
+
+    v_current_level := coalesce(v_farm.level, 1);
+    v_target_level := v_current_level + 1;
+    v_input_capacity_increase := greatest(0, coalesce(v_farm.input_capacity, 0));
+    v_output_capacity_increase := greatest(0, coalesce(v_farm.output_capacity, 0));
+    v_duration_minutes := greatest(
+      1,
+      coalesce(v_farm.construction_time_minutes, 0) * v_target_level
+    );
+    v_upgrade_cost := greatest(
+      0,
+      coalesce(v_farm.farm_type_cost, 0) * v_target_level
+    );
+    v_finish_at := v_now + make_interval(mins => v_duration_minutes);
+
+    if coalesce(v_player.cash, 0) < v_upgrade_cost then
+      raise exception 'Yetersiz bakiye. Gerekli: %, Mevcut: %',
+        v_upgrade_cost,
+        coalesce(v_player.cash, 0);
+    end if;
+
+    update public.players
+    set cash = cash - v_upgrade_cost
+    where id = p_player_id;
+
+    insert into public.building_upgrades (
+      player_id,
+      building_kind,
+      entity_id,
+      current_level,
+      target_level,
+      params,
+      status,
+      started_at,
+      finish_at,
+      created_at,
+      updated_at
+    )
+    values (
+      p_player_id,
+      p_building_kind,
+      p_entity_id,
+      v_current_level,
+      v_target_level,
+      jsonb_build_object(
+        'name', v_farm.name,
+        'farm_type_id', v_farm.farm_type_id,
+        'farm_type_name', v_farm.farm_type_name,
+        'base_duration_minutes', coalesce(v_farm.construction_time_minutes, 0),
+        'duration_minutes', v_duration_minutes,
+        'upgrade_cost', v_upgrade_cost,
+        'slot_capacity_increase', 0,
+        'max_slot_increase', 0,
+        'previous_slot_capacity', 0,
+        'next_slot_capacity', 0,
+        'previous_max_slot_count', coalesce(v_farm.max_slot_count, 0),
+        'next_max_slot_count', coalesce(v_farm.max_slot_count, 0),
+        'input_capacity_increase', v_input_capacity_increase,
+        'output_capacity_increase', v_output_capacity_increase,
+        'previous_input_capacity', coalesce(v_farm.input_capacity, 0),
+        'next_input_capacity', coalesce(v_farm.input_capacity, 0) + v_input_capacity_increase,
+        'previous_output_capacity', coalesce(v_farm.output_capacity, 0),
+        'next_output_capacity', coalesce(v_farm.output_capacity, 0) + v_output_capacity_increase
+      ),
+      'in_progress',
+      v_now,
+      v_finish_at,
+      v_now,
+      v_now
+    )
+    returning id into v_upgrade_id;
+
+    return jsonb_build_object(
+      'success', true,
+      'upgrade_id', v_upgrade_id,
+      'building_kind', p_building_kind,
+      'entity_id', p_entity_id,
+      'current_level', v_current_level,
+      'target_level', v_target_level,
+      'duration_minutes', v_duration_minutes,
+      'upgrade_cost', v_upgrade_cost,
+      'input_capacity_increase', v_input_capacity_increase,
+      'output_capacity_increase', v_output_capacity_increase,
+      'finish_at', v_finish_at
+    );
+  elsif p_building_kind = 'factory' then
+    select
+      f.*,
+      ft.name as factory_type_name,
+      ft.construction_time_minutes,
+      ft.cost as factory_type_cost
+    into v_factory
+    from public.factories f
+    join public.factory_types ft on ft.id = f.factory_type_id
+    where f.id = p_entity_id
+      and f.player_id = p_player_id
+    for update;
+
+    if not found then
+      raise exception 'Fabrika bulunamadi veya size ait degil.';
+    end if;
+
+    if coalesce(v_factory.is_active, false) = false then
+      raise exception 'Pasif fabrikada yukseltme baslatilamaz.';
+    end if;
+
+    v_current_level := coalesce(v_factory.level, 1);
+    v_target_level := v_current_level + 1;
+    v_input_capacity_increase := greatest(
+      0,
+      coalesce(v_factory.input_capacity, 0)
+    );
+    v_output_capacity_increase := greatest(
+      0,
+      coalesce(v_factory.output_capacity, 0)
+    );
+    v_duration_minutes := greatest(
+      1,
+      coalesce(v_factory.construction_time_minutes, 0) * v_target_level
+    );
+    v_upgrade_cost := greatest(
+      0,
+      coalesce(v_factory.factory_type_cost, 0) * v_target_level
+    );
+    v_finish_at := v_now + make_interval(mins => v_duration_minutes);
+
+    if coalesce(v_player.cash, 0) < v_upgrade_cost then
+      raise exception 'Yetersiz bakiye. Gerekli: %, Mevcut: %',
+        v_upgrade_cost,
+        coalesce(v_player.cash, 0);
+    end if;
+
+    update public.players
+    set cash = cash - v_upgrade_cost
+    where id = p_player_id;
+
+    insert into public.building_upgrades (
+      player_id,
+      building_kind,
+      entity_id,
+      current_level,
+      target_level,
+      params,
+      status,
+      started_at,
+      finish_at,
+      created_at,
+      updated_at
+    )
+    values (
+      p_player_id,
+      p_building_kind,
+      p_entity_id,
+      v_current_level,
+      v_target_level,
+      jsonb_build_object(
+        'name', v_factory.name,
+        'factory_type_id', v_factory.factory_type_id,
+        'factory_type_name', v_factory.factory_type_name,
+        'base_duration_minutes', coalesce(v_factory.construction_time_minutes, 0),
+        'duration_minutes', v_duration_minutes,
+        'upgrade_cost', v_upgrade_cost,
+        'slot_capacity_increase', 0,
+        'max_slot_increase', 0,
+        'previous_slot_capacity', 0,
+        'next_slot_capacity', 0,
+        'previous_max_slot_count', 0,
+        'next_max_slot_count', 0,
+        'input_capacity_increase', v_input_capacity_increase,
+        'output_capacity_increase', v_output_capacity_increase,
+        'previous_input_capacity', coalesce(v_factory.input_capacity, 0),
+        'next_input_capacity', coalesce(v_factory.input_capacity, 0) + v_input_capacity_increase,
+        'previous_output_capacity', coalesce(v_factory.output_capacity, 0),
+        'next_output_capacity', coalesce(v_factory.output_capacity, 0) + v_output_capacity_increase
+      ),
+      'in_progress',
+      v_now,
+      v_finish_at,
+      v_now,
+      v_now
+    )
+    returning id into v_upgrade_id;
+
+    return jsonb_build_object(
+      'success', true,
+      'upgrade_id', v_upgrade_id,
+      'building_kind', p_building_kind,
+      'entity_id', p_entity_id,
+      'current_level', v_current_level,
+      'target_level', v_target_level,
+      'duration_minutes', v_duration_minutes,
+      'upgrade_cost', v_upgrade_cost,
+      'input_capacity_increase', v_input_capacity_increase,
+      'output_capacity_increase', v_output_capacity_increase,
+      'finish_at', v_finish_at
+    );
+  elsif p_building_kind = 'mine' then
+    select
+      m.*,
+      mt.name as mine_type_name,
+      mt.construction_time_minutes,
+      mt.cost as mine_type_cost
+    into v_mine
+    from public.mines m
+    join public.mine_types mt on mt.id = m.mine_type_id
+    where m.id = p_entity_id
+      and m.player_id = p_player_id
+    for update;
+
+    if not found then
+      raise exception 'Maden bulunamadi veya size ait degil.';
+    end if;
+
+    if coalesce(v_mine.is_active, false) = false then
+      raise exception 'Pasif madende yukseltme baslatilamaz.';
+    end if;
+
+    v_current_level := coalesce(v_mine.level, 1);
+    v_target_level := v_current_level + 1;
+    v_output_capacity_increase := greatest(
+      0,
+      coalesce(v_mine.output_capacity, 0)
+    );
+    v_duration_minutes := greatest(
+      1,
+      coalesce(v_mine.construction_time_minutes, 0) * v_target_level
+    );
+    v_upgrade_cost := greatest(
+      0,
+      coalesce(v_mine.mine_type_cost, 0) * v_target_level
+    );
+    v_finish_at := v_now + make_interval(mins => v_duration_minutes);
+
+    if coalesce(v_player.cash, 0) < v_upgrade_cost then
+      raise exception 'Yetersiz bakiye. Gerekli: %, Mevcut: %',
+        v_upgrade_cost,
+        coalesce(v_player.cash, 0);
+    end if;
+
+    update public.players
+    set cash = cash - v_upgrade_cost
+    where id = p_player_id;
+
+    insert into public.building_upgrades (
+      player_id,
+      building_kind,
+      entity_id,
+      current_level,
+      target_level,
+      params,
+      status,
+      started_at,
+      finish_at,
+      created_at,
+      updated_at
+    )
+    values (
+      p_player_id,
+      p_building_kind,
+      p_entity_id,
+      v_current_level,
+      v_target_level,
+      jsonb_build_object(
+        'name', v_mine.name,
+        'mine_type_id', v_mine.mine_type_id,
+        'mine_type_name', v_mine.mine_type_name,
+        'base_duration_minutes', coalesce(v_mine.construction_time_minutes, 0),
+        'duration_minutes', v_duration_minutes,
+        'upgrade_cost', v_upgrade_cost,
+        'slot_capacity_increase', 0,
+        'max_slot_increase', 0,
+        'previous_slot_capacity', 0,
+        'next_slot_capacity', 0,
+        'previous_max_slot_count', 0,
+        'next_max_slot_count', 0,
+        'input_capacity_increase', 0,
+        'output_capacity_increase', v_output_capacity_increase,
+        'previous_input_capacity', 0,
+        'next_input_capacity', 0,
+        'previous_output_capacity', coalesce(v_mine.output_capacity, 0),
+        'next_output_capacity', coalesce(v_mine.output_capacity, 0) + v_output_capacity_increase
+      ),
+      'in_progress',
+      v_now,
+      v_finish_at,
+      v_now,
+      v_now
+    )
+    returning id into v_upgrade_id;
+
+    return jsonb_build_object(
+      'success', true,
+      'upgrade_id', v_upgrade_id,
+      'building_kind', p_building_kind,
+      'entity_id', p_entity_id,
+      'current_level', v_current_level,
+      'target_level', v_target_level,
+      'duration_minutes', v_duration_minutes,
+      'upgrade_cost', v_upgrade_cost,
+      'output_capacity_increase', v_output_capacity_increase,
+      'finish_at', v_finish_at
+    );
+  elsif p_building_kind = 'arge_center' then
+    select *
+    into v_arge_center
+    from public.arge_centers ac
+    where ac.id = p_entity_id
+      and ac.player_id = p_player_id
+    for update;
+
+    if not found then
+      raise exception 'AR-GE merkezi bulunamadi veya size ait degil.';
+    end if;
+
+    if coalesce(v_arge_center.is_active, false) = false then
+      raise exception 'Pasif AR-GE merkezinde yukseltme baslatilamaz.';
+    end if;
+
+    v_current_level := coalesce(v_arge_center.level, 1);
+    v_target_level := v_current_level + 1;
+    v_duration_minutes := greatest(1, 60 * v_target_level);
+    v_upgrade_cost := greatest(0, 25000 * v_target_level);
+    v_finish_at := v_now + make_interval(mins => v_duration_minutes);
+
+    if coalesce(v_player.cash, 0) < v_upgrade_cost then
+      raise exception 'Yetersiz bakiye. Gerekli: %, Mevcut: %',
+        v_upgrade_cost,
+        coalesce(v_player.cash, 0);
+    end if;
+
+    update public.players
+    set cash = cash - v_upgrade_cost
+    where id = p_player_id;
+
+    insert into public.building_upgrades (
+      player_id,
+      building_kind,
+      entity_id,
+      current_level,
+      target_level,
+      params,
+      status,
+      started_at,
+      finish_at,
+      created_at,
+      updated_at
+    )
+    values (
+      p_player_id,
+      p_building_kind,
+      p_entity_id,
+      v_current_level,
+      v_target_level,
+      jsonb_build_object(
+        'name', v_arge_center.name,
+        'duration_minutes', v_duration_minutes,
+        'upgrade_cost', v_upgrade_cost,
+        'slot_capacity_increase', 0,
+        'max_slot_increase', 0,
+        'previous_slot_capacity', 0,
+        'next_slot_capacity', 0,
+        'previous_max_slot_count', 0,
+        'next_max_slot_count', 0,
+        'input_capacity_increase', 0,
+        'output_capacity_increase', 0,
+        'previous_input_capacity', 0,
+        'next_input_capacity', 0,
+        'previous_output_capacity', 0,
+        'next_output_capacity', 0,
+        'previous_concurrent_researches', coalesce(v_arge_center.max_concurrent_researches, 1),
+        'next_concurrent_researches',
+          case
+            when v_target_level >= 6 then 4
+            when v_target_level >= 4 then 3
+            when v_target_level >= 2 then 2
+            else 1
+          end,
+        'previous_duration_reduction_pct', coalesce(v_arge_center.duration_reduction_pct, 0),
+        'next_duration_reduction_pct',
+          case
+            when v_target_level = 2 then 5
+            when v_target_level = 3 then 10
+            when v_target_level = 4 then 15
+            when v_target_level = 5 then 20
+            when v_target_level >= 6 then 25
+            else 0
+          end
+      ),
+      'in_progress',
+      v_now,
+      v_finish_at,
+      v_now,
+      v_now
+    )
+    returning id into v_upgrade_id;
+
+    return jsonb_build_object(
+      'success', true,
+      'upgrade_id', v_upgrade_id,
+      'building_kind', p_building_kind,
+      'entity_id', p_entity_id,
+      'current_level', v_current_level,
+      'target_level', v_target_level,
+      'duration_minutes', v_duration_minutes,
+      'upgrade_cost', v_upgrade_cost,
+      'finish_at', v_finish_at
+    );
   end if;
 
   raise exception 'Bu building_kind icin yukseltme destegi henuz yok: %', p_building_kind;
@@ -2668,6 +3316,8 @@ declare
   v_upgrade public.building_upgrades%rowtype;
   v_slot_capacity_increase integer := 0;
   v_max_slot_increase integer := 0;
+  v_input_capacity_increase integer := 0;
+  v_output_capacity_increase integer := 0;
 begin
   select *
   into v_upgrade
@@ -2706,6 +3356,88 @@ begin
       capacity = capacity + v_slot_capacity_increase,
       updated_at = v_now
     where store_id = v_upgrade.entity_id;
+  elsif v_upgrade.building_kind = 'field' then
+    v_input_capacity_increase := coalesce(
+      (v_upgrade.params->>'input_capacity_increase')::integer,
+      0
+    );
+    v_output_capacity_increase := coalesce(
+      (v_upgrade.params->>'output_capacity_increase')::integer,
+      0
+    );
+
+    update public.fields
+    set
+      level = v_upgrade.target_level,
+      input_capacity = input_capacity + v_input_capacity_increase,
+      output_capacity = output_capacity + v_output_capacity_increase,
+      updated_at = v_now
+    where id = v_upgrade.entity_id
+      and player_id = p_player_id;
+  elsif v_upgrade.building_kind = 'farm' then
+    v_input_capacity_increase := coalesce(
+      (v_upgrade.params->>'input_capacity_increase')::integer,
+      0
+    );
+    v_output_capacity_increase := coalesce(
+      (v_upgrade.params->>'output_capacity_increase')::integer,
+      0
+    );
+
+    update public.farms
+    set
+      level = v_upgrade.target_level,
+      input_capacity = input_capacity + v_input_capacity_increase,
+      output_capacity = output_capacity + v_output_capacity_increase,
+      updated_at = v_now
+    where id = v_upgrade.entity_id
+      and player_id = p_player_id;
+  elsif v_upgrade.building_kind = 'factory' then
+    v_input_capacity_increase := coalesce(
+      (v_upgrade.params->>'input_capacity_increase')::integer,
+      0
+    );
+    v_output_capacity_increase := coalesce(
+      (v_upgrade.params->>'output_capacity_increase')::integer,
+      0
+    );
+
+    update public.factories
+    set
+      level = v_upgrade.target_level,
+      input_capacity = input_capacity + v_input_capacity_increase,
+      output_capacity = output_capacity + v_output_capacity_increase,
+      updated_at = v_now
+    where id = v_upgrade.entity_id
+      and player_id = p_player_id;
+  elsif v_upgrade.building_kind = 'mine' then
+    v_output_capacity_increase := coalesce(
+      (v_upgrade.params->>'output_capacity_increase')::integer,
+      0
+    );
+
+    update public.mines
+    set
+      level = v_upgrade.target_level,
+      output_capacity = output_capacity + v_output_capacity_increase,
+      updated_at = v_now
+    where id = v_upgrade.entity_id
+      and player_id = p_player_id;
+  elsif v_upgrade.building_kind = 'arge_center' then
+    update public.arge_centers
+    set
+      level = v_upgrade.target_level,
+      max_concurrent_researches = coalesce(
+        (v_upgrade.params->>'next_concurrent_researches')::integer,
+        max_concurrent_researches
+      ),
+      duration_reduction_pct = coalesce(
+        (v_upgrade.params->>'next_duration_reduction_pct')::numeric,
+        duration_reduction_pct
+      ),
+      updated_at = v_now
+    where id = v_upgrade.entity_id
+      and player_id = p_player_id;
   else
     raise exception 'Bu building_kind icin tamamlama destegi henuz yok: %', v_upgrade.building_kind;
   end if;
@@ -2725,6 +3457,8 @@ begin
     'target_level', v_upgrade.target_level,
     'slot_capacity_increase', v_slot_capacity_increase,
     'max_slot_increase', v_max_slot_increase,
+    'input_capacity_increase', v_input_capacity_increase,
+    'output_capacity_increase', v_output_capacity_increase,
     'completed_at', v_now
   );
 end;
@@ -3534,9 +4268,27 @@ AS $function$
             else (
               select jsonb_build_object(
                 'id', pi.id,
-                'inventory_type', pi.inventory_type
+                'inventory_type', pi.inventory_type,
+                'city',
+                (
+                  select jsonb_build_object('id', c.id, 'name', c.name)
+                  from public.cities c
+                  where c.id = coalesce(sf.city_id, sfi.city_id, sfa.city_id, sm.city_id)
+                )
               )
               from public.production_inventory pi
+              left join public.farms sf
+                on pi.owner_kind = 'farm'
+               and sf.id = pi.owner_id
+              left join public.fields sfi
+                on pi.owner_kind = 'field'
+               and sfi.id = pi.owner_id
+              left join public.factories sfa
+                on pi.owner_kind = 'factory'
+               and sfa.id = pi.owner_id
+              left join public.mines sm
+                on pi.owner_kind = 'mine'
+               and sm.id = pi.owner_id
               where pi.id = lt.seller_production_inventory_id
             )
           end,
@@ -3582,9 +4334,27 @@ AS $function$
             else (
               select jsonb_build_object(
                 'id', pi.id,
-                'inventory_type', pi.inventory_type
+                'inventory_type', pi.inventory_type,
+                'city',
+                (
+                  select jsonb_build_object('id', c.id, 'name', c.name)
+                  from public.cities c
+                  where c.id = coalesce(bf.city_id, bfi.city_id, bfa.city_id, bm.city_id)
+                )
               )
               from public.production_inventory pi
+              left join public.farms bf
+                on pi.owner_kind = 'farm'
+               and bf.id = pi.owner_id
+              left join public.fields bfi
+                on pi.owner_kind = 'field'
+               and bfi.id = pi.owner_id
+              left join public.factories bfa
+                on pi.owner_kind = 'factory'
+               and bfa.id = pi.owner_id
+              left join public.mines bm
+                on pi.owner_kind = 'mine'
+               and bm.id = pi.owner_id
               where pi.id = lt.buyer_production_inventory_id
             )
           end
@@ -3594,7 +4364,6 @@ AS $function$
     where lt.buyer_player_id = auth.uid()
       and lt.status <> 'in_transit'
     order by lt.completed_at desc nulls last
-    limit 50
   ) history_rows;
 $function$
 ;
@@ -4787,6 +5556,20 @@ AS $function$
   from public.logistics_companies lc
   where lc.player_id = auth.uid()
   order by lc.created_at
+  limit 1;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_player_arge_center()
+ RETURNS jsonb
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select to_jsonb(ac)
+  from public.arge_centers ac
+  where ac.player_id = auth.uid()
+  order by ac.created_at
   limit 1;
 $function$
 ;
@@ -8593,13 +9376,7 @@ begin
     end if;
 
     if coalesce(v_cleared_pending_quantity, 0) > 0 then
-      update public.production_inventory
-      set pending_quantity = 0
-      where owner_kind = 'mine'
-        and owner_id = p_mine_id
-        and inventory_type = 'output'
-        and product_id = v_old_product_id
-        and quality_level = v_old_quality_level;
+      raise exception 'Bu madende yoldaki urunler var. Urun degistirmeden once transferlerin tamamlanmasini bekleyin.';
     end if;
   end if;
 
@@ -8967,6 +9744,101 @@ end;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.start_arge_center_construction(p_player_id uuid, p_name text DEFAULT 'AR-GE Merkezi'::text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_player players%rowtype;
+  v_cost numeric := 25000;
+  v_required_level integer := 1;
+  v_construction_time_minutes integer := 60;
+  v_started_at timestamptz := timezone('utc', now());
+  v_finish_at timestamptz;
+  v_construction_id uuid;
+  v_name text := coalesce(nullif(trim(p_name), ''), 'AR-GE Merkezi');
+begin
+  select * into v_player from public.players where id = p_player_id;
+  if not found then
+    return jsonb_build_object('success', false, 'message', 'Oyuncu bulunamadi.');
+  end if;
+
+  if exists (
+    select 1 from public.arge_centers ac where ac.player_id = p_player_id
+  ) then
+    return jsonb_build_object('success', false, 'message', 'Zaten aktif bir AR-GE merkeziniz bulunuyor.');
+  end if;
+
+  if exists (
+    select 1
+    from public.building_constructions bc
+    where bc.player_id = p_player_id
+      and bc.building_kind = 'arge_center'
+      and bc.status = 'in_progress'
+  ) then
+    return jsonb_build_object('success', false, 'message', 'Devam eden bir AR-GE merkez kurulumu var.');
+  end if;
+
+  if v_player.level < v_required_level then
+    return jsonb_build_object(
+      'success', false,
+      'message', format('Bu kurulum icin seviye %s gerekli. Mevcut seviyeniz: %s.', v_required_level, v_player.level)
+    );
+  end if;
+
+  if v_player.cash < v_cost then
+    return jsonb_build_object(
+      'success', false,
+      'message', format('Yetersiz bakiye. Gerekli: %s TL, Mevcut: %s TL.', v_cost::bigint, v_player.cash::bigint)
+    );
+  end if;
+
+  v_finish_at := v_started_at + make_interval(mins => v_construction_time_minutes);
+
+  update public.players
+  set cash = cash - v_cost
+  where id = p_player_id;
+
+  insert into public.building_constructions (
+    player_id,
+    building_kind,
+    params,
+    status,
+    started_at,
+    finish_at
+  )
+  values (
+    p_player_id,
+    'arge_center',
+    jsonb_build_object(
+      'name', v_name,
+      'level', 1,
+      'max_concurrent_researches', 1,
+      'duration_reduction_pct', 0,
+      'cost', v_cost,
+      'construction_time_minutes', v_construction_time_minutes
+    ),
+    'in_progress',
+    v_started_at,
+    v_finish_at
+  )
+  returning id into v_construction_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'construction_id', v_construction_id,
+    'building_kind', 'arge_center',
+    'name', v_name,
+    'cost', v_cost,
+    'finish_at', v_finish_at,
+    'construction_time_minutes', v_construction_time_minutes
+  );
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.start_arge_research(p_player_id uuid, p_product_id text)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -8975,6 +9847,7 @@ CREATE OR REPLACE FUNCTION public.start_arge_research(p_player_id uuid, p_produc
 AS $function$
 declare
   v_player players%rowtype;
+  v_arge_center arge_centers%rowtype;
   v_product products%rowtype;
   v_quality_row player_product_quality_levels%rowtype;
   v_current_quality integer;
@@ -8991,6 +9864,20 @@ begin
   select * into v_player from players where id = p_player_id;
   if not found then
     return jsonb_build_object('success', false, 'message', 'Oyuncu bulunamadi.');
+  end if;
+
+  select * into v_arge_center
+  from public.arge_centers
+  where player_id = p_player_id
+    and is_active = true
+  order by created_at
+  limit 1;
+
+  if not found then
+    return jsonb_build_object(
+      'success', false,
+      'message', 'Arastirma baslatmak icin once AR-GE merkezinizi kurmaniz gerekiyor.'
+    );
   end if;
 
   select * into v_product from products where id = p_product_id;
@@ -9031,14 +9918,43 @@ begin
   end if;
 
   if exists (
-    select 1 from arge_researches
-    where player_id = p_player_id and status = 'in_progress'
+    select 1
+    from arge_researches
+    where player_id = p_player_id
+      and product_id = p_product_id
+      and status = 'in_progress'
   ) then
-    return jsonb_build_object('success', false, 'message', 'Zaten devam eden bir AR-GE arastirmaniz var.');
+    return jsonb_build_object(
+      'success', false,
+      'message', 'Bu urun icin zaten devam eden bir arastirmaniz var.'
+    );
+  end if;
+
+  if (
+    select count(*)
+    from arge_researches
+    where player_id = p_player_id
+      and status = 'in_progress'
+  ) >= v_arge_center.max_concurrent_researches then
+    return jsonb_build_object(
+      'success', false,
+      'message', format(
+        'AR-GE merkeziniz en fazla %s eszamanli arastirma destekliyor.',
+        v_arge_center.max_concurrent_researches
+      )
+    );
   end if;
 
   v_duration_hours := v_durations[v_current_quality];
-  v_finish_at := timezone('utc', now()) + (v_duration_hours || ' hours')::interval;
+  v_finish_at := timezone('utc', now()) + make_interval(
+    secs => greatest(
+      60,
+      floor(
+        (v_duration_hours * 3600)::numeric *
+        greatest(0, 1 - (coalesce(v_arge_center.duration_reduction_pct, 0) / 100.0))
+      )::integer
+    )
+  );
 
   update players
   set cash = cash - v_cost
@@ -12496,6 +13412,8 @@ declare
 
   v_owner_city_id uuid;
   v_owner_player_id uuid;
+  v_input_capacity integer := 0;
+  v_used_input_quantity integer := 0;
 
   v_new_inventory_quantity integer;
   v_new_inventory_cost numeric;
@@ -12607,6 +13525,43 @@ begin
 
   if v_inventory.quality_level <> v_warehouse_slot.quality_level then
     raise exception 'Depo slotundaki kalite ile input inventory kalitesi aynı olmalıdır.';
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtext(
+      'production_input_capacity:' || v_inventory.owner_kind || ':' || v_inventory.owner_id::text
+    )
+  );
+
+  if v_inventory.owner_kind = 'factory' then
+    select coalesce(input_capacity, 0)
+    into v_input_capacity
+    from public.factories
+    where id = v_inventory.owner_id;
+  elsif v_inventory.owner_kind = 'field' then
+    select coalesce(input_capacity, 0)
+    into v_input_capacity
+    from public.fields
+    where id = v_inventory.owner_id;
+  elsif v_inventory.owner_kind = 'farm' then
+    select coalesce(input_capacity, 0)
+    into v_input_capacity
+    from public.farms
+    where id = v_inventory.owner_id;
+  end if;
+
+  select coalesce(sum(pi.quantity), 0)::integer
+  into v_used_input_quantity
+  from public.production_inventory pi
+  where pi.owner_kind = v_inventory.owner_kind
+    and pi.owner_id = v_inventory.owner_id
+    and pi.inventory_type = 'input';
+
+  if v_used_input_quantity + p_quantity > v_input_capacity then
+    raise exception 'Input kapasitesi yetersiz. Mevcut: %, Kapasite: %, Eklenmek istenen: %',
+      v_used_input_quantity,
+      v_input_capacity,
+      p_quantity;
   end if;
 
   v_new_inventory_quantity := v_inventory.quantity + p_quantity;
@@ -12917,6 +13872,7 @@ $function$
 -- ============================================================
 
 CREATE POLICY "Players can view their own arge researches" ON public.arge_researches AS PERMISSIVE FOR SELECT TO {public} USING ((auth.uid() = player_id));
+CREATE POLICY "Players can view their own arge centers" ON public.arge_centers AS PERMISSIVE FOR SELECT TO {public} USING ((auth.uid() = player_id));
 CREATE POLICY "Users can insert their own building constructions" ON public.building_constructions AS PERMISSIVE FOR INSERT TO {public} WITH CHECK ((auth.uid() = player_id));
 CREATE POLICY "Users can update their own building constructions" ON public.building_constructions AS PERMISSIVE FOR UPDATE TO {public} USING ((auth.uid() = player_id));
 CREATE POLICY "Users can view their own building constructions" ON public.building_constructions AS PERMISSIVE FOR SELECT TO {public} USING ((auth.uid() = player_id));

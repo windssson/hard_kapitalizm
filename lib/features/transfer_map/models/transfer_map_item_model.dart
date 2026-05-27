@@ -44,10 +44,14 @@ class TransferMapEndpointModel {
     Map<String, dynamic> json, {
     String defaultKind = 'warehouse',
   }) {
+    final resolvedKind = (json['kind'] ?? defaultKind).toString();
     return TransferMapEndpointModel(
       id: (json['id'] ?? '').toString(),
-      name: (json['name'] ?? 'Depo').toString(),
-      kind: (json['kind'] ?? defaultKind).toString(),
+      name: _normalizeEndpointName(
+        (json['name'] ?? 'Depo').toString(),
+        resolvedKind,
+      ),
+      kind: resolvedKind,
       city: TransferMapCityModel.fromJson(
         (json['city'] as Map<String, dynamic>?) ?? const {},
       ),
@@ -65,10 +69,14 @@ class TransferMapEndpointModel {
     String? kindKey,
     String defaultKind = 'warehouse',
   }) {
+    final resolvedKind = (json[kindKey] ?? defaultKind).toString();
     return TransferMapEndpointModel(
       id: (json[endpointIdKey] ?? '').toString(),
-      name: (json[endpointNameKey] ?? 'Depo').toString(),
-      kind: (json[kindKey] ?? defaultKind).toString(),
+      name: _normalizeEndpointName(
+        (json[endpointNameKey] ?? 'Depo').toString(),
+        resolvedKind,
+      ),
+      kind: resolvedKind,
       city: TransferMapCityModel(
         id: (json[cityIdKey] ?? '').toString(),
         name: (json[cityNameKey] ?? 'Sehir').toString(),
@@ -245,4 +253,25 @@ double _parseNum(dynamic value) {
   if (value == null) return 0;
   if (value is num) return value.toDouble();
   return double.tryParse(value.toString()) ?? 0;
+}
+
+String _normalizeEndpointName(String name, String kind) {
+  if (kind != 'production' && kind != 'production_inventory') {
+    return name;
+  }
+
+  final trimmed = name.trim();
+  if (trimmed == 'Uretim Input' || trimmed == 'Uretim Output') {
+    return 'Uretim';
+  }
+
+  if (trimmed.endsWith(' Input')) {
+    return trimmed.substring(0, trimmed.length - 6).trimRight();
+  }
+
+  if (trimmed.endsWith(' Output')) {
+    return trimmed.substring(0, trimmed.length - 7).trimRight();
+  }
+
+  return trimmed;
 }

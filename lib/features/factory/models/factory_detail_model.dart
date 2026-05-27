@@ -8,6 +8,8 @@ class FactoryTypeDetailModel {
   final List<String> acceptedProductIds;
   final int inputCapacity;
   final int outputCapacity;
+  final int cost;
+  final int constructionTimeMinutes;
 
   const FactoryTypeDetailModel({
     required this.id,
@@ -16,6 +18,8 @@ class FactoryTypeDetailModel {
     required this.acceptedProductIds,
     required this.inputCapacity,
     required this.outputCapacity,
+    required this.cost,
+    required this.constructionTimeMinutes,
   });
 
   factory FactoryTypeDetailModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,9 @@ class FactoryTypeDetailModel {
       acceptedProductIds: _parseAcceptedProductIds(json['accepted_product_ids']),
       inputCapacity: (json['input_capacity'] as num?)?.toInt() ?? 0,
       outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
+      cost: (json['cost'] as num?)?.toInt() ?? 0,
+      constructionTimeMinutes:
+          (json['construction_time_minutes'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -113,7 +120,7 @@ class FactoryDetailModel {
 
   Set<String> get _activeInputProductIds {
     final currentProduct = product;
-    if (currentProduct == null) return const {};
+    if (currentProduct == null) return const <String>{};
 
     return {
       if ((currentProduct.hammadde1Id ?? '').isNotEmpty) currentProduct.hammadde1Id!,
@@ -138,6 +145,17 @@ class FactoryDetailModel {
                 product != null &&
                 e.productId == product!.id &&
                 e.qualityLevel == factory.qualityLevel,
+          )
+          .toList()
+        ..sort((a, b) => a.productId.compareTo(b.productId));
+
+  List<FactoryProductionInventoryModel> get orphanInputInventories =>
+      inventories
+          .where(
+            (e) =>
+                e.isInput &&
+                !_activeInputProductIds.contains(e.productId) &&
+                (e.quantity > 0 || e.pendingQuantity > 0),
           )
           .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));

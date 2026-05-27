@@ -293,6 +293,9 @@ class _FieldTypeSelectionScreenState
       );
       if (result['success'] == true) {
         if (mounted) {
+          ref.invalidate(playerStreamProvider);
+          ref.invalidate(fieldListProvider);
+          ref.invalidate(fieldConstructionProvider);
           AppSnackbar.show(
             context,
             title: 'Basarili',

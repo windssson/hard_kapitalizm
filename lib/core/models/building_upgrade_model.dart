@@ -17,6 +17,13 @@ class BuildingUpgradeModel {
   final int nextSlotCapacity;
   final int previousMaxSlotCount;
   final int nextMaxSlotCount;
+  final int inputCapacityIncrease;
+  final int outputCapacityIncrease;
+  final int previousInputCapacity;
+  final int nextInputCapacity;
+  final int previousOutputCapacity;
+  final int nextOutputCapacity;
+  final Map<String, dynamic> params;
 
   const BuildingUpgradeModel({
     required this.id,
@@ -37,6 +44,13 @@ class BuildingUpgradeModel {
     required this.nextSlotCapacity,
     required this.previousMaxSlotCount,
     required this.nextMaxSlotCount,
+    required this.inputCapacityIncrease,
+    required this.outputCapacityIncrease,
+    required this.previousInputCapacity,
+    required this.nextInputCapacity,
+    required this.previousOutputCapacity,
+    required this.nextOutputCapacity,
+    required this.params,
   });
 
   bool get isInProgress => status == 'in_progress';
@@ -74,6 +88,19 @@ class BuildingUpgradeModel {
           (params['previous_max_slot_count'] as num?)?.toInt() ?? 0,
       nextMaxSlotCount:
           (params['next_max_slot_count'] as num?)?.toInt() ?? 0,
+      inputCapacityIncrease:
+          (params['input_capacity_increase'] as num?)?.toInt() ?? 0,
+      outputCapacityIncrease:
+          (params['output_capacity_increase'] as num?)?.toInt() ?? 0,
+      previousInputCapacity:
+          (params['previous_input_capacity'] as num?)?.toInt() ?? 0,
+      nextInputCapacity:
+          (params['next_input_capacity'] as num?)?.toInt() ?? 0,
+      previousOutputCapacity:
+          (params['previous_output_capacity'] as num?)?.toInt() ?? 0,
+      nextOutputCapacity:
+          (params['next_output_capacity'] as num?)?.toInt() ?? 0,
+      params: params,
     );
   }
 }

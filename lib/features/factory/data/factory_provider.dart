@@ -1,5 +1,7 @@
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/data/production_product_service.dart';
+import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
@@ -107,6 +109,58 @@ final factoryDetailProvider = FutureProvider.family<FactoryDetailModel, String>(
   );
 });
 
+final activeFactoryUpgradeProvider =
+    FutureProvider.family<BuildingUpgradeModel?, String>((ref, factoryId) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        return null;
+      }
+
+      final response = await supabase.rpc(
+        'get_player_active_building_upgrade',
+        params: {
+          'p_building_kind': 'factory',
+          'p_entity_id': factoryId,
+        },
+      );
+
+      if (response == null) {
+        return null;
+      }
+
+      return BuildingUpgradeModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    });
+
+final activeFactoryBoostProvider =
+    FutureProvider.family<BuildingBoostModel?, String>((ref, factoryId) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        return null;
+      }
+
+      final response = await supabase.rpc(
+        'get_player_active_building_boost',
+        params: {
+          'p_building_kind': 'factory',
+          'p_entity_id': factoryId,
+        },
+      );
+
+      if (response == null) {
+        return null;
+      }
+
+      return BuildingBoostModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    });
+
 // Fabrika Aksiyonları
 class FactoryActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -173,6 +227,114 @@ class FactoryActionNotifier {
         },
       );
       return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> startFactoryUpgrade(String factoryId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_building_upgrade',
+        params: {
+          'p_player_id': user.id,
+          'p_building_kind': 'factory',
+          'p_entity_id': factoryId,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'complete_due_building_upgrades',
+        params: {
+          'p_limit': 100,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> finishFactoryUpgradeWithGold(
+    String upgradeId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'finish_building_upgrade_with_gold',
+        params: {
+          'p_player_id': user.id,
+          'p_upgrade_id': upgradeId,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> startFactoryBoost({
+    required String factoryId,
+    required int durationHours,
+    required int starCost,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_building_boost',
+        params: {
+          'p_player_id': user.id,
+          'p_building_kind': 'factory',
+          'p_entity_id': factoryId,
+          'p_duration_hours': durationHours,
+          'p_star_cost': starCost,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> completeDueBuildingBoosts() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'complete_due_building_boosts',
+        params: {
+          'p_limit': 100,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -384,10 +546,57 @@ class FactoryActionNotifier {
   Future<List<ProductionLogisticsWarehouseOption>>
   getWarehousesForProductionLogistics({
     required String productionCityId,
-  }) {
-    return _productionLogisticsService.getWarehouseOptions(
-      productionCityId: productionCityId,
-    );
+    required String productId,
+  }) async {
+    final warehouses = await _productionLogisticsService.getPlayerWarehouses();
+    final typesResponse = await _supabase.rpc('get_warehouse_types_catalog');
+    final typeRows = (typesResponse as List<dynamic>)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+
+    final eligibleWarehouses = warehouses.where((warehouse) {
+      final typeId = (warehouse['warehouse_type_id'] ?? '').toString();
+      if (typeId.isEmpty) return false;
+
+      final typeRow = typeRows.cast<Map<String, dynamic>?>().firstWhere(
+        (row) => row?['id']?.toString() == typeId,
+        orElse: () => null,
+      );
+      if (typeRow == null) return false;
+
+      final acceptedIds = _parseAcceptedProductIds(
+        typeRow['accepted_product_ids'],
+      );
+      return acceptedIds.contains(productId.toUpperCase());
+    }).toList();
+
+    return eligibleWarehouses
+        .map(
+          (row) => ProductionLogisticsWarehouseOption.fromJson(
+            row,
+            productionCityId: productionCityId,
+          ),
+        )
+        .toList();
+  }
+
+  List<String> _parseAcceptedProductIds(dynamic rawValue) {
+    if (rawValue == null) return const [];
+
+    final cleaned = rawValue
+        .toString()
+        .replaceAll('[', '')
+        .replaceAll(']', '')
+        .replaceAll('{', '')
+        .replaceAll('}', '')
+        .replaceAll('"', '')
+        .replaceAll("'", '');
+
+    return cleaned
+        .split(',')
+        .map((e) => e.trim().toUpperCase())
+        .where((e) => e.isNotEmpty)
+        .toList();
   }
 
   Future<List<ProductionLogisticsVehicleOption>>

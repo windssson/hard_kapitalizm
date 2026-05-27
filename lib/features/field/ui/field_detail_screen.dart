@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
+import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 
 class FieldDetailScreen extends ConsumerStatefulWidget {
   final String fieldId;
@@ -20,6 +26,12 @@ class FieldDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
+  static const Map<int, int> _fieldBoostStarCosts = {
+    6: 3,
+    12: 6,
+    24: 12,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -27,19 +39,57 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   }
 
   void _refreshOnEntry() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      ref.invalidate(fieldDetailProvider(widget.fieldId));
-      ref.read(fieldDetailProvider(widget.fieldId).future);
+      await ref.read(fieldActionProvider).completeDueBuildingBoosts();
+      if (!mounted) return;
+      await ref.read(fieldActionProvider).completeDueBuildingUpgrades();
+      if (!mounted) return;
+      _refreshFieldDetail();
     });
+  }
+
+  void _refreshFieldDetail() {
+    ref.invalidate(fieldDetailProvider(widget.fieldId));
+    ref.invalidate(activeFieldBoostProvider(widget.fieldId));
+    ref.invalidate(activeFieldUpgradeProvider(widget.fieldId));
+    ref.read(fieldDetailProvider(widget.fieldId).future);
+    ref.read(activeFieldBoostProvider(widget.fieldId).future);
+    ref.read(activeFieldUpgradeProvider(widget.fieldId).future);
+  }
+
+  Future<void> _refreshFieldEcosystem({
+    String? warehouseId,
+    bool includeTransfers = false,
+  }) async {
+    _refreshFieldDetail();
+    ref.invalidate(fieldListProvider);
+    ref.invalidate(playerStreamProvider);
+    ref.invalidate(warehouseListProvider);
+    ref.invalidate(warehouseDetailProvider);
+
+    if (warehouseId != null && warehouseId.isNotEmpty) {
+      ref.invalidate(warehouseDetailProvider(warehouseId));
+    }
+
+    if (includeTransfers) {
+      ref.invalidate(buyerTransferMapProvider);
+      ref.invalidate(buyerTransferHistoryProvider);
+    }
+
+    await ref.read(fieldDetailProvider(widget.fieldId).future);
   }
 
   @override
   Widget build(BuildContext context) {
     final detailAsync = ref.watch(fieldDetailProvider(widget.fieldId));
+    final activeBoost = ref.watch(activeFieldBoostProvider(widget.fieldId)).value;
+    final activeUpgrade = ref.watch(
+      activeFieldUpgradeProvider(widget.fieldId),
+    ).value;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -61,53 +111,73 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 ),
                 data: (detail) => RefreshIndicator(
                   onRefresh: () async {
-                    ref.invalidate(fieldDetailProvider(widget.fieldId));
+                    await ref.read(fieldActionProvider).completeDueBuildingBoosts();
+                    if (!mounted) return;
+                    await ref.read(fieldActionProvider).completeDueBuildingUpgrades();
+                    if (!mounted) return;
+                    _refreshFieldDetail();
                     await ref.read(fieldDetailProvider(widget.fieldId).future);
                   },
                   child: ListView(
-                    padding: EdgeInsets.all(12.w),
+                    padding: EdgeInsets.fromLTRB(10.w, 8.h, 10.w, 24.h),
                     children: [
-                      _buildHeader(detail),
-                      SizedBox(height: 12.h),
-                      _buildActionRow(context, ref, detail),
+                      _buildHero(detail),
+                      SizedBox(height: 10.h),
+                      _buildQuickActions(
+                        context,
+                        ref,
+                        detail,
+                        activeBoost,
+                        activeUpgrade,
+                      ),
+                      if (activeBoost != null) ...[
+                        SizedBox(height: 12.h),
+                        _ActiveFieldBoostCard(boost: activeBoost),
+                      ],
+                      if (activeUpgrade != null) ...[
+                        SizedBox(height: 12.h),
+                        _ActiveFieldUpgradeCard(
+                          upgrade: activeUpgrade,
+                          onFinishWithGold: () =>
+                              _finishFieldUpgradeWithGold(activeUpgrade),
+                          calculateStarCost: _calculateUpgradeStarCost,
+                          formatCountdown: _formatCountdown,
+                        ),
+                      ],
                       SizedBox(height: 14.h),
-                      _buildSectionTitle('Uretim Slotlari'),
-                      SizedBox(height: 8.h),
+                      _buildSectionHeader(
+                        'Ciftlikler',
+                        'Her ciftlikte ekili urunu, kaliteyi ve uretim akislarini buradan yonetebilirsin.',
+                        icon: Icons.tune_rounded,
+                        color: AppColors.gold,
+                      ),
+                      SizedBox(height: 10.h),
                       if (detail.slots.isEmpty)
-                        _buildEmptyCard('Bu ciftlikte henuz uretim slotu yok.')
+                        _buildEmptyCard(
+                          'Bu ciftlikte henuz aktif uretim slotu yok.',
+                        )
                       else
                         ...detail.slots.map(
                           (slot) => _buildSlotCard(context, ref, detail, slot),
                         ),
-                      SizedBox(height: 14.h),
-                      _buildSectionTitle('Input Stoklari'),
-                      SizedBox(height: 8.h),
-                      if (detail.inputInventories.isEmpty)
-                        _buildEmptyCard('Hammadde input kaydi yok.')
-                      else
-                        ...detail.inputInventories.map(
-                          (inv) => _buildInventoryCard(
+                      if (detail.orphanInputInventories.isNotEmpty) ...[
+                        SizedBox(height: 16.h),
+                        _buildSectionHeader(
+                          'Bagli Olmayan Hammaddeler',
+                          'Urun degisikligi sonrasinda elde kalan hammaddeleri burada depoya geri aktarabilirsin.',
+                          icon: Icons.inventory_2_outlined,
+                          color: AppColors.blue,
+                        ),
+                        SizedBox(height: 10.h),
+                        ...detail.orphanInputInventories.map(
+                          (inventory) => _buildSlotInventoryCard(
                             context,
                             ref,
                             detail,
-                            inv,
+                            inventory,
                           ),
                         ),
-                      SizedBox(height: 14.h),
-                      _buildSectionTitle('Output Stoklari'),
-                      SizedBox(height: 8.h),
-                      if (detail.outputInventories.isEmpty)
-                        _buildEmptyCard('Uretilmis output kaydi yok.')
-                      else
-                        ...detail.outputInventories.map(
-                          (inv) => _buildInventoryCard(
-                            context,
-                            ref,
-                            detail,
-                            inv,
-                          ),
-                        ),
-                      SizedBox(height: 28.h),
+                      ],
                     ],
                   ),
                 ),
@@ -119,106 +189,217 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
   }
 
-  Widget _buildHeader(FieldDetailModel detail) {
+  Widget _buildHero(FieldDetailModel detail) {
     return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.cardBg.withValues(alpha: 0.8),
-            AppColors.background.withValues(alpha: 0.9),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(
-          color: AppColors.borderGoldLight.withValues(alpha: 0.2),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+      padding: EdgeInsets.all(12.w),
+      decoration: AppDecorations.panelGlass(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 68.w,
+                    height: 68.w,
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.gold.withValues(alpha: 0.1),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: CachedAssetImage(
+                      fileName: detail.fieldType.icon,
+                      fit: BoxFit.contain,
+                      errorWidget: Icon(
+                        Icons.grass,
+                        color: AppColors.green,
+                        size: 32.sp,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                detail.field.name,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                detail.fieldType.name,
+                                style: TextStyle(
+                                  color: AppColors.gold,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: AppColors.gold,
+                                    size: 14.sp,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Expanded(
+                                    child: Text(
+                                      detail.cityName,
+                                      style: TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(minWidth: 74.w),
+                          child: _buildHeroChipColumn(detail),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildHeroStat(
+                  'Hammadde',
+                  '${_calculateUsedCapacity(detail.inputInventories)}/${detail.field.inputCapacity}',
+                  AppColors.blue,
+                  ratio: _inventoryRatio(
+                    _calculateUsedCapacity(detail.inputInventories),
+                    detail.field.inputCapacity,
+                  ),
+                  icon: Icons.science_outlined,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: _buildHeroStat(
+                  'Uretilen urun',
+                  '${_calculateUsedCapacity(detail.outputInventories)}/${detail.field.outputCapacity}',
+                  AppColors.green,
+                  ratio: _inventoryRatio(
+                    _calculateUsedCapacity(detail.outputInventories),
+                    detail.field.outputCapacity,
+                  ),
+                  icon: Icons.agriculture_outlined,
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      child: Row(
+    );
+  }
+
+  Widget _buildHeroStat(
+    String label,
+    String value,
+    Color color, {
+    required double ratio,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 80.w,
-            height: 80.w,
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(
-                color: AppColors.gold.withValues(alpha: 0.3),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.gold.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: CachedAssetImage(
-              fileName: detail.fieldType.icon,
-              fit: BoxFit.contain,
-              errorWidget: Icon(
-                Icons.grass,
-                color: AppColors.green,
-                size: 36.sp,
-              ),
-            ),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  detail.field.name,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 6.h),
-                Row(
+          Row(
+            children: [
+              Icon(icon, color: color, size: 14.sp),
+              SizedBox(width: 7.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.location_on, color: AppColors.gold, size: 14.sp),
-                    SizedBox(width: 4.w),
-                    Expanded(
-                      child: Text(
-                        '${detail.cityName} | ${detail.fieldType.name}',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 9.sp,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 10.h),
-                Row(
-                  children: [
-                    _buildHeaderChip('Lv. ${detail.field.level}', AppColors.gold),
-                    SizedBox(width: 8.w),
-                    _buildHeaderChip(
-                      detail.field.isActive ? 'AKTIF' : 'PASIF',
-                      detail.field.isActive ? AppColors.green : AppColors.red,
-                    ),
-                  ],
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Container(
+            height: 5.h,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(999.r),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: ratio.clamp(0.0, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(999.r),
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -226,13 +407,173 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
   }
 
-  Widget _buildHeaderChip(String text, Color color) {
+  Widget _buildQuickActions(
+    BuildContext context,
+    WidgetRef ref,
+    FieldDetailModel detail,
+    BuildingBoostModel? activeBoost,
+    BuildingUpgradeModel? activeUpgrade,
+  ) {
+    final canBoost = detail.slots.isNotEmpty;
+
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      padding: EdgeInsets.all(8.w),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        color: Colors.black.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Wrap(
+        spacing: 10.w,
+        runSpacing: 10.h,
+        children: [
+          SizedBox(
+            width: 100.w,
+            child: _buildActionButton(
+              'Slot Ac',
+              Icons.add_box_outlined,
+              AppColors.gold,
+              () => _handleAddSlot(context, ref, detail),
+            ),
+          ),
+          SizedBox(
+            width: 100.w,
+            child: _buildActionButton(
+              'Boost',
+              Icons.flash_on_rounded,
+              canBoost ? AppColors.goldDark : AppColors.textMuted,
+              canBoost
+                  ? () => _showFieldBoostSheet(context, ref, detail, activeBoost)
+                  : () {
+                      AppSnackbar.show(
+                        context,
+                        title: 'Bilgi',
+                        message:
+                            'Boost baslatmadan once en az bir uretim slotu acmalisin.',
+                        type: SnackbarType.info,
+                      );
+                    },
+            ),
+          ),
+          SizedBox(
+            width: 100.w,
+            child: _buildActionButton(
+              'Yukselt',
+              Icons.upgrade_rounded,
+              AppColors.green,
+              () => _showFieldUpgradeSheet(context, ref, detail, activeUpgrade),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 7.h),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(color: color.withValues(alpha: 0.45)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 15.sp),
+            SizedBox(height: 3.h),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color,
+                fontSize: 9.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+    String title,
+    String subtitle, {
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 28.w,
+              height: 28.w,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(9.r),
+              ),
+              child: Icon(icon, color: color, size: 16.sp),
+            ),
+            SizedBox(width: 8.w),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 11.sp,
+            height: 1.45,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyCard(String message) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+      ),
+    );
+  }
+
+  Widget _buildTag(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Text(
         text,
@@ -245,153 +586,56 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
   }
 
-
-  Widget _buildActionRow(
-    BuildContext context,
-    WidgetRef ref,
-    FieldDetailModel detail,
-  ) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildActionButton(
-            'Slot Ac',
-            Icons.add_box_outlined,
-            AppColors.gold,
-            () => _handleAddSlot(context, ref, detail),
-          ),
-        ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: _buildActionButton(
-            'Yenile',
-            Icons.refresh,
-            AppColors.blue,
-            () {
-              ref.invalidate(fieldDetailProvider(detail.field.id));
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14.r),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: color.withValues(alpha: 0.45)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 16.sp),
-            SizedBox(width: 8.w),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: EdgeInsets.only(left: 4.w, top: 8.h),
-      child: Text(
-        title,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16.sp,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyCard(String message) {
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
-      child: Center(
-        child: Text(
-          message,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSlotCard(
     BuildContext context,
     WidgetRef ref,
     FieldDetailModel detail,
     ProductionSlotModel slot,
   ) {
+    final slotActiveColor = slot.isActive ? AppColors.green : AppColors.red;
+    final slotTitle = slot.isEmpty
+        ? 'Bos Ciftlik ${slot.slotIndex}'
+        : (slot.product?.urunAdi ?? slot.productId ?? 'Bilinmeyen Urun');
+    final outputInventory = slot.isEmpty
+        ? null
+        : _outputInventoryForSlot(detail, slot);
+
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: slot.isActive 
-              ? AppColors.borderGoldLight.withValues(alpha: 0.4) 
-              : AppColors.border.withValues(alpha: 0.3),
-        ),
-        boxShadow: slot.isActive ? [
-          BoxShadow(
-            color: AppColors.gold.withValues(alpha: 0.05),
-            blurRadius: 10,
-            spreadRadius: 1,
-          )
-        ] : null,
+      padding: EdgeInsets.all(12.w),
+      decoration: AppDecorations.premiumCard(
+        slot.isActive ? AppColors.gold : null,
+        18.r,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 50.w,
-                height: 50.w,
-                padding: EdgeInsets.all(8.w),
+                width: 58.w,
+                height: 58.w,
+                padding: EdgeInsets.all(9.w),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(16.r),
                   border: Border.all(
-                    color: !slot.isEmpty 
-                        ? AppColors.green.withValues(alpha: 0.3) 
+                    color: !slot.isEmpty
+                        ? AppColors.green.withValues(alpha: 0.3)
                         : Colors.white10,
                   ),
                 ),
-                child: (!slot.isEmpty && slot.product?.urunIconu != null)
-                    ? CachedAssetImage(
+                child: slot.isEmpty || slot.product?.urunIconu == null
+                    ? Icon(
+                        Icons.add_circle_outline,
+                        color: AppColors.textMuted,
+                        size: 24.sp,
+                      )
+                    : CachedAssetImage(
                         fileName: slot.product!.urunIconu,
                         fit: BoxFit.contain,
-                      )
-                    : Icon(Icons.add_circle_outline, color: AppColors.textMuted, size: 24.sp),
+                      ),
               ),
               SizedBox(width: 14.w),
               Expanded(
@@ -399,32 +643,130 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Slot ${slot.slotIndex}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15.sp,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                slotTitle,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 4.h),
+                              if (slot.isEmpty)
+                                Text(
+                                  'Bu ciftlik beklemede. Urun secerek uretimi baslatabilirsin.',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                )
+                              else
+                                _buildQualityStars(slot.qualityLevel),
+                            ],
                           ),
                         ),
-                        _buildHeaderChip(
-                          slot.isActive ? 'AKTIF' : 'PASIF',
-                          slot.isActive ? AppColors.green : AppColors.red,
+                        SizedBox(width: 10.w),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildTag(
+                              slot.isActive ? 'AKTIF' : 'PASIF',
+                              slotActiveColor,
+                            ),
+                            SizedBox(width: 6.w),
+                            PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              offset: const Offset(0, 40),
+                              color: AppColors.cardBgLight,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                                side: BorderSide(
+                                  color: AppColors.border.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Container(
+                                padding: EdgeInsets.all(6.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.06),
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.more_vert,
+                                  color: AppColors.textMuted,
+                                  size: 18.sp,
+                                ),
+                              ),
+                              onSelected: (value) {
+                                if (value == 'product') {
+                                  _showSlotProductDialog(context, ref, detail, slot);
+                                } else if (value == 'toggle') {
+                                  _toggleSlotActive(context, ref, detail, slot);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 'product',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.category,
+                                        color: AppColors.gold,
+                                        size: 18.sp,
+                                      ),
+                                      SizedBox(width: 8.w),
+                                      Text(
+                                        slot.isEmpty ? 'Urun Sec' : 'Urun Degistir',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13.sp,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'toggle',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        slot.isActive
+                                            ? Icons.stop_circle
+                                            : Icons.play_circle,
+                                        color: slot.isActive
+                                            ? AppColors.red
+                                            : AppColors.green,
+                                        size: 18.sp,
+                                      ),
+                                      SizedBox(width: 8.w),
+                                      Text(
+                                        slot.isActive
+                                            ? 'Uretimi Durdur'
+                                            : 'Uretime Basla',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13.sp,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                    SizedBox(height: 6.h),
-                    Text(
-                      slot.isEmpty
-                          ? 'Henuz urun secilmedi'
-                          : '${slot.product?.urunAdi ?? slot.productId} | Kalite ${slot.qualityLevel}',
-                      style: TextStyle(
-                        color: slot.isEmpty ? AppColors.textMuted : AppColors.gold,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
                     ),
                   ],
                 ),
@@ -433,55 +775,540 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           ),
           if (!slot.isEmpty) ...[
             SizedBox(height: 12.h),
-            Container(
-              padding: EdgeInsets.all(10.w),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10.r),
+            if (outputInventory != null) ...[
+              _buildOutputSummaryRow(context, ref, detail, outputInventory),
+              SizedBox(height: 10.h),
+            ],
+            Row(
+              children: [
+                Icon(
+                  Icons.schedule,
+                  color: AppColors.textMuted,
+                  size: 14.sp,
+                ),
+                SizedBox(width: 6.w),
+                Expanded(
+                  child: Text(
+                    'Tahmini saatlik uretim: ${_estimateProductionPerHour(slot)}',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12.h),
+            _buildSlotFlowGroup(context, ref, detail, slot),
+          ],
+        ],
+      ),
+    );
+  }
+
+  int _calculateUpgradeStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
+  }
+
+  String _formatCountdown(Duration remaining) {
+    if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes % 60;
+    if (hours > 0) {
+      return '${hours}s ${minutes}dk';
+    }
+    return '${remaining.inMinutes}dk';
+  }
+
+  Future<void> _showFieldBoostSheet(
+    BuildContext context,
+    WidgetRef ref,
+    FieldDetailModel detail,
+    BuildingBoostModel? activeBoost,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.all(18.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Ciftlik Boostu',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              activeBoost != null
+                  ? 'Bu ciftlikte zaten aktif bir boost var. Sure dolana kadar tum slotlar x${activeBoost.multiplier.toStringAsFixed(1)} hizla calisir.'
+                  : 'Boost basladiginda tum ciftlik slotlarinin boost katsayisi 2 olur. Uretim hizi sure boyunca artar.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12.sp,
+                height: 1.45,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            if (activeBoost == null)
+              ..._fieldBoostStarCosts.entries.map(
+                (entry) => Padding(
+                  padding: EdgeInsets.only(bottom: 10.h),
+                  child: InkWell(
+                    onTap: () async {
+                      Navigator.pop(sheetContext);
+                      final result = await ref
+                          .read(fieldActionProvider)
+                          .startFieldBoost(
+                            fieldId: detail.field.id,
+                            durationHours: entry.key,
+                            starCost: entry.value,
+                          );
+                      if (!context.mounted) return;
+                      if (result['success'] == true) {
+                        ref.invalidate(activeFieldBoostProvider(detail.field.id));
+                        ref.invalidate(fieldDetailProvider(detail.field.id));
+                        ref.invalidate(fieldListProvider);
+                        ref.invalidate(playerStreamProvider);
+                        AppSnackbar.show(
+                          context,
+                          title: 'Basarili',
+                          message: 'Ciftlik boostu baslatildi.',
+                          type: SnackbarType.success,
+                        );
+                      } else {
+                        AppSnackbar.show(
+                          context,
+                          title: 'Hata',
+                          message:
+                              result['message'] ?? 'Ciftlik boostu baslatilamadi.',
+                          type: SnackbarType.error,
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(16.r),
+                    child: Container(
+                      padding: EdgeInsets.all(14.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.textPrimary.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(
+                          color: AppColors.goldDark.withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(10.w),
+                            decoration: BoxDecoration(
+                              color: AppColors.goldDark.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            child: Icon(
+                              Icons.flash_on_rounded,
+                              color: AppColors.goldDark,
+                              size: 18.sp,
+                            ),
+                          ),
+                          SizedBox(width: 12.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${entry.key} Saat',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  'Tum slotlar x2 uretim hizi kazanir',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '${entry.value} ★',
+                            style: TextStyle(
+                              color: AppColors.gold,
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(14.w),
+                decoration: BoxDecoration(
+                  color: AppColors.textPrimary.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(
+                    color: AppColors.goldDark.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: Text(
+                  'Aktif boost bitene kadar yeni boost baslatilamaz.',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12.sp,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showFieldUpgradeSheet(
+    BuildContext context,
+    WidgetRef ref,
+    FieldDetailModel detail,
+    BuildingUpgradeModel? activeUpgrade,
+  ) async {
+    if (activeUpgrade != null) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message: 'Bu ciftlik icin zaten devam eden bir yukseltme var.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
+    final targetLevel = detail.field.level + 1;
+    final upgradeCost = (detail.fieldType.cost * targetLevel).toDouble();
+    final durationMinutes =
+        (detail.fieldType.constructionTimeMinutes * targetLevel).clamp(
+          1,
+          999999,
+        );
+    final nextInputCapacity = detail.field.inputCapacity * 2;
+    final nextOutputCapacity = detail.field.outputCapacity * 2;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+      ),
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.all(18.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Ciftlik Yukseltmesi',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Container(
+              padding: EdgeInsets.all(14.w),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(
+                  color: AppColors.green.withValues(alpha: 0.22),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSlotStat(
-                    'Boost', 
-                    'x${slot.boostMultiplier.toStringAsFixed(2)}',
-                    Icons.speed,
-                    Colors.orange,
+                  Text(
+                    'Seviye ${detail.field.level} -> $targetLevel',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  _buildSlotStat(
-                    '10 Dk', 
-                    '${_estimateProductionPerTick(slot)}',
-                    Icons.timer,
-                    AppColors.blue,
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Hammadde kapasitesi: ${detail.field.inputCapacity} -> $nextInputCapacity',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
                   ),
-                  _buildSlotStat(
-                    'Saatlik', 
-                    '${_estimateProductionPerHour(slot)}',
-                    Icons.access_time,
-                    AppColors.green,
+                  SizedBox(height: 4.h),
+                  Text(
+                    'Uretilen urun kapasitesi: ${detail.field.outputCapacity} -> $nextOutputCapacity',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    'Sure: $durationMinutes dk',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    'Maliyet: TL ${upgradeCost.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
+            SizedBox(height: 16.h),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.green,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  Navigator.pop(sheetContext);
+                  final result = await ref
+                      .read(fieldActionProvider)
+                      .startFieldUpgrade(detail.field.id);
+                  if (!context.mounted) return;
+                  if (result['success'] == true) {
+                    ref.invalidate(playerStreamProvider);
+                    _refreshFieldDetail();
+                    AppSnackbar.show(
+                      context,
+                      title: 'Basarili',
+                      message: 'Ciftlik yukseltmesi baslatildi.',
+                      type: SnackbarType.success,
+                    );
+                    return;
+                  }
+                  AppSnackbar.show(
+                    context,
+                    title: 'Hata',
+                    message: result['message'] ?? 'Yukseltme baslatilamadi.',
+                    type: SnackbarType.error,
+                  );
+                },
+                icon: const Icon(Icons.upgrade_rounded),
+                label: const Text('Yukseltmeyi Baslat'),
+              ),
+            ),
           ],
-          SizedBox(height: 14.h),
-          Row(
+        ),
+      ),
+    );
+  }
+
+  Future<void> _finishFieldUpgradeWithGold(BuildingUpgradeModel upgrade) async {
+    final result = await ref
+        .read(fieldActionProvider)
+        .finishFieldUpgradeWithGold(upgrade.id);
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      ref.invalidate(playerStreamProvider);
+      _refreshFieldDetail();
+      AppSnackbar.show(
+        context,
+        title: 'Basarili',
+        message: 'Ciftlik yukseltmesi tamamlandi.',
+        type: SnackbarType.success,
+      );
+      return;
+    }
+
+    AppSnackbar.show(
+      context,
+      title: 'Hata',
+      message: result['message'] ?? 'Yukseltme tamamlanamadi.',
+      type: SnackbarType.error,
+    );
+  }
+
+  Widget _buildHeroChipColumn(FieldDetailModel detail) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _buildTag('Lv ${detail.field.level}', AppColors.gold),
+      ],
+    );
+  }
+
+  Widget _buildSlotFlowGroup(
+    BuildContext context,
+    WidgetRef ref,
+    FieldDetailModel detail,
+    ProductionSlotModel slot,
+  ) {
+    final inputInventories = _inputInventoriesForSlot(detail, slot);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildFlowSection(
+          title: 'Hammadde',
+          color: AppColors.blue,
+          child: inputInventories.isEmpty
+              ? _buildInlineEmptyState(
+                  'Bu slot icin bagli hammadde stogu bulunmuyor.',
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSharedInputCapacityBar(detail, inputInventories),
+                    SizedBox(height: 10.h),
+                    ...inputInventories.map(
+                      (inventory) => _buildSlotInventoryCard(
+                        context,
+                        ref,
+                        detail,
+                        inventory,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFlowSection({
+    required String title,
+    required Color color,
+    required Widget child,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildMiniFlowHeader(title, color),
+        SizedBox(height: 8.h),
+        child,
+      ],
+    );
+  }
+
+  Widget _buildMiniFlowHeader(String title, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 22.w,
+          height: 22.w,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(7.r),
+          ),
+          child: Icon(
+            Icons.science_outlined,
+            color: color,
+            size: 13.sp,
+          ),
+        ),
+        SizedBox(width: 7.w),
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInlineEmptyState(String message) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 4.h),
+      child: Text(
+        message,
+        style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+      ),
+    );
+  }
+
+  Widget _buildSharedInputCapacityBar(
+    FieldDetailModel detail,
+    List<ProductionInventoryModel> inventories,
+  ) {
+    final capacity = detail.field.inputCapacity;
+    final totalStock = inventories.fold<int>(
+      0,
+      (sum, inventory) => sum + inventory.quantity,
+    );
+    final totalPending = inventories.fold<double>(
+      0,
+      (sum, inventory) => sum + inventory.pendingQuantity,
+    );
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.blue.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$totalStock stok • ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          _buildSegmentedCapacityBar(
+            inventories: inventories,
+            capacity: capacity,
+          ),
+          SizedBox(height: 8.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 6.h,
             children: [
-              Expanded(
-                child: _buildMiniAction(
-                  slot.isEmpty ? 'Urun Sec' : 'Urun Degistir',
-                  AppColors.gold,
-                  () => _showSlotProductDialog(context, ref, detail, slot),
+              ...inventories.map(
+                (inventory) => _buildCapacityLegendChip(
+                  inventory.product?.urunAdi.isNotEmpty == true
+                      ? inventory.product!.urunAdi
+                      : inventory.productId,
+                  _inputColorForProduct(inventory.productId),
                 ),
               ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: _buildMiniAction(
-                  slot.isActive ? 'Uretimi Durdur' : 'Uretime Basla',
-                  slot.isActive ? AppColors.red : AppColors.green,
-                  () => _toggleSlotActive(context, ref, detail, slot),
-                ),
-              ),
+              _buildCapacityLegendChip('Yolda', AppColors.goldDark),
             ],
           ),
         ],
@@ -489,50 +1316,161 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
   }
 
-  Widget _buildSlotStat(String label, String value, IconData icon, Color color) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 16.sp),
-        SizedBox(height: 4.h),
-        Text(
-          label,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+  Widget _buildSegmentedCapacityBar({
+    required List<ProductionInventoryModel> inventories,
+    required int capacity,
+  }) {
+    if (capacity <= 0) {
+      return Container(
+        height: 8.h,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(999.r),
         ),
-        SizedBox(height: 2.h),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 12.sp,
-            fontWeight: FontWeight.bold,
+      );
+    }
+
+    final segments = <({double amount, Color color})>[];
+    for (final inventory in inventories) {
+      if (inventory.quantity > 0) {
+        segments.add((
+          amount: inventory.quantity.toDouble(),
+          color: _inputColorForProduct(inventory.productId),
+        ));
+      }
+    }
+
+    final totalPending = inventories.fold<double>(
+      0,
+      (sum, inventory) => sum + inventory.pendingQuantity,
+    );
+    if (totalPending > 0) {
+      segments.add((amount: totalPending, color: AppColors.goldDark));
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        var left = 0.0;
+
+        return Container(
+          height: 8.h,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(999.r),
           ),
-        ),
-      ],
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999.r),
+            child: Stack(
+              children: [
+                for (final segment in segments)
+                  () {
+                    final width = ((segment.amount / capacity) * maxWidth)
+                        .clamp(0.0, maxWidth - left);
+                    final positioned = Positioned(
+                      left: left,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: width,
+                        color: segment.color,
+                      ),
+                    );
+                    left += width;
+                    return positioned;
+                  }(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildInventoryCard(
+  Widget _buildCapacityLegendChip(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7.w,
+            height: 7.w,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          SizedBox(width: 6.w),
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<ProductionInventoryModel> _inputInventoriesForSlot(
+    FieldDetailModel detail,
+    ProductionSlotModel slot,
+  ) {
+    final product = slot.product;
+    if (slot.isEmpty || product == null) return const [];
+
+    final productIds = <String>{
+      if ((product.hammadde1Id ?? '').isNotEmpty) product.hammadde1Id!,
+      if ((product.hammadde2Id ?? '').isNotEmpty) product.hammadde2Id!,
+      if ((product.hammadde3Id ?? '').isNotEmpty) product.hammadde3Id!,
+    };
+
+    final inventories = detail.inputInventories
+        .where((inventory) => productIds.contains(inventory.productId))
+        .toList();
+
+    inventories.sort((a, b) => a.productId.compareTo(b.productId));
+    return inventories;
+  }
+
+  ProductionInventoryModel? _outputInventoryForSlot(
+    FieldDetailModel detail,
+    ProductionSlotModel slot,
+  ) {
+    if (slot.isEmpty) return null;
+
+    for (final inventory in detail.outputInventories) {
+      if (inventory.productId == slot.productId &&
+          inventory.qualityLevel == slot.qualityLevel) {
+        return inventory;
+      }
+    }
+    return null;
+  }
+
+  Widget _buildSlotInventoryCard(
     BuildContext context,
     WidgetRef ref,
     FieldDetailModel detail,
     ProductionInventoryModel inventory,
   ) {
-    final title =
-        inventory.product?.urunAdi.isNotEmpty == true
-            ? inventory.product!.urunAdi
-            : inventory.productId;
-
-    final capacity = inventory.isInput ? detail.field.inputCapacity : detail.field.outputCapacity;
-    final progress = capacity > 0 ? (inventory.quantity / capacity).clamp(0.0, 1.0) : 0.0;
+    final title = inventory.product?.urunAdi.isNotEmpty == true
+        ? inventory.product!.urunAdi
+        : inventory.productId;
     final color = inventory.isInput ? AppColors.blue : AppColors.green;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(14.w),
+      margin: EdgeInsets.only(bottom: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 9.h),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withValues(alpha: 0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,111 +1478,75 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           Row(
             children: [
               Container(
-                width: 48.w,
-                height: 48.w,
-                padding: EdgeInsets.all(8.w),
+                width: 38.w,
+                height: 38.w,
+                padding: EdgeInsets.all(6.w),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                  color: Colors.black.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(color: color.withValues(alpha: 0.24)),
                 ),
                 child: inventory.product?.urunIconu != null
                     ? CachedAssetImage(
                         fileName: inventory.product!.urunIconu,
                         fit: BoxFit.contain,
                       )
-                    : Icon(Icons.inventory_2, color: AppColors.textMuted, size: 24.sp),
+                    : Icon(Icons.inventory_2, color: color, size: 18.sp),
               ),
-              SizedBox(width: 14.w),
+              SizedBox(width: 10.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        _buildHeaderChip(
-                          inventory.isInput ? 'INPUT' : 'OUTPUT',
-                          color,
-                        ),
-                      ],
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Text(
-                          'Kalite ${inventory.qualityLevel}',
-                          style: TextStyle(color: AppColors.gold, fontSize: 11.sp, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          ' • Pending: ${inventory.pendingQuantity.toStringAsFixed(1)}',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-                        ),
-                      ],
-                    ),
+                    SizedBox(height: 2.h),
+                    _buildQualityStars(inventory.qualityLevel),
                   ],
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
               Text(
-                'Maliyet: ${inventory.cost.toStringAsFixed(2)}',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-              ),
-              Text(
-                '${inventory.quantity} / $capacity',
+                '${inventory.quantity}',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
           SizedBox(height: 6.h),
-          Container(
-            height: 8.h,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(999.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(999.r),
-                  boxShadow: [
-                    BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 4)
-                  ]
-                ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Maliyet: ${inventory.cost.toStringAsFixed(2)}',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
               ),
-            ),
+              Text(
+                'Yoldaki urunler ${inventory.pendingQuantity.toStringAsFixed(1)}',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+              ),
+            ],
           ),
-          SizedBox(height: 14.h),
+          SizedBox(height: 10.h),
           if (inventory.isInput)
-            Row(
+            Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
               children: [
-                Expanded(
+                SizedBox(
+                  width: 132.w,
                   child: _buildMiniAction(
-                    'Depodan Hammadde Getir',
+                    'Stok Ekle',
                     AppColors.gold,
                     () => _startWarehouseToInventoryFlow(
                       context,
@@ -654,10 +1556,10 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                     ),
                   ),
                 ),
-                SizedBox(width: 8.w),
-                Expanded(
+                SizedBox(
+                  width: 132.w,
                   child: _buildMiniAction(
-                    'Depoya Geri Gonder',
+                    'Depoya Gonder',
                     AppColors.blue,
                     () => _startInventoryToWarehouseFlow(
                       context,
@@ -671,7 +1573,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             )
           else
             _buildMiniAction(
-              'Uretimi Depoya Aktar',
+              'Depoya Aktar',
               AppColors.blue,
               () => _startInventoryToWarehouseFlow(
                 context,
@@ -685,23 +1587,103 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
   }
 
+  Widget _buildOutputSummaryRow(
+    BuildContext context,
+    WidgetRef ref,
+    FieldDetailModel detail,
+    ProductionInventoryModel inventory,
+  ) {
+    final ratio = _inventoryRatio(inventory.quantity, detail.field.outputCapacity);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.agriculture_outlined,
+              color: AppColors.green,
+              size: 14.sp,
+            ),
+            SizedBox(width: 6.w),
+            Expanded(
+              child: Text(
+                'Uretilen urun stogu ${inventory.quantity}/${detail.field.outputCapacity}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            FilledButton.tonalIcon(
+              onPressed: () => _startInventoryToWarehouseFlow(
+                context,
+                ref,
+                detail,
+                inventory,
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.blue.withValues(alpha: 0.16),
+                foregroundColor: AppColors.blue,
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999.r),
+                  side: BorderSide(
+                    color: AppColors.blue.withValues(alpha: 0.28),
+                  ),
+                ),
+              ),
+              icon: Icon(Icons.move_up_rounded, size: 14.sp),
+              label: Text(
+                'Depoya Aktar',
+                style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        Container(
+          height: 5.h,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(999.r),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: ratio.clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.green,
+                borderRadius: BorderRadius.circular(999.r),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMiniAction(String label, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10.r),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 11.h),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10.r),
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(color: color.withValues(alpha: 0.45)),
         ),
         child: Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: color,
-            fontSize: 12.sp,
+            fontSize: 11.sp,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -720,7 +1702,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(fieldDetailProvider(detail.field.id));
+      await _refreshFieldEcosystem();
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -744,14 +1726,13 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     FieldDetailModel detail,
     ProductionSlotModel slot,
   ) async {
-    final result = await ref.read(fieldActionProvider).setProductionSlotActive(
-      slotId: slot.id,
-      isActive: !slot.isActive,
-    );
+    final result = await ref
+        .read(fieldActionProvider)
+        .setProductionSlotActive(slotId: slot.id, isActive: !slot.isActive);
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(fieldDetailProvider(detail.field.id));
+      await _refreshFieldEcosystem();
       return;
     }
 
@@ -773,10 +1754,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     try {
       products = await ref
           .read(fieldActionProvider)
-          .getSelectableProducts(
-            ownerKind: 'field',
-            typeId: detail.fieldType.id,
-          );
+          .getSelectableProducts(ownerKind: 'field', typeId: detail.fieldType.id);
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -903,15 +1881,15 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                         onTap: isDisabled
                             ? null
                             : () async {
-                          Navigator.pop(context);
-                          await _selectSlotProduct(
-                            parentContext,
-                            ref,
-                            detail,
-                            slot,
-                            selectableProduct,
-                          );
-                        },
+                                Navigator.pop(context);
+                                await _selectSlotProduct(
+                                  parentContext,
+                                  ref,
+                                  detail,
+                                  slot,
+                                  selectableProduct,
+                                );
+                              },
                       );
                     },
                   ),
@@ -944,7 +1922,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(fieldDetailProvider(detail.field.id));
+      await _refreshFieldEcosystem();
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
       final cleanupNote = deletedObsoleteCount > 0
@@ -953,10 +1931,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Basarili',
-        message:
-            slot.isEmpty
-                ? '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} ile eklendi.'
-                : '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} olarak degistirildi.$cleanupNote',
+        message: slot.isEmpty
+            ? '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} ile eklendi.'
+            : '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} olarak degistirildi.$cleanupNote',
         type: SnackbarType.success,
       );
       return;
@@ -976,18 +1953,28 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     FieldDetailModel detail,
     ProductionInventoryModel inventory,
   ) async {
-    final warehouses = await ref
-        .read(fieldActionProvider)
-        .getEligibleWarehouseSlotsForInventoryAllCities(
-          inventory: inventory,
-        );
+    List<Map<String, dynamic>> warehouses;
+    try {
+      warehouses = await ref
+          .read(fieldActionProvider)
+          .getEligibleWarehouseSlotsForInventoryAllCities(inventory: inventory);
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: e.toString().replaceFirst('Exception: ', ''),
+        type: SnackbarType.error,
+      );
+      return;
+    }
 
     if (!context.mounted) return;
     if (warehouses.isEmpty) {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu input icin uygun depo stogu bulunamadi.',
+        message: 'Bu hammadde icin uygun depo stogu bulunamadi.',
         type: SnackbarType.info,
       );
       return;
@@ -1047,11 +2034,15 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           context: context,
                           maxQuantity: qty,
                           title: 'Miktar Girin',
-                          subtitle: '${inventory.product?.urunAdi ?? inventory.productId} inputu doldurulacak',
+                          subtitle:
+                              '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi doldurulacak',
                           onConfirm: (quantity) async {
-                            final warehouseCityId =
-                                (warehouse['city_id'] ?? '').toString();
-                            if (_isSameCity(warehouseCityId, detail.field.cityId)) {
+                            final warehouseCityId = (warehouse['city_id'] ?? '')
+                                .toString();
+                            if (_isSameCity(
+                              warehouseCityId,
+                              detail.field.cityId,
+                            )) {
                               final result = await ref
                                   .read(fieldActionProvider)
                                   .transferWarehouseToProductionInventory(
@@ -1061,11 +2052,14 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                   );
                               if (!context.mounted) return;
                               if (result['success'] == true) {
-                                ref.invalidate(fieldDetailProvider(detail.field.id));
+                                await _refreshFieldEcosystem(
+                                  includeTransfers: true,
+                                );
                                 AppSnackbar.show(
                                   context,
                                   title: 'Basarili',
-                                  message: 'Ayni sehir input transferi tamamlandi.',
+                                  message:
+                                      'Ayni sehir hammadde transferi tamamlandi.',
                                   type: SnackbarType.success,
                                 );
                                 return;
@@ -1110,18 +2104,31 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     FieldDetailModel detail,
     ProductionInventoryModel inventory,
   ) async {
-    final warehouses = await ref
-        .read(fieldActionProvider)
-        .getWarehousesForProductionLogistics(
-          productionCityId: detail.field.cityId,
-        );
+    List<ProductionLogisticsWarehouseOption> warehouses;
+    try {
+      warehouses = await ref
+          .read(fieldActionProvider)
+          .getWarehousesForProductionLogistics(
+            productionCityId: detail.field.cityId,
+            productId: inventory.productId,
+          );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: e.toString().replaceFirst('Exception: ', ''),
+        type: SnackbarType.error,
+      );
+      return;
+    }
 
     if (!context.mounted) return;
     if (warehouses.isEmpty) {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu sehirde aktif depon yok.',
+        message: 'Bu urunu kabul eden aktif depon yok.',
         type: SnackbarType.info,
       );
       return;
@@ -1190,13 +2197,16 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                               );
                           if (!context.mounted) return;
                           if (result['success'] == true) {
-                            ref.invalidate(fieldDetailProvider(detail.field.id));
+                            await _refreshFieldEcosystem(
+                              warehouseId: warehouseId,
+                              includeTransfers: true,
+                            );
                             AppSnackbar.show(
                               context,
                               title: 'Basarili',
                               message: inventory.isInput
-                                  ? 'Ayni sehir input iadesi tamamlandi.'
-                                  : 'Ayni sehir output transferi tamamlandi.',
+                                  ? 'Ayni sehir hammadde iadesi tamamlandi.'
+                                  : 'Ayni sehir uretilen urun transferi tamamlandi.',
                               type: SnackbarType.success,
                             );
                             return;
@@ -1273,9 +2283,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     _showProductionVehicleOptionsSheet(
       context: context,
-      title: 'Input Lojistigi',
-      subtitle:
-          '$quantity / $maxQuantity adet hammadde icin uygun araci secin',
+      title: 'Hammadde Lojistigi',
+      subtitle: '$quantity / $maxQuantity adet hammadde icin uygun araci secin',
       options: options,
       onSelected: (vehicleId) async {
         final result = await ref
@@ -1288,7 +2297,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             );
         if (!context.mounted) return;
         if (result.success) {
-          ref.invalidate(fieldDetailProvider(detail.field.id));
+          await _refreshFieldEcosystem(includeTransfers: true);
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
@@ -1350,10 +2359,12 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     _showProductionVehicleOptionsSheet(
       context: context,
-      title: inventory.isInput ? 'Input Iade Lojistigi' : 'Output Lojistigi',
+      title: inventory.isInput
+          ? 'Hammadde Iade Lojistigi'
+          : 'Uretilen Urun Lojistigi',
       subtitle: inventory.isInput
-          ? '$quantity adet input iadesi icin uygun araci secin'
-          : '$quantity adet output icin uygun araci secin',
+          ? '$quantity adet hammadde iadesi icin uygun araci secin'
+          : '$quantity adet uretilen urun icin uygun araci secin',
       options: options,
       onSelected: (vehicleId) async {
         final result = await ref
@@ -1366,13 +2377,16 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             );
         if (!context.mounted) return;
         if (result.success) {
-          ref.invalidate(fieldDetailProvider(detail.field.id));
+          await _refreshFieldEcosystem(
+            warehouseId: warehouseId,
+            includeTransfers: true,
+          );
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
             message: inventory.isInput
-                ? 'Input iadesi icin arac yola cikti.'
-                : 'Output transferi icin arac yola cikti.',
+                ? 'Hammadde iadesi icin arac yola cikti.'
+                : 'Uretilen urun transferi icin arac yola cikti.',
             type: SnackbarType.success,
           );
           return;
@@ -1394,7 +2408,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     required String title,
     required String subtitle,
     required List<ProductionLogisticsVehicleOption> options,
-    required Future<void> Function(String? vehicleId) onSelected,
+    required Future<void> Function(String vehicleId) onSelected,
   }) {
     showModalBottomSheet(
       context: context,
@@ -1408,8 +2422,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: ListView(
           children: [
             Text(
               title,
@@ -1422,92 +2435,49 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             SizedBox(height: 6.h),
             Text(
               subtitle,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
             ),
-            SizedBox(height: 16.h),
-            Expanded(
-              child: ListView.separated(
-                itemCount: options.length,
-                separatorBuilder: (_, __) => SizedBox(height: 10.h),
-                itemBuilder: (_, index) {
-                  final option = options[index];
-                  final color =
-                      option.canSelect ? AppColors.green : AppColors.red;
-                  return InkWell(
-                    onTap: option.canSelect
-                        ? () async {
-                            Navigator.pop(sheetContext);
-                            await onSelected(option.vehicleId);
-                          }
-                        : null,
-                    borderRadius: BorderRadius.circular(14.r),
-                    child: Container(
-                      padding: EdgeInsets.all(14.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(color: color.withValues(alpha: 0.35)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.local_shipping, color: color),
-                              SizedBox(width: 10.w),
-                              Expanded(
-                                child: Text(
-                                  option.vehicleName,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                option.isRental ? 'Kiralik' : 'Ozmal',
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Kapasite: ${option.capacity} | Mesafe: ${option.distanceKm.toStringAsFixed(0)} km | Sure: ${_formatTransferDuration(option.estimatedDurationSeconds)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Kira: ${option.rentalCost.toStringAsFixed(0)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          if (!option.canSelect &&
-                              option.disabledReason != null) ...[
-                            SizedBox(height: 6.h),
-                            Text(
-                              option.disabledReason!,
-                              style: TextStyle(
-                                color: AppColors.red,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+            SizedBox(height: 12.h),
+            ...options.map(
+              (option) => Container(
+                margin: EdgeInsets.only(bottom: 10.h),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(14.r),
+                  border: Border.all(
+                    color: option.canSelect
+                        ? AppColors.gold.withValues(alpha: 0.18)
+                        : Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+                child: ListTile(
+                  enabled: option.canSelect,
+                  onTap: option.canSelect
+                      ? () async {
+                          Navigator.pop(sheetContext);
+                          await onSelected(option.vehicleId);
+                        }
+                      : null,
+                  title: Text(
+                    option.vehicleName,
+                    style: TextStyle(
+                      color: option.canSelect ? Colors.white : AppColors.textMuted,
+                      fontWeight: FontWeight.bold,
                     ),
-                  );
-                },
+                  ),
+                  subtitle: Text(
+                    option.isRental
+                        ? 'Kiralik | Kapasite ${option.capacity} | Maliyet ${option.totalPrice.toStringAsFixed(1)}'
+                        : 'Kendi aracin | Kapasite ${option.capacity} | Maliyet ${option.totalPrice.toStringAsFixed(1)}',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                  trailing: option.canSelect
+                      ? Icon(Icons.chevron_right, color: AppColors.gold, size: 18.sp)
+                      : Icon(Icons.block, color: AppColors.textMuted, size: 18.sp),
+                ),
               ),
             ),
           ],
@@ -1516,36 +2486,23 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
   }
 
-  bool _isSameCity(String warehouseCityId, String productionCityId) {
-    return warehouseCityId.isNotEmpty &&
-        productionCityId.isNotEmpty &&
-        warehouseCityId == productionCityId;
-  }
-
-  String _formatTransferDuration(int seconds) {
-    final duration = Duration(seconds: seconds);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours}s ${minutes}dk';
-    return '${duration.inMinutes}dk';
-  }
-
-  Future<void> _showQuantityDialog({
+  void _showQuantityDialog({
     required BuildContext context,
     required int maxQuantity,
     required String title,
     required String subtitle,
     required Future<void> Function(int quantity) onConfirm,
-  }) async {
-    final controller = TextEditingController(text: '1');
+  }) {
+    final controller = TextEditingController(text: maxQuantity.toString());
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.background,
-        title: Text(title, style: TextStyle(color: Colors.white, fontSize: 18.sp)),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               subtitle,
@@ -1590,23 +2547,41 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
               Navigator.pop(dialogContext);
               await onConfirm(quantity);
             },
-            child: const Text(
-              'Onayla',
-              style: TextStyle(color: Colors.black),
-            ),
+            child: const Text('Onayla', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
     );
   }
 
+  int _calculateUsedCapacity(List<ProductionInventoryModel> inventories) {
+    var total = 0;
+    for (final inventory in inventories) {
+      total += inventory.quantity;
+    }
+    return total;
+  }
 
+  double _inventoryRatio(int current, int capacity) {
+    if (capacity <= 0) return 0.0;
+    return (current / capacity).clamp(0.0, 1.0);
+  }
 
-  String _estimateProductionPerTick(ProductionSlotModel slot) {
-    final product = slot.product;
-    if (product == null) return '0';
-    final perTick = (product.uretimAdedi / 6.0) * slot.boostMultiplier;
-    return perTick.toStringAsFixed(perTick >= 10 ? 0 : 1);
+  Color _inputColorForProduct(String productId) {
+    const palette = <Color>[
+      Color(0xFF4FC3F7),
+      Color(0xFF81C784),
+      Color(0xFFFF8A65),
+      Color(0xFFBA68C8),
+      Color(0xFFFFD54F),
+      Color(0xFF64B5F6),
+    ];
+    final hash = productId.codeUnits.fold<int>(0, (sum, unit) => sum + unit);
+    return palette[hash % palette.length];
+  }
+
+  bool _isSameCity(String warehouseCityId, String productionCityId) {
+    return warehouseCityId.isNotEmpty && warehouseCityId == productionCityId;
   }
 
   String _estimateProductionPerHour(ProductionSlotModel slot) {
@@ -1615,4 +2590,237 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     final perHour = product.uretimAdedi * slot.boostMultiplier;
     return perHour.toStringAsFixed(perHour >= 10 ? 0 : 1);
   }
+
+  Widget _buildQualityStars(int quality) {
+    return Row(
+      children: List.generate(5, (index) {
+        final isFilled = index < quality;
+        return Padding(
+          padding: EdgeInsets.only(right: 2.w),
+          child: Icon(
+            isFilled ? Icons.star : Icons.star_border,
+            color: isFilled ? AppColors.gold : AppColors.textMuted,
+            size: 14.sp,
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _ActiveFieldBoostCard extends ConsumerWidget {
+  final BuildingBoostModel boost;
+
+  const _ActiveFieldBoostCard({required this.boost});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final totalSeconds = boost.finishAt.difference(boost.startedAt).inSeconds;
+    final elapsedSeconds = now.difference(boost.startedAt).inSeconds;
+    final progress = totalSeconds > 0
+        ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
+        : 1.0;
+    final remaining = boost.finishAt.difference(now);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.goldDark.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: AppColors.goldDark.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: AppColors.goldDark.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.flash_on_rounded,
+                  color: AppColors.goldDark,
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Boost Aktif',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '${boost.durationHours} saat | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost} yildiz',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                _formatCountdownLabel(remaining),
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8.h,
+              backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.goldDark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveFieldUpgradeCard extends ConsumerWidget {
+  final BuildingUpgradeModel upgrade;
+  final Future<void> Function() onFinishWithGold;
+  final int Function(DateTime finishAt) calculateStarCost;
+  final String Function(Duration remaining) formatCountdown;
+
+  const _ActiveFieldUpgradeCard({
+    required this.upgrade,
+    required this.onFinishWithGold,
+    required this.calculateStarCost,
+    required this.formatCountdown,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final totalSeconds = upgrade.finishAt.difference(upgrade.startedAt).inSeconds;
+    final elapsedSeconds = now.difference(upgrade.startedAt).inSeconds;
+    final progress = totalSeconds > 0
+        ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
+        : 1.0;
+    final remaining = upgrade.finishAt.difference(now);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: AppColors.green.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: AppColors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.upgrade_rounded,
+                  color: AppColors.green,
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ciftlik Yukseltmesi Devam Ediyor',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Seviye ${upgrade.currentLevel} -> ${upgrade.targetLevel} | Hammadde ${upgrade.previousInputCapacity} -> ${upgrade.nextInputCapacity} | Cikti ${upgrade.previousOutputCapacity} -> ${upgrade.nextOutputCapacity}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                formatCountdown(remaining),
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8.h,
+              backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: AppColors.gold.withValues(alpha: 0.35),
+                ),
+                foregroundColor: AppColors.goldLight,
+              ),
+              onPressed: onFinishWithGold,
+              icon: const Icon(Icons.star_rounded),
+              label: Text(
+                '${calculateStarCost(upgrade.finishAt)} yildiz ile bitir',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatCountdownLabel(Duration remaining) {
+  if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+  final hours = remaining.inHours;
+  final minutes = remaining.inMinutes % 60;
+  if (hours > 0) {
+    return '${hours}s ${minutes}dk';
+  }
+  return '${remaining.inMinutes}dk';
 }

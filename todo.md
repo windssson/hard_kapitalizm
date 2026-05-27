@@ -7,34 +7,38 @@ Bu liste gelistirme takibi icin tutulur. Yuzdeler "feature coverage + entegrasyo
 - [ ] Auth - %75
 - [ ] Home - %70
 - [x] Market - %100
-- [ ] Logistics - %76
+- [x] Logistics - %100
 - [ ] Transfer Map - %80
-- [ ] Warehouse - %82
+- [x] Warehouse - %100
 - [x] Store - %100
-- [ ] Field - %83
-- [ ] Farm - %83
-- [ ] Factory - %85
-- [ ] Mine - %80
+- [x] Field - %100
+- [x] Farm - %100
+- [x] Factory - %100
+- [x] Mine - %100
 - [ ] Arge - %68
 - [ ] Splash - %90
 
 ## Onerilen Siradaki Calisma
 
-1. Warehouse
-2. Logistics
-3. Field
-4. Farm
-5. Factory
-6. Mine
-7. Arge
-8. Home
-9. Auth
-10. Transfer Map
-11. Splash
+1. Transfer Map
+2. Splash
+3. Arge
+4. Home
+5. Auth
 
 ## Notlar
 
 - Store modulu tamamlandi kabul edildi.
 - Market modulu tamamlandi kabul edildi.
+- Warehouse modulu tamamlandi kabul edildi.
+- Logistics modulu tamamlandi kabul edildi.
+- Field modulu tamamlandi kabul edildi.
+- Farm modulu tamamlandi kabul edildi.
+- Factory modulu tamamlandi kabul edildi.
+- Mine modulu tamamlandi kabul edildi.
+- Arge modulu icin daha sonra tekrar donulecek.
+- Arge tarafinda seviye sistemi yapilacak:
+  Arge merkezi seviyesi, eszamanli arastirma slotu ve arastirma suresi kisaltma bonusu eklenecek.
 - Yuzdeler mutlak test kapsami degil, repo kapsam ve akislara gore tahmini durumdur.
-- Sonraki odak modul: Warehouse
+- Auth modulu Firebase tarafindaki ayarlar tamamlaninca ele alinacak.
+- Sonraki odak modul: Transfer Map
