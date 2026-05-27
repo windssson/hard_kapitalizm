@@ -5533,73 +5533,95 @@ begin
     from candidates c
   ),
   selectable_exists as (
-    select exists(select 1 from evaluated where can_select) as has_selectable
+    select exists(select 1 from evaluated ev where ev.can_select = true) as has_selectable
   ),
   no_option_reason as (
     select
       case
         when v_check_target_capacity = true and v_available_target_capacity < v_required_capacity then 'Hedef depoda bos kapasite yetersiz.'
-        when exists(select 1 from evaluated where disabled_reason = 'Hedef depoda bos kapasite yetersiz.') then 'Hedef depoda bos kapasite yetersiz.'
-        when exists(select 1 from evaluated where disabled_reason = 'Kapasite yetersiz.') then 'Bu miktar icin yeterli kapasiteye sahip arac yok.'
-        when exists(select 1 from evaluated where disabled_reason = 'Yakit yetersiz.') then 'Yeterli yakiti olan uygun arac yok.'
-        when exists(select 1 from evaluated where disabled_reason = 'Kondisyon yetersiz.') then 'Kondisyonu yeterli uygun arac yok.'
-        when exists(select 1 from evaluated where disabled_reason = 'Arac su anda uygun degil.') then 'Tum uygun araclar su anda mesgul veya kullanilamaz durumda.'
-        when exists(select 1 from evaluated where disabled_reason = 'Nakliye firmasi aktif degil.') then 'Uygun araclarin bagli oldugu nakliye firmalari aktif degil.'
-        when exists(select 1 from evaluated where disabled_reason = 'Aracin rotasi bu sehir ciftini desteklemiyor.') then 'Bu rota icin uygun arac yok.'
+        when exists(select 1 from evaluated ev where ev.disabled_reason = 'Hedef depoda bos kapasite yetersiz.') then 'Hedef depoda bos kapasite yetersiz.'
+        when exists(select 1 from evaluated ev where ev.disabled_reason = 'Kapasite yetersiz.') then 'Bu miktar icin yeterli kapasiteye sahip arac yok.'
+        when exists(select 1 from evaluated ev where ev.disabled_reason = 'Yakit yetersiz.') then 'Yeterli yakiti olan uygun arac yok.'
+        when exists(select 1 from evaluated ev where ev.disabled_reason = 'Kondisyon yetersiz.') then 'Kondisyonu yeterli uygun arac yok.'
+        when exists(select 1 from evaluated ev where ev.disabled_reason = 'Arac su anda uygun degil.') then 'Tum uygun araclar su anda mesgul veya kullanilamaz durumda.'
+        when exists(select 1 from evaluated ev where ev.disabled_reason = 'Nakliye firmasi aktif degil.') then 'Uygun araclarin bagli oldugu nakliye firmalari aktif degil.'
+        when exists(select 1 from evaluated ev where ev.disabled_reason = 'Aracin rotasi bu sehir ciftini desteklemiyor.') then 'Bu rota icin uygun arac yok.'
         else 'Bu transfer icin uygun veya kiralanabilir arac bulunamadi.'
       end as disabled_reason
   )
   select
-    e.vehicle_id,
-    e.vehicle_owner_player_id,
-    e.vehicle_name,
-    e.is_rental,
-    e.capacity,
-    e.speed_kmh,
-    e.current_fuel,
-    e.fuel_capacity,
-    e.fuel_rate,
-    e.condition,
-    e.rental_price,
-    e.distance_km,
-    e.fuel_needed,
-    e.condition_needed,
-    e.rental_cost,
-    e.estimated_duration_seconds,
-    e.can_select,
-    e.disabled_reason,
-    e.fuel_cost,
-    e.total_price
-  from evaluated e
-  where e.can_select
+    t.vehicle_id,
+    t.vehicle_owner_player_id,
+    t.vehicle_name,
+    t.is_rental,
+    t.capacity,
+    t.speed_kmh,
+    t.current_fuel,
+    t.fuel_capacity,
+    t.fuel_rate,
+    t.condition,
+    t.rental_price,
+    t.distance_km,
+    t.fuel_needed,
+    t.condition_needed,
+    t.rental_cost,
+    t.estimated_duration_seconds,
+    t.can_select,
+    t.disabled_reason,
+    t.fuel_cost,
+    t.total_price
+  from (
+    select
+      e.vehicle_id,
+      e.vehicle_owner_player_id,
+      e.vehicle_name,
+      e.is_rental,
+      e.capacity,
+      e.speed_kmh,
+      e.current_fuel,
+      e.fuel_capacity,
+      e.fuel_rate,
+      e.condition,
+      e.rental_price,
+      e.distance_km,
+      e.fuel_needed,
+      e.condition_needed,
+      e.rental_cost,
+      e.estimated_duration_seconds,
+      e.can_select,
+      e.disabled_reason,
+      e.fuel_cost,
+      e.total_price
+    from evaluated e
+    where e.can_select
 
-  union all
+    union all
 
-  select
-    null::uuid as vehicle_id,
-    null::uuid as vehicle_owner_player_id,
-    null::text as vehicle_name,
-    false as is_rental,
-    0 as capacity,
-    0 as speed_kmh,
-    0 as current_fuel,
-    0 as fuel_capacity,
-    0::numeric as fuel_rate,
-    0 as condition,
-    0::numeric as rental_price,
-    0::numeric as distance_km,
-    0::numeric as fuel_needed,
-    0::numeric as condition_needed,
-    0::numeric as rental_cost,
-    0 as estimated_duration_seconds,
-    false as can_select,
-    nr.disabled_reason,
-    0::numeric as fuel_cost,
-    0::numeric as total_price
-  from no_option_reason nr
-  where not (select has_selectable from selectable_exists)
-
-  order by is_rental asc, can_select desc, capacity asc, rental_price asc, vehicle_name asc nulls last;
+    select
+      null::uuid,
+      null::uuid,
+      null::text,
+      false,
+      0,
+      0,
+      0,
+      0,
+      0::numeric,
+      0,
+      0::numeric,
+      0::numeric,
+      0::numeric,
+      0::numeric,
+      0::numeric,
+      0,
+      false,
+      nr.disabled_reason,
+      0::numeric,
+      0::numeric
+    from no_option_reason nr
+    where not (select has_selectable from selectable_exists)
+  ) t
+  order by t.is_rental asc, t.can_select desc, t.capacity asc, t.rental_price asc, t.vehicle_name asc nulls last;
 end;
 $function$
 ;
