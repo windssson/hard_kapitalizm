@@ -7,6 +7,7 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -1050,7 +1051,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       text: slot.price > 0 ? slot.price.toStringAsFixed(1) : '',
     );
 
-    final result = await showDialog<double>(
+    showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.cardBg,
@@ -1070,24 +1071,60 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               ),
             ),
             SizedBox(height: 12.h),
-            TextField(
-              controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Birim satis fiyati',
-                labelStyle: const TextStyle(color: AppColors.gold),
-                hintText: slot.cost > 0
-                    ? 'Maliyet: ${slot.cost.toStringAsFixed(1)}'
-                    : null,
-                enabledBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white24),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(dialogContext);
+                _showNumericKeyboard(context, ref, slot, controller);
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white24, width: 1),
+                  borderRadius: BorderRadius.circular(8.r),
+                  color: Colors.black.withValues(alpha: 0.2),
                 ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.gold),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Birim satis fiyati',
+                          style: TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: controller,
+                          builder: (context, value, _) => Text(
+                            value.text.isEmpty ? '0' : value.text,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Icon(Icons.edit, color: AppColors.gold, size: 18.sp),
+                  ],
                 ),
               ),
             ),
+            if (slot.cost > 0) ...[
+              SizedBox(height: 8.h),
+              Text(
+                'Maliyet: ${slot.cost.toStringAsFixed(1)}',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11.sp,
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
@@ -1095,57 +1132,63 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Iptal'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              final parsed = double.tryParse(
-                controller.text.trim().replaceAll(',', '.'),
-              );
-              if (parsed == null || parsed <= 0) {
-                AppSnackbar.show(
-                  dialogContext,
-                  title: 'Gecersiz Fiyat',
-                  message: 'Satis fiyati 0 buyuk olmali.',
-                  type: SnackbarType.error,
-                );
-                return;
-              }
-              Navigator.of(dialogContext).pop(parsed);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gold,
-              foregroundColor: Colors.black,
-            ),
-            child: const Text('Kaydet'),
-          ),
         ],
       ),
     );
+  }
 
-    if (result == null || !context.mounted) return;
+  Future<void> _showNumericKeyboard(
+    BuildContext context,
+    WidgetRef ref,
+    WarehouseSlotModel slot,
+    TextEditingController controller,
+  ) async {
+    await showModalBottomSheet(
+      context: context,
+      builder: (_) => NumericKeyboard(
+        controller: controller,
+        onDone: () async {
+          final parsed = double.tryParse(
+            controller.text.trim().replaceAll(',', '.'),
+          );
+          if (parsed == null || parsed <= 0) {
+            AppSnackbar.show(
+              context,
+              title: 'Gecersiz Fiyat',
+              message: 'Satis fiyati 0 buyuk olmali.',
+              type: SnackbarType.error,
+            );
+            return;
+          }
 
-    final actionResult = await ref.read(warehouseActionProvider).updateWarehouseSlotPrice(
-          warehouseSlotId: slot.id,
-          price: result,
-        );
+          final actionResult = await ref.read(warehouseActionProvider).updateWarehouseSlotPrice(
+                warehouseSlotId: slot.id,
+                price: parsed,
+              );
 
-    if (!context.mounted) return;
+          if (!context.mounted) return;
 
-    if (actionResult['success'] == true) {
-      await _refreshWarehouse(ref);
-      AppSnackbar.show(
-        context,
-        title: 'Fiyat Guncellendi',
-        message: '${slot.productName ?? 'Urun'} icin satis fiyati kaydedildi.',
-        type: SnackbarType.success,
-      );
-    } else {
-      AppSnackbar.show(
-        context,
-        title: 'Islem Basarisiz',
-        message: actionResult['message']?.toString() ?? 'Fiyat kaydedilemedi.',
-        type: SnackbarType.error,
-      );
-    }
+          if (actionResult['success'] == true) {
+            await _refreshWarehouse(ref);
+            AppSnackbar.show(
+              context,
+              title: 'Fiyat Guncellendi',
+              message: '${slot.productName ?? 'Urun'} icin satis fiyati kaydedildi.',
+              type: SnackbarType.success,
+            );
+          } else {
+            AppSnackbar.show(
+              context,
+              title: 'Islem Basarisiz',
+              message: actionResult['message']?.toString() ?? 'Fiyat kaydedilemedi.',
+              type: SnackbarType.error,
+            );
+          }
+        },
+      ),
+      isScrollControlled: true,
+      useSafeArea: true,
+    );
   }
 
   Future<void> _deleteWarehouseSlot(
