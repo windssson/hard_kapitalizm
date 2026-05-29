@@ -17,7 +17,7 @@ class SecondaryTopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final playerAsyncValue = ref.watch(playerStreamProvider);
+    final playerAsyncValue = ref.watch(playerProvider);
     final player = playerAsyncValue.value;
 
     return Container(

@@ -16,6 +16,8 @@ import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
+import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 
 class FactoryDetailScreen extends ConsumerStatefulWidget {
   final String factoryId;
@@ -37,18 +39,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshOnEntry();
-  }
-
-  void _refreshOnEntry() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      await ref.read(factoryActionProvider).completeDueBuildingBoosts();
-      if (!mounted) return;
-      await ref.read(factoryActionProvider).completeDueBuildingUpgrades();
-      if (!mounted) return;
-      _refreshFactoryDetail();
-    });
   }
 
   void _refreshFactoryDetail() {
@@ -66,7 +56,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   }) async {
     _refreshFactoryDetail();
     ref.invalidate(factoryListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     ref.invalidate(warehouseListProvider);
     ref.invalidate(warehouseDetailProvider);
 
@@ -84,6 +74,26 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
+      activeFactoryUpgradeProvider(widget.factoryId),
+      (previous, next) {
+        final upgrade = next.value;
+        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
+          ref.read(factoryActionProvider).completeDueBuildingUpgrades();
+        }
+      },
+    );
+
+    ref.listen<AsyncValue<BuildingBoostModel?>>(
+      activeFactoryBoostProvider(widget.factoryId),
+      (previous, next) {
+        final boost = next.value;
+        if (boost != null && boost.finishAt.isBefore(DateTime.now())) {
+          ref.read(factoryActionProvider).completeDueBuildingBoosts();
+        }
+      },
+    );
+
     final detailAsync = ref.watch(factoryDetailProvider(widget.factoryId));
     final activeBoost = ref.watch(activeFactoryBoostProvider(widget.factoryId)).value;
     final activeUpgrade = ref.watch(
@@ -121,7 +131,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     await ref.read(factoryDetailProvider(widget.factoryId).future);
                   },
                   child: ListView(
-                    padding: EdgeInsets.fromLTRB(10.w, 8.h, 10.w, 24.h),
+                    padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
                     children: [
                       _buildHero(detail),
                       SizedBox(height: 10.h),
@@ -186,141 +196,140 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   }
 
   Widget _buildHero(FactoryDetailModel detail) {
-    final inputQty = detail.inputInventories.fold<int>(
-      0,
-      (sum, item) => sum + item.quantity,
-    );
-    final outputQty = detail.outputInventories.isNotEmpty
-        ? detail.outputInventories.first.quantity
-        : 0;
-
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: AppDecorations.panelGlass(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 68.w,
-                height: 68.w,
-                padding: EdgeInsets.all(10.w),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.35),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.gold.withValues(alpha: 0.1),
-                      blurRadius: 12,
-                      spreadRadius: 1,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 68.w,
+                    height: 68.w,
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.gold.withValues(alpha: 0.1),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: CachedAssetImage(
-                  fileName: detail.factoryType.icon,
-                  fit: BoxFit.contain,
-                  errorWidget: Icon(
-                    Icons.precision_manufacturing_rounded,
-                    color: AppColors.gold,
-                    size: 32.sp,
+                    child: CachedAssetImage(
+                      fileName: detail.factoryType.icon,
+                      fit: BoxFit.contain,
+                      errorWidget: Icon(
+                        Icons.precision_manufacturing_rounded,
+                        color: AppColors.gold,
+                        size: 32.sp,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            detail.factory.name,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            detail.factoryType.name,
-                            style: TextStyle(
-                              color: AppColors.gold,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 6.h),
-                          Row(
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.location_on_outlined,
-                                color: AppColors.textMuted,
-                                size: 14.sp,
-                              ),
-                              SizedBox(width: 4.w),
-                              Expanded(
-                                child: Text(
-                                  detail.cityName,
-                                  style: TextStyle(
-                                    color: AppColors.textMuted,
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                detail.factory.name,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                detail.factoryType.name,
+                                style: TextStyle(
+                                  color: AppColors.gold,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: AppColors.gold,
+                                    size: 14.sp,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Expanded(
+                                    child: Text(
+                                      detail.cityName,
+                                      style: TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        SizedBox(width: 8.w),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(minWidth: 74.w),
+                          child: _buildHeroChipColumn(detail),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 10.w),
-                    _buildTag('Lv ${detail.factory.level}', AppColors.gold),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+                ],
+              );
+            },
           ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 12.h),
           Row(
             children: [
               Expanded(
-                child: _buildHeroStockSummary(
-                  title: 'Hammadde',
-                  icon: Icons.inventory_2_outlined,
-                  color: AppColors.blue,
-                  amountText: '$inputQty / ${detail.factory.inputCapacity}',
-                  progress: _safeProgress(
-                    inputQty.toDouble(),
+                child: _buildHeroStat(
+                  'Hammadde',
+                  '${detail.inputInventories.fold<int>(0, (sum, item) => sum + item.quantity)}/${detail.factory.inputCapacity}',
+                  AppColors.blue,
+                  ratio: _safeProgress(
+                    detail.inputInventories.fold<int>(0, (sum, item) => sum + item.quantity).toDouble(),
                     detail.factory.inputCapacity.toDouble(),
                   ),
+                  icon: Icons.science_outlined,
                 ),
               ),
-              SizedBox(width: 8.w),
+              SizedBox(width: 10.w),
               Expanded(
-                child: _buildHeroStockSummary(
-                  title: 'Uretilen urun',
-                  icon: Icons.local_shipping_outlined,
-                  color: AppColors.green,
-                  amountText: '$outputQty / ${detail.factory.outputCapacity}',
-                  progress: _safeProgress(
-                    outputQty.toDouble(),
+                child: _buildHeroStat(
+                  'Uretilen urun',
+                  '${detail.outputInventories.isNotEmpty ? detail.outputInventories.first.quantity : 0}/${detail.factory.outputCapacity}',
+                  AppColors.green,
+                  ratio: _safeProgress(
+                    (detail.outputInventories.isNotEmpty ? detail.outputInventories.first.quantity : 0).toDouble(),
                     detail.factory.outputCapacity.toDouble(),
                   ),
+                  icon: Icons.agriculture_outlined,
                 ),
               ),
             ],
@@ -330,59 +339,84 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
   }
 
-  Widget _buildHeroStockSummary({
-    required String title,
+  Widget _buildHeroStat(
+    String label,
+    String value,
+    Color color, {
+    required double ratio,
     required IconData icon,
-    required Color color,
-    required String amountText,
-    required double progress,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: Colors.black.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 15.sp),
-              SizedBox(width: 6.w),
+              Icon(icon, color: color, size: 14.sp),
+              SizedBox(width: 7.w),
               Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                amountText,
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w600,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 9.sp,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
           SizedBox(height: 7.h),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 5.h,
-              backgroundColor: Colors.white.withValues(alpha: 0.06),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+          Container(
+            height: 5.h,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(999.r),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: ratio.clamp(0.0, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(999.r),
+                ),
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeroChipColumn(FactoryDetailModel detail) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [_buildTag('Lv ${detail.factory.level}', AppColors.gold)],
     );
   }
 
@@ -682,6 +716,14 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               ),
                               SizedBox(height: 4.h),
                               _buildQualityStars(detail.factory.qualityLevel),
+                              SizedBox(height: 4.h),
+                              Text(
+                                'Maliyet: ${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11.sp,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1045,8 +1087,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.blue.withValues(alpha: 0.16),
                   foregroundColor: AppColors.blue,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   shape: RoundedRectangleBorder(
@@ -1082,7 +1123,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6.h,
-              backgroundColor: Colors.white.withValues(alpha: 0.06),
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
               valueColor: const AlwaysStoppedAnimation<Color>(
                 AppColors.green,
               ),
@@ -1156,71 +1197,155 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     _buildQualityStars(inventory.qualityLevel),
                     SizedBox(height: 4.h),
                     Text(
-                      isOrphan
-                          ? 'Depoya geri gonderebilecegin bagimsiz hammadde'
-                          : 'Tur basina gereken: ${requiredAmount.toStringAsFixed(requiredAmount % 1 == 0 ? 0 : 1)}',
+                      'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL',
                       style: TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 10.sp,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (isOrphan) ...[
+                      SizedBox(height: 4.h),
+                      Text(
+                        'Depoya geri gonderebilecegin bagimsiz hammadde',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10.sp,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              FilledButton.icon(
-                onPressed: isOrphan
-                    ? () => _startInventoryToWarehouseFlow(
-                        context,
-                        ref,
-                        detail,
-                        inventory,
-                      )
-                    : () => _startWarehouseToInventoryFlow(
-                        context,
-                        ref,
-                        detail,
-                        inventory,
+              if (!isOrphan) ...[
+                SizedBox(width: 10.w),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(color: AppColors.blue.withValues(alpha: 0.25)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Gereken',
+                        style: TextStyle(
+                          color: AppColors.blue,
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                icon: Icon(
-                  isOrphan ? Icons.reply_all_rounded : Icons.add_box_outlined,
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: (isOrphan ? AppColors.blue : AppColors.gold)
-                      .withValues(alpha: 0.16),
-                  foregroundColor:
-                      isOrphan ? AppColors.blue : AppColors.goldLight,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999.r),
-                    side: BorderSide(
-                      color: (isOrphan ? AppColors.blue : AppColors.gold)
-                          .withValues(alpha: 0.28),
-                    ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        requiredAmount.toStringAsFixed(requiredAmount % 1 == 0 ? 0 : 1),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                label: Text(
-                  isOrphan ? 'Depoya Gonder' : 'Stok Ekle',
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
+              ],
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Stok: $quantity',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                'Yolda: ${pending.toStringAsFixed(pending % 1 == 0 ? 0 : 1)}',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
           SizedBox(height: 10.h),
-          Text(
-            'Stok: $quantity | Yoldaki urunler: ${pending.toStringAsFixed(pending % 1 == 0 ? 0 : 1)}',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
+          if (!isOrphan)
+            Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: [
+                SizedBox(
+                  width: 132.w,
+                  child: _buildMiniAction(
+                    'Stok Ekle',
+                    AppColors.gold,
+                    () => _startWarehouseToInventoryFlow(
+                      context,
+                      ref,
+                      detail,
+                      inventory,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 132.w,
+                  child: _buildMiniAction(
+                    'Depoya Gonder',
+                    AppColors.blue,
+                    () => _startInventoryToWarehouseFlow(
+                      context,
+                      ref,
+                      detail,
+                      inventory,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            _buildMiniAction(
+              'Depoya Gonder',
+              AppColors.blue,
+              () => _startInventoryToWarehouseFlow(
+                context,
+                ref,
+                detail,
+                inventory,
+              ),
             ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMiniAction(String label, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 11.h),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: color.withValues(alpha: 0.45)),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: color,
+            fontSize: 11.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -1351,7 +1476,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         ref.invalidate(activeFactoryBoostProvider(detail.factory.id));
                         ref.invalidate(factoryDetailProvider(detail.factory.id));
                         ref.invalidate(factoryListProvider);
-                        ref.invalidate(playerStreamProvider);
+                        ref.invalidate(playerProvider);
                         AppSnackbar.show(
                           context,
                           title: 'Basarili',
@@ -1567,7 +1692,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                 factoryDetailProvider(detail.factory.id),
                               );
                               ref.invalidate(factoryListProvider);
-                              ref.invalidate(playerStreamProvider);
+                              ref.invalidate(playerProvider);
                               AppSnackbar.show(
                                 context,
                                 title: 'Basarili',
@@ -1654,92 +1779,31 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
     if (!context.mounted) return;
 
-    showModalBottomSheet(
+    final options = products.map((selectableProduct) {
+      final product = selectableProduct.product;
+      return ProductSelectionOption(
+        id: product.id,
+        title: product.urunAdi,
+        subtitle: 'Saatlik üretim: ${product.uretimAdedi}',
+        badgeText: 'Maks Kalite: ${selectableProduct.maxQualityLevel}',
+        iconPath: product.urunIconu,
+        onTap: () async {
+          Navigator.pop(context);
+          await _selectFactoryProduct(
+            context,
+            ref,
+            detail,
+            selectableProduct,
+          );
+        },
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+    await ProductSelectionSheet.show(
       context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Urun Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Expanded(
-              child: products.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Bu fabrika turu icin uygun urun bulunamadi.',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12.sp,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: products.length,
-                      separatorBuilder: (_, __) => SizedBox(height: 8.h),
-                      itemBuilder: (_, index) {
-                        final selectableProduct = products[index];
-                        final product = selectableProduct.product;
-                        return ListTile(
-                          tileColor: Colors.white.withValues(alpha: 0.04),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          leading: SizedBox(
-                            width: 40.w,
-                            height: 40.w,
-                            child: CachedAssetImage(
-                              fileName: product.urunIconu,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                          title: Text(
-                            product.urunAdi,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          subtitle: Text(
-                            'Uretilecek kalite: ${selectableProduct.maxQualityLevel} | Saatlik uretim: ${product.uretimAdedi}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            color: AppColors.gold,
-                          ),
-                          onTap: () async {
-                            Navigator.pop(sheetContext);
-                            await _selectFactoryProduct(
-                              context,
-                              ref,
-                              detail,
-                              selectableProduct,
-                            );
-                          },
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
+      title: 'Ürün Seç',
+      options: options,
     );
   }
 
@@ -1849,118 +1913,81 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: ListView(
-          children: [
-            Text(
-              'Kaynak Depo Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            ...warehouses.map((warehouse) {
-              final slots =
-                  (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
-              return Column(
-                children: slots.map((slotMap) {
-                  final slot = Map<String, dynamic>.from(slotMap as Map);
-                  final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 8.h),
-                    child: ListTile(
-                      tileColor: Colors.white.withValues(alpha: 0.04),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      title: Text(
-                        (warehouse['name'] ?? 'Depo').toString(),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      subtitle: Text(
-                        '${(warehouse['city']?['name'] ?? detail.cityName).toString()} | Stok: $qty',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 11.sp,
-                        ),
-                      ),
-                      onTap: () {
-                        Navigator.pop(sheetContext);
-                        _showQuantityDialog(
-                          context: context,
-                          maxQuantity: qty,
-                          title: 'Miktar Girin',
-                          subtitle:
-                              '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi aktarilacak',
-                          onConfirm: (quantity) async {
-                            final warehouseCityId =
-                                (warehouse['city_id'] ?? '').toString();
-                            if (_isSameCity(
-                              warehouseCityId,
-                              detail.factory.cityId,
-                            )) {
-                              final result = await ref
-                                  .read(factoryActionProvider)
-                                  .transferWarehouseToProductionInventory(
-                                    warehouseSlotId: slot['id'].toString(),
-                                    productionInventoryId: inventory.id,
-                                    quantity: quantity,
-                                  );
-                              if (!context.mounted) return;
-                              if (result['success'] == true) {
-                                await _refreshFactoryEcosystem();
-                                AppSnackbar.show(
-                                  context,
-                                  title: 'Basarili',
-                                  message:
-                                      'Ayni sehir hammadde transferi tamamlandi.',
-                                  type: SnackbarType.success,
-                                );
-                                return;
-                              }
-                              AppSnackbar.show(
-                                context,
-                                title: 'Hata',
-                                message:
-                                    result['message'] ?? 'Transfer basarisiz oldu.',
-                                type: SnackbarType.error,
-                              );
-                              return;
-                            }
+    final options = <WarehouseSelectionOption>[];
+    for (final warehouse in warehouses) {
+      final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
+      for (final slotMap in slots) {
+        final slot = Map<String, dynamic>.from(slotMap as Map);
+        final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
+        final warehouseCityId = (warehouse['city_id'] ?? '').toString();
+        final isSame = _isSameCity(warehouseCityId, detail.factory.cityId);
 
-                            await _startFactoryLogisticsInputTransfer(
-                              context: context,
-                              ref: ref,
-                              detail: detail,
-                              inventory: inventory,
-                              warehouseSlotId: slot['id'].toString(),
-                              maxQuantity: qty,
-                              quantity: quantity,
-                            );
-                          },
+        options.add(
+          WarehouseSelectionOption(
+            id: slot['id'].toString(),
+            title: (warehouse['name'] ?? 'Depo').toString(),
+            subtitle: (warehouse['city']?['name'] ?? detail.cityName).toString(),
+            badgeText: isSame ? 'Aynı Şehir' : 'Farklı Şehir',
+            infoText: 'Stok: $qty adet',
+            isHighlightBadge: isSame,
+            onTap: () {
+              Navigator.pop(context);
+              _showQuantityDialog(
+                context: context,
+                maxQuantity: qty,
+                title: 'Miktar Girin',
+                subtitle: '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi aktarilacak',
+                onConfirm: (quantity) async {
+                  if (isSame) {
+                    final result = await ref
+                        .read(factoryActionProvider)
+                        .transferWarehouseToProductionInventory(
+                          warehouseSlotId: slot['id'].toString(),
+                          productionInventoryId: inventory.id,
+                          quantity: quantity,
                         );
-                      },
-                    ),
+                    if (!context.mounted) return;
+                    if (result['success'] == true) {
+                      await _refreshFactoryEcosystem();
+                      AppSnackbar.show(
+                        context,
+                        title: 'Basarili',
+                        message: 'Ayni sehir hammadde transferi tamamlandi.',
+                        type: SnackbarType.success,
+                      );
+                      return;
+                    }
+                    AppSnackbar.show(
+                      context,
+                      title: 'Hata',
+                      message: result['message'] ?? 'Transfer basarisiz oldu.',
+                      type: SnackbarType.error,
+                    );
+                    return;
+                  }
+
+                  await _startFactoryLogisticsInputTransfer(
+                    context: context,
+                    ref: ref,
+                    detail: detail,
+                    inventory: inventory,
+                    warehouseSlotId: slot['id'].toString(),
+                    maxQuantity: qty,
+                    quantity: quantity,
                   );
-                }).toList(),
+                },
               );
-            }),
-          ],
-        ),
-      ),
+            },
+          ),
+        );
+      }
+    }
+
+    if (!context.mounted) return;
+    await WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Kaynak Depo Seç',
+      options: options,
     );
   }
 
@@ -1988,109 +2015,74 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.7,
-        ),
-        child: ListView(
-          children: [
-            Text(
-              'Hedef Depo Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            ...warehouses.map((warehouse) {
-              final warehouseId = warehouse.id;
-              final sameCity = warehouse.isSameCity;
-              return Container(
-                margin: EdgeInsets.only(bottom: 8.h),
-                child: ListTile(
-                  tileColor: Colors.white.withValues(alpha: 0.04),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  title: Text(
-                    warehouse.name,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
-                    '${warehouse.cityName} | ${sameCity ? 'Anlik Transfer' : 'Lojistik Transfer'}',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _showQuantityDialog(
-                      context: context,
-                      maxQuantity: inventory.quantity,
-                      title: 'Miktar Girin',
-                      subtitle:
-                          '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarilacak',
-                      onConfirm: (quantity) async {
-                        if (sameCity) {
-                          final result = await ref
-                              .read(factoryActionProvider)
-                              .transferProductionInventoryToWarehouse(
-                                productionInventoryId: inventory.id,
-                                warehouseId: warehouseId,
-                                quantity: quantity,
-                              );
-                          if (!context.mounted) return;
-                          if (result['success'] == true) {
-                            await _refreshFactoryEcosystem(
-                              warehouseId: warehouseId,
-                            );
-                            AppSnackbar.show(
-                              context,
-                              title: 'Basarili',
-                              message: inventory.isInput
-                                  ? 'Ayni sehir hammadde iadesi tamamlandi.'
-                                  : 'Ayni sehir urun transferi tamamlandi.',
-                              type: SnackbarType.success,
-                            );
-                            return;
-                          }
-                          AppSnackbar.show(
-                            context,
-                            title: 'Hata',
-                            message:
-                                result['message'] ?? 'Transfer basarisiz oldu.',
-                            type: SnackbarType.error,
-                          );
-                          return;
-                        }
-
-                        await _startFactoryLogisticsOutputTransfer(
-                          context: context,
-                          ref: ref,
-                          detail: detail,
-                          inventory: inventory,
-                          warehouseId: warehouseId,
-                          quantity: quantity,
-                        );
-                      },
+    final options = warehouses.map((warehouse) {
+      final warehouseId = warehouse.id;
+      final sameCity = warehouse.isSameCity;
+      return WarehouseSelectionOption(
+        id: warehouseId,
+        title: warehouse.name,
+        subtitle: warehouse.cityName,
+        badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
+        isHighlightBadge: sameCity,
+        onTap: () {
+          Navigator.pop(context);
+          _showQuantityDialog(
+            context: context,
+            maxQuantity: inventory.quantity,
+            title: 'Miktar Girin',
+            subtitle: '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarilacak',
+            onConfirm: (quantity) async {
+              if (sameCity) {
+                final result = await ref
+                    .read(factoryActionProvider)
+                    .transferProductionInventoryToWarehouse(
+                      productionInventoryId: inventory.id,
+                      warehouseId: warehouseId,
+                      quantity: quantity,
                     );
-                  },
-                ),
+                if (!context.mounted) return;
+                if (result['success'] == true) {
+                  await _refreshFactoryEcosystem(
+                    warehouseId: warehouseId,
+                  );
+                  AppSnackbar.show(
+                    context,
+                    title: 'Basarili',
+                    message: inventory.isInput
+                        ? 'Ayni sehir hammadde iadesi tamamlandi.'
+                        : 'Ayni sehir urun transferi tamamlandi.',
+                    type: SnackbarType.success,
+                  );
+                  return;
+                }
+                AppSnackbar.show(
+                  context,
+                  title: 'Hata',
+                  message: result['message'] ?? 'Transfer basarisiz oldu.',
+                  type: SnackbarType.error,
+                );
+                return;
+              }
+
+              await _startFactoryLogisticsOutputTransfer(
+                context: context,
+                ref: ref,
+                detail: detail,
+                inventory: inventory,
+                warehouseId: warehouseId,
+                quantity: quantity,
               );
-            }),
-          ],
-        ),
-      ),
+            },
+          );
+        },
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+    await WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Hedef Depo Seç',
+      options: options,
     );
   }
 

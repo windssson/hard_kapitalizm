@@ -38,7 +38,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final playerAsyncValue = ref.watch(playerStreamProvider);
+    final playerAsyncValue = ref.watch(playerProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -103,10 +103,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   return GestureDetector(
                     onTap: () async {
                       Navigator.pop(context);
-                      await Supabase.instance.client.rpc(
-                        'set_player_avatar',
-                        params: {'p_avatar_id': avatar},
-                      );
+                      await ref.read(playerActionProvider).setPlayerAvatar(avatar);
                     },
                     child: Container(
                       decoration: BoxDecoration(

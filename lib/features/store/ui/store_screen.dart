@@ -28,7 +28,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
@@ -100,7 +99,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                           sliver: SliverToBoxAdapter(child: _buildFilters()),
                         ),
                         SliverPadding(
-                          padding: EdgeInsets.fromLTRB(6.w, 16.h, 6.w, 40.h),
+                          padding: EdgeInsets.fromLTRB(5.w, 16.h, 5.w, 40.h),
                           sliver: filteredStores.isEmpty
                               ? SliverToBoxAdapter(child: _buildEmptyState())
                               : SliverList.builder(

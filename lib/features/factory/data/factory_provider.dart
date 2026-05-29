@@ -11,10 +11,11 @@ import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 // Fabrika Listesi Provider
 final factoryListProvider =
-    FutureProvider.autoDispose<List<FactoryListItemModel>>((ref) async {
+    FutureProvider<List<FactoryListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -51,7 +52,7 @@ final factoryTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   return await supabase.rpc('get_factory_types_catalog');
 });
 
-final factoryConstructionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+final factoryConstructionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -164,9 +165,12 @@ final activeFactoryBoostProvider =
 
 // Fabrika Aksiyonları
 class FactoryActionNotifier {
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   final ProductionLogisticsService _productionLogisticsService =
       ProductionLogisticsService();
+
+  FactoryActionNotifier(this._ref);
 
   Future<Map<String, dynamic>> createFactory({
     required String cityId,
@@ -187,6 +191,8 @@ class FactoryActionNotifier {
           'p_name': name,
         },
       );
+      _ref.invalidate(factoryConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -205,6 +211,9 @@ class FactoryActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      _ref.invalidate(factoryListProvider);
+      _ref.invalidate(factoryConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -227,6 +236,9 @@ class FactoryActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      _ref.invalidate(factoryListProvider);
+      _ref.invalidate(factoryConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -248,6 +260,9 @@ class FactoryActionNotifier {
           'p_entity_id': factoryId,
         },
       );
+      _ref.invalidate(activeFactoryUpgradeProvider(factoryId));
+      _ref.invalidate(factoryDetailProvider(factoryId));
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -267,6 +282,9 @@ class FactoryActionNotifier {
           'p_limit': 100,
         },
       );
+      _ref.invalidate(factoryListProvider);
+      _ref.invalidate(factoryDetailProvider);
+      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -289,6 +307,9 @@ class FactoryActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
+      _ref.invalidate(factoryListProvider);
+      _ref.invalidate(factoryDetailProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -316,6 +337,9 @@ class FactoryActionNotifier {
           'p_star_cost': starCost,
         },
       );
+      _ref.invalidate(activeFactoryBoostProvider(factoryId));
+      _ref.invalidate(factoryDetailProvider(factoryId));
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -335,6 +359,8 @@ class FactoryActionNotifier {
           'p_limit': 100,
         },
       );
+      _ref.invalidate(factoryListProvider);
+      _ref.invalidate(factoryDetailProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -361,6 +387,8 @@ class FactoryActionNotifier {
           'p_quality_level': qualityLevel,
         },
       );
+      _ref.invalidate(factoryListProvider);
+      _ref.invalidate(factoryDetailProvider(factoryId));
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -384,6 +412,8 @@ class FactoryActionNotifier {
           'p_is_active': isActive,
         },
       );
+      _ref.invalidate(factoryListProvider);
+      _ref.invalidate(factoryDetailProvider(factoryId));
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -512,6 +542,8 @@ class FactoryActionNotifier {
           'p_quantity': quantity,
         },
       );
+      // Invalidate factory details to show new inventory quantities
+      _ref.invalidate(factoryDetailProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -538,6 +570,8 @@ class FactoryActionNotifier {
           'p_quantity': quantity,
         },
       );
+      // Invalidate factory details to show updated inventory quantities
+      _ref.invalidate(factoryDetailProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -632,13 +666,16 @@ class FactoryActionNotifier {
     required String productionInventoryId,
     required int quantity,
     String? vehicleId,
-  }) {
-    return _productionLogisticsService.startWarehouseToProductionTransfer(
+  }) async {
+    final result = await _productionLogisticsService.startWarehouseToProductionTransfer(
       warehouseSlotId: warehouseSlotId,
       productionInventoryId: productionInventoryId,
       quantity: quantity,
       vehicleId: vehicleId,
     );
+    _ref.invalidate(factoryDetailProvider);
+    _ref.invalidate(playerProvider);
+    return result;
   }
 
   Future<ProductionLogisticsStartResult> startProductionToWarehouseTransfer({
@@ -646,14 +683,17 @@ class FactoryActionNotifier {
     required String buyerWarehouseId,
     required int quantity,
     String? vehicleId,
-  }) {
-    return _productionLogisticsService.startProductionToWarehouseTransfer(
+  }) async {
+    final result = await _productionLogisticsService.startProductionToWarehouseTransfer(
       productionInventoryId: productionInventoryId,
       buyerWarehouseId: buyerWarehouseId,
       quantity: quantity,
       vehicleId: vehicleId,
     );
+    _ref.invalidate(factoryDetailProvider);
+    _ref.invalidate(playerProvider);
+    return result;
   }
 }
 
-final factoryActionProvider = Provider((ref) => FactoryActionNotifier());
+final factoryActionProvider = Provider((ref) => FactoryActionNotifier(ref));

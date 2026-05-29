@@ -29,7 +29,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
@@ -58,7 +57,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(fieldListProvider);
     ref.invalidate(fieldConstructionProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
@@ -68,7 +67,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
 
     ref.invalidate(fieldConstructionProvider);
     ref.invalidate(fieldListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] != true) {
@@ -88,7 +87,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
 
     ref.invalidate(fieldConstructionProvider);
     ref.invalidate(fieldListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {

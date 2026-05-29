@@ -28,7 +28,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
@@ -100,7 +99,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
                           sliver: SliverToBoxAdapter(child: _buildFilters()),
                         ),
                         SliverPadding(
-                          padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 80.h),
+                          padding: EdgeInsets.fromLTRB(5.w, 16.h, 5.w, 80.h),
                           sliver: filtered.isEmpty
                               ? SliverToBoxAdapter(child: _buildEmptyState())
                               : SliverList.builder(
@@ -600,7 +599,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
                         .read(warehouseActionProvider)
                         .completeConstruction(warehouse.id);
                     ref.invalidate(warehouseListProvider);
-                    ref.invalidate(playerStreamProvider);
+                    ref.invalidate(playerProvider);
                   },
                 ),
               ],
@@ -647,7 +646,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
 
       if (completeResult['success'] == true) {
         ref.invalidate(warehouseListProvider);
-        ref.invalidate(playerStreamProvider);
+        ref.invalidate(playerProvider);
         if (mounted) {
           AppSnackbar.show(
             context,

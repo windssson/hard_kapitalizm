@@ -40,18 +40,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshOnEntry();
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
-    });
-  }
-
-  void _refreshOnEntry() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      await ref.read(argeActionProvider).completeDueBuildingUpgrades();
-      if (!mounted) return;
-      _refreshCenterEcosystem();
     });
   }
 
@@ -87,7 +77,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     ref.invalidate(playerArgeConstructionProvider);
     ref.invalidate(activeArgeResearchesProvider);
     ref.invalidate(activeArgeResearchProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     if (centerId != null && centerId.isNotEmpty) {
       ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
     }
@@ -105,10 +95,32 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<ArgeResearchModel?>>(
+      activeArgeResearchProvider,
+      (previous, next) {
+        final research = next.value;
+        if (research != null && research.isDone) {
+          ref.read(argeActionProvider).completeResearch(research.id);
+        }
+      },
+    );
+
+    final centerAsync = ref.watch(playerArgeCenterProvider);
+    final centerId = centerAsync.value?.id ?? '';
+
+    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
+      activeArgeCenterUpgradeProvider(centerId),
+      (previous, next) {
+        final upgrade = next.value;
+        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
+          ref.read(argeActionProvider).completeDueBuildingUpgrades();
+        }
+      },
+    );
+
     final productsAsync = ref.watch(argeProductsProvider);
     final researchesAsync = ref.watch(activeArgeResearchesProvider);
-    final playerAsync = ref.watch(playerStreamProvider);
-    final centerAsync = ref.watch(playerArgeCenterProvider);
+    final playerAsync = ref.watch(playerProvider);
     final constructionAsync = ref.watch(playerArgeConstructionProvider);
     final player = playerAsync.value;
 
@@ -237,7 +249,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                             ),
                           ),
                           SliverPadding(
-                            padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 24.h),
+                            padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 24.h),
                             sliver: _buildProductGrid(
                               context,
                               _filter(products),
@@ -915,7 +927,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           border: Border.all(color: AppColors.borderGold),
         ),
-        padding: EdgeInsets.fromLTRB(18.w, 18.h, 18.w, 24.h),
+        padding: EdgeInsets.fromLTRB(5.w, 18.h, 5.w, 24.h),
         child: SafeArea(
           top: false,
           child: Column(
@@ -1029,7 +1041,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 32.h),
+      padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 32.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1196,7 +1208,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 32.h),
+      padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 32.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1707,7 +1719,7 @@ class _ArgeUpgradeMeta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(12.r),
@@ -1763,7 +1775,7 @@ class _UpgradeBottomSheet extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.5)),
       ),
-      padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 32.h),
+      padding: EdgeInsets.fromLTRB(5.w, 20.h, 5.w, 32.h),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

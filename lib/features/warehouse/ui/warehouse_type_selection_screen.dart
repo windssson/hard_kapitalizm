@@ -31,7 +31,7 @@ class _WarehouseTypeSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(warehouseTypesProvider);
-    final playerAsync = ref.watch(playerStreamProvider);
+    final playerAsync = ref.watch(playerProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -290,7 +290,7 @@ class _WarehouseTypeSelectionScreenState
       if (result['success'] == true) {
         if (!mounted) return;
         ref.invalidate(warehouseListProvider);
-        ref.invalidate(playerStreamProvider);
+        ref.invalidate(playerProvider);
         AppSnackbar.show(
           context,
           title: 'Basarili',

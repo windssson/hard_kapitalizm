@@ -11,6 +11,7 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_detail_model.dart';
@@ -36,18 +37,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshOnEntry();
-  }
-
-  void _refreshOnEntry() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      await ref.read(mineActionProvider).completeDueBuildingBoosts();
-      if (!mounted) return;
-      await ref.read(mineActionProvider).completeDueBuildingUpgrades();
-      if (!mounted) return;
-      _refreshMineDetail();
-    });
   }
 
   void _refreshMineDetail() {
@@ -65,7 +54,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   }) async {
     _refreshMineDetail();
     ref.invalidate(mineListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     ref.invalidate(warehouseListProvider);
     ref.invalidate(warehouseDetailProvider);
 
@@ -83,6 +72,26 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
+      activeMineUpgradeProvider(widget.mineId),
+      (previous, next) {
+        final upgrade = next.value;
+        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
+          ref.read(mineActionProvider).completeDueBuildingUpgrades();
+        }
+      },
+    );
+
+    ref.listen<AsyncValue<BuildingBoostModel?>>(
+      activeMineBoostProvider(widget.mineId),
+      (previous, next) {
+        final boost = next.value;
+        if (boost != null && boost.finishAt.isBefore(DateTime.now())) {
+          ref.read(mineActionProvider).completeDueBuildingBoosts();
+        }
+      },
+    );
+
     final detailAsync = ref.watch(mineDetailProvider(widget.mineId));
     final activeBoost = ref.watch(activeMineBoostProvider(widget.mineId)).value;
     final activeUpgrade = ref.watch(activeMineUpgradeProvider(widget.mineId)).value;
@@ -118,7 +127,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     await ref.read(mineDetailProvider(widget.mineId).future);
                   },
                   child: ListView(
-                    padding: EdgeInsets.fromLTRB(10.w, 8.h, 10.w, 24.h),
+                    padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
                     children: [
                       _buildHero(detail),
                       SizedBox(height: 10.h),
@@ -174,110 +183,197 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 68.w,
-                height: 68.w,
-                padding: EdgeInsets.all(10.w),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.35),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.gold.withValues(alpha: 0.1),
-                      blurRadius: 12,
-                      spreadRadius: 1,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 68.w,
+                    height: 68.w,
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.gold.withValues(alpha: 0.1),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: CachedAssetImage(
-                  fileName: detail.mineType.icon,
-                  fit: BoxFit.contain,
-                  errorWidget: Icon(
-                    Icons.diamond_rounded,
-                    color: AppColors.gold,
-                    size: 30.sp,
+                    child: CachedAssetImage(
+                      fileName: detail.mineType.icon,
+                      fit: BoxFit.contain,
+                      errorWidget: Icon(
+                        Icons.diamond_rounded,
+                        color: AppColors.gold,
+                        size: 30.sp,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            detail.mine.name,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            detail.mineType.name,
-                            style: TextStyle(
-                              color: AppColors.gold,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 6.h),
-                          Row(
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.location_on_outlined,
-                                color: AppColors.textMuted,
-                                size: 14.sp,
-                              ),
-                              SizedBox(width: 4.w),
-                              Expanded(
-                                child: Text(
-                                  detail.cityName,
-                                  style: TextStyle(
-                                    color: AppColors.textMuted,
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                detail.mine.name,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                detail.mineType.name,
+                                style: TextStyle(
+                                  color: AppColors.gold,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: AppColors.gold,
+                                    size: 14.sp,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Expanded(
+                                    child: Text(
+                                      detail.cityName,
+                                      style: TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
+                        ),
+                        SizedBox(width: 8.w),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(minWidth: 74.w),
+                          child: _buildHeroChipColumn(detail),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildHeroStat(
+                  'Cevher stogu',
+                  '$outputQty/${detail.mine.outputCapacity}',
+                  AppColors.green,
+                  ratio: _safeProgress(
+                    outputQty.toDouble(),
+                    detail.mine.outputCapacity.toDouble(),
+                  ),
+                  icon: Icons.inventory_2_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroStat(
+    String label,
+    String value,
+    Color color, {
+    required double ratio,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 14.sp),
+              SizedBox(width: 7.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 9.sp,
                       ),
                     ),
-                    SizedBox(width: 10.w),
-                    _buildTag('Lv ${detail.mine.level}', AppColors.gold),
+                    SizedBox(height: 2.h),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-          SizedBox(height: 10.h),
-          _buildHeroStockSummary(
-            title: 'Cevher stogu',
-            icon: Icons.inventory_2_outlined,
-            color: AppColors.green,
-            amountText: '$outputQty / ${detail.mine.outputCapacity}',
-            progress: _safeProgress(
-              outputQty.toDouble(),
-              detail.mine.outputCapacity.toDouble(),
+          SizedBox(height: 7.h),
+          Container(
+            height: 5.h,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(999.r),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: ratio.clamp(0.0, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(999.r),
+                ),
+              ),
             ),
           ),
         ],
@@ -285,59 +381,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
   }
 
-  Widget _buildHeroStockSummary({
-    required String title,
-    required IconData icon,
-    required Color color,
-    required String amountText,
-    required double progress,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 15.sp),
-              SizedBox(width: 6.w),
-              Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                amountText,
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 7.h),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 5.h,
-              backgroundColor: Colors.white.withValues(alpha: 0.06),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-        ],
-      ),
+  Widget _buildHeroChipColumn(MineDetailModel detail) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [_buildTag('Lv ${detail.mine.level}', AppColors.gold)],
     );
   }
 
@@ -636,6 +683,14 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               ),
                               SizedBox(height: 4.h),
                               _buildQualityStars(detail.mine.qualityLevel),
+                              SizedBox(height: 4.h),
+                              Text(
+                                'Maliyet: ${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11.sp,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -814,7 +869,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 6.h,
-                    backgroundColor: Colors.white.withValues(alpha: 0.06),
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       AppColors.green,
                     ),
@@ -859,17 +914,16 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(
-        qualityLevel,
-        (_) => Padding(
+      children: List.generate(5, (index) {
+        return Padding(
           padding: EdgeInsets.only(right: 2.w),
           child: Icon(
-            Icons.star_rounded,
-            color: AppColors.gold,
+            index < qualityLevel ? Icons.star : Icons.star_border,
+            color: index < qualityLevel ? AppColors.gold : AppColors.textMuted,
             size: 14.sp,
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 
@@ -960,7 +1014,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         ref.invalidate(activeMineBoostProvider(detail.mine.id));
                         ref.invalidate(mineDetailProvider(detail.mine.id));
                         ref.invalidate(mineListProvider);
-                        ref.invalidate(playerStreamProvider);
+                        ref.invalidate(playerProvider);
                         AppSnackbar.show(
                           context,
                           title: 'Basarili',
@@ -1162,7 +1216,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               ref.invalidate(activeMineUpgradeProvider(detail.mine.id));
                               ref.invalidate(mineDetailProvider(detail.mine.id));
                               ref.invalidate(mineListProvider);
-                              ref.invalidate(playerStreamProvider);
+                              ref.invalidate(playerProvider);
                               AppSnackbar.show(
                                 context,
                                 title: 'Basarili',
@@ -1438,105 +1492,72 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.7,
-        ),
-        child: ListView(
-          children: [
-            Text(
-              'Hedef Depo Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            ...warehouses.map((warehouse) {
-              final warehouseId = warehouse.id;
-              final sameCity = warehouse.isSameCity;
-              return Container(
-                margin: EdgeInsets.only(bottom: 8.h),
-                child: ListTile(
-                  tileColor: Colors.white.withValues(alpha: 0.04),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  title: Text(
-                    warehouse.name,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
-                    '${warehouse.cityName} | ${sameCity ? 'Anlik Transfer' : 'Lojistik Transfer'}',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _showQuantityDialog(
-                      context: context,
-                      maxQuantity: inventory.quantity,
-                      title: 'Miktar Girin',
-                      subtitle:
-                          '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarilacak',
-                      onConfirm: (quantity) async {
-                        if (sameCity) {
-                          final result = await ref
-                              .read(mineActionProvider)
-                              .transferProductionInventoryToWarehouse(
-                                productionInventoryId: inventory.id,
-                                warehouseId: warehouseId,
-                                quantity: quantity,
-                              );
-                          if (!context.mounted) return;
-                          if (result['success'] == true) {
-                            await _refreshMineEcosystem(warehouseId: warehouseId);
-                            AppSnackbar.show(
-                              context,
-                              title: 'Basarili',
-                              message: 'Transfer tamamlandi.',
-                              type: SnackbarType.success,
-                            );
-                            return;
-                          }
-                          AppSnackbar.show(
-                            context,
-                            title: 'Hata',
-                            message:
-                                result['message'] ?? 'Transfer basarisiz oldu.',
-                            type: SnackbarType.error,
-                          );
-                          return;
-                        }
-
-                        await _startMineLogisticsOutputTransfer(
-                          context: context,
-                          ref: ref,
-                          detail: detail,
-                          inventory: inventory,
-                          warehouseId: warehouseId,
-                          quantity: quantity,
-                        );
-                      },
+    final options = warehouses.map((warehouse) {
+      final warehouseId = warehouse.id;
+      final sameCity = warehouse.isSameCity;
+      return WarehouseSelectionOption(
+        id: warehouseId,
+        title: warehouse.name,
+        subtitle: warehouse.cityName,
+        badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
+        isHighlightBadge: sameCity,
+        onTap: () {
+          Navigator.pop(context);
+          _showQuantityDialog(
+            context: context,
+            maxQuantity: inventory.quantity,
+            title: 'Miktar Girin',
+            subtitle:
+                '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarılacak',
+            onConfirm: (quantity) async {
+              if (sameCity) {
+                final result = await ref
+                    .read(mineActionProvider)
+                    .transferProductionInventoryToWarehouse(
+                      productionInventoryId: inventory.id,
+                      warehouseId: warehouseId,
+                      quantity: quantity,
                     );
-                  },
-                ),
+                if (!context.mounted) return;
+                if (result['success'] == true) {
+                  await _refreshMineEcosystem(warehouseId: warehouseId);
+                  AppSnackbar.show(
+                    context,
+                    title: 'Başarılı',
+                    message: 'Transfer tamamlandı.',
+                    type: SnackbarType.success,
+                  );
+                  return;
+                }
+                AppSnackbar.show(
+                  context,
+                  title: 'Hata',
+                  message:
+                      result['message'] ?? 'Transfer başarısız oldu.',
+                  type: SnackbarType.error,
+                );
+                return;
+              }
+
+              await _startMineLogisticsOutputTransfer(
+                context: context,
+                ref: ref,
+                detail: detail,
+                inventory: inventory,
+                warehouseId: warehouseId,
+                quantity: quantity,
               );
-            }),
-          ],
-        ),
-      ),
+            },
+          );
+        },
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+    await WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Hedef Depo Seç',
+      options: options,
     );
   }
 

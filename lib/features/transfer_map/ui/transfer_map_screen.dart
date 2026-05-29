@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -11,6 +11,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
@@ -131,7 +132,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           .completeDueMarketTransfers();
       ref.invalidate(buyerTransferMapProvider);
       ref.invalidate(buyerTransferHistoryProvider);
-      ref.invalidate(playerStreamProvider);
+      ref.invalidate(playerProvider);
       ref.invalidate(storesListProvider);
       ref.invalidate(storeDetailProvider);
       ref.invalidate(warehouseListProvider);
@@ -187,166 +188,318 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 14.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+            child: Consumer(
+              builder: (context, ref, _) {
+                final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+                final remaining = transfer.finishAt.difference(now);
+                final remainingSeconds = remaining.inSeconds;
+                final showButton = transfer.status == 'in_transit' && remainingSeconds > 0;
+                final starCost = remainingSeconds > 0 ? (remainingSeconds / 600.0).ceil() : 0;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(8.w),
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Icon(
-                        transfer.isRental
-                            ? Icons.local_shipping
-                            : Icons.directions_car,
-                        color: accentColor,
-                      ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            transfer.product.name,
-                            style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            'Transfer Detaylari',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 12.sp,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: AppColors.textMuted,
-                        size: 20.sp,
-                      ),
-                      splashRadius: 20.r,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12.h),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.all(14.w),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(16.r),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.05),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              _buildDialogInfoRow(
-                                Icons.my_location,
-                                'Cikis (${transfer.sellerKindLabel})',
-                                '${transfer.sellerWarehouse.name} | ${transfer.sellerWarehouse.city.name}',
-                              ),
-                              Divider(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                height: 22.h,
-                              ),
-                              _buildDialogInfoRow(
-                                Icons.location_on,
-                                'Varis (${transfer.buyerKindLabel})',
-                                '${transfer.buyerWarehouse.name} | ${transfer.buyerWarehouse.city.name}',
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 14.h),
-                        _buildDialogDetailRow('Miktar', '${transfer.quantity} adet'),
-                        _buildDialogDetailRow(
-                          'Nakliye Tipi',
-                          transfer.isRental ? 'Kiralik Arac' : 'Ozmal Arac',
-                        ),
-                        _buildDialogDetailRow(
-                          'Rota',
-                          _isSameCityTransfer(transfer)
-                              ? 'Ayni Sehir'
-                              : 'Sehirler Arasi',
-                        ),
-                        _buildDialogDetailRow(
-                          'Mesafe',
-                          '${routeDistanceKm.toStringAsFixed(0)} km',
-                        ),
-                        _buildDialogDetailRow(
-                          'Urun Bedeli',
-                          _formatCurrency(transfer.totalPrice),
-                        ),
-                        _buildDialogDetailRow(
-                          'Kira Bedeli',
-                          _formatCurrency(transfer.rentalCost),
-                        ),
-                        _buildDialogDetailRow(
-                          'Toplam Maliyet',
-                          _formatCurrency(totalCost),
-                        ),
-                        _buildDialogDetailRow(
-                          'Birim Maliyet',
-                          _formatCurrency(unitCost),
-                        ),
-                        SizedBox(height: 6.h),
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 12.w,
-                            vertical: 10.h,
-                          ),
+                          padding: EdgeInsets.all(8.w),
                           decoration: BoxDecoration(
                             color: accentColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12.r),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          child: Icon(
+                            transfer.isRental
+                                ? Icons.local_shipping
+                                : Icons.directions_car,
+                            color: accentColor,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.timer_outlined,
-                                color: accentColor,
-                                size: 16.sp,
+                              Text(
+                                transfer.product.name,
+                                style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
                               ),
-                              SizedBox(width: 8.w),
-                              Flexible(
-                                child: Text(
-                                  'Kalan Sure: ${_formatRemaining(transfer.finishAt.difference(_now))}',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: accentColor,
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                'Transfer Detaylari',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 12.sp,
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            color: AppColors.textMuted,
+                            size: 20.sp,
+                          ),
+                          splashRadius: 20.r,
+                        ),
                       ],
                     ),
-                  ),
-                ),
-              ],
+                    SizedBox(height: 12.h),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(14.w),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(16.r),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.05),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildDialogInfoRow(
+                                    Icons.my_location,
+                                    'Cikis (${transfer.sellerKindLabel})',
+                                    '${transfer.sellerWarehouse.name} | ${transfer.sellerWarehouse.city.name}',
+                                  ),
+                                  Divider(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                    height: 22.h,
+                                  ),
+                                  _buildDialogInfoRow(
+                                    Icons.location_on,
+                                    'Varis (${transfer.buyerKindLabel})',
+                                    '${transfer.buyerWarehouse.name} | ${transfer.buyerWarehouse.city.name}',
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: 14.h),
+                            _buildDialogDetailRow('Miktar', '${transfer.quantity} adet'),
+                            _buildDialogDetailRow(
+                              'Nakliye Tipi',
+                              transfer.isRental ? 'Kiralik Arac' : 'Ozmal Arac',
+                            ),
+                            _buildDialogDetailRow(
+                              'Rota',
+                              _isSameCityTransfer(transfer)
+                                  ? 'Ayni Sehir'
+                                  : 'Sehirler Arasi',
+                            ),
+                            _buildDialogDetailRow(
+                              'Mesafe',
+                              '${routeDistanceKm.toStringAsFixed(0)} km',
+                            ),
+                            _buildDialogDetailRow(
+                              'Urun Bedeli',
+                              _formatCurrency(transfer.totalPrice),
+                            ),
+                            _buildDialogDetailRow(
+                              'Kira Bedeli',
+                              _formatCurrency(transfer.rentalCost),
+                            ),
+                            _buildDialogDetailRow(
+                              'Toplam Maliyet',
+                              _formatCurrency(totalCost),
+                            ),
+                            _buildDialogDetailRow(
+                              'Birim Maliyet',
+                              _formatCurrency(unitCost),
+                            ),
+                            SizedBox(height: 6.h),
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 10.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accentColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.timer_outlined,
+                                    color: accentColor,
+                                    size: 16.sp,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Flexible(
+                                    child: Text(
+                                      'Kalan Sure: ${_formatRemaining(remaining)}',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: accentColor,
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (showButton) ...[
+                      SizedBox(height: 12.h),
+                      GoldFinishButton(
+                        starCost: starCost,
+                        onPressed: () => _confirmFinishWithStars(
+                          context,
+                          ref,
+                          transfer,
+                          starCost,
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _confirmFinishWithStars(
+    BuildContext context,
+    WidgetRef ref,
+    TransferMapItemModel transfer,
+    int starCost,
+  ) async {
+    final player = ref.read(playerProvider).value;
+    final currentGold = player?.gold ?? 0;
+
+    if (currentGold < starCost) {
+      AppSnackbar.show(
+        context,
+        title: 'Yetersiz Yildiz',
+        message: 'Bu islemi gerceklestirmek icin yeterli yildiziniz yok. Gerekli: $starCost, Mevcut: ${currentGold.toInt()}',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: BorderSide(color: AppColors.gold.withValues(alpha: 0.3)),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.star_rounded, color: AppColors.gold, size: 24.sp),
+            SizedBox(width: 8.w),
+            const Text('Hemen Bitir', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Text(
+          'Bu transferi $starCost ⭐ harcayarak aninda tamamlamak istiyor musunuz?\n\nMevcut Yildiziniz: ${currentGold.toInt()}',
+          style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Vazgec',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black,
+            ),
+            child: Text(
+              'Tamamla',
+              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    if (!context.mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: AppColors.gold,
+        ),
+      ),
+    );
+
+    try {
+      final result = await ref
+          .read(marketActionProvider)
+          .finishMarketTransferWithStars(transfer.id);
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Pop loading dialog
+      }
+
+      if (result['success'] == true) {
+        if (context.mounted) {
+          Navigator.of(context).pop(); // Pop details dialog
+        }
+
+        ref.invalidate(buyerTransferMapProvider);
+        ref.invalidate(buyerTransferHistoryProvider);
+        ref.invalidate(playerProvider);
+        ref.invalidate(storesListProvider);
+        ref.invalidate(storeDetailProvider);
+        ref.invalidate(warehouseListProvider);
+        ref.invalidate(warehouseDetailProvider);
+
+        if (context.mounted) {
+          AppSnackbar.show(
+            context,
+            title: 'Basarili',
+            message: 'Transfer yildiz kullanilarak aninda tamamlandi!',
+            type: SnackbarType.success,
+          );
+        }
+      } else {
+        if (context.mounted) {
+          AppSnackbar.show(
+            context,
+            title: 'Hata',
+            message: result['message'] ?? 'Transfer tamamlanirken bir hata olustu.',
+            type: SnackbarType.error,
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Pop loading dialog
+      }
+      if (context.mounted) {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: e.toString(),
+          type: SnackbarType.error,
+        );
+      }
+    }
   }
 
   Widget _buildDialogInfoRow(IconData icon, String label, String value) {

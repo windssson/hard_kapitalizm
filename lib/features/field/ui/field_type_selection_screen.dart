@@ -28,7 +28,7 @@ class _FieldTypeSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(fieldTypesProvider);
-    final playerAsync = ref.watch(playerStreamProvider);
+    final playerAsync = ref.watch(playerProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -293,7 +293,7 @@ class _FieldTypeSelectionScreenState
       );
       if (result['success'] == true) {
         if (mounted) {
-          ref.invalidate(playerStreamProvider);
+          ref.invalidate(playerProvider);
           ref.invalidate(fieldListProvider);
           ref.invalidate(fieldConstructionProvider);
           AppSnackbar.show(

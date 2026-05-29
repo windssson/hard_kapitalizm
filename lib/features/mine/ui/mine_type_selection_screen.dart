@@ -28,7 +28,7 @@ class _MineTypeSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(mineTypesProvider);
-    final playerAsync = ref.watch(playerStreamProvider);
+    final playerAsync = ref.watch(playerProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -288,7 +288,7 @@ class _MineTypeSelectionScreenState
         name: _selectedType!['name'].toString(),
       );
       if (result['success'] == true) {
-        ref.invalidate(playerStreamProvider);
+        ref.invalidate(playerProvider);
         ref.invalidate(mineListProvider);
         ref.invalidate(mineConstructionProvider);
         if (mounted) {

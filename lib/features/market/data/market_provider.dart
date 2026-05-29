@@ -260,6 +260,26 @@ class MarketActionNotifier {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  Future<Map<String, dynamic>> finishMarketTransferWithStars(
+    String transferId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'finish_market_transfer_with_stars',
+        params: {'p_transfer_id': transferId},
+      );
+
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
 
 final marketActionProvider = Provider((ref) => MarketActionNotifier());

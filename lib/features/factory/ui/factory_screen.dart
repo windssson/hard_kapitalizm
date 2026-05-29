@@ -29,14 +29,13 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
   void refreshRouteData() {
     ref.invalidate(factoryListProvider);
     ref.invalidate(factoryConstructionProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     ref.read(factoryListProvider.future);
     ref.read(factoryConstructionProvider.future);
   }
@@ -59,7 +58,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(factoryListProvider);
     ref.invalidate(factoryConstructionProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
@@ -69,7 +68,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
 
     ref.invalidate(factoryConstructionProvider);
     ref.invalidate(factoryListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] != true) {
@@ -89,7 +88,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
 
     ref.invalidate(factoryConstructionProvider);
     ref.invalidate(factoryListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -499,17 +498,6 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFactoryList(List<FactoryListItemModel> factories) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: factories.length,
-      itemBuilder: (context, index) {
-        return _buildAdvancedFactoryCard(factories[index]);
-      },
     );
   }
 

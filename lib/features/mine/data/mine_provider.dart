@@ -11,10 +11,11 @@ import 'package:hard_kapitalizm/features/mine/models/mine_detail_model.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_list_item_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_model.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 // Maden Liste Provider
 final mineListProvider =
-    FutureProvider.autoDispose<List<MineListItemModel>>((ref) async {
+    FutureProvider<List<MineListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -49,7 +50,7 @@ final mineTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   return await supabase.rpc('get_mine_types_catalog');
 });
 
-final mineConstructionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+final mineConstructionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -162,9 +163,12 @@ final activeMineBoostProvider =
 
 // Maden Aksiyonları
 class MineActionNotifier {
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   final ProductionLogisticsService _productionLogisticsService =
       ProductionLogisticsService();
+
+  MineActionNotifier(this._ref);
 
   Future<Map<String, dynamic>> createMine({
     required String cityId,
@@ -185,6 +189,8 @@ class MineActionNotifier {
           'p_name': name,
         },
       );
+      _ref.invalidate(mineConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -203,6 +209,9 @@ class MineActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      _ref.invalidate(mineListProvider);
+      _ref.invalidate(mineConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -225,6 +234,9 @@ class MineActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      _ref.invalidate(mineListProvider);
+      _ref.invalidate(mineConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -246,6 +258,9 @@ class MineActionNotifier {
           'p_entity_id': mineId,
         },
       );
+      _ref.invalidate(activeMineUpgradeProvider(mineId));
+      _ref.invalidate(mineDetailProvider(mineId));
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -265,6 +280,9 @@ class MineActionNotifier {
           'p_limit': 100,
         },
       );
+      _ref.invalidate(mineListProvider);
+      _ref.invalidate(mineDetailProvider);
+      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -287,6 +305,9 @@ class MineActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
+      _ref.invalidate(mineListProvider);
+      _ref.invalidate(mineDetailProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -314,6 +335,9 @@ class MineActionNotifier {
           'p_star_cost': starCost,
         },
       );
+      _ref.invalidate(activeMineBoostProvider(mineId));
+      _ref.invalidate(mineDetailProvider(mineId));
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -333,6 +357,8 @@ class MineActionNotifier {
           'p_limit': 100,
         },
       );
+      _ref.invalidate(mineListProvider);
+      _ref.invalidate(mineDetailProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -367,6 +393,8 @@ class MineActionNotifier {
           'p_product_id': productId,
         },
       );
+      _ref.invalidate(mineListProvider);
+      _ref.invalidate(mineDetailProvider(mineId));
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       final message = e.toString();
@@ -398,6 +426,8 @@ class MineActionNotifier {
           'p_is_active': isActive,
         },
       );
+      _ref.invalidate(mineListProvider);
+      _ref.invalidate(mineDetailProvider(mineId));
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -496,6 +526,7 @@ class MineActionNotifier {
           'p_quantity': quantity,
         },
       );
+      _ref.invalidate(mineDetailProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -521,14 +552,17 @@ class MineActionNotifier {
     required String buyerWarehouseId,
     required int quantity,
     String? vehicleId,
-  }) {
-    return _productionLogisticsService.startProductionToWarehouseTransfer(
+  }) async {
+    final result = await _productionLogisticsService.startProductionToWarehouseTransfer(
       productionInventoryId: productionInventoryId,
       buyerWarehouseId: buyerWarehouseId,
       quantity: quantity,
       vehicleId: vehicleId,
     );
+    _ref.invalidate(mineDetailProvider);
+    _ref.invalidate(playerProvider);
+    return result;
   }
 }
 
-final mineActionProvider = Provider((ref) => MineActionNotifier());
+final mineActionProvider = Provider((ref) => MineActionNotifier(ref));

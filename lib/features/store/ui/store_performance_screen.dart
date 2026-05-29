@@ -23,7 +23,6 @@ class _StorePerformanceScreenState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override

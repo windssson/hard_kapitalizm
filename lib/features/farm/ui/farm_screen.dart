@@ -29,14 +29,13 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
   void refreshRouteData() {
     ref.invalidate(farmListProvider);
     ref.invalidate(farmConstructionProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     ref.read(farmListProvider.future);
     ref.read(farmConstructionProvider.future);
   }
@@ -59,7 +58,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(farmListProvider);
     ref.invalidate(farmConstructionProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
@@ -69,7 +68,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
     ref.invalidate(farmConstructionProvider);
     ref.invalidate(farmListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -99,7 +98,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
     ref.invalidate(farmConstructionProvider);
     ref.invalidate(farmListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -174,7 +173,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                               ),
                             ),
                           SliverPadding(
-                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 80.h),
+                            padding: EdgeInsets.fromLTRB(5.w, 16.h, 5.w, 80.h),
                             sliver: filteredFarms.isEmpty
                                 ? SliverToBoxAdapter(
                                     child: construction == null
@@ -512,17 +511,6 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     );
   }
 
-  Widget _buildFarmList(List<FarmListItemModel> farms) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: farms.length,
-      itemBuilder: (context, index) {
-        return _buildAdvancedFarmCard(farms[index]);
-      },
-    );
-  }
-
   Widget _buildAdvancedFarmCard(FarmListItemModel item) {
     final farm = item.farm;
     return Container(
@@ -714,7 +702,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     final ratio = item.outputStockRatio;
     final color = _getRatioColor(ratio);
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12.r),

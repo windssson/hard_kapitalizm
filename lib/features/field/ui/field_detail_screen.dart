@@ -16,6 +16,8 @@ import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
+import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 
 class FieldDetailScreen extends ConsumerStatefulWidget {
   final String fieldId;
@@ -36,18 +38,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshOnEntry();
-  }
-
-  void _refreshOnEntry() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      await ref.read(fieldActionProvider).completeDueBuildingBoosts();
-      if (!mounted) return;
-      await ref.read(fieldActionProvider).completeDueBuildingUpgrades();
-      if (!mounted) return;
-      _refreshFieldDetail();
-    });
   }
 
   void _refreshFieldDetail() {
@@ -65,7 +55,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   }) async {
     _refreshFieldDetail();
     ref.invalidate(fieldListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     ref.invalidate(warehouseListProvider);
     ref.invalidate(warehouseDetailProvider);
 
@@ -83,6 +73,26 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
+      activeFieldUpgradeProvider(widget.fieldId),
+      (previous, next) {
+        final upgrade = next.value;
+        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
+          ref.read(fieldActionProvider).completeDueBuildingUpgrades();
+        }
+      },
+    );
+
+    ref.listen<AsyncValue<BuildingBoostModel?>>(
+      activeFieldBoostProvider(widget.fieldId),
+      (previous, next) {
+        final boost = next.value;
+        if (boost != null && boost.finishAt.isBefore(DateTime.now())) {
+          ref.read(fieldActionProvider).completeDueBuildingBoosts();
+        }
+      },
+    );
+
     final detailAsync = ref.watch(fieldDetailProvider(widget.fieldId));
     final activeBoost = ref.watch(activeFieldBoostProvider(widget.fieldId)).value;
     final activeUpgrade = ref.watch(
@@ -120,7 +130,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                     await ref.read(fieldDetailProvider(widget.fieldId).future);
                   },
                   child: ListView(
-                    padding: EdgeInsets.fromLTRB(10.w, 8.h, 10.w, 24.h),
+                    padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
                     children: [
                       _buildHero(detail),
                       SizedBox(height: 10.h),
@@ -342,7 +352,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     required IconData icon,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(14.r),
@@ -389,7 +399,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           Container(
             height: 5.h,
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.35),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(999.r),
             ),
             child: FractionallySizedBox(
@@ -670,8 +680,17 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 )
-                              else
+                              else ...[
                                 _buildQualityStars(slot.qualityLevel),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  'Maliyet: ${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -881,7 +900,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                         ref.invalidate(activeFieldBoostProvider(detail.field.id));
                         ref.invalidate(fieldDetailProvider(detail.field.id));
                         ref.invalidate(fieldListProvider);
-                        ref.invalidate(playerStreamProvider);
+                        ref.invalidate(playerProvider);
                         AppSnackbar.show(
                           context,
                           title: 'Basarili',
@@ -947,7 +966,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                             ),
                           ),
                           Text(
-                            '${entry.value} ★',
+                            '${entry.value} â˜…',
                             style: TextStyle(
                               color: AppColors.gold,
                               fontSize: 14.sp,
@@ -1103,7 +1122,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                       .startFieldUpgrade(detail.field.id);
                   if (!context.mounted) return;
                   if (result['success'] == true) {
-                    ref.invalidate(playerStreamProvider);
+                    ref.invalidate(playerProvider);
                     _refreshFieldDetail();
                     AppSnackbar.show(
                       context,
@@ -1137,7 +1156,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     if (!mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(playerStreamProvider);
+      ref.invalidate(playerProvider);
       _refreshFieldDetail();
       AppSnackbar.show(
         context,
@@ -1274,7 +1293,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12.r),
@@ -1284,7 +1303,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$totalStock stok • ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
+            '$totalStock stok â€¢ ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11.sp,
@@ -1467,7 +1486,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 9.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 9.h),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12.r),
@@ -1627,7 +1646,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.blue.withValues(alpha: 0.16),
                 foregroundColor: AppColors.blue,
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(
@@ -1649,7 +1668,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         Container(
           height: 5.h,
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.35),
+            color: Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(999.r),
           ),
           child: FractionallySizedBox(
@@ -1672,7 +1691,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10.r),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 11.h),
+        padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 11.h),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
@@ -1769,134 +1788,41 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     if (!context.mounted) return;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => _buildProductSelectionSheet(
-        context,
-        sheetContext,
-        ref,
-        detail,
-        slot,
-        products,
-      ),
-    );
-  }
-
-  Widget _buildProductSelectionSheet(
-    BuildContext parentContext,
-    BuildContext context,
-    WidgetRef ref,
-    FieldDetailModel detail,
-    ProductionSlotModel slot,
-    List<SelectableProductionProductModel> products,
-  ) {
     final disabledProductIds = detail.slots
         .where((otherSlot) => otherSlot.id != slot.id)
         .map((otherSlot) => otherSlot.productId ?? '')
         .where((productId) => productId.isNotEmpty)
         .toSet();
 
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.75,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Urun Sec',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          Expanded(
-            child: products.isEmpty
-                ? Center(
-                    child: Text(
-                      'Bu ciftlik turu icin uygun urun bulunamadi.',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12.sp,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: products.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 8.h),
-                    itemBuilder: (_, index) {
-                      final selectableProduct = products[index];
-                      final product = selectableProduct.product;
-                      final isDisabled = disabledProductIds.contains(product.id);
-                      return ListTile(
-                        enabled: !isDisabled,
-                        tileColor: isDisabled
-                            ? Colors.white.withValues(alpha: 0.02)
-                            : Colors.white.withValues(alpha: 0.04),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        leading: SizedBox(
-                          width: 40.w,
-                          height: 40.w,
-                          child: Opacity(
-                            opacity: isDisabled ? 0.4 : 1,
-                            child: CachedAssetImage(
-                              fileName: product.urunIconu,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          product.urunAdi,
-                          style: TextStyle(
-                            color: isDisabled
-                                ? AppColors.textMuted
-                                : Colors.white,
-                          ),
-                        ),
-                        subtitle: Text(
-                          isDisabled
-                              ? 'Bu urun baska bir slotta kullaniliyor'
-                              : 'Maks kalite: ${selectableProduct.maxQualityLevel} | Saatlik uretim: ${product.uretimAdedi}',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11.sp,
-                          ),
-                        ),
-                        trailing: Icon(
-                          isDisabled ? Icons.block : Icons.chevron_right,
-                          color: isDisabled
-                              ? AppColors.textMuted
-                              : AppColors.gold,
-                        ),
-                        onTap: isDisabled
-                            ? null
-                            : () async {
-                                Navigator.pop(context);
-                                await _selectSlotProduct(
-                                  parentContext,
-                                  ref,
-                                  detail,
-                                  slot,
-                                  selectableProduct,
-                                );
-                              },
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+    final options = products.map((selectableProduct) {
+      final product = selectableProduct.product;
+      final isDisabled = disabledProductIds.contains(product.id);
+      return ProductSelectionOption(
+        id: product.id,
+        title: product.urunAdi,
+        subtitle: 'Saatlik üretim: ${product.uretimAdedi}',
+        badgeText: 'Maks Kalite: ${selectableProduct.maxQualityLevel}',
+        iconPath: product.urunIconu,
+        isDisabled: isDisabled,
+        disabledReason: isDisabled ? 'Bu ürün başka bir slotta kullanılıyor' : null,
+        onTap: () async {
+          Navigator.pop(context);
+          await _selectSlotProduct(
+            context,
+            ref,
+            detail,
+            slot,
+            selectableProduct,
+          );
+        },
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+    await ProductSelectionSheet.show(
+      context: context,
+      title: 'Ürün Seç',
+      options: options,
     );
   }
 
@@ -1981,121 +1907,83 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: ListView(
-          children: [
-            Text(
-              'Kaynak Depo Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            ...warehouses.map((warehouse) {
-              final slots =
-                  (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
-              return Column(
-                children: slots.map((slotMap) {
-                  final slot = Map<String, dynamic>.from(slotMap as Map);
-                  final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 8.h),
-                    child: ListTile(
-                      tileColor: Colors.white.withValues(alpha: 0.04),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      title: Text(
-                        (warehouse['name'] ?? 'Depo').toString(),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      subtitle: Text(
-                        '${(warehouse['city']?['name'] ?? detail.cityName).toString()} | Stok: $qty',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 11.sp,
-                        ),
-                      ),
-                      onTap: () {
-                        Navigator.pop(sheetContext);
-                        _showQuantityDialog(
-                          context: context,
-                          maxQuantity: qty,
-                          title: 'Miktar Girin',
-                          subtitle:
-                              '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi doldurulacak',
-                          onConfirm: (quantity) async {
-                            final warehouseCityId = (warehouse['city_id'] ?? '')
-                                .toString();
-                            if (_isSameCity(
-                              warehouseCityId,
-                              detail.field.cityId,
-                            )) {
-                              final result = await ref
-                                  .read(fieldActionProvider)
-                                  .transferWarehouseToProductionInventory(
-                                    warehouseSlotId: slot['id'].toString(),
-                                    productionInventoryId: inventory.id,
-                                    quantity: quantity,
-                                  );
-                              if (!context.mounted) return;
-                              if (result['success'] == true) {
-                                await _refreshFieldEcosystem(
-                                  includeTransfers: true,
-                                );
-                                AppSnackbar.show(
-                                  context,
-                                  title: 'Basarili',
-                                  message:
-                                      'Ayni sehir hammadde transferi tamamlandi.',
-                                  type: SnackbarType.success,
-                                );
-                                return;
-                              }
-                              AppSnackbar.show(
-                                context,
-                                title: 'Hata',
-                                message:
-                                    result['message'] ??
-                                    'Transfer basarisiz oldu.',
-                                type: SnackbarType.error,
-                              );
-                              return;
-                            }
+    final options = <WarehouseSelectionOption>[];
+    for (final warehouse in warehouses) {
+      final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
+      for (final slotMap in slots) {
+        final slot = Map<String, dynamic>.from(slotMap as Map);
+        final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
+        final warehouseCityId = (warehouse['city_id'] ?? '').toString();
+        final isSame = _isSameCity(warehouseCityId, detail.field.cityId);
 
-                            await _startFieldLogisticsInputTransfer(
-                              context: context,
-                              ref: ref,
-                              detail: detail,
-                              inventory: inventory,
-                              warehouseSlotId: slot['id'].toString(),
-                              maxQuantity: qty,
-                              quantity: quantity,
-                            );
-                          },
+        options.add(
+          WarehouseSelectionOption(
+            id: slot['id'].toString(),
+            title: (warehouse['name'] ?? 'Depo').toString(),
+            subtitle: (warehouse['city']?['name'] ?? detail.cityName).toString(),
+            badgeText: isSame ? 'Aynı Şehir' : 'Farklı Şehir',
+            infoText: 'Stok: $qty adet',
+            isHighlightBadge: isSame,
+            onTap: () {
+              Navigator.pop(context);
+              _showQuantityDialog(
+                context: context,
+                maxQuantity: qty,
+                title: 'Miktar Girin',
+                subtitle: '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi doldurulacak',
+                onConfirm: (quantity) async {
+                  if (isSame) {
+                    final result = await ref
+                        .read(fieldActionProvider)
+                        .transferWarehouseToProductionInventory(
+                          warehouseSlotId: slot['id'].toString(),
+                          productionInventoryId: inventory.id,
+                          quantity: quantity,
                         );
-                      },
-                    ),
+                    if (!context.mounted) return;
+                    if (result['success'] == true) {
+                      await _refreshFieldEcosystem(
+                        includeTransfers: true,
+                      );
+                      AppSnackbar.show(
+                        context,
+                        title: 'Basarili',
+                        message: 'Ayni sehir hammadde transferi tamamlandi.',
+                        type: SnackbarType.success,
+                      );
+                      return;
+                    }
+                    AppSnackbar.show(
+                      context,
+                      title: 'Hata',
+                      message: result['message'] ?? 'Transfer basarisiz oldu.',
+                      type: SnackbarType.error,
+                    );
+                    return;
+                  }
+
+                  await _startFieldLogisticsInputTransfer(
+                    context: context,
+                    ref: ref,
+                    detail: detail,
+                    inventory: inventory,
+                    warehouseSlotId: slot['id'].toString(),
+                    maxQuantity: qty,
+                    quantity: quantity,
                   );
-                }).toList(),
+                },
               );
-            }),
-          ],
-        ),
-      ),
+            },
+          ),
+        );
+      }
+    }
+
+    if (!context.mounted) return;
+    await WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Kaynak Depo Seç',
+      options: options,
     );
   }
 
@@ -2135,110 +2023,75 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.7,
-        ),
-        child: ListView(
-          children: [
-            Text(
-              'Hedef Depo Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            ...warehouses.map((warehouse) {
-              final warehouseId = warehouse.id;
-              final sameCity = warehouse.isSameCity;
-              return Container(
-                margin: EdgeInsets.only(bottom: 8.h),
-                child: ListTile(
-                  tileColor: Colors.white.withValues(alpha: 0.04),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  title: Text(
-                    warehouse.name,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
-                    '${warehouse.cityName} | ${sameCity ? 'Anlik Transfer' : 'Lojistik Transfer'}',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _showQuantityDialog(
-                      context: context,
-                      maxQuantity: inventory.quantity,
-                      title: 'Miktar Girin',
-                      subtitle:
-                          '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarilacak',
-                      onConfirm: (quantity) async {
-                        if (sameCity) {
-                          final result = await ref
-                              .read(fieldActionProvider)
-                              .transferProductionInventoryToWarehouse(
-                                productionInventoryId: inventory.id,
-                                warehouseId: warehouseId,
-                                quantity: quantity,
-                              );
-                          if (!context.mounted) return;
-                          if (result['success'] == true) {
-                            await _refreshFieldEcosystem(
-                              warehouseId: warehouseId,
-                              includeTransfers: true,
-                            );
-                            AppSnackbar.show(
-                              context,
-                              title: 'Basarili',
-                              message: inventory.isInput
-                                  ? 'Ayni sehir hammadde iadesi tamamlandi.'
-                                  : 'Ayni sehir uretilen urun transferi tamamlandi.',
-                              type: SnackbarType.success,
-                            );
-                            return;
-                          }
-                          AppSnackbar.show(
-                            context,
-                            title: 'Hata',
-                            message:
-                                result['message'] ?? 'Transfer basarisiz oldu.',
-                            type: SnackbarType.error,
-                          );
-                          return;
-                        }
-
-                        await _startFieldLogisticsOutputTransfer(
-                          context: context,
-                          ref: ref,
-                          detail: detail,
-                          inventory: inventory,
-                          warehouseId: warehouseId,
-                          quantity: quantity,
-                        );
-                      },
+    final options = warehouses.map((warehouse) {
+      final warehouseId = warehouse.id;
+      final sameCity = warehouse.isSameCity;
+      return WarehouseSelectionOption(
+        id: warehouseId,
+        title: warehouse.name,
+        subtitle: warehouse.cityName,
+        badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
+        isHighlightBadge: sameCity,
+        onTap: () {
+          Navigator.pop(context);
+          _showQuantityDialog(
+            context: context,
+            maxQuantity: inventory.quantity,
+            title: 'Miktar Girin',
+            subtitle: '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarilacak',
+            onConfirm: (quantity) async {
+              if (sameCity) {
+                final result = await ref
+                    .read(fieldActionProvider)
+                    .transferProductionInventoryToWarehouse(
+                      productionInventoryId: inventory.id,
+                      warehouseId: warehouseId,
+                      quantity: quantity,
                     );
-                  },
-                ),
+                if (!context.mounted) return;
+                if (result['success'] == true) {
+                  await _refreshFieldEcosystem(
+                    warehouseId: warehouseId,
+                    includeTransfers: true,
+                  );
+                  AppSnackbar.show(
+                    context,
+                    title: 'Basarili',
+                    message: inventory.isInput
+                        ? 'Ayni sehir hammadde iadesi tamamlandi.'
+                        : 'Ayni sehir uretilen urun transferi tamamlandi.',
+                    type: SnackbarType.success,
+                  );
+                  return;
+                }
+                AppSnackbar.show(
+                  context,
+                  title: 'Hata',
+                  message: result['message'] ?? 'Transfer basarisiz oldu.',
+                  type: SnackbarType.error,
+                );
+                return;
+              }
+
+              await _startFieldLogisticsOutputTransfer(
+                context: context,
+                ref: ref,
+                detail: detail,
+                inventory: inventory,
+                warehouseId: warehouseId,
+                quantity: quantity,
               );
-            }),
-          ],
-        ),
-      ),
+            },
+          );
+        },
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+    await WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Hedef Depo Seç',
+      options: options,
     );
   }
 

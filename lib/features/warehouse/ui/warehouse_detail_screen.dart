@@ -10,8 +10,9 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
+import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
-import 'package:hard_kapitalizm/features/warehouse/ui/widgets/product_selection_dialog.dart';
 
 class WarehouseDetailScreen extends ConsumerStatefulWidget {
   final String warehouseId;
@@ -27,15 +28,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshOnEntry();
-  }
-
-  void _refreshOnEntry() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ref.invalidate(warehouseDetailProvider(widget.warehouseId));
-      ref.read(warehouseDetailProvider(widget.warehouseId).future);
-    });
   }
 
   @override
@@ -69,7 +61,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   onRefresh: () => _refreshWarehouse(ref),
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 96.h),
+                    padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 96.h),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -100,13 +92,120 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     await ref.read(warehouseDetailProvider(widget.warehouseId).future);
   }
 
-  void _showProductSelection(BuildContext context, WarehouseModel warehouse) {
-    showModalBottomSheet(
+  void _showProductSelection(BuildContext context, WarehouseModel warehouse) async {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => ProductSelectionDialog(warehouse: warehouse),
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.gold),
+      ),
     );
+
+    try {
+      final allProducts = await ref.read(allProductsProvider.future);
+      final typeDetail = await ref.read(warehouseTypeDetailProvider(warehouse.warehouseTypeId).future);
+
+      if (context.mounted) Navigator.pop(context);
+
+      final acceptedIds = _parseAcceptedProductIds(typeDetail['accepted_product_ids']);
+
+      final filteredProducts = allProducts.where((p) {
+        if (acceptedIds.isEmpty) return true;
+        return acceptedIds.contains(p.id.trim().toUpperCase());
+      }).toList();
+
+      final options = filteredProducts.map((product) {
+        return ProductSelectionOption(
+          id: product.id,
+          title: product.urunAdi,
+          subtitle: 'Birim Hacim: ${product.birimHacim} m³',
+          iconPath: product.urunIconu,
+          trailingWidget: OutlinedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push(
+                Uri(
+                  path: '/market/${product.id}',
+                  queryParameters: {
+                    'warehouseId': warehouse.id,
+                    'playerId': warehouse.playerId,
+                    'cityId': warehouse.cityId,
+                  },
+                ).toString(),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(
+                color: AppColors.gold.withValues(alpha: 0.6),
+                width: 1.w,
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
+            child: Text(
+              'Pazar',
+              style: TextStyle(
+                color: AppColors.gold,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          onTap: () {
+            Navigator.pop(context);
+            context.push(
+              Uri(
+                path: '/market/${product.id}',
+                queryParameters: {
+                  'warehouseId': warehouse.id,
+                  'playerId': warehouse.playerId,
+                  'cityId': warehouse.cityId,
+                },
+              ).toString(),
+            );
+          },
+        );
+      }).toList();
+
+      if (!context.mounted) return;
+      await ProductSelectionSheet.show(
+        context: context,
+        title: 'Deponun Alabildiği Ürünler',
+        options: options,
+      );
+
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: 'Ürün listesi yüklenemedi: $e',
+          type: SnackbarType.error,
+        );
+      }
+    }
+  }
+
+  List<String> _parseAcceptedProductIds(dynamic rawValue) {
+    if (rawValue == null) return const [];
+
+    final cleaned = rawValue
+        .toString()
+        .replaceAll('[', '')
+        .replaceAll(']', '')
+        .replaceAll('{', '')
+        .replaceAll('}', '')
+        .replaceAll('"', '')
+        .replaceAll("'", '');
+
+    return cleaned
+        .split(',')
+        .map((e) => e.trim().toUpperCase())
+        .where((e) => e.isNotEmpty)
+        .toList();
   }
 
   void _openMarketForSlot(
@@ -153,102 +252,118 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             filledSlots.length;
     final stockRatio =
         capacity > 0 ? (totalStock / capacity).clamp(0.0, 1.0) : 0.0;
-    final usedRatio =
-        capacity > 0 ? ((totalStock + reserved) / capacity).clamp(0.0, 1.0) : 0.0;
+    final reserveRatio =
+        capacity > 0 ? (reserved / capacity).clamp(0.0, 1.0) : 0.0;
 
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(12.w),
       decoration: AppDecorations.panelGlass(),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 80.w,
-                height: 80.w,
-                padding: EdgeInsets.all(12.w),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.3),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.gold.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      spreadRadius: 1,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 68.w,
+                    height: 68.w,
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.gold.withValues(alpha: 0.1),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: CachedAssetImage(
-                  fileName: warehouse.typeIcon ?? 'warehouse.webp',
-                  fit: BoxFit.contain,
-                  errorWidget: Icon(
-                    Icons.warehouse_outlined,
-                    color: AppColors.green,
-                    size: 36.sp,
-                  ),
-                ),
-              ),
-              SizedBox(width: 16.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      warehouse.name,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
+                    child: CachedAssetImage(
+                      fileName: warehouse.typeIcon ?? 'warehouse.webp',
+                      fit: BoxFit.contain,
+                      errorWidget: Icon(
+                        Icons.warehouse_outlined,
+                        color: AppColors.gold,
+                        size: 32.sp,
                       ),
                     ),
-                    SizedBox(height: 6.h),
-                    Row(
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.location_on,
-                          color: AppColors.gold,
-                          size: 14.sp,
-                        ),
-                        SizedBox(width: 4.w),
                         Expanded(
-                          child: Text(
-                            '${warehouse.cityName ?? '-'} | Seviye ${warehouse.level}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                warehouse.name,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                'Depo / Lojistik',
+                                style: TextStyle(
+                                  color: AppColors.gold,
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: AppColors.gold,
+                                    size: 14.sp,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Expanded(
+                                    child: Text(
+                                      warehouse.cityName ?? '-',
+                                      style: TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                    SizedBox(height: 10.h),
-                    Wrap(
-                      spacing: 8.w,
-                      runSpacing: 8.h,
-                      children: [
-                        _buildTag(
-                          warehouse.isActive ? 'AKTIF' : 'PASIF',
-                          warehouse.isActive ? AppColors.green : AppColors.red,
-                        ),
-                        _buildTag(
-                          'KAPASITE: ${_formatValue(warehouse.capacity)}',
-                          AppColors.blue,
+                        SizedBox(width: 8.w),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(minWidth: 74.w),
+                          child: _buildHeroChipColumn(warehouse),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+                ],
+              );
+            },
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: 12.h),
           SizedBox(
             height: 74.h,
             child: ListView(
@@ -291,86 +406,101 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             ),
           ),
           SizedBox(height: 12.h),
-          Container(
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Row(
+            children: [
+              Expanded(
+                child: _buildHeroStat(
+                  'Stok',
+                  '${_formatValue(totalStock)}/${_formatValue(capacity)}',
+                  AppColors.blue,
+                  ratio: stockRatio,
+                  icon: Icons.inventory_2_outlined,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: _buildHeroStat(
+                  'Rezerve',
+                  '${_formatValue(reserved)}/${_formatValue(capacity)}',
+                  AppColors.gold,
+                  ratio: reserveRatio,
+                  icon: Icons.lock_outline,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroStat(
+    String label,
+    String value,
+    Color color, {
+    required double ratio,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 14.sp),
+              SizedBox(width: 7.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        _buildLegendDot(AppColors.blue),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Stok',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11.sp,
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        _buildLegendDot(AppColors.gold),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Rezerve',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11.sp,
-                          ),
-                        ),
-                      ],
-                    ),
                     Text(
-                      '${_formatValue(totalStock + reserved)} / ${_formatValue(capacity)}',
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 9.sp,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 12.sp,
+                        fontSize: 11.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 10.h),
-                Container(
-                  height: 12.h,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(999.r),
-                  ),
-                  child: Stack(
-                    children: [
-                      FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: usedRatio,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.gold,
-                            borderRadius: BorderRadius.circular(999.r),
-                          ),
-                        ),
-                      ),
-                      FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: stockRatio,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.blue,
-                            borderRadius: BorderRadius.circular(999.r),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+            ],
+          ),
+          SizedBox(height: 7.h),
+          Container(
+            height: 5.h,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(999.r),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: ratio.clamp(0.0, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(999.r),
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -378,17 +508,23 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildLegendDot(Color color) {
-    return Container(
-      width: 8.w,
-      height: 8.w,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  Widget _buildHeroChipColumn(WarehouseModel warehouse) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _buildTag('Lv ${warehouse.level}', AppColors.gold),
+        SizedBox(height: 6.h),
+        _buildTag(
+          warehouse.isActive ? 'AKTIF' : 'PASIF',
+          warehouse.isActive ? AppColors.green : AppColors.red,
+        ),
+      ],
     );
   }
 
   Widget _buildTag(String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 4.h),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8.r),
@@ -507,7 +643,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (sortedSlots.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: EdgeInsets.all(24.w),
+        padding: EdgeInsets.all(16.w),
         decoration: AppDecorations.premiumCard(AppColors.border, 18.r),
         child: Column(
           children: [
@@ -530,7 +666,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: sortedSlots.length,
-      separatorBuilder: (context, index) => SizedBox(height: 12.h),
+      separatorBuilder: (context, index) => SizedBox(height: 8.h),
       itemBuilder: (context, index) {
         final slot = sortedSlots[index];
         return _buildSlotCard(context, ref, warehouse, slot);
@@ -628,26 +764,58 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
   ) {
     if (slot.isEmpty) {
       return Container(
+        margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.all(12.w),
-        decoration: AppDecorations.premiumCard(AppColors.border, 16.r),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(18.r),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+        ),
         child: Row(
           children: [
-            Icon(
-              Icons.inventory_2_outlined,
-              color: AppColors.textMuted.withValues(alpha: 0.6),
-              size: 28.sp,
-            ),
-            SizedBox(width: 12.w),
-            Text(
-              'Bos Slot',
-              style: TextStyle(
+            Container(
+              width: 58.w,
+              height: 58.w,
+              padding: EdgeInsets.all(9.w),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Icon(
+                Icons.add_circle_outline,
                 color: AppColors.textMuted,
-                fontSize: 14.sp,
+                size: 24.sp,
               ),
             ),
-            const Spacer(),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Bos Slot',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    'Bu slot su an bos. Urun ekleyebilirsiniz.',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 10.w),
             SizedBox(
-              width: 120.w,
+              width: 100.w,
               child: _buildQuickActionButton(
                 label: 'Urun Ekle',
                 icon: Icons.add_shopping_cart_outlined,
@@ -664,119 +832,196 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         (slot.price > 0 && slot.cost > 0) ? ((slot.price - slot.cost) / slot.cost) * 100 : null;
 
     return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(12.w),
-      decoration: AppDecorations.premiumCard(slot.isAvailableForSale ? AppColors.green : null, 16.r),
+      decoration: AppDecorations.premiumCard(
+        slot.isAvailableForSale ? AppColors.green : null,
+        18.r,
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Column(
-            children: [
-              Container(
-                width: 52.w,
-                height: 52.w,
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(
-                    color: slot.isAvailableForSale
-                        ? AppColors.green.withValues(alpha: 0.3)
-                        : Colors.white10,
+          // Left Side: Icon, Name, Quality
+          SizedBox(
+            width: 76.w,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 58.w,
+                  height: 58.w,
+                  padding: EdgeInsets.all(9.w),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(
+                      color: slot.isAvailableForSale
+                          ? AppColors.green.withValues(alpha: 0.3)
+                          : Colors.white10,
+                    ),
+                  ),
+                  child: CachedAssetImage(
+                    fileName: slot.productIcon ?? 'default',
+                    fit: BoxFit.contain,
                   ),
                 ),
-                child: CachedAssetImage(
-                  fileName: slot.productIcon ?? 'default',
-                  fit: BoxFit.contain,
-                ),
-              ),
-              SizedBox(height: 6.h),
-              SizedBox(
-                width: 72.w,
-                child: Text(
+                SizedBox(height: 8.h),
+                Text(
                   slot.productName ?? 'Urun',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 11.sp,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
+                    fontWeight: FontWeight.bold,
+                    height: 1.1,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              SizedBox(height: 6.h),
-              _buildQualityStars(slot.qualityLevel),
-            ],
+                SizedBox(height: 4.h),
+                _buildQualityStars(slot.qualityLevel),
+              ],
+            ),
           ),
           SizedBox(width: 12.w),
+          
+          // Middle Side: Chips and other elements
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Spacer(),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 4.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.blue.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8.r),
-                        border: Border.all(
-                          color: AppColors.blue.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.inventory_2,
-                            color: AppColors.blue,
-                            size: 14.sp,
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            '${slot.quantity}',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.bold,
+                    _buildTag(
+                      slot.isAvailableForSale ? 'SATISTA' : 'BEKLEMEDE',
+                      slot.isAvailableForSale ? AppColors.green : AppColors.textMuted,
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          height: 24.h,
+                          child: FittedBox(
+                            fit: BoxFit.contain,
+                            child: Switch(
+                              value: slot.isAvailableForSale,
+                              activeColor: AppColors.green,
+                              inactiveThumbColor: AppColors.textMuted,
+                              inactiveTrackColor: Colors.black26,
+                              onChanged: (_) => _toggleSaleStatus(context, ref, slot),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        SizedBox(width: 8.w),
+                        SizedBox(
+                          height: 24.h,
+                          width: 24.h,
+                          child: PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              Icons.more_vert,
+                              color: AppColors.textMuted,
+                              size: 20.sp,
+                            ),
+                            color: AppColors.cardBg,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                              side: BorderSide(
+                                color: AppColors.border.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            onSelected: (value) {
+                              if (value == 'market') {
+                                _openMarketForSlot(context, warehouse, slot);
+                              } else if (value == 'transfer') {
+                                _startWarehouseOutboundFlow(context, ref, warehouse, slot);
+                              } else if (value == 'delete') {
+                                _deleteWarehouseSlot(context, ref, slot);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 'market',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.storefront_outlined, color: Colors.white, size: 18.sp),
+                                    SizedBox(width: 8.w),
+                                    Text('Pazar', style: TextStyle(color: Colors.white, fontSize: 13.sp)),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'transfer',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.local_shipping_outlined, color: Colors.white, size: 18.sp),
+                                    SizedBox(width: 8.w),
+                                    Text('Depoya', style: TextStyle(color: Colors.white, fontSize: 13.sp)),
+                                  ],
+                                ),
+                              ),
+                              if (slot.quantity <= 0)
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline, color: AppColors.red, size: 18.sp),
+                                      SizedBox(width: 8.w),
+                                      Text('Sil', style: TextStyle(color: AppColors.red, fontSize: 13.sp)),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                SizedBox(height: 6.h),
+                SizedBox(height: 10.h),
                 Wrap(
                   spacing: 6.w,
                   runSpacing: 6.h,
                   children: [
                     _buildSlotMetricChip(
-                      icon: slot.isAvailableForSale
-                          ? Icons.check_circle_outline
-                          : Icons.pause_circle_outline,
-                      label: slot.isAvailableForSale ? 'Satista' : 'Beklemede',
-                      color: slot.isAvailableForSale
-                          ? AppColors.green
-                          : AppColors.textMuted,
+                      icon: Icons.inventory_2,
+                      label: 'Stok: ${slot.quantity}',
+                      color: AppColors.blue,
                     ),
                     _buildSlotMetricChip(
                       icon: Icons.payments_outlined,
                       label: 'Maliyet ${slot.cost.toStringAsFixed(1)}',
                       color: AppColors.textMuted,
                     ),
-                    _buildSlotMetricChip(
-                      icon: Icons.sell_outlined,
-                      label: slot.price > 0
-                          ? 'Fiyat ${slot.price.toStringAsFixed(1)}'
-                          : 'Fiyat yok',
-                      color: AppColors.gold,
+                    GestureDetector(
+                      onTap: () => _showPriceDialog(context, ref, slot),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.sell_outlined, color: AppColors.gold, size: 12.sp),
+                            SizedBox(width: 4.w),
+                            Text(
+                              slot.price > 0 ? 'Fiyat ${slot.price.toStringAsFixed(1)}' : 'Fiyat yok',
+                              style: TextStyle(
+                                color: AppColors.gold,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 4.w),
+                            Icon(Icons.edit, color: AppColors.gold, size: 12.sp),
+                          ],
+                        ),
+                      ),
                     ),
                     if (marginPercent != null)
                       _buildSlotMetricChip(
@@ -786,81 +1031,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                             ? AppColors.green
                             : AppColors.red,
                       ),
-                  ],
-                ),
-                SizedBox(height: 6.h),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final itemWidth = (constraints.maxWidth - (8.w * 2)) / 3;
-                    return Wrap(
-                      spacing: 8.w,
-                      runSpacing: 8.h,
-                      children: [
-                        SizedBox(
-                          width: itemWidth,
-                          child: _buildQuickActionButton(
-                            label: 'Pazar',
-                            icon: Icons.storefront_outlined,
-                            onPressed: () =>
-                                _openMarketForSlot(context, warehouse, slot),
-                            filled: false,
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: _buildQuickActionButton(
-                            label: 'Depoya',
-                            icon: Icons.local_shipping_outlined,
-                            onPressed: () => _startWarehouseOutboundFlow(
-                              context,
-                              ref,
-                              warehouse,
-                              slot,
-                            ),
-                            filled: false,
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: _buildQuickActionButton(
-                            label: 'Fiyat',
-                            icon: Icons.edit_outlined,
-                            onPressed: () => _showPriceDialog(context, ref, slot),
-                            filled: true,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                SizedBox(height: 6.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Satista',
-                      style: TextStyle(
-                        color: slot.isAvailableForSale
-                            ? AppColors.green
-                            : AppColors.textMuted,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(width: 6.w),
-                    SizedBox(
-                      height: 24.h,
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        child: Switch(
-                          value: slot.isAvailableForSale,
-                          activeColor: AppColors.green,
-                          inactiveThumbColor: AppColors.textMuted,
-                          inactiveTrackColor: Colors.black26,
-                          onChanged: (_) => _toggleSaleStatus(context, ref, slot),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ],
@@ -978,6 +1148,67 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     }
   }
 
+  Future<void> _deleteWarehouseSlot(
+    BuildContext context,
+    WidgetRef ref,
+    WarehouseSlotModel slot,
+  ) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        title: Text(
+          'Slotu Sil',
+          style: TextStyle(color: Colors.white, fontSize: 18.sp),
+        ),
+        content: Text(
+          'Bu bos depo slotunu silmek istediginize emin misiniz?',
+          style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Iptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    final actionResult = await ref.read(warehouseActionProvider).deleteWarehouseSlot(
+          warehouseSlotId: slot.id,
+        );
+
+    if (!context.mounted) return;
+
+    if (actionResult['success'] == true) {
+      await _refreshWarehouse(ref);
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Slot Silindi',
+        message: 'Depo slotu basariyla silindi.',
+        type: SnackbarType.success,
+      );
+    } else {
+      AppSnackbar.show(
+        context,
+        title: 'Islem Basarisiz',
+        message: actionResult['message']?.toString() ?? 'Slot silinemedi.',
+        type: SnackbarType.error,
+      );
+    }
+  }
+
   Future<void> _startWarehouseOutboundFlow(
     BuildContext context,
     WidgetRef ref,
@@ -1047,132 +1278,35 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     WarehouseSlotModel slot,
     List<Map<String, dynamic>> warehouses,
   ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.78,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hedef Depo Secin',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              '${slot.productName ?? 'Urun'} icin hedef depoyu secin',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 13.sp,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Expanded(
-              child: ListView.separated(
-                itemCount: warehouses.length,
-                separatorBuilder: (_, __) => SizedBox(height: 10.h),
-                itemBuilder: (_, index) {
-                  final target = warehouses[index];
-                  final cityName =
-                      ((target['city'] as Map?)?['name'] ?? '-').toString();
-                  final sameCity =
-                      target['city_id']?.toString() == sourceWarehouse.cityId;
+    final options = warehouses.map((target) {
+      final cityName = ((target['city'] as Map?)?['name'] ?? '-').toString();
+      final sameCity = target['city_id']?.toString() == sourceWarehouse.cityId;
 
-                  return InkWell(
-                    onTap: () {
-                      Navigator.of(sheetContext).pop();
-                      _showWarehouseOutboundQuantityDialog(
-                        context,
-                        ref,
-                        sourceWarehouse,
-                        slot,
-                        target,
-                        cityName,
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16.r),
-                    child: Container(
-                      padding: EdgeInsets.all(14.w),
-                      decoration: AppDecorations.premiumCard(sameCity ? AppColors.green : null, 16.r),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.warehouse_outlined,
-                                color: sameCity
-                                    ? AppColors.green
-                                    : AppColors.gold,
-                                size: 18.sp,
-                              ),
-                              SizedBox(width: 8.w),
-                              Expanded(
-                                child: Text(
-                                  (target['name'] ?? 'Depo').toString(),
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              _buildStatusPill(
-                                sameCity ? 'Ayni sehir' : 'Sehirler arasi',
-                                sameCity ? AppColors.green : AppColors.blue,
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8.h),
-                          Wrap(
-                            spacing: 8.w,
-                            runSpacing: 8.h,
-                            children: [
-                              _buildCompactSelectionChip(
-                                Icons.location_on_outlined,
-                                'Sehir',
-                                cityName,
-                                AppColors.gold,
-                              ),
-                              _buildCompactSelectionChip(
-                                Icons.layers_outlined,
-                                'Seviye',
-                                (target['level'] ?? 1).toString(),
-                                AppColors.blue,
-                              ),
-                              _buildCompactSelectionChip(
-                                Icons.straighten,
-                                'Kapasite',
-                                _formatValue(
-                                  ((target['capacity'] as num?) ?? 0)
-                                      .toDouble(),
-                                ),
-                                AppColors.green,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      return WarehouseSelectionOption(
+        id: target['id'].toString(),
+        title: (target['name'] ?? 'Depo').toString(),
+        subtitle: '$cityName | Seviye: ${target['level'] ?? 1}',
+        badgeText: sameCity ? 'Aynı Şehir' : 'Şehirler Arası',
+        infoText: sameCity ? 'Anlık' : 'Lojistik',
+        isHighlightBadge: sameCity,
+        onTap: () {
+          Navigator.pop(context);
+          _showWarehouseOutboundQuantityDialog(
+            context,
+            ref,
+            sourceWarehouse,
+            slot,
+            target,
+            cityName,
+          );
+        },
+      );
+    }).toList();
+
+    WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Hedef Depo Seçin',
+      options: options,
     );
   }
 
@@ -1570,7 +1704,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       await _refreshWarehouse(ref);
       ref.invalidate(warehouseListProvider);
       ref.invalidate(warehouseDetailProvider(targetWarehouseId));
-      ref.invalidate(playerStreamProvider);
+      ref.invalidate(playerProvider);
       final isInstant = result['mode']?.toString() == 'instant';
       AppSnackbar.show(
         context,
@@ -1688,36 +1822,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     return value.toStringAsFixed(0);
   }
 
-  Widget _buildCompactSelectionChip(
-    IconData icon,
-    String label,
-    String value,
-    Color accentColor,
-  ) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: accentColor.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14.sp, color: accentColor),
-          SizedBox(width: 6.w),
-          Text(
-            '$label: $value',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildStatusPill(String label, Color accentColor) {
     return Container(

@@ -36,10 +36,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
-        ref.invalidate(playerStreamProvider);
+        ref.invalidate(playerProvider);
         try {
           await ref
-              .read(playerStreamProvider.future)
+              .read(playerProvider.future)
               .timeout(const Duration(seconds: 3));
         } catch (_) {
           // Oyuncu verisi gec gelse bile splash akisini bloklamiyoruz.

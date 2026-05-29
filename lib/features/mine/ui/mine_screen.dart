@@ -29,14 +29,13 @@ class _MineScreenState extends ConsumerState<MineScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
   void refreshRouteData() {
     ref.invalidate(mineListProvider);
     ref.invalidate(mineConstructionProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     ref.read(mineListProvider.future);
     ref.read(mineConstructionProvider.future);
   }
@@ -59,7 +58,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(mineListProvider);
     ref.invalidate(mineConstructionProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
@@ -69,7 +68,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
 
     ref.invalidate(mineConstructionProvider);
     ref.invalidate(mineListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] != true) {
@@ -89,7 +88,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
 
     ref.invalidate(mineConstructionProvider);
     ref.invalidate(mineListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -178,7 +177,12 @@ class _MineScreenState extends ConsumerState<MineScreen>
                               ),
                             ),
                           SliverPadding(
-                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 80.h),
+                            padding: EdgeInsets.fromLTRB(
+                              10.w,
+                              16.h,
+                              10.w,
+                              80.h,
+                            ),
                             sliver: filteredMines.isEmpty
                                 ? SliverToBoxAdapter(
                                     child: construction == null
@@ -410,7 +414,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _buildFilterChip('Tumu', null),
+          _buildFilterChip('Tümü', null),
           SizedBox(width: 8.w),
           _buildFilterChip('Aktif', AppColors.green),
           SizedBox(width: 8.w),
@@ -459,7 +463,9 @@ class _MineScreenState extends ConsumerState<MineScreen>
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? AppColors.goldLight : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.goldLight
+                    : AppColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 fontSize: 12.sp,
               ),
@@ -475,11 +481,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
       child: Column(
         children: [
           SizedBox(height: 60.h),
-          Icon(
-            Icons.diamond_outlined,
-            color: AppColors.textMuted,
-            size: 80.sp,
-          ),
+          Icon(Icons.diamond_outlined, color: AppColors.textMuted, size: 80.sp),
           SizedBox(height: 16.h),
           Text(
             'Henuz bir madenin yok.',
@@ -622,8 +624,8 @@ class _MineScreenState extends ConsumerState<MineScreen>
                 item.cityName,
                 style: TextStyle(
                   color: AppColors.gold,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -635,10 +637,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
         SizedBox(height: 4.h),
         Text(
           item.mineTypeName,
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 10.sp,
-          ),
+          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -697,43 +696,78 @@ class _MineScreenState extends ConsumerState<MineScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  hasProduct ? 'Cikarilan urun' : 'Urun ayari gerekli',
-                  style: TextStyle(
-                    color: hasProduct
-                        ? AppColors.textSecondary
-                        : AppColors.gold.withValues(alpha: 0.8),
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w600,
+                if (!hasProduct) ...[
+                  Text(
+                    'Ürün ayarı gerekli',
+                    style: TextStyle(
+                      color: AppColors.gold.withValues(alpha: 0.8),
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  hasProduct ? product!.urunAdi : 'Urun secilmedi',
-                  style: TextStyle(
-                    color: hasProduct ? Colors.white : AppColors.textMuted,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Ürün seçilmedi',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  hasProduct
-                      ? 'Kalite ${mine.qualityLevel} | Saatlik ${product!.uretimAdedi}'
-                      : 'Detay ekranindan urun secerek madeni baslat.',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Detay ekranindan ürün seçerek madeni baslat.',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 10.sp,
+                    ),
                   ),
-                ),
+                ] else ...[
+                  Text(
+                    product!.urunAdi,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        index < mine.qualityLevel
+                            ? Icons.star
+                            : Icons.star_border,
+                        color: index < mine.qualityLevel
+                            ? AppColors.gold
+                            : AppColors.textMuted,
+                        size: 10.sp,
+                      );
+                    }),
+                  ),
+                ],
               ],
             ),
           ),
-          if (mine.boostMultiplier > 1.0)
-            _buildSmallBadge(
-              'Boost x${mine.boostMultiplier.toStringAsFixed(1)}',
-              AppColors.gold,
-            ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (hasProduct)
+                _buildSmallBadge(
+                  'Saatlik ${product!.uretimAdedi}',
+                  Colors.lightBlueAccent,
+                ),
+              if (mine.boostMultiplier > 1.0) ...[
+                if (hasProduct) SizedBox(height: 4.h),
+                _buildSmallBadge(
+                  'Boost x${mine.boostMultiplier.toStringAsFixed(1)}',
+                  AppColors.gold,
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
@@ -743,7 +777,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
     final ratio = item.outputStockRatio;
     final color = _getRatioColor(ratio);
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12.r),
@@ -764,7 +798,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
                   ),
                   SizedBox(width: 5.w),
                   Text(
-                    'Cevher stogu',
+                    'Cevher stoğu',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 10.sp,
@@ -798,10 +832,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(3.r),
                   gradient: LinearGradient(
-                    colors: [
-                      color.withValues(alpha: 0.6),
-                      color,
-                    ],
+                    colors: [color.withValues(alpha: 0.6), color],
                   ),
                 ),
               ),
@@ -856,10 +887,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 16.h),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: const Text('Tekrar Dene'),
-          ),
+          ElevatedButton(onPressed: onRetry, child: const Text('Tekrar Dene')),
         ],
       ),
     );

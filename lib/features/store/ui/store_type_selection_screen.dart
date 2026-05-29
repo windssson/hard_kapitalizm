@@ -29,7 +29,7 @@ class _StoreTypeSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(storeTypesProvider);
-    final playerAsync = ref.watch(playerStreamProvider);
+    final playerAsync = ref.watch(playerProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -310,6 +310,7 @@ class _StoreTypeSelectionScreenState
         if (mounted) {
           // Listeyi yenilemesi için provider'ı invalidate et
           ref.invalidate(storesListProvider);
+          ref.invalidate(playerProvider);
           
           AppSnackbar.show(
             context,

@@ -11,6 +11,8 @@ import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -41,17 +43,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _refreshOnEntry();
-  }
-
-  void _refreshOnEntry() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      _resetSalesCheckState();
-      await ref.read(storeActionProvider).completeDueBuildingUpgrades();
-      if (!mounted) return;
-      _refreshStoreDetail();
-    });
+    _resetSalesCheckState();
   }
 
   void _resetSalesCheckState() {
@@ -60,14 +52,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     _lastShownSalesResultKey = null;
   }
 
-  void _refreshStoreDetail() {
-    ref.invalidate(storeDetailProvider(widget.storeId));
-    ref.invalidate(activeStoreBoostProvider(widget.storeId));
-    ref.invalidate(activeStoreUpgradeProvider(widget.storeId));
-    ref.read(storeDetailProvider(widget.storeId).future);
-    ref.read(activeStoreBoostProvider(widget.storeId).future);
-    ref.read(activeStoreUpgradeProvider(widget.storeId).future);
-  }
+
 
   void _onNavSelected(int index) {
     if (index == 1) return;
@@ -86,6 +71,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
+      activeStoreUpgradeProvider(widget.storeId),
+      (previous, next) {
+        final upgrade = next.value;
+        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
+          ref.read(storeActionProvider).completeDueBuildingUpgrades();
+        }
+      },
+    );
+
     final storeAsync = ref.watch(storeDetailProvider(widget.storeId));
 
     return Scaffold(
@@ -148,7 +143,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         ref.invalidate(storesListProvider);
         ref.invalidate(storeHistoryProvider(store.id));
         ref.invalidate(storePerformanceProvider(store.id));
-        ref.invalidate(playerStreamProvider);
+        ref.invalidate(playerProvider);
       }
 
       if (!result.processed || !result.hasVisibleSales) {
@@ -458,7 +453,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                         ref.invalidate(activeStoreBoostProvider(store.id));
                         ref.invalidate(storeDetailProvider(store.id));
                         ref.invalidate(storesListProvider);
-                        ref.invalidate(playerStreamProvider);
+                        ref.invalidate(playerProvider);
                         _showSuccess(context, 'Magaza boostu baslatildi.');
                       } else {
                         _showError(
@@ -617,7 +612,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       ref.invalidate(activeStoreUpgradeProvider(widget.storeId));
       ref.invalidate(storeDetailProvider(widget.storeId));
       ref.invalidate(storesListProvider);
-      ref.invalidate(playerStreamProvider);
+      ref.invalidate(playerProvider);
       _showSuccess(context, 'Magaza yukseltmesi tamamlandi!');
     } else {
       _showError(
@@ -725,7 +720,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                           ref.invalidate(activeStoreUpgradeProvider(store.id));
                           ref.invalidate(storeDetailProvider(store.id));
                           ref.invalidate(storesListProvider);
-                          ref.invalidate(playerStreamProvider);
+                          ref.invalidate(playerProvider);
                           _showSuccess(
                             context,
                             'Magaza yukseltmesi baslatildi.',
@@ -1099,23 +1094,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  Widget _buildMiniStatus(bool isActive) {
-    return Container(
-      width: 8.w,
-      height: 8.w,
-      decoration: BoxDecoration(
-        color: isActive ? AppColors.green : AppColors.red,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: (isActive ? AppColors.green : AppColors.red).withValues(alpha: 0.5),
-            blurRadius: 4,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-    );
-  }
+
 
   bool _canEditSlotProduct(StoreSlotModel slot) {
     return slot.quantity <= 0 && slot.pendingQuantity <= 0;
@@ -1548,205 +1527,80 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
-  ) {
+  ) async {
     final parentContext = context;
     showDialog(
       context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 40.h),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppColors.cardBg,
-              borderRadius: BorderRadius.circular(20.r),
-              border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: EdgeInsets.all(16.w),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBg,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.inventory, color: AppColors.gold),
-                      SizedBox(width: 12.w),
-                      Text(
-                        'Urun Secimi',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: AppColors.textPrimary),
-                        onPressed: () => Navigator.pop(dialogContext),
-                      ),
-                    ],
-                  ),
-                ),
-                // Product List
-                Flexible(
-                  child: FutureBuilder<Map<String, dynamic>>(
-                    future: ref
-                        .read(storeActionProvider)
-                        .getAvailableProductsForStore(store.id),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(32.0),
-                            child: CircularProgressIndicator(color: AppColors.gold),
-                          ),
-                        );
-                      }
-
-                      if (snapshot.hasError ||
-                          snapshot.data?['success'] != true) {
-                        return Padding(
-                          padding: EdgeInsets.all(20.w),
-                          child: Text(
-                            'Urunler yuklenirken hata olustu: ${snapshot.data?['message'] ?? 'Bilinmeyen hata'}',
-                            style: const TextStyle(color: AppColors.red),
-                          ),
-                        );
-                      }
-
-                      final List<dynamic> products =
-                          snapshot.data?['products'] ?? [];
-
-                      if (products.isEmpty) {
-                        return Padding(
-                          padding: EdgeInsets.all(40.w),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.info_outline,
-                                  color: AppColors.textMuted, size: 48.sp),
-                              SizedBox(height: 16.h),
-                              Text(
-                                'Bu magaza icin uygun veya eklenmemis urun bulunamadi.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: AppColors.textMuted),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        shrinkWrap: true,
-                        padding: EdgeInsets.all(16.w),
-                        itemCount: products.length,
-                        separatorBuilder: (context, index) =>
-                            SizedBox(height: 10.h),
-                        itemBuilder: (context, index) {
-                          final product = products[index];
-                          return _buildProductSelectionItem(
-                            parentContext,
-                            dialogContext,
-                            ref,
-                            store,
-                            slot,
-                            product,
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(height: 16.h),
-              ],
-            ),
-          ),
-        );
-      },
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.gold),
+      ),
     );
-  }
 
-  Widget _buildProductSelectionItem(
-    BuildContext parentContext,
-    BuildContext dialogContext,
-    WidgetRef ref,
-    StoreModel store,
-    StoreSlotModel slot,
-    Map<String, dynamic> product,
-  ) {
-    return GestureDetector(
-      onTap: () => _handleProductSelection(
-        parentContext,
-        dialogContext,
-        ref,
-        store,
-        slot,
-        product,
-      ),
-      child: Container(
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: Colors.black12,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: AppColors.border.withValues(alpha: 0.1)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50.w,
-              height: 50.w,
-              child: CachedAssetImage(
-                fileName: product['icon'] ?? 'default',
-                fit: BoxFit.contain,
-              ),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product['name'] ?? 'Bilinmeyen Urun',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Baz Fiyat: ${product['base_price']} TL',
-                    style: TextStyle(
-                      color: AppColors.gold.withValues(alpha: 0.7),
-                      fontSize: 12.sp,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.add_circle, color: AppColors.gold, size: 24.sp),
-          ],
-        ),
-      ),
+    Map<String, dynamic> result = const {};
+    try {
+      result = await ref
+          .read(storeActionProvider)
+          .getAvailableProductsForStore(store.id);
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        _showError(context, 'Urunler yuklenirken hata olustu: $e');
+      }
+      return;
+    }
+
+    if (context.mounted) Navigator.pop(context);
+
+    if (result['success'] != true) {
+      if (context.mounted) {
+        _showError(context, result['message'] ?? 'Urunler yuklenemedi.');
+      }
+      return;
+    }
+
+    final List<dynamic> products = result['products'] ?? [];
+    if (products.isEmpty) {
+      if (context.mounted) {
+        _showInfo(context, 'Bu magaza icin uygun veya eklenmemis urun bulunamadi.');
+      }
+      return;
+    }
+
+    final options = products.map((product) {
+      return ProductSelectionOption(
+        id: product['id']?.toString() ?? '',
+        title: (product['name'] ?? 'Bilinmeyen Urun').toString(),
+        subtitle: 'Baz Fiyat: ${product['base_price']} TL',
+        iconPath: (product['icon'] ?? 'default').toString(),
+        onTap: () async {
+          Navigator.pop(context);
+          await _handleProductSelection(
+            parentContext,
+            ref,
+            store,
+            slot,
+            product,
+          );
+        },
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+    await ProductSelectionSheet.show(
+      context: context,
+      title: 'Ürün Seçimi',
+      options: options,
     );
   }
 
   Future<void> _handleProductSelection(
     BuildContext parentContext,
-    BuildContext dialogContext,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
     Map<String, dynamic> product,
   ) async {
-    // Dialog'u kapat
-    Navigator.pop(dialogContext);
-
-    // Islemi yap
     final result = await ref.read(storeActionProvider).setStoreSlotProduct(
           slotId: slot.id,
           productId: product['id'],
@@ -1765,300 +1619,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     }
   }
 
-  Widget _buildFinancialFooter(StoreModel store) {
-    final stockCost = _calculateStoreStockCost(store);
-    final stockSaleValue = _calculateStoreStockSaleValue(store);
-    final pendingSale = _calculatePendingSaleValue(store);
-    final estimatedProfit = stockSaleValue - stockCost;
-    final averageMargin = stockCost > 0 ? (estimatedProfit / stockCost) * 100 : 0.0;
 
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Finansal Ozet',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 14.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              Expanded(
-                child: _buildFooterStat(
-                  Icons.inventory_2,
-                  'Stok Maliyeti',
-                  _formatValue(stockCost),
-                  AppColors.textPrimary,
-                ),
-              ),
-              Expanded(
-                child: _buildFooterStat(
-                  Icons.sell,
-                  'Liste Degeri',
-                  _formatValue(stockSaleValue),
-                  AppColors.gold,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              Expanded(
-                child: _buildFooterStat(
-                  Icons.trending_up,
-                  'Tahmini Kar',
-                  _formatSignedValue(estimatedProfit),
-                  estimatedProfit >= 0 ? AppColors.green : AppColors.red,
-                ),
-              ),
-              Expanded(
-                child: _buildFooterStat(
-                  Icons.av_timer,
-                  'Bekleyen Satis',
-                  pendingSale.toStringAsFixed(1),
-                  AppColors.blue,
-                ),
-              ),
-              Expanded(
-                child: _buildFooterStat(
-                  Icons.percent,
-                  'Ort. Marj',
-                  '${averageMargin.toStringAsFixed(1)}%',
-                  averageMargin >= 0 ? AppColors.green : AppColors.red,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLevelBadge(int level) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.goldDark, AppColors.gold],
-        ),
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      child: Text(
-        'Lv. $level',
-        style: TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 12.sp,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderInfoRow(String label, String value, {Color? valueColor}) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 4.h),
-      child: Row(
-        children: [
-          Icon(
-            Icons.location_on,
-            color: AppColors.gold,
-            size: 14.sp,
-          ), // Just for icon consistency
-          SizedBox(width: 6.w),
-          Text(
-            label,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              color: valueColor ?? AppColors.textPrimary,
-              fontSize: 12.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryItem(
-    IconData icon,
-    String label,
-    String value, {
-    bool showProgress = false,
-    double progress = 0,
-    Color? valueColor,
-  }) {
-    return Expanded(
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: AppColors.gold, size: 12.sp),
-              SizedBox(width: 4.w),
-              Text(
-                label,
-                style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
-              ),
-            ],
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            value,
-            style: TextStyle(
-              color: valueColor ?? AppColors.textPrimary,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (showProgress) ...[
-            SizedBox(height: 3.h),
-            _buildMiniProgress(progress),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerticalDivider() {
-    return Container(
-      width: 1,
-      height: 30.h,
-      color: AppColors.border.withValues(alpha: 0.3),
-    );
-  }
-
-  Widget _buildActionButton(
-    IconData icon,
-    String label,
-    Color color, {
-    VoidCallback? onTap,
-  }) {
-    final isDisabled = onTap == null;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
-        decoration: BoxDecoration(
-          color: isDisabled
-              ? AppColors.cardBg.withValues(alpha: 0.55)
-              : AppColors.cardBg,
-          borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(
-            color: isDisabled
-                ? AppColors.border.withValues(alpha: 0.2)
-                : color.withValues(alpha: 0.4),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isDisabled ? AppColors.textMuted : color,
-              size: 16.sp,
-            ),
-            SizedBox(width: 6.w),
-            Text(
-              label,
-              style: TextStyle(
-                color: isDisabled ? AppColors.textMuted : AppColors.textPrimary,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-
-  Widget _buildMiniProgress(double progress, [String? text]) {
-    return Container(
-      width: 90.w,
-      height: 14.h,
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(4.r),
-        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Progress Fill
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FractionallySizedBox(
-              widthFactor: progress.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.goldDark, AppColors.gold.withValues(alpha: 0.8)],
-                  ),
-                  borderRadius: BorderRadius.circular(3.r),
-                ),
-              ),
-            ),
-          ),
-          if (text != null)
-            Text(
-              text,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 9.sp,
-                fontWeight: FontWeight.bold,
-                shadows: const [
-                  Shadow(color: Colors.black87, blurRadius: 2),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFooterStat(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: color, size: 16.sp),
-        SizedBox(height: 4.h),
-        Text(
-          label,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 13.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
 
 
 
@@ -2077,7 +1638,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           ElevatedButton(
             onPressed: () {
               _resetSalesCheckState();
-              ref.refresh(storeDetailProvider(widget.storeId));
+              ref.refresh(storeDetailProvider(widget.storeId)); // ignore: unused_result
             },
             child: const Text('Tekrar Dene'),
           ),
@@ -2094,46 +1655,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     return val.toStringAsFixed(1);
   }
 
-  String _formatSignedValue(double amount) {
-    final prefix = amount >= 0 ? '+' : '-';
-    return '$prefix${_formatValue(amount.abs())}';
-  }
 
-  double _calculateStoreStockCost(StoreModel store) {
-    final summaryCost = store.summary.totalStockCostValue;
-    if (summaryCost != null && summaryCost > 0) {
-      return summaryCost;
-    }
-
-    return store.slots.fold<double>(
-      0,
-      (total, slot) => total + ((slot.cost ?? 0) * slot.quantity),
-    );
-  }
-
-  double _calculateStoreStockSaleValue(StoreModel store) {
-    final summarySaleValue = store.summary.totalStockSaleValue;
-    if (summarySaleValue != null && summarySaleValue > 0) {
-      return summarySaleValue;
-    }
-
-    return store.slots.fold<double>(
-      0,
-      (total, slot) => total + ((slot.price ?? 0) * slot.quantity),
-    );
-  }
-
-  double _calculatePendingSaleValue(StoreModel store) {
-    final summaryPending = store.summary.pendingSaleTotal;
-    if (summaryPending != null && summaryPending > 0) {
-      return summaryPending;
-    }
-
-    return store.slots.fold<double>(
-      0,
-      (total, slot) => total + (slot.pendingSale ?? 0),
-    );
-  }
   void _startStoreTransferFlow(
     BuildContext context,
     WidgetRef ref,
@@ -2285,43 +1807,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  Widget _buildActionBtn(String label, IconData icon, Color color, {VoidCallback? onTap}) {
-    final isDisabled = onTap == null;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10.r),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
-        decoration: BoxDecoration(
-          color: isDisabled 
-              ? AppColors.textPrimary.withValues(alpha: 0.03) 
-              : color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: isDisabled 
-                ? AppColors.textPrimary.withValues(alpha: 0.05) 
-                : color.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: isDisabled ? AppColors.textMuted : color, size: 14.sp),
-            SizedBox(width: 6.w),
-            Text(
-              label,
-              style: TextStyle(
-                color: isDisabled ? AppColors.textMuted : color,
-                fontSize: 11.sp,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
 
   Widget _buildSourceChoiceTileV2({
@@ -2428,22 +1914,47 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       return;
     }
 
+    final options = <WarehouseSelectionOption>[];
+    for (final warehouse in warehouses) {
+      final warehouseSlots = warehouse['warehouse_slots'] as List<dynamic>? ?? const [];
+      for (final productSlot in warehouseSlots) {
+        final availableQty = (productSlot['quantity'] as num?)?.toInt() ?? 0;
+        final qualityLevel = (productSlot['quality_level'] as num?)?.toInt() ?? 1;
+        final sourceCityId = (warehouse['city_id'] ?? warehouse['city']?['id'] ?? '').toString();
+        final cityName = (warehouse['city']?['name'] ?? 'Bilinmeyen Sehir').toString();
+        final sameCity = (store.cityId ?? '').isNotEmpty && store.cityId == sourceCityId;
+
+        options.add(
+          WarehouseSelectionOption(
+            id: productSlot['id'].toString(),
+            title: (warehouse['name'] ?? 'Depo').toString(),
+            subtitle: '$cityName | Kalite: $qualityLevel',
+            badgeText: sameCity ? 'Aynı Şehir' : 'Şehirler Arası',
+            infoText: '$availableQty Adet',
+            isHighlightBadge: sameCity,
+            onTap: () {
+              Navigator.pop(context);
+              _showQuantityTransferDialogV2(
+                context,
+                ref,
+                store,
+                slot,
+                productSlot['id'].toString(),
+                availableQty,
+                qualityLevel,
+                sourceCityId,
+              );
+            },
+          ),
+        );
+      }
+    }
+
     if (!context.mounted) return;
-    showModalBottomSheet(
+    await WarehouseSelectionSheet.show(
       context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-      ),
-      builder: (sheetContext) => _buildWarehouseSelectionSheetV2(
-        context,
-        sheetContext,
-        ref,
-        store,
-        slot,
-        warehouses,
-      ),
+      title: 'Kaynak Depo Seçin',
+      options: options,
     );
   }
 
@@ -2469,102 +1980,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  Widget _buildWarehouseSelectionSheetV2(
-    BuildContext parentContext,
-    BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-    StoreSlotModel slot,
-    List<dynamic> warehouses,
-  ) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Kaynak Depo Secin',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            '${slot.productName} gonderecek depoyu secin',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
-          ),
-          SizedBox(height: 16.h),
-          Expanded(
-            child: ListView.builder(
-              itemCount: warehouses.length,
-              itemBuilder: (context, index) {
-                final warehouse = warehouses[index];
-                final warehouseSlots =
-                    warehouse['warehouse_slots'] as List<dynamic>? ?? const [];
-                return Column(
-                  children: warehouseSlots.map<Widget>((productSlot) {
-                    final availableQty =
-                        (productSlot['quantity'] as num?)?.toInt() ?? 0;
-                    final qualityLevel =
-                        (productSlot['quality_level'] as num?)?.toInt() ?? 1;
-                    final sourceCityId =
-                        (warehouse['city_id'] ??
-                                warehouse['city']?['id'] ??
-                                '')
-                            .toString();
-                    final cityName =
-                        (warehouse['city']?['name'] ?? 'Bilinmeyen Sehir')
-                            .toString();
 
-                    return Card(
-                      color: AppColors.textPrimary.withValues(alpha: 0.05),
-                      margin: EdgeInsets.only(bottom: 10.h),
-                      child: ListTile(
-                        leading: Icon(Icons.warehouse, color: AppColors.gold),
-                        title: Text(
-                          (warehouse['name'] ?? 'Depo').toString(),
-                          style: const TextStyle(color: AppColors.textPrimary),
-                        ),
-                        subtitle: Text(
-                          '$cityName | Kalite: $qualityLevel | Mevcut: $availableQty adet',
-                          style: TextStyle(
-                            color: AppColors.gold.withValues(alpha: 0.7),
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.chevron_right,
-                          color: AppColors.textSecondary,
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _showQuantityTransferDialogV2(
-                            parentContext,
-                            ref,
-                            store,
-                            slot,
-                            productSlot['id'].toString(),
-                            availableQty,
-                            qualityLevel,
-                            sourceCityId,
-                          );
-                        },
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showQuantityTransferDialogV2(
     BuildContext context,
@@ -2899,7 +2315,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       await ref.read(storeDetailProvider(store.id).future);
       if (!context.mounted) return;
       ref.invalidate(storesListProvider);
-      ref.invalidate(playerStreamProvider);
+      ref.invalidate(playerProvider);
       final isInstant = result['mode']?.toString() == 'instant';
       _showSuccess(
         context,
@@ -2952,33 +2368,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       return;
     }
 
-    if (!context.mounted) return;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-      ),
-      builder: (sheetContext) => _buildOutboundWarehouseSheet(
-        context,
-        sheetContext,
-        ref,
-        store,
-        slot,
-        warehouses,
-      ),
-    );
-  }
-
-  Widget _buildOutboundWarehouseSheet(
-    BuildContext parentContext,
-    BuildContext context,
-    WidgetRef ref,
-    StoreModel store,
-    StoreSlotModel slot,
-    List<Map<String, dynamic>> warehouses,
-  ) {
     final sortedWarehouses = List<Map<String, dynamic>>.from(warehouses)
       ..sort((a, b) {
         final aSameCity =
@@ -2993,176 +2382,36 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         return aSameCity ? -1 : 1;
       });
 
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.78,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Hedef Depo Secin',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            '${slot.productName ?? 'Urun'} gondereceginiz depoyu secin',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
-          ),
-          SizedBox(height: 12.h),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: AppColors.cardBgLight.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(14.r),
-              border: Border.all(
-                color: AppColors.borderGoldLight.withValues(alpha: 0.16),
-              ),
-            ),
-            child: Wrap(
-              spacing: 8.w,
-              runSpacing: 8.h,
-              children: [
-                _buildCompactSelectionChip(
-                  Icons.inventory_2_outlined,
-                  'Stok',
-                  '${slot.quantity}',
-                  AppColors.gold,
-                ),
-                _buildCompactSelectionChip(
-                  Icons.storefront_outlined,
-                  'Magaza',
-                  store.cityName ?? 'Bilinmiyor',
-                  AppColors.blue,
-                ),
-                _buildCompactSelectionChip(
-                  Icons.warehouse_outlined,
-                  'Depo',
-                  '${sortedWarehouses.length} secenek',
-                  AppColors.green,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 16.h),
-          Expanded(
-            child: ListView.separated(
-              itemCount: sortedWarehouses.length,
-              separatorBuilder: (_, __) => SizedBox(height: 10.h),
-              itemBuilder: (context, index) {
-                final warehouse = sortedWarehouses[index];
-                final cityName =
-                    (warehouse['city']?['name'] ?? 'Bilinmeyen Sehir')
-                        .toString();
-                final isSameCity =
-                    (warehouse['city_id']?.toString() ?? '') ==
-                    (store.cityId ?? '');
+    final options = sortedWarehouses.map((warehouse) {
+      final cityName = (warehouse['city']?['name'] ?? 'Bilinmeyen Sehir').toString();
+      final isSameCity = (warehouse['city_id']?.toString() ?? '') == (store.cityId ?? '');
 
-                return InkWell(
-                  borderRadius: BorderRadius.circular(16.r),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showOutboundQuantityDialog(
-                      parentContext,
-                      ref,
-                      store,
-                      slot,
-                      warehouse,
-                      cityName,
-                    );
-                  },
-                  child: Container(
-                    padding: EdgeInsets.all(14.w),
-                    decoration: BoxDecoration(
-                      color: AppColors.textPrimary.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(
-                        color:
-                            (isSameCity
-                                    ? AppColors.green
-                                    : AppColors.borderGoldLight)
-                                .withValues(alpha: 0.24),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42.w,
-                          height: 42.w,
-                          decoration: BoxDecoration(
-                            color:
-                                (isSameCity ? AppColors.green : AppColors.gold)
-                                    .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Icon(
-                            Icons.warehouse,
-                            color: isSameCity ? AppColors.green : AppColors.gold,
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                (warehouse['name'] ?? 'Depo').toString(),
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Text(
-                                cityName,
-                                style: TextStyle(
-                                  color: AppColors.gold.withValues(alpha: 0.75),
-                                  fontSize: 12.sp,
-                                ),
-                              ),
-                              SizedBox(height: 6.h),
-                              Wrap(
-                                spacing: 8.w,
-                                runSpacing: 6.h,
-                                children: [
-                                  _buildStatusPill(
-                                    isSameCity
-                                        ? 'Ayni sehir'
-                                        : 'Sehirler arasi',
-                                    isSameCity
-                                        ? AppColors.green
-                                        : AppColors.blue,
-                                  ),
-                                  if (isSameCity)
-                                    _buildStatusPill(
-                                      'Aninda teslim',
-                                      AppColors.green,
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: AppColors.textPrimary.withValues(alpha: 0.6),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+      return WarehouseSelectionOption(
+        id: warehouse['id'].toString(),
+        title: (warehouse['name'] ?? 'Depo').toString(),
+        subtitle: cityName,
+        badgeText: isSameCity ? 'Aynı Şehir' : 'Şehirler Arası',
+        infoText: isSameCity ? 'Anlık' : 'Lojistik',
+        isHighlightBadge: isSameCity,
+        onTap: () {
+          Navigator.pop(context);
+          _showOutboundQuantityDialog(
+            context,
+            ref,
+            store,
+            slot,
+            warehouse,
+            cityName,
+          );
+        },
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+    await WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Hedef Depo Seçin',
+      options: options,
     );
   }
 
@@ -3325,36 +2574,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  Widget _buildCompactSelectionChip(
-    IconData icon,
-    String label,
-    String value,
-    Color accentColor,
-  ) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: accentColor.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14.sp, color: accentColor),
-          SizedBox(width: 6.w),
-          Text(
-            '$label: $value',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildStatusPill(String label, Color accentColor) {
     return Container(
@@ -3609,7 +2829,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       await ref.read(storeDetailProvider(store.id).future);
       if (!context.mounted) return;
       ref.invalidate(storesListProvider);
-      ref.invalidate(playerStreamProvider);
+      ref.invalidate(playerProvider);
       final isInstant = result['mode']?.toString() == 'instant';
       _showSuccess(
         context,

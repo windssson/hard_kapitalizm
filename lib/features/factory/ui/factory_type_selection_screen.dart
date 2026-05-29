@@ -28,7 +28,7 @@ class _FactoryTypeSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(factoryTypesProvider);
-    final playerAsync = ref.watch(playerStreamProvider);
+    final playerAsync = ref.watch(playerProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -290,7 +290,7 @@ class _FactoryTypeSelectionScreenState
         name: _selectedType!['name'].toString(),
       );
       if (result['success'] == true) {
-        ref.invalidate(playerStreamProvider);
+        ref.invalidate(playerProvider);
         ref.invalidate(factoryListProvider);
         ref.invalidate(factoryConstructionProvider);
         if (mounted) {

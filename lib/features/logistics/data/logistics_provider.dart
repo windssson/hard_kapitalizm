@@ -7,11 +7,12 @@ import 'package:hard_kapitalizm/features/logistics/models/logistics_company_mode
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_performance_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_type_model.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 const logisticsFuelProductId = 'YAKIT';
 
 final logisticsCompanyTypesProvider =
-    FutureProvider.autoDispose<List<LogisticsCompanyTypeModel>>((ref) async {
+    FutureProvider<List<LogisticsCompanyTypeModel>>((ref) async {
       final supabase = Supabase.instance.client;
       final response = await supabase.rpc('get_logistics_company_types_catalog');
 
@@ -21,7 +22,7 @@ final logisticsCompanyTypesProvider =
     });
 
 final logisticsVehicleTypesProvider =
-    FutureProvider.autoDispose<List<LogisticsVehicleTypeModel>>((ref) async {
+    FutureProvider<List<LogisticsVehicleTypeModel>>((ref) async {
       final supabase = Supabase.instance.client;
       final response = await supabase.rpc('get_logistics_vehicle_types_catalog');
 
@@ -30,7 +31,7 @@ final logisticsVehicleTypesProvider =
           .toList();
     });
 
-final activeCitiesProvider = FutureProvider.autoDispose<List<CityModel>>((ref) async {
+final activeCitiesProvider = FutureProvider<List<CityModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final response = await supabase.rpc('get_active_cities');
 
@@ -71,24 +72,22 @@ final playerLogisticsConstructionProvider =
       return rows.first as Map<String, dynamic>;
     });
 
-final logisticsVehicleListStreamProvider =
-    StreamProvider.autoDispose<List<LogisticsVehicleModel>>((ref) {
+final logisticsVehicleListProvider =
+    FutureProvider<List<LogisticsVehicleModel>>((ref) async {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
 
-      if (user == null) return const Stream.empty();
+      if (user == null) return [];
 
-      return supabase
-          .from('logistics_vehicles')
-          .stream(primaryKey: ['id'])
-          .eq('player_id', user.id)
-          .map((event) {
-            final vehicles = event
-                .map((e) => LogisticsVehicleModel.fromJson(e))
-                .toList();
-            vehicles.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-            return vehicles;
-          });
+      final response = await supabase.rpc(
+        'get_player_logistics_vehicles',
+        params: {'p_player_id': user.id},
+      );
+
+      final list = response as List<dynamic>;
+      return list
+          .map((json) => LogisticsVehicleModel.fromJson(Map<String, dynamic>.from(json as Map)))
+          .toList();
     });
 
 final logisticsVehiclePerformanceProvider =
@@ -193,7 +192,10 @@ final logisticsFuelMarketListingsProvider =
     });
 
 class LogisticsActionNotifier {
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
+
+  LogisticsActionNotifier(this._ref);
 
   Future<Map<String, dynamic>> createLogisticsCompany({
     required String typeId,
@@ -213,7 +215,9 @@ class LogisticsActionNotifier {
           'p_name': name,
         },
       );
-
+      _ref.invalidate(playerLogisticsCompanyProvider);
+      _ref.invalidate(playerLogisticsConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -234,7 +238,9 @@ class LogisticsActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-
+      _ref.invalidate(playerLogisticsCompanyProvider);
+      _ref.invalidate(playerLogisticsConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -257,7 +263,9 @@ class LogisticsActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-
+      _ref.invalidate(playerLogisticsCompanyProvider);
+      _ref.invalidate(playerLogisticsConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -282,7 +290,9 @@ class LogisticsActionNotifier {
           'p_logistics_vehicle_type_id': logisticsVehicleTypeId,
         },
       );
-
+      _ref.invalidate(logisticsVehicleListProvider);
+      _ref.invalidate(playerLogisticsCompanyProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -309,7 +319,7 @@ class LogisticsActionNotifier {
           'p_rental_price': rentalPrice,
         },
       );
-
+      _ref.invalidate(logisticsVehicleListProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -330,7 +340,8 @@ class LogisticsActionNotifier {
           'p_vehicle_id': vehicleId,
         },
       );
-
+      _ref.invalidate(logisticsVehicleListProvider);
+      _ref.invalidate(playerLogisticsCompanyProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -351,7 +362,8 @@ class LogisticsActionNotifier {
           'p_vehicle_id': vehicleId,
         },
       );
-
+      _ref.invalidate(logisticsVehicleListProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -372,7 +384,9 @@ class LogisticsActionNotifier {
           'p_quantity': quantity,
         },
       );
-
+      _ref.invalidate(playerLogisticsCompanyProvider);
+      _ref.invalidate(playerLogisticsFuelWarehouseSourcesProvider);
+      _ref.invalidate(logisticsVehicleListProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -393,7 +407,10 @@ class LogisticsActionNotifier {
           'p_quantity': quantity,
         },
       );
-
+      _ref.invalidate(playerLogisticsCompanyProvider);
+      _ref.invalidate(logisticsFuelMarketListingsProvider);
+      _ref.invalidate(playerProvider);
+      _ref.invalidate(logisticsVehicleListProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -418,7 +435,7 @@ class LogisticsActionNotifier {
           'p_is_active': isActive,
         },
       );
-
+      _ref.invalidate(logisticsVehicleListProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -452,6 +469,7 @@ class LogisticsActionNotifier {
           'p_route_city_b_id': cityBId,
         },
       );
+      _ref.invalidate(logisticsVehicleListProvider);
       final result = Map<String, dynamic>.from(response as Map);
 
       return {
@@ -470,4 +488,4 @@ class LogisticsActionNotifier {
   }
 }
 
-final logisticsActionProvider = Provider((ref) => LogisticsActionNotifier());
+final logisticsActionProvider = Provider((ref) => LogisticsActionNotifier(ref));

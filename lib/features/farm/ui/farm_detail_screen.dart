@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
@@ -16,6 +16,8 @@ import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
+import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 
 class FarmDetailScreen extends ConsumerStatefulWidget {
   final String farmId;
@@ -27,27 +29,11 @@ class FarmDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
-  static const Map<int, int> _farmBoostStarCosts = {
-    6: 3,
-    12: 6,
-    24: 12,
-  };
+  static const Map<int, int> _farmBoostStarCosts = {6: 3, 12: 6, 24: 12};
 
   @override
   void initState() {
     super.initState();
-    _refreshOnEntry();
-  }
-
-  void _refreshOnEntry() {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      await ref.read(farmActionProvider).completeDueBuildingBoosts();
-      if (!mounted) return;
-      await ref.read(farmActionProvider).completeDueBuildingUpgrades();
-      if (!mounted) return;
-      _refreshFarmDetail();
-    });
   }
 
   void _refreshFarmDetail() {
@@ -65,7 +51,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   }) async {
     _refreshFarmDetail();
     ref.invalidate(farmListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     ref.invalidate(warehouseListProvider);
     ref.invalidate(warehouseDetailProvider);
 
@@ -83,9 +69,31 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
+      activeFarmUpgradeProvider(widget.farmId),
+      (previous, next) {
+        final upgrade = next.value;
+        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
+          ref.read(farmActionProvider).completeDueBuildingUpgrades();
+        }
+      },
+    );
+
+    ref.listen<AsyncValue<BuildingBoostModel?>>(
+      activeFarmBoostProvider(widget.farmId),
+      (previous, next) {
+        final boost = next.value;
+        if (boost != null && boost.finishAt.isBefore(DateTime.now())) {
+          ref.read(farmActionProvider).completeDueBuildingBoosts();
+        }
+      },
+    );
+
     final detailAsync = ref.watch(farmDetailProvider(widget.farmId));
     final activeBoost = ref.watch(activeFarmBoostProvider(widget.farmId)).value;
-    final activeUpgrade = ref.watch(activeFarmUpgradeProvider(widget.farmId)).value;
+    final activeUpgrade = ref
+        .watch(activeFarmUpgradeProvider(widget.farmId))
+        .value;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -110,15 +118,19 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 ),
                 data: (detail) => RefreshIndicator(
                   onRefresh: () async {
-                    await ref.read(farmActionProvider).completeDueBuildingBoosts();
+                    await ref
+                        .read(farmActionProvider)
+                        .completeDueBuildingBoosts();
                     if (!mounted) return;
-                    await ref.read(farmActionProvider).completeDueBuildingUpgrades();
+                    await ref
+                        .read(farmActionProvider)
+                        .completeDueBuildingUpgrades();
                     if (!mounted) return;
                     _refreshFarmDetail();
                     await ref.read(farmDetailProvider(widget.farmId).future);
                   },
                   child: ListView(
-                    padding: EdgeInsets.fromLTRB(10.w, 8.h, 10.w, 24.h),
+                    padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
                     children: [
                       _buildHero(detail),
                       SizedBox(height: 10.h),
@@ -137,7 +149,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                         SizedBox(height: 12.h),
                         _ActiveFarmUpgradeCard(
                           upgrade: activeUpgrade,
-                          onFinishWithGold: () => _finishFarmUpgradeWithGold(activeUpgrade),
+                          onFinishWithGold: () =>
+                              _finishFarmUpgradeWithGold(activeUpgrade),
                           calculateStarCost: _calculateUpgradeStarCost,
                           formatCountdown: _formatCountdown,
                         ),
@@ -339,7 +352,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     required IconData icon,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(14.r),
@@ -541,7 +554,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
   Widget _buildTag(String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 4.h),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999.r),
@@ -658,8 +671,17 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 )
-                              else
+                              else ...[
                                 _buildQualityStars(slot.qualityLevel),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  'Maliyet: ${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -680,7 +702,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12.r),
                                 side: BorderSide(
-                                  color: AppColors.border.withValues(alpha: 0.3),
+                                  color: AppColors.border.withValues(
+                                    alpha: 0.3,
+                                  ),
                                 ),
                               ),
                               child: Container(
@@ -700,7 +724,12 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                               ),
                               onSelected: (value) {
                                 if (value == 'product') {
-                                  _showSlotProductDialog(context, ref, detail, slot);
+                                  _showSlotProductDialog(
+                                    context,
+                                    ref,
+                                    detail,
+                                    slot,
+                                  );
                                 } else if (value == 'toggle') {
                                   _toggleSlotActive(context, ref, detail, slot);
                                 }
@@ -717,7 +746,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                       ),
                                       SizedBox(width: 8.w),
                                       Text(
-                                        slot.isEmpty ? 'Urun Sec' : 'Urun Degistir',
+                                        slot.isEmpty
+                                            ? 'Urun Sec'
+                                            : 'Urun Degistir',
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontSize: 13.sp,
@@ -771,11 +802,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             ],
             Row(
               children: [
-                Icon(
-                  Icons.schedule,
-                  color: AppColors.textMuted,
-                  size: 14.sp,
-                ),
+                Icon(Icons.schedule, color: AppColors.textMuted, size: 14.sp),
                 SizedBox(width: 6.w),
                 Expanded(
                   child: Text(
@@ -872,7 +899,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                         ref.invalidate(activeFarmBoostProvider(detail.farm.id));
                         ref.invalidate(farmDetailProvider(detail.farm.id));
                         ref.invalidate(farmListProvider);
-                        ref.invalidate(playerStreamProvider);
+                        ref.invalidate(playerProvider);
                         AppSnackbar.show(
                           context,
                           title: 'Basarili',
@@ -884,7 +911,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                           context,
                           title: 'Hata',
                           message:
-                              result['message'] ?? 'Tarla boostu baslatilamadi.',
+                              result['message'] ??
+                              'Tarla boostu baslatilamadi.',
                           type: SnackbarType.error,
                         );
                       }
@@ -938,7 +966,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                             ),
                           ),
                           Text(
-                            '${entry.value} ★',
+                            '${entry.value} ?',
                             style: TextStyle(
                               color: AppColors.gold,
                               fontSize: 14.sp,
@@ -964,10 +992,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 ),
                 child: Text(
                   'Aktif boost bitene kadar yeni boost baslatilamaz.',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12.sp,
-                  ),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
                 ),
               ),
           ],
@@ -995,7 +1020,10 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     final targetLevel = detail.farm.level + 1;
     final upgradeCost = (detail.farmType.cost * targetLevel).toDouble();
     final durationMinutes =
-        (detail.farmType.constructionTimeMinutes * targetLevel).clamp(1, 999999);
+        (detail.farmType.constructionTimeMinutes * targetLevel).clamp(
+          1,
+          999999,
+        );
     final nextInputCapacity = detail.farm.inputCapacity * 2;
     final nextOutputCapacity = detail.farm.outputCapacity * 2;
 
@@ -1092,7 +1120,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
                   if (!context.mounted) return;
                   if (result['success'] == true) {
-                    ref.invalidate(playerStreamProvider);
+                    ref.invalidate(playerProvider);
                     _refreshFarmDetail();
                     AppSnackbar.show(
                       context,
@@ -1127,7 +1155,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     if (!mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(playerStreamProvider);
+      ref.invalidate(playerProvider);
       _refreshFarmDetail();
       AppSnackbar.show(
         context,
@@ -1202,9 +1230,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   Widget _buildHeroChipColumn(FarmDetailModel detail) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        _buildTag('Lv ${detail.farm.level}', AppColors.gold),
-      ],
+      children: [_buildTag('Lv ${detail.farm.level}', AppColors.gold)],
     );
   }
 
@@ -1247,7 +1273,10 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     FarmDetailModel detail,
     FarmProductionInventoryModel inventory,
   ) {
-    final ratio = _inventoryRatio(inventory.quantity, detail.farm.outputCapacity);
+    final ratio = _inventoryRatio(
+      inventory.quantity,
+      detail.farm.outputCapacity,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1280,7 +1309,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.blue.withValues(alpha: 0.16),
                 foregroundColor: AppColors.blue,
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(
@@ -1293,10 +1322,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               icon: Icon(Icons.move_up_rounded, size: 14.sp),
               label: Text(
                 'Depoya Aktar',
-                style: TextStyle(
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -1305,7 +1331,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         Container(
           height: 5.h,
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.35),
+            color: Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(999.r),
           ),
           child: FractionallySizedBox(
@@ -1348,7 +1374,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     );
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12.r),
@@ -1358,7 +1384,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$totalStock stok • ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
+            '$totalStock stok � ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11.sp,
@@ -1446,10 +1472,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                       left: left,
                       top: 0,
                       bottom: 0,
-                      child: Container(
-                        width: width,
-                        color: segment.color,
-                      ),
+                      child: Container(width: width, color: segment.color),
                     );
                     left += width;
                     return positioned;
@@ -1541,7 +1564,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 9.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 9.h),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12.r),
@@ -1667,7 +1690,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10.r),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 11.h),
+        padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 11.h),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
@@ -1764,136 +1787,41 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     if (!context.mounted) return;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => _buildProductSelectionSheet(
-        context,
-        sheetContext,
-        ref,
-        detail,
-        slot,
-        products,
-      ),
-    );
-  }
-
-  Widget _buildProductSelectionSheet(
-    BuildContext parentContext,
-    BuildContext context,
-    WidgetRef ref,
-    FarmDetailModel detail,
-    FarmProductionSlotModel slot,
-    List<SelectableProductionProductModel> products,
-  ) {
     final disabledProductIds = detail.slots
         .where((otherSlot) => otherSlot.id != slot.id)
         .map((otherSlot) => otherSlot.productId ?? '')
         .where((productId) => productId.isNotEmpty)
         .toSet();
 
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.75,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Urun Sec',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          Expanded(
-            child: products.isEmpty
-                ? Center(
-                    child: Text(
-                      'Bu tarla turu icin uygun urun bulunamadi.',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12.sp,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: products.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 8.h),
-                    itemBuilder: (_, index) {
-                      final selectableProduct = products[index];
-                      final product = selectableProduct.product;
-                      final isDisabled = disabledProductIds.contains(
-                        product.id,
-                      );
-                      return ListTile(
-                        enabled: !isDisabled,
-                        tileColor: isDisabled
-                            ? Colors.white.withValues(alpha: 0.02)
-                            : Colors.white.withValues(alpha: 0.04),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        leading: SizedBox(
-                          width: 40.w,
-                          height: 40.w,
-                          child: Opacity(
-                            opacity: isDisabled ? 0.4 : 1,
-                            child: CachedAssetImage(
-                              fileName: product.urunIconu,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          product.urunAdi,
-                          style: TextStyle(
-                            color: isDisabled
-                                ? AppColors.textMuted
-                                : Colors.white,
-                          ),
-                        ),
-                        subtitle: Text(
-                          isDisabled
-                              ? 'Bu urun baska bir slotta kullaniliyor'
-                              : 'Maks kalite: ${selectableProduct.maxQualityLevel} | Saatlik uretim: ${product.uretimAdedi}',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11.sp,
-                          ),
-                        ),
-                        trailing: Icon(
-                          isDisabled ? Icons.block : Icons.chevron_right,
-                          color: isDisabled
-                              ? AppColors.textMuted
-                              : AppColors.gold,
-                        ),
-                        onTap: isDisabled
-                            ? null
-                            : () async {
-                                Navigator.pop(context);
-                                await _selectSlotProduct(
-                                  parentContext,
-                                  ref,
-                                  detail,
-                                  slot,
-                                  selectableProduct,
-                                );
-                              },
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+    final options = products.map((selectableProduct) {
+      final product = selectableProduct.product;
+      final isDisabled = disabledProductIds.contains(product.id);
+      return ProductSelectionOption(
+        id: product.id,
+        title: product.urunAdi,
+        subtitle: 'Saatlik üretim: ${product.uretimAdedi}',
+        badgeText: 'Maks Kalite: ${selectableProduct.maxQualityLevel}',
+        iconPath: product.urunIconu,
+        isDisabled: isDisabled,
+        disabledReason: isDisabled ? 'Bu ürün başka bir slotta kullanılıyor' : null,
+        onTap: () async {
+          Navigator.pop(context);
+          await _selectSlotProduct(
+            context,
+            ref,
+            detail,
+            slot,
+            selectableProduct,
+          );
+        },
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+    await ProductSelectionSheet.show(
+      context: context,
+      title: 'Ürün Seç',
+      options: options,
     );
   }
 
@@ -1978,121 +1906,83 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: ListView(
-          children: [
-            Text(
-              'Kaynak Depo Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            ...warehouses.map((warehouse) {
-              final slots =
-                  (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
-              return Column(
-                children: slots.map((slotMap) {
-                  final slot = Map<String, dynamic>.from(slotMap as Map);
-                  final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 8.h),
-                    child: ListTile(
-                      tileColor: Colors.white.withValues(alpha: 0.04),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      title: Text(
-                        (warehouse['name'] ?? 'Depo').toString(),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      subtitle: Text(
-                        '${(warehouse['city']?['name'] ?? detail.cityName).toString()} | Stok: $qty',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 11.sp,
-                        ),
-                      ),
-                      onTap: () {
-                        Navigator.pop(sheetContext);
-                        _showQuantityDialog(
-                          context: context,
-                          maxQuantity: qty,
-                          title: 'Miktar Girin',
-                          subtitle:
-                              '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi doldurulacak',
-                          onConfirm: (quantity) async {
-                            final warehouseCityId = (warehouse['city_id'] ?? '')
-                                .toString();
-                            if (_isSameCity(
-                              warehouseCityId,
-                              detail.farm.cityId,
-                            )) {
-                              final result = await ref
-                                  .read(farmActionProvider)
-                                  .transferWarehouseToProductionInventory(
-                                    warehouseSlotId: slot['id'].toString(),
-                                    productionInventoryId: inventory.id,
-                                    quantity: quantity,
-                                  );
-                              if (!context.mounted) return;
-                              if (result['success'] == true) {
-                                await _refreshFarmEcosystem(
-                                  includeTransfers: true,
-                                );
-                                AppSnackbar.show(
-                                  context,
-                                  title: 'Basarili',
-                                  message:
-                                      'Ayni sehir hammadde transferi tamamlandi.',
-                                  type: SnackbarType.success,
-                                );
-                                return;
-                              }
-                              AppSnackbar.show(
-                                context,
-                                title: 'Hata',
-                                message:
-                                    result['message'] ??
-                                    'Transfer basarisiz oldu.',
-                                type: SnackbarType.error,
-                              );
-                              return;
-                            }
+    final options = <WarehouseSelectionOption>[];
+    for (final warehouse in warehouses) {
+      final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
+      for (final slotMap in slots) {
+        final slot = Map<String, dynamic>.from(slotMap as Map);
+        final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
+        final warehouseCityId = (warehouse['city_id'] ?? '').toString();
+        final isSame = _isSameCity(warehouseCityId, detail.farm.cityId);
 
-                            await _startFarmLogisticsInputTransfer(
-                              context: context,
-                              ref: ref,
-                              detail: detail,
-                              inventory: inventory,
-                              warehouseSlotId: slot['id'].toString(),
-                              maxQuantity: qty,
-                              quantity: quantity,
-                            );
-                          },
+        options.add(
+          WarehouseSelectionOption(
+            id: slot['id'].toString(),
+            title: (warehouse['name'] ?? 'Depo').toString(),
+            subtitle: (warehouse['city']?['name'] ?? detail.cityName).toString(),
+            badgeText: isSame ? 'Aynı Şehir' : 'Farklı Şehir',
+            infoText: 'Stok: $qty adet',
+            isHighlightBadge: isSame,
+            onTap: () {
+              Navigator.pop(context);
+              _showQuantityDialog(
+                context: context,
+                maxQuantity: qty,
+                title: 'Miktar Girin',
+                subtitle: '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi doldurulacak',
+                onConfirm: (quantity) async {
+                  if (isSame) {
+                    final result = await ref
+                        .read(farmActionProvider)
+                        .transferWarehouseToProductionInventory(
+                          warehouseSlotId: slot['id'].toString(),
+                          productionInventoryId: inventory.id,
+                          quantity: quantity,
                         );
-                      },
-                    ),
+                    if (!context.mounted) return;
+                    if (result['success'] == true) {
+                      await _refreshFarmEcosystem(
+                        includeTransfers: true,
+                      );
+                      AppSnackbar.show(
+                        context,
+                        title: 'Basarili',
+                        message: 'Ayni sehir hammadde transferi tamamlandi.',
+                        type: SnackbarType.success,
+                      );
+                      return;
+                    }
+                    AppSnackbar.show(
+                      context,
+                      title: 'Hata',
+                      message: result['message'] ?? 'Transfer basarisiz oldu.',
+                      type: SnackbarType.error,
+                    );
+                    return;
+                  }
+
+                  await _startFarmLogisticsInputTransfer(
+                    context: context,
+                    ref: ref,
+                    detail: detail,
+                    inventory: inventory,
+                    warehouseSlotId: slot['id'].toString(),
+                    maxQuantity: qty,
+                    quantity: quantity,
                   );
-                }).toList(),
+                },
               );
-            }),
-          ],
-        ),
-      ),
+            },
+          ),
+        );
+      }
+    }
+
+    if (!context.mounted) return;
+    await WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Kaynak Depo Seç',
+      options: options,
     );
   }
 
@@ -2132,110 +2022,75 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.7,
-        ),
-        child: ListView(
-          children: [
-            Text(
-              'Hedef Depo Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            ...warehouses.map((warehouse) {
-              final warehouseId = warehouse.id;
-              final sameCity = warehouse.isSameCity;
-              return Container(
-                margin: EdgeInsets.only(bottom: 8.h),
-                child: ListTile(
-                  tileColor: Colors.white.withValues(alpha: 0.04),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  title: Text(
-                    warehouse.name,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
-                    '${warehouse.cityName} | ${sameCity ? 'Anlik Transfer' : 'Lojistik Transfer'}',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _showQuantityDialog(
-                      context: context,
-                      maxQuantity: inventory.quantity,
-                      title: 'Miktar Girin',
-                      subtitle:
-                          '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarilacak',
-                      onConfirm: (quantity) async {
-                        if (sameCity) {
-                          final result = await ref
-                              .read(farmActionProvider)
-                              .transferProductionInventoryToWarehouse(
-                                productionInventoryId: inventory.id,
-                                warehouseId: warehouseId,
-                                quantity: quantity,
-                              );
-                          if (!context.mounted) return;
-                          if (result['success'] == true) {
-                            await _refreshFarmEcosystem(
-                              warehouseId: warehouseId,
-                              includeTransfers: true,
-                            );
-                            AppSnackbar.show(
-                              context,
-                              title: 'Basarili',
-                              message: inventory.isInput
-                                  ? 'Ayni sehir hammadde iadesi tamamlandi.'
-                                  : 'Ayni sehir uretilen urun transferi tamamlandi.',
-                              type: SnackbarType.success,
-                            );
-                            return;
-                          }
-                          AppSnackbar.show(
-                            context,
-                            title: 'Hata',
-                            message:
-                                result['message'] ?? 'Transfer basarisiz oldu.',
-                            type: SnackbarType.error,
-                          );
-                          return;
-                        }
-
-                        await _startFarmLogisticsOutputTransfer(
-                          context: context,
-                          ref: ref,
-                          detail: detail,
-                          inventory: inventory,
-                          warehouseId: warehouseId,
-                          quantity: quantity,
-                        );
-                      },
+    final options = warehouses.map((warehouse) {
+      final warehouseId = warehouse.id;
+      final sameCity = warehouse.isSameCity;
+      return WarehouseSelectionOption(
+        id: warehouseId,
+        title: warehouse.name,
+        subtitle: warehouse.cityName,
+        badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
+        isHighlightBadge: sameCity,
+        onTap: () {
+          Navigator.pop(context);
+          _showQuantityDialog(
+            context: context,
+            maxQuantity: inventory.quantity,
+            title: 'Miktar Girin',
+            subtitle: '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarilacak',
+            onConfirm: (quantity) async {
+              if (sameCity) {
+                final result = await ref
+                    .read(farmActionProvider)
+                    .transferProductionInventoryToWarehouse(
+                      productionInventoryId: inventory.id,
+                      warehouseId: warehouseId,
+                      quantity: quantity,
                     );
-                  },
-                ),
+                if (!context.mounted) return;
+                if (result['success'] == true) {
+                  await _refreshFarmEcosystem(
+                    warehouseId: warehouseId,
+                    includeTransfers: true,
+                  );
+                  AppSnackbar.show(
+                    context,
+                    title: 'Basarili',
+                    message: inventory.isInput
+                        ? 'Ayni sehir hammadde iadesi tamamlandi.'
+                        : 'Ayni sehir uretilen urun transferi tamamlandi.',
+                    type: SnackbarType.success,
+                  );
+                  return;
+                }
+                AppSnackbar.show(
+                  context,
+                  title: 'Hata',
+                  message: result['message'] ?? 'Transfer basarisiz oldu.',
+                  type: SnackbarType.error,
+                );
+                return;
+              }
+
+              await _startFarmLogisticsOutputTransfer(
+                context: context,
+                ref: ref,
+                detail: detail,
+                inventory: inventory,
+                warehouseId: warehouseId,
+                quantity: quantity,
               );
-            }),
-          ],
-        ),
-      ),
+            },
+          );
+        },
+      );
+    }).toList();
+
+    if (!context.mounted) return;
+    await WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Hedef Depo Seç',
+      options: options,
     );
   }
 
@@ -2301,9 +2156,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             );
         if (!context.mounted) return;
         if (result.success) {
-          await _refreshFarmEcosystem(
-            includeTransfers: true,
-          );
+          await _refreshFarmEcosystem(includeTransfers: true);
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
@@ -2655,13 +2508,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     return palette[hash % palette.length];
   }
 
-  String _estimateProductionPerTick(FarmProductionSlotModel slot) {
-    final product = slot.product;
-    if (product == null) return '0';
-    final perTick = (product.uretimAdedi / 6.0) * slot.boostMultiplier;
-    return perTick.toStringAsFixed(perTick >= 10 ? 0 : 1);
-  }
-
   String _estimateProductionPerHour(FarmProductionSlotModel slot) {
     final product = slot.product;
     if (product == null) return '0';
@@ -2794,7 +2640,9 @@ class _ActiveFarmUpgradeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final totalSeconds = upgrade.finishAt.difference(upgrade.startedAt).inSeconds;
+    final totalSeconds = upgrade.finishAt
+        .difference(upgrade.startedAt)
+        .inSeconds;
     final elapsedSeconds = now.difference(upgrade.startedAt).inSeconds;
     final progress = totalSeconds > 0
         ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
@@ -2875,9 +2723,7 @@ class _ActiveFarmUpgradeCard extends ConsumerWidget {
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: AppColors.gold.withValues(alpha: 0.35),
-                ),
+                side: BorderSide(color: AppColors.gold.withValues(alpha: 0.35)),
                 foregroundColor: AppColors.goldLight,
               ),
               onPressed: onFinishWithGold,
@@ -2902,4 +2748,3 @@ String _formatCountdownLabel(Duration remaining) {
   }
   return '${remaining.inMinutes}dk';
 }
-

@@ -10,9 +10,10 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_model.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 final fieldListProvider =
-    FutureProvider.autoDispose<List<FieldListItemModel>>((ref) async {
+    FutureProvider<List<FieldListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -50,7 +51,7 @@ final fieldTypesProvider = FutureProvider<List<dynamic>>((ref) async {
 });
 
 final fieldConstructionProvider =
-    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+    FutureProvider<Map<String, dynamic>?>((ref) async {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
 
@@ -164,9 +165,12 @@ final activeFieldBoostProvider =
     });
 
 class FieldActionNotifier {
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   final ProductionLogisticsService _productionLogisticsService =
       ProductionLogisticsService();
+
+  FieldActionNotifier(this._ref);
 
   Future<Map<String, dynamic>> createField({
     required String cityId,
@@ -189,6 +193,8 @@ class FieldActionNotifier {
           'p_name': name,
         },
       );
+      _ref.invalidate(fieldConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -211,6 +217,9 @@ class FieldActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      _ref.invalidate(fieldListProvider);
+      _ref.invalidate(fieldConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -233,6 +242,9 @@ class FieldActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      _ref.invalidate(fieldListProvider);
+      _ref.invalidate(fieldConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -254,6 +266,9 @@ class FieldActionNotifier {
           'p_entity_id': fieldId,
         },
       );
+      _ref.invalidate(activeFieldUpgradeProvider(fieldId));
+      _ref.invalidate(fieldDetailProvider(fieldId));
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -273,6 +288,9 @@ class FieldActionNotifier {
           'p_limit': 100,
         },
       );
+      _ref.invalidate(fieldListProvider);
+      _ref.invalidate(fieldDetailProvider);
+      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -295,6 +313,9 @@ class FieldActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
+      _ref.invalidate(fieldListProvider);
+      _ref.invalidate(fieldDetailProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -322,6 +343,9 @@ class FieldActionNotifier {
           'p_star_cost': starCost,
         },
       );
+      _ref.invalidate(activeFieldBoostProvider(fieldId));
+      _ref.invalidate(fieldDetailProvider(fieldId));
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -341,6 +365,8 @@ class FieldActionNotifier {
           'p_limit': 100,
         },
       );
+      _ref.invalidate(fieldListProvider);
+      _ref.invalidate(fieldDetailProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -362,6 +388,9 @@ class FieldActionNotifier {
           'p_owner_id': fieldId,
         },
       );
+      _ref.invalidate(fieldListProvider);
+      _ref.invalidate(fieldDetailProvider(fieldId));
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -388,6 +417,8 @@ class FieldActionNotifier {
           'p_quality_level': qualityLevel,
         },
       );
+      _ref.invalidate(fieldListProvider);
+      _ref.invalidate(fieldDetailProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -414,6 +445,8 @@ class FieldActionNotifier {
           'p_quality_level': qualityLevel,
         },
       );
+      _ref.invalidate(fieldListProvider);
+      _ref.invalidate(fieldDetailProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -438,6 +471,8 @@ class FieldActionNotifier {
           'p_is_active': isActive,
         },
       );
+      _ref.invalidate(fieldListProvider);
+      _ref.invalidate(fieldDetailProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -567,6 +602,7 @@ class FieldActionNotifier {
           'p_quantity': quantity,
         },
       );
+      _ref.invalidate(fieldDetailProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -593,6 +629,7 @@ class FieldActionNotifier {
           'p_quantity': quantity,
         },
       );
+      _ref.invalidate(fieldDetailProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -687,13 +724,16 @@ class FieldActionNotifier {
     required String productionInventoryId,
     required int quantity,
     String? vehicleId,
-  }) {
-    return _productionLogisticsService.startWarehouseToProductionTransfer(
+  }) async {
+    final result = await _productionLogisticsService.startWarehouseToProductionTransfer(
       warehouseSlotId: warehouseSlotId,
       productionInventoryId: productionInventoryId,
       quantity: quantity,
       vehicleId: vehicleId,
     );
+    _ref.invalidate(fieldDetailProvider);
+    _ref.invalidate(playerProvider);
+    return result;
   }
 
   Future<ProductionLogisticsStartResult> startProductionToWarehouseTransfer({
@@ -701,14 +741,17 @@ class FieldActionNotifier {
     required String buyerWarehouseId,
     required int quantity,
     String? vehicleId,
-  }) {
-    return _productionLogisticsService.startProductionToWarehouseTransfer(
+  }) async {
+    final result = await _productionLogisticsService.startProductionToWarehouseTransfer(
       productionInventoryId: productionInventoryId,
       buyerWarehouseId: buyerWarehouseId,
       quantity: quantity,
       vehicleId: vehicleId,
     );
+    _ref.invalidate(fieldDetailProvider);
+    _ref.invalidate(playerProvider);
+    return result;
   }
 }
 
-final fieldActionProvider = Provider((ref) => FieldActionNotifier());
+final fieldActionProvider = Provider((ref) => FieldActionNotifier(ref));

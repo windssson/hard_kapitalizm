@@ -34,7 +34,6 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
@@ -412,7 +411,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
 
   Widget _buildMetricChip(String label, String value) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(10.r),
@@ -431,7 +430,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
 
   Widget _buildStatusChip(String label, Color accentColor) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: accentColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999.r),
@@ -476,7 +475,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
 
   Widget _buildSummaryChip(String label, String value, Color accentColor) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: accentColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12.r),

@@ -316,6 +316,26 @@ class WarehouseActionNotifier {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  Future<Map<String, dynamic>> deleteWarehouseSlot({
+    required String warehouseSlotId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'delete_warehouse_slot',
+        params: {
+          'p_player_id': user.id,
+          'p_warehouse_slot_id': warehouseSlotId,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
 
 final warehouseActionProvider = Provider((ref) => WarehouseActionNotifier());

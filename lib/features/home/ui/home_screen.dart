@@ -29,7 +29,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const AppTopBar(),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
                 child: Column(
                   children: [
                     _buildCompanySummaryCard(),
@@ -70,7 +70,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildCompanySummaryCard() {
     return Consumer(
       builder: (context, ref, child) {
-        final player = ref.watch(playerStreamProvider).value;
+        final player = ref.watch(playerProvider).value;
 
         return Container(
           decoration: BoxDecoration(

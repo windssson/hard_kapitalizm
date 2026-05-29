@@ -51,7 +51,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Future<void> _refreshAll() async {
     ref.invalidate(marketProductProvider(widget.productId));
     ref.invalidate(marketListingsProvider(widget.productId));
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     if (_isStoreTarget) {
       ref.invalidate(marketBuyerStoreSlotProvider(widget.storeSlotId));
       if (widget.storeId.isNotEmpty) {
@@ -304,7 +304,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverPadding(
-                      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 32.h),
+                      padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 32.h),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
                           productAsync.when(
@@ -713,7 +713,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               ),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 12.h),
+                  padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 12.h),
                   child: Column(
                     children: [
                     Row(
@@ -971,7 +971,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Widget _buildStatusBadge(bool active) {
     final color = active ? AppColors.green : AppColors.red;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 5.h),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10.r),
@@ -1395,7 +1395,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
         !_isStoreTarget && widget.buyerWarehouseId != null
         ? ref.watch(warehouseCapacityStatusProvider(widget.buyerWarehouseId!))
         : const AsyncValue<WarehouseCapacityStatusModel?>.data(null);
-    final player = ref.watch(playerStreamProvider).value;
+    final player = ref.watch(playerProvider).value;
     _warehouseCapacity = warehouseCapacityAsync.value;
     final params = MarketVehicleOptionsParams(
       buyerWarehouseId: widget.buyerWarehouseId,
