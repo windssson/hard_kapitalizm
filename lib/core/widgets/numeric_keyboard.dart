@@ -20,10 +20,10 @@ class NumericKeyboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
         border: Border(
           top: BorderSide(
             color: AppColors.gold.withValues(alpha: 0.3),
@@ -39,9 +39,9 @@ class NumericKeyboard extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 3,
-            childAspectRatio: 1.2,
-            crossAxisSpacing: 4.w,
-            mainAxisSpacing: 4.h,
+            childAspectRatio: 1.6,
+            crossAxisSpacing: 3.w,
+            mainAxisSpacing: 3.h,
             children: [
               // Numbers 1-9
               ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(
@@ -88,15 +88,15 @@ class NumericKeyboard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: color.withValues(alpha: 0.35), width: 1.5),
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
               color: Colors.white,
-              fontSize: isIcon ? 14.sp : 16.sp,
+              fontSize: isIcon ? 12.sp : 14.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
