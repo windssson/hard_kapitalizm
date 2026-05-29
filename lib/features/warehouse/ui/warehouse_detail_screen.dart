@@ -1108,7 +1108,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           borderRadius: BorderRadius.circular(16.r),
         ),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: 500.h, maxWidth: 400.w),
+          constraints: BoxConstraints(maxHeight: 650.h, maxWidth: 400.w),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
