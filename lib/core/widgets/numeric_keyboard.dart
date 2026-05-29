@@ -72,7 +72,6 @@ class NumericKeyboard extends StatelessWidget {
               ),
             ],
           ),
-          ),
         ],
       ),
     );
