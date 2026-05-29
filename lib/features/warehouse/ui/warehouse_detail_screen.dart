@@ -1104,12 +1104,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       context: context,
       builder: (dialogContext) => Dialog(
         backgroundColor: AppColors.cardBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: 500.h,
-            maxWidth: 400.w,
-          ),
+          constraints: BoxConstraints(maxHeight: 500.h, maxWidth: 400.w),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1138,16 +1137,16 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   ],
                 ),
               ),
-              Divider(
-                color: Colors.white.withValues(alpha: 0.1),
-                height: 1,
-              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
               // Price Display
               Padding(
                 padding: EdgeInsets.all(16.w),
                 child: Container(
                   width: double.infinity,
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 12.h,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(10.r),
@@ -1190,7 +1189,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               // Cost info
               if (slot.cost > 0)
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
+                  ),
                   child: Text(
                     'Maliyet: ${slot.cost.toStringAsFixed(1)}',
                     style: TextStyle(
@@ -1245,7 +1247,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                         ),
                         child: Text(
                           'Kaydet',
-                          style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -1260,10 +1265,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     if (result == null || !context.mounted) return;
 
-    final actionResult = await ref.read(warehouseActionProvider).updateWarehouseSlotPrice(
-          warehouseSlotId: slot.id,
-          price: result,
-        );
+    final actionResult = await ref
+        .read(warehouseActionProvider)
+        .updateWarehouseSlotPrice(warehouseSlotId: slot.id, price: result);
 
     if (!context.mounted) return;
 

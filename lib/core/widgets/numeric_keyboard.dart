@@ -42,36 +42,36 @@ class NumericKeyboard extends StatelessWidget {
             childAspectRatio: 1.2,
             crossAxisSpacing: 4.w,
             mainAxisSpacing: 4.h,
-              children: [
-                // Numbers 1-9
-                ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(
-                  (number) => _buildButton(
-                    label: number.toString(),
-                    onPressed: () => _onNumberPressed(number.toString()),
-                    color: AppColors.gold,
-                  ),
-                ),
-                // Comma button (bottom-left)
-                _buildButton(
-                  label: ',',
-                  onPressed: () => _onNumberPressed(','),
-                  color: AppColors.goldLight,
-                ),
-                // Zero button (bottom-center)
-                _buildButton(
-                  label: '0',
-                  onPressed: () => _onNumberPressed('0'),
+            children: [
+              // Numbers 1-9
+              ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(
+                (number) => _buildButton(
+                  label: number.toString(),
+                  onPressed: () => _onNumberPressed(number.toString()),
                   color: AppColors.gold,
                 ),
-                // Backspace button (bottom-right)
-                _buildButton(
-                  label: '⌫',
-                  onPressed: _onBackspace,
-                  color: AppColors.red,
-                  isIcon: true,
-                ),
-              ],
-            ),
+              ),
+              // Comma button (bottom-left)
+              _buildButton(
+                label: ',',
+                onPressed: () => _onNumberPressed(','),
+                color: AppColors.goldLight,
+              ),
+              // Zero button (bottom-center)
+              _buildButton(
+                label: '0',
+                onPressed: () => _onNumberPressed('0'),
+                color: AppColors.gold,
+              ),
+              // Backspace button (bottom-right)
+              _buildButton(
+                label: '⌫',
+                onPressed: _onBackspace,
+                color: AppColors.red,
+                isIcon: true,
+              ),
+            ],
+          ),
           ),
         ],
       ),
