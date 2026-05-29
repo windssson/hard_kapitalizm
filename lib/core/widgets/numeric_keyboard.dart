@@ -20,11 +20,10 @@ class NumericKeyboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height ?? 280.h,
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
         border: Border(
           top: BorderSide(
             color: AppColors.gold.withValues(alpha: 0.3),
@@ -33,42 +32,16 @@ class NumericKeyboard extends StatelessWidget {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Display field with current value
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-            margin: EdgeInsets.only(bottom: 12.h),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(
-                color: AppColors.gold.withValues(alpha: 0.25),
-                width: 1.5,
-              ),
-            ),
-            child: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: controller,
-              builder: (context, value, _) {
-                return Text(
-                  value.text.isEmpty ? '0' : value.text,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.right,
-                );
-              },
-            ),
-          ),
           // Keyboard grid
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 3,
-              childAspectRatio: 1.0,
-              crossAxisSpacing: 6.w,
-              mainAxisSpacing: 6.h,
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            childAspectRatio: 1.2,
+            crossAxisSpacing: 4.w,
+            mainAxisSpacing: 4.h,
               children: [
                 // Numbers 1-9
                 ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(
@@ -100,69 +73,6 @@ class NumericKeyboard extends StatelessWidget {
               ],
             ),
           ),
-          // Action buttons
-          SizedBox(height: 8.h),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    controller.clear();
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.red.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(
-                        color: AppColors.red.withValues(alpha: 0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Text(
-                      'Temizle',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.red,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context);
-                    onDone?.call();
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(
-                        color: AppColors.gold.withValues(alpha: 0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Text(
-                      'Tamam',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -179,18 +89,15 @@ class NumericKeyboard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(
-            color: color.withValues(alpha: 0.35),
-            width: 1.5,
-          ),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(color: color.withValues(alpha: 0.35), width: 1.5),
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
               color: Colors.white,
-              fontSize: isIcon ? 18.sp : 20.sp,
+              fontSize: isIcon ? 14.sp : 16.sp,
               fontWeight: FontWeight.bold,
             ),
           ),

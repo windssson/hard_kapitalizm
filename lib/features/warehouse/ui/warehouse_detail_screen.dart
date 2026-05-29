@@ -33,7 +33,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final warehouseAsync = ref.watch(warehouseDetailProvider(widget.warehouseId));
+    final warehouseAsync = ref.watch(
+      warehouseDetailProvider(widget.warehouseId),
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -44,10 +46,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           icon: const Icon(Icons.add_shopping_cart, color: Colors.black),
           label: const Text(
             'Urun Ekle',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
         ),
         orElse: () => null,
@@ -93,22 +92,28 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     await ref.read(warehouseDetailProvider(widget.warehouseId).future);
   }
 
-  void _showProductSelection(BuildContext context, WarehouseModel warehouse) async {
+  void _showProductSelection(
+    BuildContext context,
+    WarehouseModel warehouse,
+  ) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.gold),
-      ),
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: AppColors.gold)),
     );
 
     try {
       final allProducts = await ref.read(allProductsProvider.future);
-      final typeDetail = await ref.read(warehouseTypeDetailProvider(warehouse.warehouseTypeId).future);
+      final typeDetail = await ref.read(
+        warehouseTypeDetailProvider(warehouse.warehouseTypeId).future,
+      );
 
       if (context.mounted) Navigator.pop(context);
 
-      final acceptedIds = _parseAcceptedProductIds(typeDetail['accepted_product_ids']);
+      final acceptedIds = _parseAcceptedProductIds(
+        typeDetail['accepted_product_ids'],
+      );
 
       final filteredProducts = allProducts.where((p) {
         if (acceptedIds.isEmpty) return true;
@@ -176,7 +181,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         title: 'Deponun Alabildiği Ürünler',
         options: options,
       );
-
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
       if (context.mounted) {
@@ -239,10 +243,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
   Widget _buildHeaderCard(WarehouseModel warehouse) {
     final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
-    final listedSlots =
-        filledSlots.where((slot) => slot.isAvailableForSale).length;
-    final totalQuantity =
-        filledSlots.fold<int>(0, (sum, slot) => sum + slot.quantity);
+    final listedSlots = filledSlots
+        .where((slot) => slot.isAvailableForSale)
+        .length;
+    final totalQuantity = filledSlots.fold<int>(
+      0,
+      (sum, slot) => sum + slot.quantity,
+    );
     final totalStock = totalQuantity.toDouble();
     final reserved = warehouse.reservedCapacity;
     final capacity = warehouse.capacity;
@@ -250,11 +257,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final averageQuality = filledSlots.isEmpty
         ? 0.0
         : filledSlots.fold<int>(0, (sum, slot) => sum + slot.qualityLevel) /
-            filledSlots.length;
-    final stockRatio =
-        capacity > 0 ? (totalStock / capacity).clamp(0.0, 1.0) : 0.0;
-    final reserveRatio =
-        capacity > 0 ? (reserved / capacity).clamp(0.0, 1.0) : 0.0;
+              filledSlots.length;
+    final stockRatio = capacity > 0
+        ? (totalStock / capacity).clamp(0.0, 1.0)
+        : 0.0;
+    final reserveRatio = capacity > 0
+        ? (reserved / capacity).clamp(0.0, 1.0)
+        : 0.0;
 
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -572,10 +581,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           ),
           Text(
             label,
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 10.sp,
-            ),
+            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
           ),
         ],
       ),
@@ -601,10 +607,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             SizedBox(height: 4.h),
             Text(
               subtitle,
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
-              ),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
             ),
           ],
         ],
@@ -654,10 +657,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               size: 42.sp,
             ),
             SizedBox(height: 12.h),
-            Text(
-              'Bu depoda henuz urun yok.',
-              style: AppTextStyles.body,
-            ),
+            Text('Bu depoda henuz urun yok.', style: AppTextStyles.body),
           ],
         ),
       );
@@ -718,10 +718,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         SizedBox(width: 6.w),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 11.sp,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w700),
         ),
       ],
     );
@@ -745,9 +742,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.gold,
-        side: BorderSide(
-          color: AppColors.gold.withValues(alpha: 0.35),
-        ),
+        side: BorderSide(color: AppColors.gold.withValues(alpha: 0.35)),
         padding: EdgeInsets.symmetric(vertical: 8.h),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10.r),
@@ -829,8 +824,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       );
     }
 
-    final marginPercent =
-        (slot.price > 0 && slot.cost > 0) ? ((slot.price - slot.cost) / slot.cost) * 100 : null;
+    final marginPercent = (slot.price > 0 && slot.cost > 0)
+        ? ((slot.price - slot.cost) / slot.cost) * 100
+        : null;
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -885,7 +881,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             ),
           ),
           SizedBox(width: 12.w),
-          
+
           // Middle Side: Chips and other elements
           Expanded(
             child: Column(
@@ -897,7 +893,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   children: [
                     _buildTag(
                       slot.isAvailableForSale ? 'SATISTA' : 'BEKLEMEDE',
-                      slot.isAvailableForSale ? AppColors.green : AppColors.textMuted,
+                      slot.isAvailableForSale
+                          ? AppColors.green
+                          : AppColors.textMuted,
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -911,7 +909,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                               activeColor: AppColors.green,
                               inactiveThumbColor: AppColors.textMuted,
                               inactiveTrackColor: Colors.black26,
-                              onChanged: (_) => _toggleSaleStatus(context, ref, slot),
+                              onChanged: (_) =>
+                                  _toggleSaleStatus(context, ref, slot),
                             ),
                           ),
                         ),
@@ -937,7 +936,12 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                               if (value == 'market') {
                                 _openMarketForSlot(context, warehouse, slot);
                               } else if (value == 'transfer') {
-                                _startWarehouseOutboundFlow(context, ref, warehouse, slot);
+                                _startWarehouseOutboundFlow(
+                                  context,
+                                  ref,
+                                  warehouse,
+                                  slot,
+                                );
                               } else if (value == 'delete') {
                                 _deleteWarehouseSlot(context, ref, slot);
                               }
@@ -947,9 +951,19 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                 value: 'market',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.storefront_outlined, color: Colors.white, size: 18.sp),
+                                    Icon(
+                                      Icons.storefront_outlined,
+                                      color: Colors.white,
+                                      size: 18.sp,
+                                    ),
                                     SizedBox(width: 8.w),
-                                    Text('Pazar', style: TextStyle(color: Colors.white, fontSize: 13.sp)),
+                                    Text(
+                                      'Pazar',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13.sp,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -957,9 +971,19 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                 value: 'transfer',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.local_shipping_outlined, color: Colors.white, size: 18.sp),
+                                    Icon(
+                                      Icons.local_shipping_outlined,
+                                      color: Colors.white,
+                                      size: 18.sp,
+                                    ),
                                     SizedBox(width: 8.w),
-                                    Text('Depoya', style: TextStyle(color: Colors.white, fontSize: 13.sp)),
+                                    Text(
+                                      'Depoya',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13.sp,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -968,9 +992,19 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                   value: 'delete',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.delete_outline, color: AppColors.red, size: 18.sp),
+                                      Icon(
+                                        Icons.delete_outline,
+                                        color: AppColors.red,
+                                        size: 18.sp,
+                                      ),
                                       SizedBox(width: 8.w),
-                                      Text('Sil', style: TextStyle(color: AppColors.red, fontSize: 13.sp)),
+                                      Text(
+                                        'Sil',
+                                        style: TextStyle(
+                                          color: AppColors.red,
+                                          fontSize: 13.sp,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -999,19 +1033,30 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     GestureDetector(
                       onTap: () => _showPriceDialog(context, ref, slot),
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.w,
+                          vertical: 4.h,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.gold.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.sell_outlined, color: AppColors.gold, size: 12.sp),
+                            Icon(
+                              Icons.sell_outlined,
+                              color: AppColors.gold,
+                              size: 12.sp,
+                            ),
                             SizedBox(width: 4.w),
                             Text(
-                              slot.price > 0 ? 'Fiyat ${slot.price.toStringAsFixed(1)}' : 'Fiyat yok',
+                              slot.price > 0
+                                  ? 'Fiyat ${slot.price.toStringAsFixed(1)}'
+                                  : 'Fiyat yok',
                               style: TextStyle(
                                 color: AppColors.gold,
                                 fontSize: 10.sp,
@@ -1019,7 +1064,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                               ),
                             ),
                             SizedBox(width: 4.w),
-                            Icon(Icons.edit, color: AppColors.gold, size: 12.sp),
+                            Icon(
+                              Icons.edit,
+                              color: AppColors.gold,
+                              size: 12.sp,
+                            ),
                           ],
                         ),
                       ),
@@ -1051,144 +1100,189 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       text: slot.price > 0 ? slot.price.toStringAsFixed(1) : '',
     );
 
-    showDialog(
+    final result = await showDialog<double>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (dialogContext) => Dialog(
         backgroundColor: AppColors.cardBg,
-        title: Text(
-          'Satis Fiyati',
-          style: TextStyle(color: Colors.white, fontSize: 18.sp),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              slot.productName ?? 'Urun',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 13.sp,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            GestureDetector(
-              onTap: () {
-                Navigator.pop(dialogContext);
-                _showNumericKeyboard(context, ref, slot, controller);
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white24, width: 1),
-                  borderRadius: BorderRadius.circular(8.r),
-                  color: Colors.black.withValues(alpha: 0.2),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: 500.h,
+            maxWidth: 400.w,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Birim satis fiyati',
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontSize: 12.sp,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        ValueListenableBuilder<TextEditingValue>(
-                          valueListenable: controller,
-                          builder: (context, value, _) => Text(
-                            value.text.isEmpty ? '0' : value.text,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Satis Fiyati',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    Icon(Icons.edit, color: AppColors.gold, size: 18.sp),
+                    SizedBox(height: 8.h),
+                    Text(
+                      slot.productName ?? 'Urun',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-            if (slot.cost > 0) ...[
-              SizedBox(height: 8.h),
-              Text(
-                'Maliyet: ${slot.cost.toStringAsFixed(1)}',
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 11.sp,
+              Divider(
+                color: Colors.white.withValues(alpha: 0.1),
+                height: 1,
+              ),
+              // Price Display
+              Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.25),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Birim Satis Fiyati',
+                        style: TextStyle(
+                          color: AppColors.gold,
+                          fontSize: 11.sp,
+                        ),
+                      ),
+                      SizedBox(height: 6.h),
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: controller,
+                        builder: (context, value, _) => Text(
+                          value.text.isEmpty ? '0' : value.text,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Keyboard
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: NumericKeyboard(controller: controller),
+              ),
+              // Cost info
+              if (slot.cost > 0)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  child: Text(
+                    'Maliyet: ${slot.cost.toStringAsFixed(1)}',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 10.sp,
+                    ),
+                  ),
+                ),
+              // Action Buttons
+              Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 10.h),
+                        ),
+                        child: Text(
+                          'Iptal',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final parsed = double.tryParse(
+                            controller.text.trim().replaceAll(',', '.'),
+                          );
+                          if (parsed == null || parsed <= 0) {
+                            Navigator.pop(dialogContext);
+                            AppSnackbar.show(
+                              context,
+                              title: 'Gecersiz Fiyat',
+                              message: 'Satis fiyati 0 buyuk olmali.',
+                              type: SnackbarType.error,
+                            );
+                            return;
+                          }
+                          Navigator.pop(dialogContext, parsed);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.gold,
+                          foregroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(vertical: 10.h),
+                        ),
+                        child: Text(
+                          'Kaydet',
+                          style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Iptal'),
           ),
-        ],
+        ),
       ),
     );
-  }
 
-  Future<void> _showNumericKeyboard(
-    BuildContext context,
-    WidgetRef ref,
-    WarehouseSlotModel slot,
-    TextEditingController controller,
-  ) async {
-    await showModalBottomSheet(
-      context: context,
-      builder: (_) => NumericKeyboard(
-        controller: controller,
-        onDone: () async {
-          final parsed = double.tryParse(
-            controller.text.trim().replaceAll(',', '.'),
-          );
-          if (parsed == null || parsed <= 0) {
-            AppSnackbar.show(
-              context,
-              title: 'Gecersiz Fiyat',
-              message: 'Satis fiyati 0 buyuk olmali.',
-              type: SnackbarType.error,
-            );
-            return;
-          }
+    if (result == null || !context.mounted) return;
 
-          final actionResult = await ref.read(warehouseActionProvider).updateWarehouseSlotPrice(
-                warehouseSlotId: slot.id,
-                price: parsed,
-              );
+    final actionResult = await ref.read(warehouseActionProvider).updateWarehouseSlotPrice(
+          warehouseSlotId: slot.id,
+          price: result,
+        );
 
-          if (!context.mounted) return;
+    if (!context.mounted) return;
 
-          if (actionResult['success'] == true) {
-            await _refreshWarehouse(ref);
-            AppSnackbar.show(
-              context,
-              title: 'Fiyat Guncellendi',
-              message: '${slot.productName ?? 'Urun'} icin satis fiyati kaydedildi.',
-              type: SnackbarType.success,
-            );
-          } else {
-            AppSnackbar.show(
-              context,
-              title: 'Islem Basarisiz',
-              message: actionResult['message']?.toString() ?? 'Fiyat kaydedilemedi.',
-              type: SnackbarType.error,
-            );
-          }
-        },
-      ),
-      isScrollControlled: true,
-      useSafeArea: true,
-    );
+    if (actionResult['success'] == true) {
+      await _refreshWarehouse(ref);
+      AppSnackbar.show(
+        context,
+        title: 'Fiyat Guncellendi',
+        message: '${slot.productName ?? 'Urun'} icin satis fiyati kaydedildi.',
+        type: SnackbarType.success,
+      );
+    } else {
+      AppSnackbar.show(
+        context,
+        title: 'Islem Basarisiz',
+        message: actionResult['message']?.toString() ?? 'Fiyat kaydedilemedi.',
+        type: SnackbarType.error,
+      );
+    }
   }
 
   Future<void> _deleteWarehouseSlot(
@@ -1227,9 +1321,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     if (confirm != true || !context.mounted) return;
 
-    final actionResult = await ref.read(warehouseActionProvider).deleteWarehouseSlot(
-          warehouseSlotId: slot.id,
-        );
+    final actionResult = await ref
+        .read(warehouseActionProvider)
+        .deleteWarehouseSlot(warehouseSlotId: slot.id);
 
     if (!context.mounted) return;
 
@@ -1271,9 +1365,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.gold),
-      ),
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: AppColors.gold)),
     );
 
     List<Map<String, dynamic>> warehouses = const [];
@@ -1364,7 +1457,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final controller = TextEditingController(text: '1');
     final limit = slot.quantity;
     final isSameCity =
-        (targetWarehouse['city_id']?.toString() ?? '') == sourceWarehouse.cityId;
+        (targetWarehouse['city_id']?.toString() ?? '') ==
+        sourceWarehouse.cityId;
 
     void applyQuantity(int value, void Function(void Function()) setState) {
       final clamped = value.clamp(1, limit);
@@ -1429,8 +1523,14 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                             isSameCity ? 'Ayni sehir' : 'Sehirler arasi',
                             isSameCity ? AppColors.green : AppColors.blue,
                           ),
-                          _buildStatusPill('Hedef: $targetCityName', AppColors.gold),
-                          _buildStatusPill('Maksimum $limit', AppColors.goldLight),
+                          _buildStatusPill(
+                            'Hedef: $targetCityName',
+                            AppColors.gold,
+                          ),
+                          _buildStatusPill(
+                            'Maksimum $limit',
+                            AppColors.goldLight,
+                          ),
                         ],
                       ),
                     ],
@@ -1524,7 +1624,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
   ) async {
     final targetWarehouseId = targetWarehouse['id']?.toString() ?? '';
     final sameCity =
-        (targetWarehouse['city_id']?.toString() ?? '') == sourceWarehouse.cityId;
+        (targetWarehouse['city_id']?.toString() ?? '') ==
+        sourceWarehouse.cityId;
 
     if (targetWarehouseId.isEmpty) {
       AppSnackbar.show(
@@ -1551,9 +1652,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.gold),
-      ),
+      builder: (_) =>
+          const Center(child: CircularProgressIndicator(color: AppColors.gold)),
     );
 
     TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>
@@ -1632,8 +1732,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 separatorBuilder: (_, __) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = vehicleResult.options[index];
-                  final color =
-                      option.canSelect ? AppColors.green : AppColors.red;
+                  final color = option.canSelect
+                      ? AppColors.green
+                      : AppColors.red;
                   return InkWell(
                     onTap: option.canSelect
                         ? () {
@@ -1654,7 +1755,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.textPrimary.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(color: color.withValues(alpha: 0.35)),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1783,7 +1886,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       return;
     }
 
-    final result = await ref.read(warehouseActionProvider).setWarehouseSlotSaleStatus(
+    final result = await ref
+        .read(warehouseActionProvider)
+        .setWarehouseSlotSaleStatus(
           warehouseSlotId: slot.id,
           isAvailableForSale: !slot.isAvailableForSale,
         );
@@ -1848,10 +1953,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             Text(
               error.toString(),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
-              ),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
             ),
           ],
         ),
@@ -1864,8 +1966,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
     return value.toStringAsFixed(0);
   }
-
-
 
   Widget _buildStatusPill(String label, Color accentColor) {
     return Container(
