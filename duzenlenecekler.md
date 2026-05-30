@@ -106,184 +106,26 @@ Bu dosya, performans odaklı mimari düzenlemeleri sayfa sayfa takip etmek için
 
 - `lib/features/store/ui/store_detail_screen.dart`
 - `lib/features/store/data/store_provider.dart`
-- `lib/features/store/ui/store_history_screen.dart` (detaydan açılan alt ekran olarak daha sonra ayrıca derin incelenecek)
-- `lib/features/store/ui/store_performance_screen.dart` (detaydan açılan alt ekran olarak daha sonra ayrıca derin incelenecek)
 
 ### Tespitler
 
-#### Detay ekranı açılışında parçalı veri çekiliyor
+- Detay ekranı açılışta `get_store_detail`, `get_player_active_building_boost`, `get_player_active_building_upgrade` şeklinde en az 3 ayrı RPC çalıştırabiliyor.
+- Detay verisi geldikten sonra `_scheduleStoreSalesCheck()` içinde `process_store_sales_on_entry` ayrı RPC olarak çalışıyor.
+- Satış işlenirse `storeDetailProvider`, `activeStoreBoostProvider`, `storesListProvider`, `storeHistoryProvider`, `storePerformanceProvider`, `playerProvider` invalidate ediliyor.
+- Bu, detay ekranındaki en büyük performans problemidir: kullanıcı mağaza detayına girince önce veri çekiliyor, sonra satış işleniyor, sonra birçok veri tekrar çekiliyor.
+- `activeStoreUpgradeProvider` listener içinde upgrade süresi geçmişse `completeDueBuildingUpgrades()` çağrılıyor; bu da build sırasında ekstra RPC doğurabilir.
+- Slot açma sonrası `storeDetailProvider.future` okunuyor ve `storesListProvider` invalidate ediliyor.
+- Boost ve upgrade aksiyonları genelde `activeStoreBoostProvider` / `activeStoreUpgradeProvider`, `storeDetailProvider`, `storesListProvider`, `playerProvider` invalidate ediyor.
+- Slot aktif/pasif, ürün temizleme, fiyat değiştirme, ürün seçme gibi aksiyonlar tüm detay veya listeyi tekrar çektiriyor.
+- Ürün seçimi her açılışta `get_available_products_for_store` RPC'si çalıştırıyor.
+- Depodan mağazaya ve mağazadan depoya transfer akışları çok adımlı ve işlem sonrası tekrar okuma/invalidate üretiyor.
 
-`StoreDetailScreen` ana veri olarak `storeDetailProvider(storeId)` izliyor. Bu provider `get_store_detail` RPC'sini çağırıyor.
+### Önerilen yeni yapı
 
-Ekran içeriği oluşturulurken ayrıca:
+- Tek açılış endpoint'i: `open_store_detail_page(p_store_id)`.
+- Bu fonksiyon gerekirse satışları işlemeli, süresi biten boost/upgrade durumlarını tamamlamalı veya güncel durumlarını dönmeli, güncel mağaza detayını, aktif boost'u, aktif upgrade'i, görünür satış sonucunu, player patch'i ve store list item patch'i döndürmeli.
 
-- `activeStoreBoostProvider(store.id)` → `get_player_active_building_boost`
-- `activeStoreUpgradeProvider(store.id)` → `get_player_active_building_upgrade`
-
-çalışıyor.
-
-Yani detay ekranı ilk açılışta satış işleminden önce bile en az 3 ayrı RPC çalıştırabiliyor:
-
-```text
-get_store_detail
-get_player_active_building_boost
-get_player_active_building_upgrade
-```
-
-Bu üç veri tek detay endpoint'inde dönmeli.
-
-#### Satış kontrolü detay verisi geldikten sonra ayrı RPC olarak çalışıyor
-
-`_scheduleStoreSalesCheck()` içinde `processStoreSalesOnEntry(store.id)` çağrılıyor. Bu da `process_store_sales_on_entry` RPC'sine gidiyor.
-
-Satış işlenirse şu invalidate zinciri çalışıyor:
-
-- `storeDetailProvider(store.id)`
-- `activeStoreBoostProvider(store.id)`
-- `storesListProvider`
-- `storeHistoryProvider(store.id)`
-- `storePerformanceProvider(store.id)`
-- `playerProvider`
-
-Bu detay ekranındaki en büyük performans problemi. Kullanıcı mağaza detayına girince önce detay çekiliyor, sonra satış işleniyor, sonra detay ve ilgili provider'lar tekrar çekiliyor.
-
-#### Satış işleme ve detay verisi aynı açılış endpoint'inde birleşmeli
-
-Mağaza detay sayfası açılırken ideal akış tek RPC olmalı:
-
-```sql
-open_store_detail_page(p_store_id)
-```
-
-Bu fonksiyon:
-
-- Gerekliyse satışları işler.
-- Süresi biten boost/upgrade durumlarını tamamlar veya döndürür.
-- Güncel mağaza detayını döndürür.
-- Aktif boost bilgisini döndürür.
-- Aktif upgrade bilgisini döndürür.
-- Satış sonucu görünürse dialog için `sale_result` döndürür.
-- Güncel player patch döndürür.
-- Liste kartı için store summary patch döndürür.
-
-Response örneği:
-
-```json
-{
-  "success": true,
-  "store": {},
-  "active_boost": null,
-  "active_upgrade": null,
-  "sale_result": {},
-  "changed": {
-    "player": {},
-    "store_list_item": {},
-    "history_dirty": true,
-    "performance_dirty": true
-  }
-}
-```
-
-Böylece açılışta şu yapıdan kaçılır:
-
-```text
-get_store_detail
-+ process_store_sales_on_entry
-+ get_store_detail tekrar
-+ get_player_active_building_boost tekrar
-+ get_store_history_items invalidate
-+ get_store_daily_performance invalidate
-+ get_player_profile invalidate
-```
-
-#### `activeStoreUpgradeProvider` listener içinde süresi dolduysa RPC çağrılıyor
-
-`ref.listen(activeStoreUpgradeProvider(storeId))` içinde upgrade varsa ve `finishAt` geçmişse `completeDueBuildingUpgrades()` çağrılıyor.
-
-Bu ekran build sırasında ekstra tamamlatma RPC'si doğurabilir. Tamamlanması gereken upgrade/boost işleri detail open RPC içinde yapılmalı veya bootstrap/background completion içinde tek noktada yönetilmeli.
-
-#### Slot açma sonrası gereksiz tekrar okuma var
-
-`_handleOpenSlot()` başarılı olunca önce `ref.read(storeDetailProvider(store.id).future)` çağrılıyor, sonra `storesListProvider` invalidate ediliyor.
-
-Bu yaklaşım yanlış: `add_store_slot` response'u yeni slotu, güncel store summary'yi ve liste kartı patch'ini dönmeli.
-
-#### Boost ve upgrade aksiyonları çoklu invalidate yapıyor
-
-`startStoreBoost`, `startStoreUpgrade`, `finishStoreUpgradeWithGold` başarılı olunca genelde şunlar invalidate ediliyor:
-
-- `activeStoreBoostProvider` veya `activeStoreUpgradeProvider`
-- `storeDetailProvider`
-- `storesListProvider`
-- `playerProvider`
-
-Bunlar patch response ile güncellenmeli.
-
-#### Slot aksiyonlarında tüm detay tekrar çekiliyor
-
-Aşağıdaki aksiyonlar başarılı olunca detay veya liste invalidate ediliyor:
-
-- Slot aktif/pasif değiştirme: `set_store_slot_active`
-- Slot ürününü temizleme: `clear_store_slot_product`
-- Slot fiyatı değiştirme: `set_store_slot_price`
-- Slot ürünü seçme: `set_store_slot_product`
-
-Bu aksiyonlar sadece ilgili slotu ve store/list summary değerlerini etkiler. Tüm mağaza detayını yeniden çekmek gereksiz.
-
-#### Ürün seçimi her açılışta RPC ile ürünleri getiriyor
-
-`_showProductSelectionDialog()` her açıldığında `get_available_products_for_store` çağırıyor. Ürün kataloğu ve mağaza uygunlukları sık değişmiyorsa bu response kısa süreli cache'lenebilir veya detay açılışında uygun ürün listesi opsiyonel olarak getirilebilir.
-
-Öneri:
-
-- Store tipine göre uygun ürün katalogları merkezi cache'e alınsın.
-- Slot ürün seçimi açıldığında sadece gerçekten gerekiyorsa RPC çalışsın.
-- Ürün seçimi sonrası sadece ilgili slot patch edilsin.
-
-#### Depodan mağazaya stok aktarım akışı çok adımlı ve sorgu üretmeye yatkın
-
-Depodan mağazaya stok ekleme akışında:
-
-1. `get_player_active_warehouses_with_slots`
-2. Şehirler arası ise `get_transfer_vehicle_options`
-3. Gerekirse `set_store_slot_product`
-4. `start_warehouse_to_store_transfer`
-5. Başarılı olursa `storeDetailProvider.future`
-6. `storesListProvider` invalidate
-7. `playerProvider` invalidate
-
-Aynı şehir transferinde araç seçimi atlanıyor ama yine de transfer sonrası detay/liste/player yeniden çekiliyor.
-
-Bu akış için transfer RPC'si değişen store slot, warehouse slot, player, active transfer ve store list item patch dönmeli.
-
-#### Mağazadan depoya stok gönderme akışı da çok adımlı
-
-Mağazadan depoya gönderimde:
-
-1. `get_player_active_warehouses_basic`
-2. Şehirler arası ise `get_transfer_vehicle_options`
-3. `start_store_to_warehouse_transfer`
-4. Başarılı olursa `storeDetailProvider.future`
-5. `storesListProvider` invalidate
-6. `playerProvider` invalidate
-
-Bu da patch response ile çözülmeli. Same-city transfer tamamlandıysa store slot ve warehouse slot anlık patch edilmeli; şehirler arası transfer başladıysa store slot pending/reserved alanı ve transfer kaydı patch edilmeli.
-
-#### History ve performance provider'ları detay ekranında doğrudan yüklenmiyor ama satış sonrası invalidate ediliyor
-
-Detay ekranı içinde `history` ve `performance` ayrı ekranlara `context.push` ile gidiyor. Fakat satış işlenince `storeHistoryProvider` ve `storePerformanceProvider` invalidate ediliyor.
-
-Bu provider'lar o anda izlenmiyorsa invalidate cache'i kirletmekten başka işe yaramaz. Yeni mimaride `history_dirty` ve `performance_dirty` flag tutulmalı. Kullanıcı history/performance ekranına girdiğinde gerekiyorsa refresh yapılmalı.
-
-### Önerilen yeni mağaza detay mimarisi
-
-#### Tek açılış endpoint'i
-
-```sql
-open_store_detail_page(p_store_id)
-```
-
-Bu fonksiyon şunları döndürmeli:
+Örnek response:
 
 ```json
 {
@@ -301,53 +143,12 @@ Bu fonksiyon şunları döndürmeli:
 }
 ```
 
-#### Patch edilebilir detail notifier
+- `storeDetailProvider` klasik `FutureProvider.family` yerine patch edilebilir `StoreDetailNotifier` yapısına alınmalı.
+- `activeStoreBoostProvider` ve `activeStoreUpgradeProvider` detay ekranında ayrı provider olarak izlenmemeli; detail state içinde tutulmalı.
+- History/performance doğrudan invalidate edilmemeli; detail state içinde dirty flag tutulmalı.
+- Tüm mağaza aksiyonları sadece değişen entity'leri döndürmeli.
 
-`storeDetailProvider` klasik `FutureProvider.family` yerine patch edilebilir bir notifier yapısına alınmalı.
-
-Öneri:
-
-```text
-StoreDetailNotifier(storeId)
-- open()
-- refresh()
-- applySaleResult(result)
-- patchStore(store)
-- patchSlot(slot)
-- patchSummary(summary)
-- patchActiveBoost(boost)
-- patchActiveUpgrade(upgrade)
-- markHistoryDirty()
-- markPerformanceDirty()
-```
-
-#### Aksiyon response standartları
-
-Her mağaza detay aksiyonu değişen veriyi dönmeli:
-
-```json
-{
-  "success": true,
-  "message": "İşlem başarılı.",
-  "changed": {
-    "store": {},
-    "store_slot": {},
-    "store_summary": {},
-    "store_list_item": {},
-    "player": {},
-    "active_boost": null,
-    "active_upgrade": null,
-    "warehouse_slot": {},
-    "transfer": {},
-    "history_dirty": true,
-    "performance_dirty": true
-  }
-}
-```
-
-Her aksiyon tüm alanları döndürmek zorunda değil. Sadece değişen entity'leri döndürmeli.
-
-#### Invalidate yerine patch uygulanacak aksiyonlar
+### Patch response üretmesi gereken aksiyonlar
 
 - `process_store_sales_on_entry`
 - `add_store_slot`
@@ -361,30 +162,47 @@ Her aksiyon tüm alanları döndürmek zorunda değil. Sadece değişen entity'l
 - `start_warehouse_to_store_transfer`
 - `start_store_to_warehouse_transfer`
 
-#### Transfer akışları için endpoint iyileştirmesi
+### Yapılacaklar
 
-Uzun vadede transfer başlatma endpoint'leri hem işlemi yapmalı hem de UI patch döndürmeli:
+- [ ] `open_store_detail_page(p_store_id)` RPC tasarlanacak.
+- [ ] `get_store_detail`, `process_store_sales_on_entry`, `get_player_active_building_boost`, `get_player_active_building_upgrade` açılışta tek response'a indirilecek.
+- [ ] `process_store_sales_on_entry` response'u güncel `store`, `player`, `store_list_item`, `sale_result`, `history_dirty`, `performance_dirty` dönecek şekilde düzenlenecek veya açılış RPC içine taşınacak.
+- [ ] `StoreDetailNotifier` patch edilebilir hale getirilecek.
+- [ ] `activeStoreBoostProvider` ve `activeStoreUpgradeProvider` detail ekranında ayrı provider olarak izlenmeyecek.
+- [ ] Satış sonrası provider invalidate zinciri kaldırılacak.
+- [ ] Slot açma response'u yeni slot + store summary + store list item patch dönecek.
+- [ ] Boost başlatma response'u active boost + player + store/list patch dönecek.
+- [ ] Upgrade başlatma/bitirme response'u active upgrade veya completed store + player + store/list patch dönecek.
+- [ ] Slot aktif/pasif, fiyat, ürün seçme, ürün temizleme aksiyonları sadece ilgili slotu ve summary'yi patch edecek.
+- [ ] Depodan mağazaya ve mağazadan depoya transfer response'ları store slot, warehouse slot, player, transfer ve store list item patch dönecek.
+- [ ] History/performance için dirty flag mantığı kurulacak.
 
-- `store_slot`
-- `warehouse_slot`
-- `player`
-- `transfer`
-- `store_list_item`
+---
 
-Ayrıca aynı şehir transferinde anlık tamamlanan sonuç ile şehirler arası transferde başlayan lojistik kaydı aynı response formatında ayrışmalı:
+## 4. Mağaza History ve Performance Ekranları
 
-```json
-{
-  "mode": "instant" | "logistics",
-  "changed": {}
-}
-```
+İncelenen dosyalar:
 
-#### History/performance lazy refresh
+- `lib/features/store/ui/store_history_screen.dart`
+- `lib/features/store/ui/store_performance_screen.dart`
+- `lib/features/store/data/store_provider.dart`
 
-Satış işlenince history/performance provider'ları doğrudan invalidate edilmemeli.
+### Tespitler
 
-Yerine detail state içinde:
+- History ekranı açılınca `storeHistoryProvider(storeId)` üzerinden tek RPC çalışıyor: `get_store_history_items`.
+- Performance ekranı açılınca `storePerformanceProvider(storeId)` üzerinden tek RPC çalışıyor: `get_store_daily_performance`, `p_days: 14`.
+- Bu iki ekran detay ekranında doğrudan yüklenmiyor; kullanıcı `History` veya `Report` aksiyonuna basınca ayrı route olarak açılıyor.
+- Asıl sorun bu ekranların kendisinde değil, detay ekranındaki satış sonrası erken invalidate davranışında.
+- Detayda satış işlenince kullanıcı bu ekranlara girmemiş olsa bile `storeHistoryProvider(store.id)` ve `storePerformanceProvider(store.id)` invalidate ediliyor.
+- İki ekranda da `RouteRefreshMixin` var; `didPopNext()` tetiklenirse provider invalidate edilip tekrar okunuyor. Bu genel mimari kuralına aykırı.
+- Pull-to-refresh kalmalı; bu bilinçli hard refresh kabul edilebilir.
+- History ekranında filtreleme ve özet hesapları local list üzerinden yapılıyor. Veri büyürse pagination gerekir.
+- Performance ekranı 14 günlük veriyle sınırlı olduğu için mevcut sorgu genişliği şimdilik makul.
+
+### Önerilen yeni yapı
+
+- Detay ekranında satış/transfer/slot değişiklikleri olduğunda history ve performance provider'ları doğrudan invalidate edilmemeli.
+- Bunun yerine store detail state içinde dirty flag tutulmalı:
 
 ```json
 {
@@ -393,29 +211,59 @@ Yerine detail state içinde:
 }
 ```
 
-tutulmalı. Kullanıcı ilgili ekrana girerse ve dirty ise refresh yapılmalı.
+- Kullanıcı history/performance ekranına girdiğinde dirty flag kontrol edilmeli. Dirty ise refresh yapılmalı, değilse cache kullanılmalı.
+- `RouteRefreshMixin` burada kaldırılmalı veya dirty flag'e bağlanmalı.
+- History uzun vadede pagination desteklemeli.
 
-### Öncelik kararı
+Önerilen notifier yapıları:
 
-- Mağaza detay ekranı şu ana kadar incelenen mağaza sayfaları içinde en büyük sorgu şişirme kaynağıdır.
-- İlk düzeltme `open_store_detail_page()` ile açılış akışının tek RPC'ye indirilmesi olmalı.
-- İkinci düzeltme satış sonrası invalidate zincirinin kaldırılması olmalı.
-- Üçüncü düzeltme slot/boost/upgrade/transfer aksiyonlarının patch response üretmesi olmalı.
+```text
+StoreHistoryNotifier(storeId)
+- loadIfNeeded()
+- refresh()
+- markDirty()
+- prependItems(items)
+```
+
+```text
+StorePerformanceNotifier(storeId)
+- loadIfNeeded()
+- refresh()
+- markDirty()
+```
+
+History pagination önerisi:
+
+```sql
+get_store_history_items(p_store_id, p_limit, p_before)
+```
+
+veya:
+
+```sql
+get_store_history_items(p_store_id, p_limit, p_offset)
+```
+
+Örnek response:
+
+```json
+{
+  "items": [],
+  "next_cursor": null,
+  "has_more": false
+}
+```
 
 ### Yapılacaklar
 
-- [ ] `open_store_detail_page(p_store_id)` RPC tasarlanacak.
-- [ ] `get_store_detail`, `process_store_sales_on_entry`, `get_player_active_building_boost`, `get_player_active_building_upgrade` açılışta tek response'a indirilecek.
-- [ ] `process_store_sales_on_entry` response'u güncel `store`, `player`, `store_list_item`, `sale_result`, `history_dirty`, `performance_dirty` dönecek şekilde düzenlenecek veya açılış RPC içine taşınacak.
-- [ ] `StoreDetailNotifier` patch edilebilir hale getirilecek.
-- [ ] `activeStoreBoostProvider` ve `activeStoreUpgradeProvider` detail ekranında ayrı provider olarak izlenmeyecek; detail state içinde tutulacak.
-- [ ] Satış sonrası `storeDetailProvider`, `storesListProvider`, `storeHistoryProvider`, `storePerformanceProvider`, `playerProvider` invalidate zinciri kaldırılacak.
-- [ ] Slot açma response'u yeni slot + store summary + store list item patch dönecek.
-- [ ] Boost başlatma response'u active boost + player + store/list patch dönecek.
-- [ ] Upgrade başlatma/bitirme response'u active upgrade veya completed store + player + store/list patch dönecek.
-- [ ] Slot aktif/pasif, fiyat, ürün seçme, ürün temizleme aksiyonları sadece ilgili slotu ve summary'yi patch edecek.
-- [ ] Depodan mağazaya ve mağazadan depoya transfer response'ları store slot, warehouse slot, player, transfer ve store list item patch dönecek.
-- [ ] History/performance için dirty flag mantığı kurulacak.
+- [ ] Detay ekranındaki satış sonrası `storeHistoryProvider` ve `storePerformanceProvider` invalidate kaldırılacak.
+- [ ] Store detail state içinde `history_dirty` ve `performance_dirty` tutulacak.
+- [ ] History ekranı açılırken dirty flag kontrolü yapılacak.
+- [ ] Performance ekranı açılırken dirty flag kontrolü yapılacak.
+- [ ] History ve performance ekranlarında `RouteRefreshMixin` kaynaklı otomatik hard refresh kaldırılacak veya dirty flag'e bağlanacak.
+- [ ] Pull-to-refresh manuel hard refresh olarak kalacak.
+- [ ] History provider uzun vadede pagination destekleyecek şekilde planlanacak.
+- [ ] Performance provider 14 günlük veriyle kalabilir; şimdilik tek RPC yeterli.
 
 ---
 
