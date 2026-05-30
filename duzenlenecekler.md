@@ -9,12 +9,14 @@ Bu dosya, performans odaklı mimari düzenlemeleri sayfa sayfa takip etmek için
 - Flutter tarafında provider state'i response içindeki küçük patch/update verisiyle güncellenecek.
 - `invalidate` sadece ilk yükleme, manuel refresh, oturum değişimi veya hata sonrası hard refresh için kullanılacak.
 - Büyük ekran verileri tek devasa response olarak değil, ilgili ekranın ihtiyacı kadar ve mümkünse sadece değişen entity'ler olarak döndürülecek.
+- Liste ve detay ekranlarında `FutureProvider` yerine patch edilebilir notifier yapısına geçilecek.
+- `RouteRefreshMixin` kaynaklı otomatik refresh varsayılan davranış olmaktan çıkarılacak; dirty flag veya route result ile sınırlandırılacak.
 
 ---
 
 ## 1. Splash Screen + Home Screen
 
-İncelenen dosyalar:
+### İncelenen dosyalar
 
 - `lib/features/splash/ui/splash_screen.dart`
 - `lib/features/home/ui/home_screen.dart`
@@ -56,7 +58,7 @@ Bu dosya, performans odaklı mimari düzenlemeleri sayfa sayfa takip etmek için
 
 ## 2. Mağaza Listeleme Ekranı
 
-İncelenen dosyalar:
+### İncelenen dosyalar
 
 - `lib/features/store/ui/store_screen.dart`
 - `lib/features/store/data/store_provider.dart`
@@ -102,7 +104,7 @@ Bu dosya, performans odaklı mimari düzenlemeleri sayfa sayfa takip etmek için
 
 ## 3. Mağaza Detay Ekranı
 
-İncelenen dosyalar:
+### İncelenen dosyalar
 
 - `lib/features/store/ui/store_detail_screen.dart`
 - `lib/features/store/data/store_provider.dart`
@@ -181,7 +183,7 @@ Bu dosya, performans odaklı mimari düzenlemeleri sayfa sayfa takip etmek için
 
 ## 4. Mağaza History ve Performance Ekranları
 
-İncelenen dosyalar:
+### İncelenen dosyalar
 
 - `lib/features/store/ui/store_history_screen.dart`
 - `lib/features/store/ui/store_performance_screen.dart`
@@ -215,45 +217,6 @@ Bu dosya, performans odaklı mimari düzenlemeleri sayfa sayfa takip etmek için
 - `RouteRefreshMixin` burada kaldırılmalı veya dirty flag'e bağlanmalı.
 - History uzun vadede pagination desteklemeli.
 
-Önerilen notifier yapıları:
-
-```text
-StoreHistoryNotifier(storeId)
-- loadIfNeeded()
-- refresh()
-- markDirty()
-- prependItems(items)
-```
-
-```text
-StorePerformanceNotifier(storeId)
-- loadIfNeeded()
-- refresh()
-- markDirty()
-```
-
-History pagination önerisi:
-
-```sql
-get_store_history_items(p_store_id, p_limit, p_before)
-```
-
-veya:
-
-```sql
-get_store_history_items(p_store_id, p_limit, p_offset)
-```
-
-Örnek response:
-
-```json
-{
-  "items": [],
-  "next_cursor": null,
-  "has_more": false
-}
-```
-
 ### Yapılacaklar
 
 - [ ] Detay ekranındaki satış sonrası `storeHistoryProvider` ve `storePerformanceProvider` invalidate kaldırılacak.
@@ -264,6 +227,221 @@ get_store_history_items(p_store_id, p_limit, p_offset)
 - [ ] Pull-to-refresh manuel hard refresh olarak kalacak.
 - [ ] History provider uzun vadede pagination destekleyecek şekilde planlanacak.
 - [ ] Performance provider 14 günlük veriyle kalabilir; şimdilik tek RPC yeterli.
+
+---
+
+## 5. Depo Listeleme ve Detay Ekranları
+
+### İncelenen dosyalar
+
+- `lib/features/warehouse/ui/warehouse_screen.dart`
+- `lib/features/warehouse/ui/warehouse_detail_screen.dart`
+- `lib/features/warehouse/ui/warehouse_type_selection_screen.dart`
+- `lib/features/warehouse/data/warehouse_provider.dart`
+- `lib/core/navigation/route_refresh_mixin.dart`
+
+### Tespitler
+
+#### Depo listeleme ekranı mağaza listeleme ile aynı sorunu taşıyor
+
+`WarehouseScreen` açılışta `warehouseListProvider` izliyor.
+
+`warehouseListProvider` mevcut durumda önce `get_player_warehouses_raw` RPC'sini çağırıyor. Sonra `get_player_building_constructions` ile devam eden depo inşaatlarını çekiyor. İnşaat varsa ek olarak `get_warehouse_types_catalog` ve `get_cities_catalog` çağrılıyor.
+
+Yani depo listeleme ekranı normal durumda 2 RPC, inşaat varsa 4 RPC çalıştırabiliyor.
+
+İnşaat halindeki depo kartları Flutter tarafında type/city kataloglarıyla birleştiriliyor. Bu iş backend tarafında hazır kart olarak dönmeli.
+
+#### Listeye dönüşte otomatik hard refresh var
+
+`WarehouseScreen` de `RouteRefreshMixin` kullanıyor. `refreshRouteData()` içinde:
+
+```dart
+ref.invalidate(warehouseListProvider);
+ref.read(warehouseListProvider.future);
+```
+
+çalışıyor. Bu detaydan listeye dönüşlerde gereksiz sorgu oluşturabilir.
+
+#### İnşaat tamamlanınca liste ve player invalidate ediliyor
+
+Construction countdown bittiğinde `completeConstruction(warehouse.id)` çağrılıyor, ardından `warehouseListProvider` ve `playerProvider` invalidate ediliyor.
+
+Bu işlem response içinde `completed_warehouse`, `remove_construction_id`, `player`, `warehouse_list_summary` döndürmeli ve liste patch edilmeli.
+
+#### Altınla hızlı bitirme iki RPC kullanıyor
+
+`_handleQuickFinish()` önce `finishConstructionWithGold(id)` çağırıyor, sonra ayrıca `completeConstruction(id)` çağırıyor. Başarılı olursa `warehouseListProvider` ve `playerProvider` invalidate ediliyor.
+
+Bu iki adım tek RPC'ye indirilmeli veya `finish_construction_with_gold` tamamlanmış entity patch'ini doğrudan döndürmeli.
+
+#### Depo detay ekranı açılışta tek RPC çalıştırıyor
+
+`WarehouseDetailScreen` açılışta `warehouseDetailProvider(warehouseId)` izliyor. Bu provider `get_player_warehouse_detail` RPC'sini çağırıyor.
+
+Detay açılışı mağaza detay kadar kötü değil; satış/boost/upgrade gibi ekstra açılış sorguları yok.
+
+#### Manuel refresh hem detay hem listeyi yeniliyor
+
+`_refreshWarehouse()` içinde:
+
+```dart
+ref.invalidate(warehouseDetailProvider(widget.warehouseId));
+ref.invalidate(warehouseListProvider);
+await ref.read(warehouseDetailProvider(widget.warehouseId).future);
+```
+
+çalışıyor. Kullanıcı pull-to-refresh yaparsa detay yenilenebilir ama listeyi her seferinde invalidate etmek gereksiz. Detay response'u list card patch döndürüyorsa listeye de patch uygulanmalı.
+
+#### Ürün ekleme/pazar açma akışı katalog sorguları yapıyor
+
+`_showProductSelection()` çalışınca önce `allProductsProvider.future`, sonra `warehouseTypeDetailProvider(warehouse.warehouseTypeId).future` okunuyor. Bunlar sırasıyla `get_all_products_catalog` ve `get_warehouse_type_detail` RPC'lerine gider.
+
+Bu veriler katalog niteliğinde. Global catalog/cache katmanında tutulmalı. Her depo detayında tekrar çekilmemeli.
+
+#### Depo slot aksiyonları tüm detayı yeniliyor
+
+Aşağıdaki aksiyonlar başarılı olunca `_refreshWarehouse(ref)` çağrılıyor:
+
+- `updateWarehouseSlotPrice` → `set_warehouse_slot_price`
+- `deleteWarehouseSlot` → `delete_warehouse_slot`
+- `setWarehouseSlotSaleStatus` → `set_warehouse_slot_sale_status`
+
+Bu aksiyonlar sadece ilgili slotu ve depo summary/list item değerlerini etkiler. Tüm depo detayını yeniden çekmek gereksiz.
+
+#### Depodan depoya transfer çok adımlı ve çok invalidate yapıyor
+
+Depodan depoya transfer akışı:
+
+1. `get_player_active_warehouses_basic`
+2. Şehirler arası ise `get_transfer_vehicle_options`
+3. `start_warehouse_to_warehouse_transfer`
+4. Başarılı olursa `_refreshWarehouse(ref)`
+5. `warehouseListProvider` invalidate
+6. `warehouseDetailProvider(targetWarehouseId)` invalidate
+7. `playerProvider` invalidate
+
+Bu akış patch response ile çözülmeli. Aynı şehir transferde kaynak ve hedef depo slotları anlık patch edilmeli. Şehirler arası transferde kaynak slot reserve/pending alanı, transfer kaydı, player ve liste item patch dönmeli.
+
+### Önerilen yeni yapı
+
+#### Tek liste endpoint'i
+
+```sql
+get_warehouse_list_page_data()
+```
+
+veya mevcut `get_player_warehouses_raw` genişletmesi.
+
+Response hem aktif/pasif depoları hem de inşaat halindeki depo kartlarını içermeli:
+
+```json
+{
+  "success": true,
+  "warehouses": [],
+  "summary": {
+    "total_count": 0,
+    "active_count": 0,
+    "total_capacity": 0
+  }
+}
+```
+
+#### Patch edilebilir liste ve detay notifier'ları
+
+```text
+WarehouseListNotifier
+- load()
+- refresh()
+- addOrUpdateWarehouse(warehouse)
+- removeConstruction(constructionId)
+- patchSummary(summary)
+```
+
+```text
+WarehouseDetailNotifier(warehouseId)
+- load()
+- refresh()
+- patchWarehouse(warehouse)
+- patchSlot(slot)
+- removeSlot(slotId)
+- patchSummary(summary)
+```
+
+#### İnşaat response'ları patch döndürmeli
+
+Depo kurma / inşaat başlatma response'u:
+
+```json
+{
+  "success": true,
+  "changed": {
+    "player": {},
+    "warehouse_construction_card": {},
+    "warehouse_list_summary": {}
+  }
+}
+```
+
+Depo inşaatını altınla bitirme veya süre dolunca tamamlama response'u:
+
+```json
+{
+  "success": true,
+  "changed": {
+    "player": {},
+    "completed_warehouse": {},
+    "remove_construction_id": "...",
+    "warehouse_list_summary": {}
+  }
+}
+```
+
+#### Slot ve transfer aksiyonları patch döndürmeli
+
+Aşağıdaki aksiyonlar invalidate yerine patch uygulamalı:
+
+- `set_warehouse_slot_price`
+- `set_warehouse_slot_sale_status`
+- `delete_warehouse_slot`
+- `start_warehouse_to_warehouse_transfer`
+
+Transfer response formatı:
+
+```json
+{
+  "success": true,
+  "mode": "instant" | "logistics",
+  "changed": {
+    "source_warehouse_slot": {},
+    "target_warehouse_slot": {},
+    "source_warehouse_list_item": {},
+    "target_warehouse_list_item": {},
+    "player": {},
+    "transfer": {}
+  }
+}
+```
+
+#### Katalog verileri merkezi cache'e alınmalı
+
+`allProductsProvider`, `warehouseTypesProvider`, `warehouseTypeDetailProvider` merkezi catalog/cache yapısına taşınmalı. Depo detayda ürün seçimi açılınca mümkünse cache kullanılmalı.
+
+### Yapılacaklar
+
+- [ ] `get_warehouse_list_page_data()` veya mevcut `get_player_warehouses_raw` genişletmesi tasarlanacak.
+- [ ] İnşaat halindeki depo kartları backend'de hazırlanıp liste response'una eklenecek.
+- [ ] `warehouseListProvider` patch edilebilir notifier yapısına taşınacak.
+- [ ] `warehouseDetailProvider` patch edilebilir notifier yapısına taşınacak.
+- [ ] `RouteRefreshMixin` kaynaklı otomatik warehouse list refresh kaldırılacak veya dirty flag ile sınırlandırılacak.
+- [ ] Depo kurma response'u `player`, `warehouse_construction_card`, `warehouse_list_summary` dönecek.
+- [ ] Depo inşaat tamamlama response'u `player`, `completed_warehouse`, `remove_construction_id`, `warehouse_list_summary` dönecek.
+- [ ] Altınla hızlı bitirme iki RPC yerine tek patch response üreten akışa indirilecek.
+- [ ] `_refreshWarehouse()` listeyi otomatik invalidate etmeyecek.
+- [ ] Fiyat güncelleme, satışa aç/kapat, slot silme sadece ilgili slotu ve summary'yi patch edecek.
+- [ ] Depodan depoya transfer response'u kaynak/hedef slot, player, transfer ve liste item patch dönecek.
+- [ ] `allProductsProvider`, `warehouseTypesProvider`, `warehouseTypeDetailProvider` merkezi catalog cache'e taşınacak.
+- [ ] Pull-to-refresh manuel hard refresh olarak kalacak.
 
 ---
 
