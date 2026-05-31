@@ -11,6 +11,13 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 const logisticsFuelProductId = 'YAKIT';
 
+final logisticsEntryStateProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.rpc('get_logistics_entry_state');
+      return Map<String, dynamic>.from(response as Map);
+    });
+
 final logisticsCompanyTypesProvider =
     FutureProvider<List<LogisticsCompanyTypeModel>>((ref) async {
       final supabase = Supabase.instance.client;

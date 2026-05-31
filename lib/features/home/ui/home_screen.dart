@@ -382,20 +382,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         context.go('/mines');
         return;
       case 'Nakliye':
-        final company = await ref.read(playerLogisticsCompanyProvider.future);
-        if (!mounted) return;
-
-        if (company != null) {
-          context.go('/logistics');
-          return;
-        }
-
-        final construction = await ref.read(
-          playerLogisticsConstructionProvider.future,
+        final logisticsEntryState = await ref.read(
+          logisticsEntryStateProvider.future,
         );
         if (!mounted) return;
-
-        context.go(construction != null ? '/logistics' : '/logistics/setup');
+        final route =
+            logisticsEntryState['route']?.toString() ?? '/logistics/setup';
+        context.go(route);
         return;
       case 'AR-GE':
         context.go('/arge');

@@ -309,7 +309,7 @@ class _StoreTypeSelectionScreenState
       if (result['success'] == true) {
         if (mounted) {
           // Listeyi yenilemesi için provider'ı invalidate et
-          ref.invalidate(storesListProvider);
+          await ref.read(storesListProvider.notifier).refresh();
           ref.invalidate(playerProvider);
           
           AppSnackbar.show(

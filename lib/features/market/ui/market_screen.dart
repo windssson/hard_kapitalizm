@@ -55,7 +55,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     if (_isStoreTarget) {
       ref.invalidate(marketBuyerStoreSlotProvider(widget.storeSlotId));
       if (widget.storeId.isNotEmpty) {
-        ref.invalidate(storeDetailProvider(widget.storeId));
+        ref.invalidate(storeDetailPageProvider(widget.storeId));
       }
     } else {
       ref.invalidate(marketBuyerWarehouseProvider(widget.warehouseId));
@@ -275,8 +275,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         ? ref.watch(marketBuyerStoreSlotProvider(widget.storeSlotId))
         : AsyncValue<MarketBuyerStoreSlotModel?>.data(null);
     final buyerStoreAsync = _isStoreTarget && widget.storeId.isNotEmpty
-        ? ref.watch(storeDetailProvider(widget.storeId))
-        : AsyncValue<StoreModel?>.data(null);
+        ? ref.watch(storeDetailPageProvider(widget.storeId)).whenData(
+            (page) => page.store,
+          )
+        : const AsyncValue<StoreModel?>.data(null);
     final buyerStoreSlot = _isStoreTarget
         ? _deriveBuyerStoreSlot(
             buyerStoreAsync.value,

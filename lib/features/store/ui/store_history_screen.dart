@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -27,19 +26,26 @@ class StoreHistoryScreen extends ConsumerStatefulWidget {
   ConsumerState<StoreHistoryScreen> createState() => _StoreHistoryScreenState();
 }
 
-class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
-    with RouteRefreshMixin<StoreHistoryScreen> {
+class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
   _StoreHistoryFilter _selectedFilter = _StoreHistoryFilter.all;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      if (!ref.read(storeHistoryDirtyProvider(widget.storeId))) return;
+      await _refreshHistory(clearDirty: true);
+    });
   }
 
-  @override
-  void refreshRouteData() {
+  Future<void> _refreshHistory({required bool clearDirty}) async {
     ref.invalidate(storeHistoryProvider(widget.storeId));
-    ref.read(storeHistoryProvider(widget.storeId).future);
+    await ref.read(storeHistoryProvider(widget.storeId).future);
+    if (clearDirty) {
+      ref.read(storeHistoryDirtyProvider(widget.storeId).notifier).state =
+          false;
+    }
   }
 
   @override
@@ -72,8 +78,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen>
                   final filteredItems = _applyFilter(items);
                   return RefreshIndicator(
                     onRefresh: () async {
-                      ref.invalidate(storeHistoryProvider(widget.storeId));
-                      await ref.read(storeHistoryProvider(widget.storeId).future);
+                      await _refreshHistory(clearDirty: true);
                     },
                     child: filteredItems.isEmpty
                         ? ListView(

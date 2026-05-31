@@ -36,6 +36,25 @@ class StoreTypeModel {
     'required_level': requiredLevel,
     'construction_time_minutes': constructionTimeMinutes,
   };
+
+  StoreTypeModel copyWith({
+    String? id,
+    String? name,
+    String? icon,
+    int? cost,
+    int? requiredLevel,
+    int? constructionTimeMinutes,
+  }) {
+    return StoreTypeModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      cost: cost ?? this.cost,
+      requiredLevel: requiredLevel ?? this.requiredLevel,
+      constructionTimeMinutes:
+          constructionTimeMinutes ?? this.constructionTimeMinutes,
+    );
+  }
 }
 
 class StoreSummaryModel {
@@ -70,6 +89,28 @@ class StoreSummaryModel {
       pendingSaleTotal: (json['pending_sale_total'] as num?)?.toDouble(),
       totalStockCostValue: (json['total_stock_cost_value'] as num?)?.toDouble(),
       totalStockSaleValue: (json['total_stock_sale_value'] as num?)?.toDouble(),
+    );
+  }
+
+  StoreSummaryModel copyWith({
+    int? totalQuantity,
+    int? totalCapacity,
+    int? pendingQuantity,
+    int? availableCapacity,
+    double? usedCapacityRatio,
+    double? pendingSaleTotal,
+    double? totalStockCostValue,
+    double? totalStockSaleValue,
+  }) {
+    return StoreSummaryModel(
+      totalQuantity: totalQuantity ?? this.totalQuantity,
+      totalCapacity: totalCapacity ?? this.totalCapacity,
+      pendingQuantity: pendingQuantity ?? this.pendingQuantity,
+      availableCapacity: availableCapacity ?? this.availableCapacity,
+      usedCapacityRatio: usedCapacityRatio ?? this.usedCapacityRatio,
+      pendingSaleTotal: pendingSaleTotal ?? this.pendingSaleTotal,
+      totalStockCostValue: totalStockCostValue ?? this.totalStockCostValue,
+      totalStockSaleValue: totalStockSaleValue ?? this.totalStockSaleValue,
     );
   }
 }
@@ -140,6 +181,48 @@ class StoreSlotModel {
       product: productJson != null ? ProductModel.fromJson(productJson) : null,
     );
   }
+
+  StoreSlotModel copyWith({
+    String? id,
+    String? storeId,
+    int? slotIndex,
+    String? productId,
+    String? productName,
+    String? productIcon,
+    int? quantity,
+    int? pendingQuantity,
+    int? qualityLevel,
+    double? price,
+    double? cost,
+    int? capacity,
+    double? boostMultiplier,
+    double? pendingSale,
+    bool? isActive,
+    bool? isEmpty,
+    double? usedCapacityRatio,
+    ProductModel? product,
+  }) {
+    return StoreSlotModel(
+      id: id ?? this.id,
+      storeId: storeId ?? this.storeId,
+      slotIndex: slotIndex ?? this.slotIndex,
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      productIcon: productIcon ?? this.productIcon,
+      quantity: quantity ?? this.quantity,
+      pendingQuantity: pendingQuantity ?? this.pendingQuantity,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      price: price ?? this.price,
+      cost: cost ?? this.cost,
+      capacity: capacity ?? this.capacity,
+      boostMultiplier: boostMultiplier ?? this.boostMultiplier,
+      pendingSale: pendingSale ?? this.pendingSale,
+      isActive: isActive ?? this.isActive,
+      isEmpty: isEmpty ?? this.isEmpty,
+      usedCapacityRatio: usedCapacityRatio ?? this.usedCapacityRatio,
+      product: product ?? this.product,
+    );
+  }
 }
 
 class StoreModel {
@@ -203,6 +286,44 @@ class StoreModel {
       startedAt: json['started_at'] != null ? DateTime.tryParse(json['started_at'].toString()) : null,
       finishAt: json['finish_at'] != null ? DateTime.tryParse(json['finish_at'].toString()) : null,
       constructionProgress: (json['construction_progress'] as num?)?.toDouble() ?? 1.0,
+    );
+  }
+
+  StoreModel copyWith({
+    String? id,
+    String? name,
+    String? cityId,
+    String? cityName,
+    int? level,
+    bool? isActive,
+    int? currentSlotCount,
+    int? maxSlotCount,
+    int? slotCapacity,
+    StoreTypeModel? storeType,
+    StoreSummaryModel? summary,
+    List<StoreSlotModel>? slots,
+    bool? isUnderConstruction,
+    DateTime? startedAt,
+    DateTime? finishAt,
+    double? constructionProgress,
+  }) {
+    return StoreModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      cityId: cityId ?? this.cityId,
+      cityName: cityName ?? this.cityName,
+      level: level ?? this.level,
+      isActive: isActive ?? this.isActive,
+      currentSlotCount: currentSlotCount ?? this.currentSlotCount,
+      maxSlotCount: maxSlotCount ?? this.maxSlotCount,
+      slotCapacity: slotCapacity ?? this.slotCapacity,
+      storeType: storeType ?? this.storeType,
+      summary: summary ?? this.summary,
+      slots: slots ?? this.slots,
+      isUnderConstruction: isUnderConstruction ?? this.isUnderConstruction,
+      startedAt: startedAt ?? this.startedAt,
+      finishAt: finishAt ?? this.finishAt,
+      constructionProgress: constructionProgress ?? this.constructionProgress,
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
+import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -20,6 +21,11 @@ final mineListProvider =
   final user = supabase.auth.currentUser;
 
   if (user == null) return const [];
+
+  await processProductionEntry(
+    supabase: supabase,
+    ownerKind: 'mine',
+  );
 
   final response = await supabase.rpc('get_mine_list_items');
   final rows = response as List<dynamic>;
@@ -79,6 +85,12 @@ final mineDetailProvider = FutureProvider.family<MineDetailModel, String>((
   if (user == null) {
     throw Exception('Kullanici girisi yapilmamis.');
   }
+
+  await processProductionEntry(
+    supabase: supabase,
+    ownerKind: 'mine',
+    ownerId: mineId,
+  );
 
   final response = await supabase.rpc(
     'get_mine_detail_data',

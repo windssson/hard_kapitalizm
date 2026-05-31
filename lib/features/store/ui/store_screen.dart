@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
-import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -20,20 +19,13 @@ class StoreScreen extends ConsumerStatefulWidget {
   ConsumerState<StoreScreen> createState() => _StoreScreenState();
 }
 
-class _StoreScreenState extends ConsumerState<StoreScreen>
-    with RouteRefreshMixin<StoreScreen> {
+class _StoreScreenState extends ConsumerState<StoreScreen> {
   final int _selectedIndex = 1;
   String _selectedFilter = 'Tumu';
 
   @override
   void initState() {
     super.initState();
-  }
-
-  @override
-  void refreshRouteData() {
-    ref.invalidate(storesListProvider);
-    ref.read(storesListProvider.future);
   }
 
   void _onNavSelected(int index) {
@@ -84,7 +76,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                   }).toList();
 
                   return RefreshIndicator(
-                    onRefresh: () => ref.refresh(storesListProvider.future),
+                    onRefresh: () =>
+                        ref.read(storesListProvider.notifier).refresh(),
                     child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
@@ -424,7 +417,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
                         await ref
                             .read(storeActionProvider)
                             .completeConstruction(store.id);
-                        ref.invalidate(storesListProvider);
+                        await ref.read(storesListProvider.notifier).refresh();
                       },
                     ),
                   ],
@@ -507,7 +500,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen>
         .read(storeActionProvider)
         .finishConstructionWithGold(constructionId);
     if (result['success'] == true) {
-      ref.invalidate(storesListProvider);
+      await ref.read(storesListProvider.notifier).refresh();
       if (mounted) {
         AppSnackbar.show(
           context,

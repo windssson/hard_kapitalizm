@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -36,36 +35,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
-        ref.invalidate(playerProvider);
-        try {
-          await ref
-              .read(playerProvider.future)
-              .timeout(const Duration(seconds: 3));
-        } catch (_) {
-          // Oyuncu verisi gec gelse bile splash akisini bloklamiyoruz.
-        }
-
         try {
           await Supabase.instance.client.rpc(
-            'complete_due_building_upgrades',
-            params: {
-              'p_limit': 100,
-            },
+            'bootstrap_game_session',
           );
         } catch (_) {
-          // Gecikmis yukseltmeler basarisiz olsa bile giris akisini bloklamiyoruz.
-        }
-
-        try {
-          await Supabase.instance.client.rpc(
-            'complete_due_market_transfers',
-            params: {
-              'p_buyer_player_id': user.id,
-              'p_limit': 100,
-            },
-          );
-        } catch (_) {
-          // Gecikmis transfer tamamlama basarisiz olsa bile giris akisini bloklamiyoruz.
+          // Bootstrap basarisiz olsa bile asset yukleme ve giris akisina devam ediyoruz.
         }
       }
 

@@ -12,61 +12,11 @@ final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
   if (user == null) return [];
 
   try {
-    final response = await supabase.rpc('get_player_warehouses_raw');
-
-    final List<dynamic> data = response as List<dynamic>;
-    List<WarehouseModel> allWarehouses =
-        data.map((json) => WarehouseModel.fromJson(json)).toList();
-
-    final constructionResponse = await supabase.rpc(
-      'get_player_building_constructions',
-      params: {
-        'p_building_kind': 'warehouse',
-        'p_status': 'in_progress',
-      },
-    );
-
-    if (constructionResponse.isNotEmpty) {
-      final typesResponse = await supabase.rpc('get_warehouse_types_catalog');
-      final citiesResponse = await supabase.rpc('get_cities_catalog');
-
-      for (var constr in constructionResponse) {
-        final params = constr['params'] as Map<String, dynamic>;
-        final typeId = params['warehouse_type_id'] as String?;
-        final cityId = params['city_id'] as String?;
-
-        final type = (typesResponse as List).firstWhere(
-          (t) => t['id'] == typeId,
-          orElse: () => {'name': 'Depo', 'icon': 'warehouse.webp'},
-        );
-        final city = (citiesResponse as List).firstWhere(
-          (c) => c['id'] == cityId,
-          orElse: () => {'name': 'Bilinmeyen'},
-        );
-
-        allWarehouses.add(
-          WarehouseModel(
-            id: constr['id'],
-            playerId: user.id,
-            warehouseTypeId: typeId ?? '',
-            typeIcon: type['icon'],
-            cityId: cityId ?? '',
-            cityName: city['name'] ?? 'Bilinmeyen',
-            name: params['name'] ?? type['name'],
-            level: 1,
-            capacity: (params['base_capacity'] ?? 0).toDouble(),
-            reservedCapacity: 0,
-            isActive: false,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            isUnderConstruction: true,
-            finishAt: DateTime.parse(constr['finish_at']),
-          ),
-        );
-      }
-    }
-
-    return allWarehouses;
+    final response = await supabase.rpc('get_warehouse_list_page_data');
+    final data = response['warehouses'] as List<dynamic>? ?? const [];
+    return data
+        .map((json) => WarehouseModel.fromJson(Map<String, dynamic>.from(json as Map)))
+        .toList();
   } catch (e) {
     throw Exception('Depo listesi alinamadi: $e');
   }

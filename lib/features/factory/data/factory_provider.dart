@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
+import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/data/production_product_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
@@ -20,6 +21,11 @@ final factoryListProvider =
   final user = supabase.auth.currentUser;
 
   if (user == null) return const [];
+
+  await processProductionEntry(
+    supabase: supabase,
+    ownerKind: 'factory',
+  );
 
   final response = await supabase.rpc('get_factory_list_items');
   final rows = response as List<dynamic>;
@@ -81,6 +87,12 @@ final factoryDetailProvider = FutureProvider.family<FactoryDetailModel, String>(
   if (user == null) {
     throw Exception('Kullanici girisi yapilmamis.');
   }
+
+  await processProductionEntry(
+    supabase: supabase,
+    ownerKind: 'factory',
+    ownerId: factoryId,
+  );
 
   final response = await supabase.rpc(
     'get_factory_detail_data',

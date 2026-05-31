@@ -49,8 +49,6 @@ class AuthManager {
             rethrow;
           }
         }
-      } else {
-        await _ensurePlayerRecordExists(session.user.id);
       }
     } catch (e) {
       throw Exception(

@@ -56,6 +56,10 @@ class WarehouseModel {
               .map((s) => WarehouseSlotModel.fromJson(s))
               .toList()
           : [],
+      isUnderConstruction: json['is_under_construction'] as bool? ?? false,
+      finishAt: json['finish_at'] != null
+          ? DateTime.tryParse(json['finish_at'] as String)
+          : null,
     );
   }
 }

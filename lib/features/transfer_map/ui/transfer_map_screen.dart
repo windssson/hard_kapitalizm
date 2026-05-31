@@ -134,7 +134,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       ref.invalidate(buyerTransferHistoryProvider);
       ref.invalidate(playerProvider);
       ref.invalidate(storesListProvider);
-      ref.invalidate(storeDetailProvider);
+      ref.invalidate(storeDetailPageProvider);
       ref.invalidate(warehouseListProvider);
       ref.invalidate(warehouseDetailProvider);
       ref.invalidate(factoryListProvider);
@@ -465,7 +465,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         ref.invalidate(buyerTransferHistoryProvider);
         ref.invalidate(playerProvider);
         ref.invalidate(storesListProvider);
-        ref.invalidate(storeDetailProvider);
+        ref.invalidate(storeDetailPageProvider);
         ref.invalidate(warehouseListProvider);
         ref.invalidate(warehouseDetailProvider);
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -18,17 +17,24 @@ class StorePerformanceScreen extends ConsumerStatefulWidget {
 }
 
 class _StorePerformanceScreenState
-    extends ConsumerState<StorePerformanceScreen>
-    with RouteRefreshMixin<StorePerformanceScreen> {
+    extends ConsumerState<StorePerformanceScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      if (!ref.read(storePerformanceDirtyProvider(widget.storeId))) return;
+      await _refreshPerformance(clearDirty: true);
+    });
   }
 
-  @override
-  void refreshRouteData() {
+  Future<void> _refreshPerformance({required bool clearDirty}) async {
     ref.invalidate(storePerformanceProvider(widget.storeId));
-    ref.read(storePerformanceProvider(widget.storeId).future);
+    await ref.read(storePerformanceProvider(widget.storeId).future);
+    if (clearDirty) {
+      ref.read(storePerformanceDirtyProvider(widget.storeId).notifier).state =
+          false;
+    }
   }
 
   @override
@@ -49,10 +55,7 @@ class _StorePerformanceScreenState
                 error: (error, _) => _buildErrorState(context, ref, error),
                 data: (data) => RefreshIndicator(
                   onRefresh: () async {
-                    ref.invalidate(storePerformanceProvider(widget.storeId));
-                    await ref.read(
-                      storePerformanceProvider(widget.storeId).future,
-                    );
+                    await _refreshPerformance(clearDirty: true);
                   },
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -129,8 +132,7 @@ class _StorePerformanceScreenState
             ),
             SizedBox(height: 14.h),
             ElevatedButton(
-              onPressed: () =>
-                  ref.refresh(storePerformanceProvider(widget.storeId)),
+              onPressed: () => _refreshPerformance(clearDirty: true),
               child: const Text('Tekrar Dene'),
             ),
           ],

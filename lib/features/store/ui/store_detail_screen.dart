@@ -16,6 +16,7 @@ import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
+import 'package:hard_kapitalizm/features/store/models/store_detail_page_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
 import 'package:hard_kapitalizm/features/store/ui/widgets/store_detail_header.dart';
@@ -31,8 +32,6 @@ class StoreDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
-  bool _salesCheckDone = false;
-  bool _salesCheckInProgress = false;
   String? _lastShownSalesResultKey;
   static const Map<int, int> _storeBoostStarCosts = {
     6: 3,
@@ -43,12 +42,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _resetSalesCheckState();
-  }
-
-  void _resetSalesCheckState() {
-    _salesCheckDone = false;
-    _salesCheckInProgress = false;
     _lastShownSalesResultKey = null;
   }
 
@@ -71,17 +64,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
-      activeStoreUpgradeProvider(widget.storeId),
-      (previous, next) {
-        final upgrade = next.value;
-        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
-          ref.read(storeActionProvider).completeDueBuildingUpgrades();
-        }
-      },
-    );
-
-    final storeAsync = ref.watch(storeDetailProvider(widget.storeId));
+    final storeAsync = ref.watch(storeDetailPageProvider(widget.storeId));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -91,9 +74,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       ),
       body: SafeArea(
         child: storeAsync.when(
-          data: (store) {
-            _scheduleStoreSalesCheck(store);
-            return _buildMainContent(context, ref, store);
+          data: (page) {
+            _scheduleSalesSummaryDialog(page);
+            return _buildMainContent(context, ref, page);
           },
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.gold),
@@ -104,58 +87,35 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     );
   }
 
-  void _scheduleStoreSalesCheck(StoreModel store) {
-    if (_salesCheckDone || _salesCheckInProgress) return;
+  void _scheduleSalesSummaryDialog(StoreDetailPageModel page) {
+    ref.read(storeHistoryDirtyProvider(page.store.id).notifier).state =
+        page.changed.historyDirty;
+    ref.read(storePerformanceDirtyProvider(page.store.id).notifier).state =
+        page.changed.performanceDirty;
 
-    _salesCheckInProgress = true;
-    _salesCheckDone = true;
+    final result = page.saleResult;
+    if (result == null || !result.processed || !result.hasVisibleSales) {
+      return;
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-
-      final result = await ref
-          .read(storeActionProvider)
-          .processStoreSalesOnEntry(store.id);
-
-      if (!mounted) return;
-
-      _salesCheckInProgress = false;
-
-      if (result.success != true) {
-        _salesCheckDone = false;
-        if ((result.message ?? '').trim().isNotEmpty) {
-          AppSnackbar.show(
-            context,
-            title: 'Satis Hesaplanamadi',
-            message: result.message!,
-            type: SnackbarType.error,
-          );
-        }
-        return;
-      }
-
-      if (result.processed || result.completedBoostCount > 0) {
-        ref.invalidate(storeDetailProvider(store.id));
-        ref.invalidate(activeStoreBoostProvider(store.id));
-      }
-
-      if (result.processed) {
-        ref.invalidate(storesListProvider);
-        ref.invalidate(storeHistoryProvider(store.id));
-        ref.invalidate(storePerformanceProvider(store.id));
-        ref.invalidate(playerProvider);
-      }
-
-      if (!result.processed || !result.hasVisibleSales) {
-        return;
-      }
-
       final resultKey =
-          '${store.id}_${result.processedAt?.toIso8601String() ?? 'no_time'}_${result.totalSoldQuantity}_${result.totalRevenue}';
+          '${page.store.id}_${result.processedAt?.toIso8601String() ?? 'no_time'}_${result.totalSoldQuantity}_${result.totalRevenue}';
       if (_lastShownSalesResultKey == resultKey) {
         return;
       }
       _lastShownSalesResultKey = resultKey;
+
+      if (result.success != true && (result.message ?? '').trim().isNotEmpty) {
+        AppSnackbar.show(
+          context,
+          title: 'Satis Hesaplanamadi',
+          message: result.message!,
+          type: SnackbarType.error,
+        );
+        return;
+      }
 
       await _showStoreSalesSummaryDialog(context, result);
     });
@@ -312,10 +272,11 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   Widget _buildMainContent(
     BuildContext context,
     WidgetRef ref,
-    StoreModel store,
+    StoreDetailPageModel page,
   ) {
-    final activeBoost = ref.watch(activeStoreBoostProvider(store.id)).value;
-    final activeUpgrade = ref.watch(activeStoreUpgradeProvider(store.id)).value;
+    final store = page.store;
+    final activeBoost = page.activeBoost;
+    final activeUpgrade = page.activeUpgrade;
 
     return Column(
       children: [
@@ -374,15 +335,51 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (context.mounted) {
       if (result['success'] == true) {
-        await ref.read(storeDetailProvider(store.id).future);
+        await _refreshStorePageAndSync(
+          store.id,
+          performanceDirty: true,
+        );
         if (!context.mounted) return;
-        ref.invalidate(storesListProvider);
         _showSuccess(context, 'Yeni slot basariyla acildi!');
       } else {
         if (!context.mounted) return;
         _showError(context, result['message'] ?? 'Slot acilirken bir hata olustu.');
       }
     }
+  }
+
+  Future<StoreDetailPageModel> _refreshStorePageAndSync(
+    String storeId, {
+    bool refreshPlayer = false,
+    bool historyDirty = false,
+    bool performanceDirty = false,
+  }) async {
+    final page = await ref.read(
+      storeDetailPageProvider(storeId).notifier,
+    ).refresh();
+    ref.read(storesListProvider.notifier).replaceStore(page.store);
+
+    if (refreshPlayer || page.changed.player != null) {
+      ref.invalidate(playerProvider);
+    }
+
+    if (historyDirty || page.changed.historyDirty) {
+      ref.read(storeHistoryDirtyProvider(storeId).notifier).state = true;
+    }
+
+    if (performanceDirty || page.changed.performanceDirty) {
+      ref.read(storePerformanceDirtyProvider(storeId).notifier).state = true;
+    }
+
+    return page;
+  }
+
+  String? _productNameFromMap(Map<String, dynamic> product) {
+    return (product['name'] ?? product['urun_adi'])?.toString();
+  }
+
+  String? _productIconFromMap(Map<String, dynamic> product) {
+    return (product['icon'] ?? product['urun_iconu'])?.toString();
   }
   String _formatCountdown(Duration remaining) {
     if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
@@ -450,10 +447,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                       if (!context.mounted) return;
 
                       if (result['success'] == true) {
-                        ref.invalidate(activeStoreBoostProvider(store.id));
-                        ref.invalidate(storeDetailProvider(store.id));
-                        ref.invalidate(storesListProvider);
-                        ref.invalidate(playerProvider);
+                        await _refreshStorePageAndSync(
+                          store.id,
+                          refreshPlayer: true,
+                        );
                         _showSuccess(context, 'Magaza boostu baslatildi.');
                       } else {
                         _showError(
@@ -609,10 +606,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     if (!mounted) return;
 
     if (result['success'] == true) {
-      ref.invalidate(activeStoreUpgradeProvider(widget.storeId));
-      ref.invalidate(storeDetailProvider(widget.storeId));
-      ref.invalidate(storesListProvider);
-      ref.invalidate(playerProvider);
+      await _refreshStorePageAndSync(
+        widget.storeId,
+        refreshPlayer: true,
+      );
       _showSuccess(context, 'Magaza yukseltmesi tamamlandi!');
     } else {
       _showError(
@@ -717,10 +714,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                         if (!context.mounted) return;
 
                         if (result['success'] == true) {
-                          ref.invalidate(activeStoreUpgradeProvider(store.id));
-                          ref.invalidate(storeDetailProvider(store.id));
-                          ref.invalidate(storesListProvider);
-                          ref.invalidate(playerProvider);
+                          await _refreshStorePageAndSync(
+                            store.id,
+                            refreshPlayer: true,
+                          );
                           _showSuccess(
                             context,
                             'Magaza yukseltmesi baslatildi.',
@@ -1161,8 +1158,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      ref.invalidate(storeDetailProvider(store.id));
-      ref.invalidate(storesListProvider);
+      ref.read(storeDetailPageProvider(store.id).notifier).patchSlotActive(
+        slotId: slot.id,
+        isActive: !slot.isActive,
+      );
+      ref.read(storesListProvider.notifier).patchSlotActive(
+        storeId: store.id,
+        slotId: slot.id,
+        isActive: !slot.isActive,
+      );
+      ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
       _showSuccess(
         context,
         slot.isActive ? 'Slot pasif yapildi.' : 'Slot aktif edildi.',
@@ -1225,8 +1230,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      ref.invalidate(storeDetailProvider(store.id));
-      ref.invalidate(storesListProvider);
+      ref.read(storeDetailPageProvider(store.id).notifier).patchSlotCleared(
+        slotId: slot.id,
+      );
+      ref.read(storesListProvider.notifier).patchSlotCleared(
+        storeId: store.id,
+        slotId: slot.id,
+      );
+      ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
       _showSuccess(context, 'Slot urun secimi temizlendi.');
       return;
     }
@@ -1500,7 +1511,18 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
                   if (result['success'] == true) {
                     Navigator.of(dialogContext).pop();
-                    ref.invalidate(storeDetailProvider(store.id));
+                    ref.read(storeDetailPageProvider(store.id).notifier)
+                        .patchSlotPrice(
+                          slotId: slot.id,
+                          price: parsedPrice,
+                        );
+                    ref.read(storesListProvider.notifier).patchSlotPrice(
+                      storeId: store.id,
+                      slotId: slot.id,
+                      price: parsedPrice,
+                    );
+                    ref.read(storePerformanceDirtyProvider(store.id).notifier)
+                        .state = true;
                     _showSuccess(context, 'Satis fiyati kaydedildi.');
                     return;
                   }
@@ -1608,9 +1630,24 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (parentContext.mounted) {
       if (result['success'] == true) {
-        await ref.read(storeDetailProvider(store.id).future);
+        final productId = product['id']?.toString() ?? '';
+        ref.read(storeDetailPageProvider(store.id).notifier).patchSlotProduct(
+          slotId: slot.id,
+          productId: productId,
+          qualityLevel: 1,
+          productName: _productNameFromMap(product),
+          productIcon: _productIconFromMap(product),
+        );
+        ref.read(storesListProvider.notifier).patchSlotProduct(
+          storeId: store.id,
+          slotId: slot.id,
+          productId: productId,
+          qualityLevel: 1,
+          productName: _productNameFromMap(product),
+          productIcon: _productIconFromMap(product),
+        );
         if (!parentContext.mounted) return;
-        ref.invalidate(storesListProvider);
+        ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
         _showSuccess(parentContext, '${product['name']} basariyla eklendi!');
       } else {
         if (!parentContext.mounted) return;
@@ -1637,8 +1674,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           SizedBox(height: 16.h),
           ElevatedButton(
             onPressed: () {
-              _resetSalesCheckState();
-              ref.refresh(storeDetailProvider(widget.storeId)); // ignore: unused_result
+              ref.read(storeDetailPageProvider(widget.storeId).notifier).refresh();
             },
             child: const Text('Tekrar Dene'),
           ),
@@ -2312,10 +2348,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await ref.read(storeDetailProvider(store.id).future);
+      await _refreshStorePageAndSync(
+        store.id,
+        refreshPlayer: true,
+        historyDirty: true,
+        performanceDirty: true,
+      );
       if (!context.mounted) return;
-      ref.invalidate(storesListProvider);
-      ref.invalidate(playerProvider);
       final isInstant = result['mode']?.toString() == 'instant';
       _showSuccess(
         context,
@@ -2826,10 +2865,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      await ref.read(storeDetailProvider(store.id).future);
+      await _refreshStorePageAndSync(
+        store.id,
+        refreshPlayer: true,
+        historyDirty: true,
+        performanceDirty: true,
+      );
       if (!context.mounted) return;
-      ref.invalidate(storesListProvider);
-      ref.invalidate(playerProvider);
       final isInstant = result['mode']?.toString() == 'instant';
       _showSuccess(
         context,
