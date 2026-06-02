@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/app_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
+import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
+import 'package:hard_kapitalizm/features/notification/models/player_notification_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -16,8 +19,17 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with RouteRefreshMixin<HomeScreen> {
   final int _selectedIndex = 0;
+
+  @override
+  void refreshRouteData() {
+    Future.microtask(() async {
+      await ref.read(notificationActionProvider).refreshAttention();
+    });
+    ref.invalidate(playerNotificationDashboardProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -489,6 +501,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildNewsSection() {
+    final notificationsAsync = ref.watch(playerNotificationDashboardProvider);
+
+    return notificationsAsync.when(
+      loading: () => _buildDefaultNewsSection(),
+      error: (_, _) => _buildDefaultNewsSection(),
+      data: (dashboard) {
+        if (!dashboard.success || dashboard.notifications.isEmpty) {
+          return _buildDefaultNewsSection();
+        }
+
+        final items = [...dashboard.notifications]
+          ..sort((a, b) {
+            final aPriority = _homeNotificationPriority(a);
+            final bPriority = _homeNotificationPriority(b);
+            if (aPriority != bPriority) {
+              return aPriority.compareTo(bPriority);
+            }
+            return b.createdAt.compareTo(a.createdAt);
+          });
+
+        final hasActionable =
+            items.any((item) => item.isActiveWarning) ||
+            items.any((item) => item.isActiveReminder);
+
+        final cards = items
+            .take(5)
+            .map((item) => _buildNotificationNewsCard(item))
+            .toList();
+
+        return _buildLegacyNewsSection(
+          title: hasActionable ? 'Aktif Sorunlar' : 'Bildirimler',
+          onHeaderTap: () => context.push('/notifications'),
+          trailingText: hasActionable
+              ? '${dashboard.activeWarningCount} Sorun'
+              : dashboard.unreadCount > 0
+                  ? '${dashboard.unreadCount} Yeni'
+                  : 'Tumunu Gor',
+          trailingColor: hasActionable
+              ? Colors.orange
+              : dashboard.unreadCount > 0
+                  ? AppColors.gold
+                  : AppColors.blue,
+          cards: cards,
+        );
+      },
+    );
+  }
+
+  Widget _buildDefaultNewsSection() => _buildLegacyNewsSection(
+    title: 'Guncel Durum',
+    cards: [
+      _buildNewsCard(
+        'Biskuvi fabrikasinda hammadde azaluyor.',
+        '15 dk once',
+        Icons.cookie,
+        Colors.orange,
+        Icons.warning_amber_rounded,
+        Colors.red,
+      ),
+      _buildNewsCard(
+        '1 nakliye araci teslimata cikti.',
+        '35 dk once',
+        Icons.local_shipping,
+        AppColors.blue,
+        Icons.check_circle,
+        AppColors.green,
+      ),
+      _buildNewsCard(
+        'Vergi odeme tarihi yaklasiyor.',
+        '2 sa once',
+        Icons.receipt_long,
+        AppColors.gold,
+        Icons.warning_amber_rounded,
+        Colors.orange,
+      ),
+    ],
+  );
+
+  Widget _buildLegacyNewsSection({
+    required String title,
+    required List<Widget> cards,
+    String trailingText = 'Tumunu Gor',
+    Color trailingColor = AppColors.blue,
+    VoidCallback? onHeaderTap,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBg,
@@ -497,27 +594,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       child: Column(
         children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: Row(
-              children: [
-                Icon(Icons.notifications, color: AppColors.gold, size: 20.sp),
-                SizedBox(width: 8.w),
-                Text(
-                  'Guncel Durum',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
+          InkWell(
+            onTap: onHeaderTap,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              child: Row(
+                children: [
+                  Icon(Icons.notifications, color: AppColors.gold, size: 20.sp),
+                  SizedBox(width: 8.w),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  'Tumunu Gor',
-                  style: TextStyle(color: AppColors.blue, fontSize: 12.sp),
-                ),
-                Icon(Icons.chevron_right, color: AppColors.blue, size: 16.sp),
-              ],
+                  const Spacer(),
+                  Text(
+                    trailingText,
+                    style: TextStyle(color: trailingColor, fontSize: 12.sp),
+                  ),
+                  Icon(Icons.chevron_right, color: trailingColor, size: 16.sp),
+                ],
+              ),
             ),
           ),
           Divider(height: 1.h, color: AppColors.border),
@@ -526,35 +626,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-              children: [
-                _buildNewsCard(
-                  'Biskuvi fabrikasinda hammadde azaluyor.',
-                  '15 dk once',
-                  Icons.cookie,
-                  Colors.orange,
-                  Icons.warning_amber_rounded,
-                  Colors.red,
-                ),
-                _buildNewsCard(
-                  '1 nakliye araci teslimata cikti.',
-                  '35 dk once',
-                  Icons.local_shipping,
-                  AppColors.blue,
-                  Icons.check_circle,
-                  AppColors.green,
-                ),
-                _buildNewsCard(
-                  'Vergi odeme tarihi yaklasiyor.',
-                  '2 sa once',
-                  Icons.receipt_long,
-                  AppColors.gold,
-                  Icons.warning_amber_rounded,
-                  Colors.orange,
-                ),
-              ],
+              children: cards,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationNewsCard(PlayerNotificationModel notification) {
+    final accent = _notificationColor(notification);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push('/notifications'),
+        borderRadius: BorderRadius.circular(8.r),
+        child: _buildNewsCard(
+          '${_notificationMiniLabel(notification)} • ${notification.title}',
+          _relativeTime(notification.createdAt),
+          _notificationIcon(notification),
+          accent,
+          notification.isUnread
+              ? Icons.fiber_manual_record
+              : notification.isWarning
+                  ? Icons.warning_amber_rounded
+                  : Icons.check_circle,
+          notification.isUnread ? accent : accent.withValues(alpha: 0.8),
+        ),
       ),
     );
   }
@@ -656,5 +754,77 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
     return value.toStringAsFixed(0);
+  }
+
+  int _homeNotificationPriority(PlayerNotificationModel item) {
+    if (item.isActiveWarning) return 0;
+    if (item.isActiveReminder) {
+      return 1;
+    }
+    if (item.isUnread) return 2;
+    return 3;
+  }
+
+  IconData _notificationIcon(PlayerNotificationModel item) {
+    switch (item.category) {
+      case 'construction_completed':
+        return Icons.construction_rounded;
+      case 'upgrade_completed':
+        return Icons.trending_up_rounded;
+      case 'transfer_completed':
+        return Icons.local_shipping_rounded;
+      case 'arge_completed':
+        return Icons.science_rounded;
+      case 'store_blocked':
+        return Icons.storefront_outlined;
+      case 'production_blocked':
+        return Icons.warning_amber_rounded;
+      case 'logistics_attention':
+        return Icons.local_shipping_outlined;
+      case 'inactive_reminder':
+        return Icons.pause_circle_outline_rounded;
+      default:
+        return Icons.notifications_none_rounded;
+    }
+  }
+
+  Color _notificationColor(PlayerNotificationModel item) {
+    switch (item.severity) {
+      case 'success':
+        return AppColors.green;
+      case 'warning':
+        return Colors.orange;
+      default:
+        return AppColors.blue;
+    }
+  }
+
+  String _notificationMiniLabel(PlayerNotificationModel item) {
+    if (item.kind == 'warning') return 'Uyari';
+
+    switch (item.category) {
+      case 'construction_completed':
+        return 'Insaat';
+      case 'upgrade_completed':
+        return 'Yukseltme';
+      case 'transfer_completed':
+        return 'Transfer';
+      case 'arge_completed':
+        return 'AR-GE';
+      case 'logistics_attention':
+        return 'Nakliye';
+      case 'inactive_reminder':
+        return 'Hatirlatma';
+      default:
+        return 'Bilgi';
+    }
+  }
+
+  String _relativeTime(DateTime dateTime) {
+    final difference = DateTime.now().difference(dateTime);
+    if (difference.inMinutes < 1) return 'Simdi';
+    if (difference.inHours < 1) return '${difference.inMinutes} dk once';
+    if (difference.inDays < 1) return '${difference.inHours} sa once';
+    return '${difference.inDays} gun once';
   }
 }

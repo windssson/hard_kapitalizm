@@ -1,3 +1,5 @@
+import 'package:hard_kapitalizm/features/auth/models/experience_gain_model.dart';
+
 class StoreSaleItemModel {
   final String slotId;
   final int slotIndex;
@@ -59,6 +61,7 @@ class StoreSaleResultModel {
   final double totalProfit;
   final int totalSoldQuantity;
   final int completedBoostCount;
+  final ExperienceGainModel? experience;
   final List<StoreSaleItemModel> items;
 
   const StoreSaleResultModel({
@@ -71,6 +74,7 @@ class StoreSaleResultModel {
     required this.totalProfit,
     required this.totalSoldQuantity,
     required this.completedBoostCount,
+    required this.experience,
     required this.items,
   });
 
@@ -91,6 +95,13 @@ class StoreSaleResultModel {
       totalSoldQuantity: (json['total_sold_quantity'] as num?)?.toInt() ?? 0,
       completedBoostCount:
           (json['completed_boost_count'] as num?)?.toInt() ?? 0,
+      experience: json['experience'] is Map<String, dynamic>
+          ? ExperienceGainModel.fromJson(json['experience'])
+          : json['experience'] is Map
+              ? ExperienceGainModel.fromJson(
+                  Map<String, dynamic>.from(json['experience'] as Map),
+                )
+              : null,
       items: rawItems
           .whereType<Map>()
           .map(

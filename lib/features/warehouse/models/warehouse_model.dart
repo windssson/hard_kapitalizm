@@ -37,20 +37,33 @@ class WarehouseModel {
   });
 
   factory WarehouseModel.fromJson(Map<String, dynamic> json) {
+    final warehouseTypeJson = json['warehouse_type'] is Map<String, dynamic>
+        ? json['warehouse_type'] as Map<String, dynamic>
+        : json['warehouse_type'] is Map
+            ? Map<String, dynamic>.from(json['warehouse_type'] as Map)
+            : null;
+    final cityJson = json['city'] is Map<String, dynamic>
+        ? json['city'] as Map<String, dynamic>
+        : json['city'] is Map
+            ? Map<String, dynamic>.from(json['city'] as Map)
+            : null;
+
     return WarehouseModel(
-      id: json['id'] as String,
-      playerId: json['player_id'] as String,
-      warehouseTypeId: json['warehouse_type_id'] as String,
-      typeIcon: json['warehouse_type']?['icon'] as String?,
-      cityId: json['city_id'] as String,
-      cityName: json['city']?['name'] as String?,
-      name: json['name'] as String,
-      level: json['level'] as int? ?? 1,
+      id: (json['id'] ?? '').toString(),
+      playerId: (json['player_id'] ?? '').toString(),
+      warehouseTypeId: (json['warehouse_type_id'] ?? '').toString(),
+      typeIcon: warehouseTypeJson?['icon']?.toString(),
+      cityId: (json['city_id'] ?? '').toString(),
+      cityName: cityJson?['name']?.toString(),
+      name: (json['name'] ?? '').toString(),
+      level: (json['level'] as num?)?.toInt() ?? 1,
       capacity: (json['capacity'] as num?)?.toDouble() ?? 0.0,
       reservedCapacity: (json['reserved_capacity'] as num?)?.toDouble() ?? 0.0,
       isActive: json['is_active'] as bool? ?? true,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()) ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse((json['updated_at'] ?? '').toString()) ??
+          DateTime.now(),
       slots: json['warehouse_slots'] != null
           ? (json['warehouse_slots'] as List)
               .map((s) => WarehouseSlotModel.fromJson(s))
@@ -60,6 +73,48 @@ class WarehouseModel {
       finishAt: json['finish_at'] != null
           ? DateTime.tryParse(json['finish_at'] as String)
           : null,
+    );
+  }
+
+  WarehouseModel copyWith({
+    String? id,
+    String? playerId,
+    String? warehouseTypeId,
+    String? typeIcon,
+    String? cityId,
+    Object? cityName = _warehouseUnset,
+    String? name,
+    int? level,
+    double? capacity,
+    double? reservedCapacity,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    List<WarehouseSlotModel>? slots,
+    bool? isUnderConstruction,
+    Object? finishAt = _warehouseUnset,
+  }) {
+    return WarehouseModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      warehouseTypeId: warehouseTypeId ?? this.warehouseTypeId,
+      typeIcon: typeIcon ?? this.typeIcon,
+      cityId: cityId ?? this.cityId,
+      cityName: identical(cityName, _warehouseUnset)
+          ? this.cityName
+          : cityName as String?,
+      name: name ?? this.name,
+      level: level ?? this.level,
+      capacity: capacity ?? this.capacity,
+      reservedCapacity: reservedCapacity ?? this.reservedCapacity,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      slots: slots ?? this.slots,
+      isUnderConstruction: isUnderConstruction ?? this.isUnderConstruction,
+      finishAt: identical(finishAt, _warehouseUnset)
+          ? this.finishAt
+          : finishAt as DateTime?,
     );
   }
 }
@@ -90,21 +145,59 @@ class WarehouseSlotModel {
   });
 
   factory WarehouseSlotModel.fromJson(Map<String, dynamic> json) {
-    final productJson = json['product'] as Map<String, dynamic>?;
+    final productJson = json['product'] is Map<String, dynamic>
+        ? json['product'] as Map<String, dynamic>
+        : json['product'] is Map
+            ? Map<String, dynamic>.from(json['product'] as Map)
+            : null;
     
     return WarehouseSlotModel(
-      id: json['id'] as String,
-      productId: json['product_id'] as String?,
+      id: (json['id'] ?? '').toString(),
+      productId: json['product_id']?.toString(),
       productName: json['product_name'] as String? ?? productJson?['urun_adi'] as String?,
       productIcon: productJson?['urun_iconu'] as String?,
-      quantity: json['quantity'] as int? ?? 0,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       unitVolume: (productJson?['birim_hacim'] as num?)?.toDouble() ?? 0.0,
-      qualityLevel: json['quality_level'] as int? ?? 0,
+      qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       cost: (json['cost'] as num?)?.toDouble() ?? 0.0,
       isAvailableForSale: json['is_available_for_sale'] as bool? ?? false,
     );
   }
 
-  bool get isEmpty => productId == null;
+  WarehouseSlotModel copyWith({
+    String? id,
+    Object? productId = _warehouseUnset,
+    Object? productName = _warehouseUnset,
+    Object? productIcon = _warehouseUnset,
+    int? quantity,
+    double? unitVolume,
+    int? qualityLevel,
+    double? price,
+    double? cost,
+    bool? isAvailableForSale,
+  }) {
+    return WarehouseSlotModel(
+      id: id ?? this.id,
+      productId: identical(productId, _warehouseUnset)
+          ? this.productId
+          : productId as String?,
+      productName: identical(productName, _warehouseUnset)
+          ? this.productName
+          : productName as String?,
+      productIcon: identical(productIcon, _warehouseUnset)
+          ? this.productIcon
+          : productIcon as String?,
+      quantity: quantity ?? this.quantity,
+      unitVolume: unitVolume ?? this.unitVolume,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      price: price ?? this.price,
+      cost: cost ?? this.cost,
+      isAvailableForSale: isAvailableForSale ?? this.isAvailableForSale,
+    );
+  }
+
+  bool get isEmpty => productId == null || quantity <= 0;
 }
+
+const _warehouseUnset = Object();

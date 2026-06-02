@@ -48,7 +48,13 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                     data: (construction) {
                       if (construction != null) {
                         final params =
-                            construction['params'] as Map<String, dynamic>?;
+                            construction['params'] is Map<String, dynamic>
+                            ? construction['params'] as Map<String, dynamic>
+                            : construction['params'] is Map
+                                ? Map<String, dynamic>.from(
+                                    construction['params'] as Map,
+                                  )
+                                : null;
                         return _buildRedirectState(
                           title:
                               (params?['name'] ?? 'Lojistik Firmasi').toString(),
@@ -449,6 +455,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       final res = await ref.read(logisticsActionProvider).createLogisticsCompany(
             typeId: _selectedType!.id,
             name: _selectedType!.name,
+            syncProviders: false,
           );
       if (!mounted) return;
 

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
@@ -201,6 +202,21 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     state = AsyncData(page);
   }
 
+  void clearSaleResult() {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      StoreDetailPageModel(
+        success: current.success,
+        store: current.store,
+        activeBoost: current.activeBoost,
+        activeUpgrade: current.activeUpgrade,
+        saleResult: null,
+        changed: current.changed,
+      ),
+    );
+  }
+
   void patchSlotActive({
     required String slotId,
     required bool isActive,
@@ -380,19 +396,13 @@ final storeHistoryProvider =
     });
 
 final citiesProvider = FutureProvider<List<CityModel>>((ref) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase.rpc('get_active_cities');
-
-  return (response as List).map((json) => CityModel.fromJson(json)).toList();
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.cities;
 });
 
 final storeTypesProvider = FutureProvider<List<StoreTypeModel>>((ref) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase.rpc('get_store_types_catalog');
-
-  return (response as List)
-      .map((json) => StoreTypeModel.fromJson(json))
-      .toList();
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.storeTypes;
 });
 
 class StoreActionNotifier {

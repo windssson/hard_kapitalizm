@@ -186,7 +186,10 @@ class ArgeActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
+  Future<Map<String, dynamic>> completeConstruction(
+    String constructionId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -198,9 +201,10 @@ class ArgeActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(playerArgeCenterProvider);
-      _ref.invalidate(playerArgeConstructionProvider);
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(playerArgeCenterProvider);
+        _ref.invalidate(playerArgeConstructionProvider);
+      }
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

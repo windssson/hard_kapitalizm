@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
@@ -64,11 +65,10 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   Future<void> _completeConstruction(String constructionId) async {
     final result = await ref
         .read(factoryActionProvider)
-        .completeConstruction(constructionId);
+        .completeConstruction(constructionId, syncProviders: false);
 
     ref.invalidate(factoryConstructionProvider);
     ref.invalidate(factoryListProvider);
-    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] != true) {
@@ -78,13 +78,16 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
         message: result['message'] ?? 'Fabrika insaati tamamlanamadi.',
         type: SnackbarType.error,
       );
+      return;
     }
+
+    await showExperienceFeedbackFromResult(context, result);
   }
 
   Future<void> _finishConstructionWithGold(String constructionId) async {
     final result = await ref
         .read(factoryActionProvider)
-        .finishConstructionWithGold(constructionId);
+        .finishConstructionWithGold(constructionId, syncProviders: false);
 
     ref.invalidate(factoryConstructionProvider);
     ref.invalidate(factoryListProvider);
@@ -98,6 +101,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
         message: 'Insaat aninda tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
       return;
     }
 

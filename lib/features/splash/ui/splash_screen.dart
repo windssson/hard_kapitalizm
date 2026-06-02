@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
+import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -41,6 +43,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           );
         } catch (_) {
           // Bootstrap basarisiz olsa bile asset yukleme ve giris akisina devam ediyoruz.
+        }
+      }
+
+      await ref.read(staticCatalogsProvider.future);
+
+      if (user != null) {
+        try {
+          await ref.read(notificationActionProvider).refreshAttention();
+        } catch (_) {
+          // Bildirim attention refresh basarisiz olsa da giris akisina devam.
         }
       }
 

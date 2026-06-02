@@ -1,65 +1,186 @@
-# Modül TODO Durumu ve Proje Analizi
+# Modul TODO Durumu ve Proje Ozeti
 
-Bu liste geliştirme takibi için tutulur. Yüzdeler "Feature Coverage (Özellik Kapsamı) + Entegrasyon Olgunluğu" bazlı mühendislik tahminidir.
+Bu dosya aktif gelistirme durumunu ozetler. Yuzdeler "ozellik kapsami + entegrasyon olgunlugu + cihaz testi guveni" bazli muhendislik tahminidir.
 
 ## Genel Durum
-- **İstemci (UI / Flutter) Tamamlanma Oranı:** ~%98
-- **Veritabanı (Supabase PostgreSQL + RPC) Tamamlanma Oranı:** ~%90
+- Istemci (Flutter UI): ~%98
+- Veritabani / RPC (Supabase): ~%95
+- Performans refactor fazi: Ana hedefler tamamlandi
+- UX / UI iyilestirme fazi: Ilk tur tamamlandi, test geri bildirimleri bekleniyor
 
 ---
 
-## Modül Listesi & Tamamlanma Oranları
+## Modul Durumu
 
-- [x] **Splash** - %98
-  - *Yapılanlar:* Cihaz kimliği ile otomatik anonim giriş, varlıkların önceden indirilmesi (prefetch), gecikmiş inşaat ve market transferlerinin otomatik tetiklenerek tamamlanması.
-- [x] **Auth (Profil)** - %95
-  - *Yapılanlar:* Supabase üzerinden cihaz UUID tabanlı e-posta/şifre ile arka planda sorunsuz giriş/kayıt, veritabanında `ensure_player_record_exists` ile oyuncu kaydının otomatik oluşturulması, profil ekranı.
-- [x] **Home (Anasayfa)** - %90
-  - *Yapılanlar:* CEO paneli, seviye ve deneyim göstergeleri, kasa/altın bilgileri, modül navigasyon ızgarası, finansal özetler ve haber akışı.
-- [x] **Market (Pazar)** - %100
-  - *Yapılanlar:* Alış/satış listelemeleri, filtreleme, satın alma işlemleri ve veritabanı entegrasyonu.
-- [x] **Logistics (Lojistik)** - %100
-  - *Yapılanlar:* Araç listesi, şirket kurulumu, araç kapasiteleri ve sevkiyat/lojistik yönetimi.
-- [x] **Transfer Map (Transfer Haritası)** - %95
-  - *Yapılanlar:* Aktif ve geçmiş lojistik transferlerin takibi, teslimat süreleri, kullanılmayan kodların ve static analiz uyarılarının temizlenmesi.
-- [x] **Warehouse (Depo)** - %100
-  - *Yapılanlar:* Doluluk ve rezerve kapasite gösterimleri (2 ayrı bar), slot yönetimi, ürün detayları ve diğer birimlerle görsel standartlaştırma.
-- [x] **Store (Mağaza)** - %100
-  - *Yapılanlar:* Satış slotu ekleme/çıkarma, fiyat belirleme, depodan mağazaya stok aktarımı, mağaza performans raporları ve geçmiş veriler.
-- [x] **Field (Tarla)** - %100
-  - *Yapılanlar:* Çoklu slot yönetimi, tohum ekimi, aktif/pasif durumu, hammadde ve üretilen ürün maliyet gösterimleri.
-- [x] **Farm (Çiftlik)** - %100
-  - *Yapılanlar:* Hayvan/ürün üretimi, slot yönetimi, seviye yükseltme, hammadde ve ürün maliyet entegrasyonu.
-- [x] **Factory (Fabrika)** - %100
-  - *Yapılanlar:* Giriş hammaddeleri ve çıkış ürünlerinin yönetimi, hammadde ve ürün maliyet gösterimleri, boost sistemi, üretim hızlandırmaları.
-- [x] **Mine (Maden)** - %100
-  - *Yapılanlar:* Hammaddesiz üretim yönetimi, üretilen maden maliyet gösterimi, seviye yükseltme.
-- [x] **Arge (Araştırma & Geliştirme)** - %95
-  - *Yapılanlar:* AR-GE merkezi seviye yükseltme, eşzamanlı araştırma slotları, araştırma süre azaltma bonusları, altınla anında tamamlama, ürün kalite kilidi açma.
+- [x] Splash - %99
+  - `bootstrap_game_session()` ile acilis akisi tekles tirildi.
+  - Oyuncu girisi, due islemler ve ilk yuklemeler daha dar sorgu akisina cekildi.
+  - Sabit katalog cache preload eklendi.
+
+- [x] Auth / Profil - %95
+  - Cihaz tabanli otomatik giris akisi calisiyor.
+  - `ensure_player_record_exists` tekrarsiz akisa indirildi.
+
+- [x] Home - %92
+  - Giris sonrasi ozet ekranlari calisiyor.
+  - Lojistik giris karari tek RPC akisina baglandi.
+
+- [x] Market - %97
+  - Satin alma, filtreleme, hedef odakli alim akisi calisiyor.
+  - Hedef ozeti ve alim modu UX iyilestirildi.
+  - Miktar popup'larinda sistem klavyesi yerine ozel numpad kullaniliyor.
+  - Kalan is: cihaz testiyle son UX ayarlari.
+
+- [x] Logistics - %96
+  - Sirket kurulumu, arac yonetimi, yakit ve kiralama akislari calisiyor.
+  - Bircok gereksiz invalidate daraltildi.
+  - Sabit kataloglar cache'ten okunuyor.
+  - Miktar girislerinde ozel numpad aktif.
+  - Kalan is: testte cikacak runtime / state buglari.
+
+- [x] Transfer Map - %96
+  - Aktif ve gecmis transfer takibi calisiyor.
+  - Backend `affected targets` sozlesmesi ile hedefli refresh akisi kuruldu.
+  - Filtre/siralama akislari ve ust ozet kartlari iyilestirildi.
+  - Kalan is: gercek cihaz testinde son UX duzeltmeleri.
+
+- [x] Warehouse - %97
+  - Liste ve detay state'i notifier tabanli hale getirildi.
+  - Kucuk slot islemleri lokal patch ile akiyor.
+  - Route donusu hard refresh kaldirildi.
+  - Depo tipi seciminde kabul edilen urunler gosteriliyor.
+  - Miktar girislerinde ozel numpad ve hizli miktar kisayollari aktif.
+  - Kalan is: testte gorulecek son davranis farklari.
+
+- [x] Store - %97
+  - Liste ekrani tek page-data akisina indirildi.
+  - Detail acilisi `open_store_detail_page()` ile tek akisa cekildi.
+  - History / performance ekranlari dirty-flag mantigina baglandi.
+  - Cok sayida invalidate zinciri daraltildi.
+  - Magaza tipi seciminde satilabilen urunler gosteriliyor.
+  - Miktar girislerinde ozel numpad ve hizli miktar kisayollari aktif.
+  - Kalan is: testte gorulecek runtime / state buglari.
+
+- [x] Field - %97
+  - Uretim, slot, boost ve transfer akislari yeni performans desenine yaklastirildi.
+  - Cron yerine oyuncu girisi / ilgili akis bazli uretim hesaplama aktif.
+  - Tur secim ekraninda uretebildigi urunler gosteriliyor.
+  - Miktar girisleri numpad ile calisiyor.
+  - Kalan is: cihaz testi ve son refresh ince ayarlari.
+
+- [x] Farm - %97
+  - Field ile benzer performans ve uretim refactoru uygulandi.
+  - Tur secim ekraninda uretebildigi urunler gosteriliyor.
+  - Miktar girisleri numpad ile calisiyor.
+  - Kalan is: cihaz testi ve son refresh ince ayarlari.
+
+- [x] Factory - %97
+  - Uretim hesaplama giriste / ilgili akis bazli calisiyor.
+  - Boost sistemi yeni uretim modeline uyarlandi.
+  - Tur secim ekraninda uretebildigi urunler gosteriliyor.
+  - Miktar girisleri numpad ile calisiyor.
+  - Kalan is: cihaz testi ve son refresh ince ayarlari.
+
+- [x] Mine - %97
+  - Uretim ve boost akisi yeni modele uyarlandi.
+  - Tur secim ekraninda uretebildigi urunler gosteriliyor.
+  - Miktar girisleri numpad ile calisiyor.
+  - Kalan is: cihaz testi ve son refresh ince ayarlari.
+
+- [x] Arge - %95
+  - Ana arastirma akislari calisiyor.
+  - Bazi gereksiz refresh zincirleri daraltildi.
+  - Kalan is: son UX ve test duzeltmeleri.
 
 ---
 
-## Veritabanı ve Backend Durumu (Supabase)
+## Backend / Supabase Durumu
 
-### Tamamlanan Altyapı
-- Tüm tablolar (32 adet) oluşturulmuş ve RLS (Row Level Security) kuralları aktif hale getirilmiştir.
-- **İnşaat Sistemi:** İnşaat başlatma, tamamlama, iptal etme ve iade (%50 cash) fonksiyonları.
-- **Üretim Döngüleri (Cron):** 10 dakikalık kaydırmalı (offset) cron’lar ile Maden, Fabrika, Tarla ve Çiftlik üretim işlemleri veritabanı düzeyinde optimize edilmiştir.
-- **Maliyet Hesaplama:** Hammadde girdi maliyetleri üzerinden ağırlıklı ortalama birim maliyet hesaplaması ve Madenler için baz satış fiyatının %10'u oranında otomatik maliyet ataması.
+### Tamamlananlar
+- Oyuncu girisine dayali `bootstrap_game_session()` akisi kuruldu.
+- Sabit katalog kullanimina uygun istemci cache mimarisi hazirlandi.
+- Store icin yeni RPC katmani:
+  - `get_store_list_page_data()`
+  - `open_store_detail_page()`
+- Warehouse liste verisi daha dar sorgu akisina cekildi.
+- Uretim cron mantigi oyuncu girisi ve ilgili akis bazli hesaplamaya tasindi.
+- Eski production cron kayitlari ve kullanilmayan legacy RPC'lerin buyuk kismi temizlendi.
+- Boost sistemi `building_boosts` kaydini dogruluk kaynagi kabul edecek sekilde uretim hesabina uyarlandi.
+- Transfer tamamlama sonuclarinda etkilenen hedefleri donduren backend sozlesmeleri eklendi.
 
-### Kalan / Eksik Backend İşleri (UI Akışları Sonrası Planlananlar)
-1. **Mağaza Satış Cron Sistemi:**
-   - Müşteri ziyareti, satış hızları ve stok eritme işlemlerini yürütecek backend satış cron'u ve algoritması henüz detaylandırılmadı.
-2. **Lojistik Detay İşlemleri:**
-   - Şirket dışı araç kiralama, yakıt yönetimi ve araç satın alma fonksiyonlarının backend entegrasyonu.
-3. **Veritabanı Temizliği (Cleanup):**
-   - Miktarı ve bekleyen miktarı sıfır (quantity = 0, pending_quantity = 0) olan atıl `production_inventory` kayıtlarını temizleyecek periodik fonksiyon.
+### Bilincli Olarak Kalanlar
+- Gercek global etkiye sahip bazi refresh / due islemler hala genis kapsamli.
+- Warehouse icin store seviyesinde tam `page model + patch contract` standardi henuz son noktaya tasinmadi.
+
+### Takip Edilecek Temizlikler
+1. Testte ortaya cikacak kalan RPC / state / parsing hatalarini kapatmak
+2. Gerekirse warehouse backend response'larini daha da patch-dostu hale getirmek
+3. Analyzer / build tarafinda tekrar eden sorunlari uygun ortamda temiz raporla dogrulamak
 
 ---
 
-## Önerilen Sonraki Odak Noktası
+## Performans Fazinda Yapilan Ana Isler
 
-1. **Mağaza Satış Altyapısı (Backend/Cron):**
-   - Mağazalarda stokların otomatik satılması ve oyuncuya gelir getirmesi için veritabanında satış cron'unun kurulması.
-2. **Lojistik Detayları (Kiralama & Satın Alma):**
-   - Lojistik araçlarının kiralama ve satın alma işlemlerinin entegrasyonunun tamamlanması.
+- Splash acilis sorgulari ciddi sekilde azaltildi.
+- Store liste ve detail akislari tekilleştirildi.
+- Warehouse liste / detail refresh fan-out'u daraltildi.
+- Cron tabanli uretim kaldirildi, on-entry hesaplama modeline gecildi.
+- Boost sistemi yeni uretim zaman modeliyle hizalandi.
+- Store, warehouse, production, logistics, market ve transfer map tarafinda gereksiz invalidate zincirleri temizlendi.
+- Sabit kataloglar acilista bir kez yuklenip oyun boyunca cache'ten kullanilir hale getirildi:
+  - cities
+  - products
+  - store types
+  - warehouse types
+  - factory / farm / field / mine types
+  - logistics company / vehicle types
+
+---
+
+## UX / UI Fazinda Yapilan Ana Isler
+
+- Store detail satis ozeti modal yerine inline karta donusturuldu.
+- Warehouse detail ust bilgi hiyerarsisi iyilestirildi.
+- Market ekranina alim hedefi ve teslimat modu baglami eklendi.
+- Transfer map ust ozet kartlari ve filtre deneyimi iyilestirildi.
+- Kurulum / tip secim ekranlarinda urun onizlemeleri eklendi:
+  - magaza tipleri icin satilabilen urunler
+  - depo tipleri icin kabul edilen urunler
+  - uretim birimi tipleri icin uretilebilen urunler
+- Miktar girilen popup'larda cihaz klavyesi kapatildi, ozel numpad kullanima alindi.
+- Numpad'e hizli miktar kisayollari eklendi:
+  - `1/4`
+  - `Yari`
+  - `Tamami`
+
+---
+
+## Siradaki En Mantikli Faz
+
+1. Gercek cihaz test turu
+   - Store
+   - Warehouse
+   - Market
+   - Transfer Map
+   - Logistics
+   - Production detail ekranlari
+
+2. Testten gelen bugfix turu
+   - Runtime hatalari
+   - Eksik refresh senaryolari
+   - UX akisi tutarsizliklari
+
+3. Ikinci tur UX parlatma
+   - Bos durumlar
+   - Kart spacing / buton dili
+   - Mobil okunabilirlik
+
+4. Gerekirse warehouse backend mimari tamamlama
+
+---
+
+## Kisa Notlar
+
+- `flutter analyze` bu ortamda duzenli olarak timeout verdigi icin tam temiz analyzer raporu alinmis degil.
+- Bu nedenle mevcut odak "gercek cihaz testi + hedefli bugfix" olmali.
+- `Todo.md` tekrar aktif takip dosyasi olarak kullanilacaksa her buyuk faz sonunda guncellenmeli.

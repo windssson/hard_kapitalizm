@@ -3,18 +3,22 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/features/auth/models/experience_gain_model.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_detail_page_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
@@ -88,10 +92,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
   }
 
   void _scheduleSalesSummaryDialog(StoreDetailPageModel page) {
-    ref.read(storeHistoryDirtyProvider(page.store.id).notifier).state =
-        page.changed.historyDirty;
-    ref.read(storePerformanceDirtyProvider(page.store.id).notifier).state =
-        page.changed.performanceDirty;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(storeHistoryDirtyProvider(page.store.id).notifier).state =
+          page.changed.historyDirty;
+      ref.read(storePerformanceDirtyProvider(page.store.id).notifier).state =
+          page.changed.performanceDirty;
+    });
 
     final result = page.saleResult;
     if (result == null || !result.processed || !result.hasVisibleSales) {
@@ -106,6 +113,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         return;
       }
       _lastShownSalesResultKey = resultKey;
+      
+      // Clear the sale result from the provider so it doesn't pop up again when returning to this screen
+      ref.read(storeDetailPageProvider(page.store.id).notifier).clearSaleResult();
+
 
       if (result.success != true && (result.message ?? '').trim().isNotEmpty) {
         AppSnackbar.show(
@@ -118,6 +129,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
       }
 
       await _showStoreSalesSummaryDialog(context, result);
+
+      if (!mounted) return;
+      final exp = result.experience;
+      if (exp != null && exp.leveledUp) {
+        await _showLevelUpDialog(context, exp);
+      }
     });
   }
 
@@ -162,6 +179,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
                   result.totalProfit.toStringAsFixed(1),
                   valueColor: AppColors.gold,
                 ),
+                if ((result.experience?.amount ?? 0) > 0)
+                  _buildSalesSummaryRow(
+                    'Kazanilan XP',
+                    '+${result.experience!.amount}',
+                    valueColor: AppColors.blue,
+                  ),
                 SizedBox(height: 14.h),
                 Text(
                   'Urun Bazli Sonuc',
@@ -223,6 +246,60 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showLevelUpDialog(
+    BuildContext context,
+    ExperienceGainModel experience,
+  ) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.background,
+        title: Text(
+          'Seviye Atladi!',
+          style: TextStyle(
+            color: AppColors.gold,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tebrikler, sirket seviyen yukseldi.',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13.sp,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            _buildSalesSummaryRow(
+              'Eski Seviye',
+              experience.oldLevel.toString(),
+            ),
+            _buildSalesSummaryRow(
+              'Yeni Seviye',
+              experience.newLevel.toString(),
+              valueColor: AppColors.gold,
+            ),
+            _buildSalesSummaryRow(
+              'Kazanilan XP',
+              '+${experience.amount}',
+              valueColor: AppColors.blue,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Harika'),
           ),
         ],
       ),
@@ -611,6 +688,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
         refreshPlayer: true,
       );
       _showSuccess(context, 'Magaza yukseltmesi tamamlandi!');
+      await showExperienceFeedbackFromResult(context, result);
     } else {
       _showError(
         context,
@@ -2032,70 +2110,163 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
     final maxCanTake = slot.capacity - slot.quantity - slot.pendingQuantity;
     final limit = availableQty < maxCanTake ? availableQty : maxCanTake.toInt();
 
-    showDialog(
+    if (limit <= 0) {
+      _showWarning(context, 'Maksimum kapasiteye ulastiniz veya depoda urun yok.');
+      return;
+    }
+
+    showModalBottomSheet(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.background,
-        title: Text(
-          'Miktar Girin',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18.sp),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${slot.productName} Transferi',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
-            ),
-            SizedBox(height: 16.h),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                labelText: 'Miktar (Maks: $limit)',
-                labelStyle: const TextStyle(color: AppColors.gold),
-                enabledBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.textMuted),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.gold),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (dialogContext, setState) {
+          void updateQuantity(String value) {
+            final parsed = int.tryParse(value) ?? 1;
+            final safe = limit <= 0 ? 0 : parsed.clamp(1, limit);
+            final safeText = safe.toString();
+
+            if (controller.text != safeText) {
+              controller.value = TextEditingValue(
+                text: safeText,
+                selection: TextSelection.collapsed(offset: safeText.length),
+              );
+            }
+          }
+
+          return Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(
+                16.w,
+                16.h,
+                16.w,
+                MediaQuery.of(context).viewInsets.bottom + 16.h,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(24.r),
+                border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Miktar Girin',
+                            style: AppTextStyles.h1.copyWith(fontSize: 20.sp),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: Icon(
+                            Icons.close,
+                            color: AppColors.textMuted,
+                            size: 20.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      '${slot.productName} Transferi',
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+                    ),
+                    SizedBox(height: 16.h),
+                    TextField(
+                      controller: controller,
+                      readOnly: true,
+                      showCursor: true,
+                      enableInteractiveSelection: false,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Miktar',
+                        labelStyle: const TextStyle(color: AppColors.textMuted),
+                        helperText: '1 - $limit adet arasi (Depo: $availableQty, Slot: $maxCanTake)',
+                        helperStyle: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11.sp,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.cardBg,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: const BorderSide(color: AppColors.gold),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    NumericKeyboard(
+                      controller: controller,
+                      onChanged: updateQuantity,
+                      shortcuts: [
+                        NumericKeyboardShortcut(
+                          label: '1/4',
+                          value: limit <= 0 ? '0' : (limit ~/ 4).clamp(1, limit).toString(),
+                        ),
+                        NumericKeyboardShortcut(
+                          label: 'Yarisi',
+                          value: limit <= 0 ? '0' : (limit ~/ 2).clamp(1, limit).toString(),
+                        ),
+                        NumericKeyboardShortcut(
+                          label: 'Tamami',
+                          value: limit.toString(),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48.h,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.gold,
+                          foregroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                        onPressed: () {
+                          final qty = int.tryParse(controller.text) ?? 0;
+                          if (qty <= 0 || qty > limit) {
+                            _showWarning(context, 'Gecersiz miktar!');
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          _showVehicleSelectionSheetV2(
+                            context,
+                            ref,
+                            store,
+                            slot,
+                            warehouseSlotId,
+                            qty,
+                            selectedQualityLevel,
+                            sourceCityId,
+                          );
+                        },
+                        child: Text(
+                          'DEVAM ET',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Iptal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            onPressed: () {
-              final qty = int.tryParse(controller.text) ?? 0;
-              if (qty <= 0 || qty > limit) {
-                _showWarning(context, 'Gecersiz miktar!');
-                return;
-              }
-              Navigator.pop(dialogContext);
-              _showVehicleSelectionSheetV2(
-                context,
-                ref,
-                store,
-                slot,
-                warehouseSlotId,
-                qty,
-                selectedQualityLevel,
-                sourceCityId,
-              );
-            },
-            child: const Text(
-              'Devam Et',
-              style: TextStyle(color: Colors.black),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -2400,14 +2571,33 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen> {
 
     if (context.mounted) Navigator.pop(context);
 
-    if (warehouses.isEmpty) {
+    final staticCatalog = ref.read(staticCatalogsProvider).value;
+    final warehouseTypes = staticCatalog?.warehouseTypes ?? [];
+
+    final eligibleWarehouses = warehouses.where((warehouse) {
+      final warehouseTypeId = warehouse['warehouse_type_id']?.toString() ?? '';
+      final wType = warehouseTypes.firstWhere(
+        (type) => type['id']?.toString() == warehouseTypeId,
+        orElse: () => <String, dynamic>{},
+      );
+      final acceptedProductIdsRaw = wType['accepted_product_ids']?.toString() ?? '';
+      if (acceptedProductIdsRaw.isEmpty) return false;
+
+      final acceptedProductIds = acceptedProductIdsRaw
+          .split(',')
+          .map((id) => id.trim().toUpperCase())
+          .toList();
+      return acceptedProductIds.contains(slot.productId?.toUpperCase());
+    }).toList();
+
+    if (eligibleWarehouses.isEmpty) {
       if (context.mounted) {
-        _showError(context, 'Uygun hedef deponuz bulunamadi.');
+        _showError(context, 'Bu urunu kabul edebilecek uygun hedef deponuz bulunamadi.');
       }
       return;
     }
 
-    final sortedWarehouses = List<Map<String, dynamic>>.from(warehouses)
+    final sortedWarehouses = List<Map<String, dynamic>>.from(eligibleWarehouses)
       ..sort((a, b) {
         final aSameCity =
             (a['city_id']?.toString() ?? '') == (store.cityId ?? '');

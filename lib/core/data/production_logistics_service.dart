@@ -27,17 +27,57 @@ class ProductionLogisticsService {
         .toList();
   }
 
+  Future<List<Map<String, dynamic>>> getPlayerWarehousesRaw() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      throw Exception('Oturum acilmamis.');
+    }
+
+    final response = await _supabase.rpc(
+      'get_player_warehouses_raw',
+    );
+
+    return (response as List<dynamic>)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  }
+
   Future<List<ProductionLogisticsWarehouseOption>> getWarehouseOptions({
     required String productionCityId,
+    required String productId,
   }) async {
-    final warehouses = await getPlayerWarehouses();
+    final warehouses = await getPlayerWarehousesRaw();
     return warehouses
+        .where((row) => row['is_active'] == true)
+        .where((row) {
+          final warehouseType = row['warehouse_type'];
+          if (warehouseType is! Map) return false;
+          final acceptedProductIds = _parseAcceptedProductIds(
+            warehouseType['accepted_product_ids'],
+          );
+          if (acceptedProductIds.isEmpty) return false;
+          final normalizedProductId = productId.trim().toLowerCase();
+          return acceptedProductIds.any(
+            (acceptedId) => acceptedId.toLowerCase() == normalizedProductId,
+          );
+        })
         .map(
           (row) => ProductionLogisticsWarehouseOption.fromJson(
             row,
             productionCityId: productionCityId,
           ),
         )
+        .toList();
+  }
+
+  List<String> _parseAcceptedProductIds(dynamic rawValue) {
+    if (rawValue == null) return const [];
+
+    return rawValue
+        .toString()
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
         .toList();
   }
 

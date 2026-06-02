@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -20,21 +20,9 @@ class WarehouseScreen extends ConsumerStatefulWidget {
   ConsumerState<WarehouseScreen> createState() => _WarehouseScreenState();
 }
 
-class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
-    with RouteRefreshMixin<WarehouseScreen> {
+class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   final int _selectedIndex = 1;
   String _selectedFilter = 'Tumu';
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void refreshRouteData() {
-    ref.invalidate(warehouseListProvider);
-    ref.read(warehouseListProvider.future);
-  }
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
@@ -84,7 +72,8 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
                   }).toList();
 
                   return RefreshIndicator(
-                    onRefresh: () => ref.refresh(warehouseListProvider.future),
+                    onRefresh: () =>
+                        ref.read(warehouseListProvider.notifier).refresh(),
                     child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
@@ -592,16 +581,33 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
                   style: TextStyle(color: AppColors.gold, fontSize: 11.sp),
                 ),
                 SizedBox(height: 8.h),
-                _ConstructionCountdown(
-                  finishAt: warehouse.finishAt!,
-                  onFinish: () async {
-                    await ref
-                        .read(warehouseActionProvider)
-                        .completeConstruction(warehouse.id);
-                    ref.invalidate(warehouseListProvider);
-                    ref.invalidate(playerProvider);
-                  },
-                ),
+                if (warehouse.finishAt != null)
+                  _ConstructionCountdown(
+                    finishAt: warehouse.finishAt!,
+                    onFinish: () async {
+                      final result = await ref
+                          .read(warehouseActionProvider)
+                          .completeConstruction(warehouse.id);
+                      if (result['success'] == true) {
+                        await ref.read(warehouseListProvider.notifier).refresh();
+                        ref.invalidate(playerProvider);
+                        if (mounted) {
+                          await showExperienceFeedbackFromResult(
+                            context,
+                            result,
+                          );
+                        }
+                      }
+                    },
+                  )
+                else
+                  Text(
+                    'Insaat verisi guncelleniyor...',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11.sp,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -645,7 +651,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
           .completeConstruction(id);
 
       if (completeResult['success'] == true) {
-        ref.invalidate(warehouseListProvider);
+        await ref.read(warehouseListProvider.notifier).refresh();
         ref.invalidate(playerProvider);
         if (mounted) {
           AppSnackbar.show(
@@ -654,6 +660,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
             message: 'Depo insaati aninda tamamlandi!',
             type: SnackbarType.success,
           );
+          await showExperienceFeedbackFromResult(context, completeResult);
         }
       } else if (mounted) {
         AppSnackbar.show(

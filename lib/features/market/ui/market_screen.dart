@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_store_slot_model.dart';
@@ -19,6 +20,7 @@ import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 
 class MarketScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -48,7 +50,28 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   bool get _isStoreTarget =>
       widget.targetType == 'store' && widget.storeSlotId.isNotEmpty;
 
-  Future<void> _refreshAll() async {
+  String get _targetTypeLabel => _isStoreTarget ? 'Magaza Rafina' : 'Depoya';
+
+  Future<void> _refreshPage() async {
+    ref.invalidate(marketProductProvider(widget.productId));
+    ref.invalidate(marketListingsProvider(widget.productId));
+    ref.invalidate(buyerActiveMarketTransfersProvider);
+    if (_isStoreTarget) {
+      ref.invalidate(marketBuyerStoreSlotProvider(widget.storeSlotId));
+      if (widget.storeId.isNotEmpty) {
+        ref.invalidate(storeDetailPageProvider(widget.storeId));
+      }
+      return;
+    }
+
+    ref.invalidate(marketBuyerWarehouseProvider(widget.warehouseId));
+    ref.invalidate(warehouseCapacityStatusProvider(widget.warehouseId));
+    ref.invalidate(warehouseDetailProvider(widget.warehouseId));
+  }
+
+  Future<void> _refreshAfterPurchase({
+    required bool isInstant,
+  }) async {
     ref.invalidate(marketProductProvider(widget.productId));
     ref.invalidate(marketListingsProvider(widget.productId));
     ref.invalidate(playerProvider);
@@ -60,8 +83,20 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     } else {
       ref.invalidate(marketBuyerWarehouseProvider(widget.warehouseId));
       ref.invalidate(warehouseCapacityStatusProvider(widget.warehouseId));
+      ref.invalidate(warehouseListProvider);
+      ref.invalidate(warehouseDetailProvider(widget.warehouseId));
     }
-    ref.invalidate(buyerActiveMarketTransfersProvider);
+    if (!isInstant) {
+      ref.invalidate(buyerActiveMarketTransfersProvider);
+    }
+  }
+
+  Future<void> _refreshAfterPreparedStoreSlotRollback() async {
+    if (!_isStoreTarget) return;
+    ref.invalidate(marketBuyerStoreSlotProvider(widget.storeSlotId));
+    if (widget.storeId.isNotEmpty) {
+      ref.invalidate(storeDetailPageProvider(widget.storeId));
+    }
   }
 
   Future<void> _openPurchaseSheet(
@@ -100,7 +135,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     : widget.cityId,
             product: product,
             parentContext: context,
-            onSuccess: _refreshAll,
+            onSuccess: _refreshAfterPurchase,
+            onPreparedSlotRollback: _refreshAfterPreparedStoreSlotRollback,
           ),
         ),
       ),
@@ -134,6 +170,38 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       child: Text(
         label,
         style: AppTextStyles.body.copyWith(color: color, fontSize: 9.sp),
+      ),
+    );
+  }
+
+  Widget _buildInlineStat(String label, String value) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 10.sp,
+              ),
+            ),
+            TextSpan(
+              text: value,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -261,6 +329,102 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
+  Widget _buildTargetSummaryCard({
+    required ProductModel? product,
+    required MarketBuyerWarehouseModel? buyerWarehouse,
+    required MarketBuyerStoreSlotModel? buyerStoreSlot,
+    required WarehouseCapacityStatusModel? capacity,
+  }) {
+    final targetName = _isStoreTarget
+        ? (buyerStoreSlot?.storeName ?? 'Magaza')
+        : (buyerWarehouse?.warehouseName ?? 'Merkez Depo');
+    final cityName = _isStoreTarget
+        ? (buyerStoreSlot?.cityName ?? 'Sehir bekleniyor...')
+        : (buyerWarehouse?.cityName ?? 'Sehir bekleniyor...');
+    final availableText = _isStoreTarget
+        ? '${buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'} bos alan'
+        : '${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m3 bos kapasite';
+    final productText = product?.urunAdi ?? 'Urun';
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.gold.withValues(alpha: 0.10),
+            AppColors.blue.withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  _isStoreTarget
+                      ? Icons.storefront_outlined
+                      : Icons.warehouse_outlined,
+                  color: AppColors.gold,
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Alim Hedefi',
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10.sp,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '$targetName icin $productText',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
+                    ),
+                  ],
+                ),
+              ),
+              _buildTypeBadge(_targetTypeLabel, AppColors.gold),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: [
+              _buildInlineStat('Sehir', cityName),
+              _buildInlineStat('Durum', availableText),
+              _buildInlineStat(
+                'Teslimat',
+                widget.cityId.isNotEmpty && widget.cityId == (buyerStoreSlot?.cityId ?? buyerWarehouse?.cityId)
+                    ? 'Ayni sehir'
+                    : 'Sehirler arasi olabilir',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final productAsync = ref.watch(marketProductProvider(widget.productId));
@@ -299,7 +463,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             const SecondaryTopBar(title: 'Global Pazar'),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: _refreshAll,
+                onRefresh: _refreshPage,
                 color: AppColors.gold,
                 backgroundColor: AppColors.cardBg,
                 child: CustomScrollView(
@@ -318,6 +482,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             loading: _buildLoadingCard,
                             error: (e, s) =>
                                 _buildErrorCard('Urun bilgisi yuklenemedi.'),
+                          ),
+                          SizedBox(height: 12.h),
+                          _buildTargetSummaryCard(
+                            product: productAsync.value,
+                            buyerWarehouse: buyerWarehouseAsync.value,
+                            buyerStoreSlot: buyerStoreSlot,
+                            capacity: capacityAsync.value,
                           ),
                           SizedBox(height: 12.h),
                           _isStoreTarget
@@ -1120,7 +1291,8 @@ class _PurchaseSheet extends ConsumerStatefulWidget {
   final String targetCityId;
   final ProductModel product;
   final BuildContext parentContext;
-  final Future<void> Function() onSuccess;
+  final Future<void> Function({required bool isInstant}) onSuccess;
+  final Future<void> Function() onPreparedSlotRollback;
 
   const _PurchaseSheet({
     required this.listing,
@@ -1131,6 +1303,7 @@ class _PurchaseSheet extends ConsumerStatefulWidget {
     required this.product,
     required this.parentContext,
     required this.onSuccess,
+    required this.onPreparedSlotRollback,
   });
 
   @override
@@ -1151,6 +1324,12 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
     if (widget.targetCityId.isEmpty) return false;
     return widget.targetCityId == widget.listing.cityId;
   }
+
+  String get _deliveryModeLabel =>
+      _isSameCityInstantPurchase ? 'Anlik Teslimat' : 'Lojistik Transfer';
+
+  String get _targetLabel =>
+      _isStoreTarget ? 'Magaza Slotu' : 'Depo';
 
   @override
   void initState() {
@@ -1313,82 +1492,99 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       preparedStoreSlot = true;
     }
 
-    final result = await ref.read(marketActionProvider).startMarketTransfer(
-          buyerWarehouseId: widget.buyerWarehouseId,
-          buyerStoreSlotId: widget.buyerStoreSlotId,
-          sellerSlotId: widget.listing.slotId,
-          quantity: _quantity,
-          vehicleId: selected?.vehicleId,
-        );
-
-    if (!mounted) return;
-
-    setState(() {
-      _isSubmitting = false;
-    });
-
-    if (result['success'] == true) {
-      await widget.onSuccess();
-      if (!widget.parentContext.mounted || !mounted) return;
-      Navigator.of(context).pop();
-      final isInstant = result['mode']?.toString() == 'instant';
-      AppSnackbar.show(
-        widget.parentContext,
-        title: 'Basarili',
-        message: isInstant
-            ? 'Satin alma aninda tamamlandi.'
-            : 'Lojistik transfer baslatildi. Arac yola cikti.',
-        type: SnackbarType.success,
+    try {
+      final result = await ref.read(marketActionProvider).startMarketTransfer(
+            buyerWarehouseId: widget.buyerWarehouseId,
+            buyerStoreSlotId: widget.buyerStoreSlotId,
+            sellerSlotId: _isStoreTarget
+                ? widget.listing.slotId
+                : widget.listing.slotId,
+            quantity: _quantity,
+            vehicleId: selected?.vehicleId,
+          );
+      debugPrint(
+        '[MarketPurchase] target=${_isStoreTarget ? 'store' : 'warehouse'} '
+        'listingId=${widget.listing.listingId} slotId=${widget.listing.slotId} '
+        'quantity=$_quantity result=$result',
       );
-      return;
-    }
 
-    if (preparedStoreSlot && widget.buyerStoreSlotId != null) {
-      final rollbackResult = await ref
-          .read(storeActionProvider)
-          .clearStoreSlotProduct(widget.buyerStoreSlotId!);
-      await widget.onSuccess();
       if (!mounted) return;
-      if (rollbackResult['success'] != true) {
+
+      setState(() {
+        _isSubmitting = false;
+      });
+
+      if (result['success'] == true) {
+        final isInstant = result['mode']?.toString() == 'instant';
+        try {
+          await widget.onSuccess(isInstant: isInstant);
+        } catch (refreshError) {
+          debugPrint(
+            '[MarketPurchase] onSuccess refresh error: $refreshError',
+          );
+          if (widget.parentContext.mounted) {
+            AppSnackbar.show(
+              widget.parentContext,
+              title: 'Yenileme Uyarisi',
+              message:
+                  'Satin alma tamamlandi, ancak ekran yenilenirken bir hata olustu: $refreshError',
+              type: SnackbarType.warning,
+            );
+          }
+        }
+
+        if (!widget.parentContext.mounted || !mounted) return;
+        Navigator.of(context).pop();
         AppSnackbar.show(
-          context,
-          title: 'Slot Geri Alinamadi',
-          message: rollbackResult['message']?.toString() ??
-              'Hazirlanan magaza slotunu otomatik geri alamadik.',
-          type: SnackbarType.warning,
+          widget.parentContext,
+          title: 'Basarili',
+          message: isInstant
+              ? 'Satin alma aninda tamamlandi.'
+              : 'Lojistik transfer baslatildi. Arac yola cikti.',
+          type: SnackbarType.success,
         );
+        return;
       }
+
+      if (preparedStoreSlot && widget.buyerStoreSlotId != null) {
+        final rollbackResult = await ref
+            .read(storeActionProvider)
+            .clearStoreSlotProduct(widget.buyerStoreSlotId!);
+        debugPrint(
+          '[MarketPurchase] rollback result for store slot ${widget.buyerStoreSlotId}: $rollbackResult',
+        );
+        await widget.onPreparedSlotRollback();
+        if (!mounted) return;
+        if (rollbackResult['success'] != true) {
+          AppSnackbar.show(
+            context,
+            title: 'Slot Geri Alinamadi',
+            message: rollbackResult['message']?.toString() ??
+                'Hazirlanan magaza slotunu otomatik geri alamadik.',
+            type: SnackbarType.warning,
+          );
+        }
+      }
+
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: result['message']?.toString() ?? 'Transfer baslatilamadi.',
+        type: SnackbarType.error,
+      );
+    } catch (error) {
+      debugPrint('[MarketPurchase] unexpected error: $error');
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+      });
+      AppSnackbar.show(
+        context,
+        title: 'Beklenmeyen Hata',
+        message: error.toString(),
+        type: SnackbarType.error,
+      );
     }
-
-    AppSnackbar.show(
-      context,
-      title: 'Hata',
-      message: result['message']?.toString() ?? 'Transfer baslatilamadi.',
-      type: SnackbarType.error,
-    );
-  }
-
-  Widget _buildQuickQuantityButton({
-    required String label,
-    required int value,
-    required double playerCash,
-    required double rentalCost,
-  }) {
-    final safeValue = value <= 0 ? 0 : value;
-    return OutlinedButton(
-      onPressed: safeValue <= 0
-          ? null
-          : () => _updateQuantity(
-                safeValue.toString(),
-                playerCash: playerCash,
-                rentalCost: rentalCost,
-              ),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.gold,
-        side: BorderSide(color: AppColors.gold.withValues(alpha: 0.35)),
-      ),
-      child: Text(label),
-    );
   }
 
   @override
@@ -1442,10 +1638,10 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       color: Colors.transparent,
       child: Container(
       padding: EdgeInsets.fromLTRB(
-        16.w,
-        16.h,
-        16.w,
-        MediaQuery.of(context).viewInsets.bottom + 16.h,
+        14.w,
+        14.h,
+        14.w,
+        MediaQuery.of(context).viewInsets.bottom + 14.h,
       ),
       decoration: BoxDecoration(
         color: AppColors.background,
@@ -1480,80 +1676,62 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 '${widget.listing.sellerPlayerName} oyuncusundan alim yapacaksiniz.',
                 style: AppTextStyles.body,
               ),
-              if (_isSameCityInstantPurchase) ...[
-                SizedBox(height: 8.h),
-                Text(
-                  'Ayni sehir oldugu icin teslimat aninda tamamlanacak.',
-                  style: AppTextStyles.body.copyWith(color: AppColors.green),
-                ),
-              ],
-              SizedBox(height: 16.h),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Birim Fiyat',
-                      widget.listing.price.toStringAsFixed(1),
-                      AppColors.green,
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                  Expanded(
-                    child: _buildSummaryCard(
-                      'Kalite',
-                      'Lv.${widget.listing.qualityLevel}',
-                      AppColors.gold,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12.h),
+              SizedBox(height: 10.h),
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
                 decoration: BoxDecoration(
                   color: AppColors.cardBgLight.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: Wrap(
-                  spacing: 10.w,
+                  spacing: 8.w,
                   runSpacing: 6.h,
                   children: [
+                    _buildInlineStat(
+                      'Fiyat',
+                      widget.listing.price.toStringAsFixed(1),
+                    ),
+                    _buildInlineStat(
+                      'Kalite',
+                      'Lv.${widget.listing.qualityLevel}',
+                    ),
                     if (player != null)
                       Text(
                         'Nakit: ${player.cash.toStringAsFixed(1)}',
-                        style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                        style: AppTextStyles.body.copyWith(fontSize: 10.sp),
                       ),
+                    Text(
+                      'Hedef: $_targetLabel',
+                      style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                    ),
                     Text(
                       'Maksimum: $maxQuantity adet',
                       style: AppTextStyles.body.copyWith(
-                        fontSize: 11.sp,
+                        fontSize: 10.sp,
                         color: AppColors.gold,
                       ),
                     ),
                     if (_isStoreTarget)
                       Text(
                         'Bos kapasite: ${widget.buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'}',
-                        style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                        style: AppTextStyles.body.copyWith(fontSize: 10.sp),
                       )
                     else
                       Text(
                         'Depo bos kapasite: ${_warehouseCapacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m3',
-                        style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                        style: AppTextStyles.body.copyWith(fontSize: 10.sp),
                       ),
                   ],
                 ),
               ),
-              SizedBox(height: 12.h),
+              SizedBox(height: 10.h),
               TextField(
                 controller: _quantityController,
-                keyboardType: TextInputType.number,
-                onChanged: (value) => _updateQuantity(
-                  value,
-                  playerCash: player?.cash.toDouble() ?? double.infinity,
-                  rentalCost: rentalCost,
-                ),
+                readOnly: true,
+                showCursor: true,
+                enableInteractiveSelection: false,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Miktar',
@@ -1563,7 +1741,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                       : 'Yeterli nakit veya bos kapasite yok',
                   helperStyle: TextStyle(
                     color: AppColors.textMuted,
-                    fontSize: 11.sp,
+                    fontSize: 10.sp,
                   ),
                   filled: true,
                   fillColor: AppColors.cardBg,
@@ -1577,38 +1755,40 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                   ),
                 ),
               ),
-              SizedBox(height: 12.h),
-              Wrap(
-                spacing: 8.w,
-                runSpacing: 8.h,
-                children: [
-                  _buildQuickQuantityButton(
+              SizedBox(height: 10.h),
+              NumericKeyboard(
+                controller: _quantityController,
+                onChanged: (value) => _updateQuantity(
+                  value,
+                  playerCash: player?.cash.toDouble() ?? double.infinity,
+                  rentalCost: rentalCost,
+                ),
+                shortcuts: [
+                  NumericKeyboardShortcut(
                     label: '1/4',
-                    value: maxQuantity <= 0 ? 0 : (maxQuantity / 4).floor(),
-                    playerCash: player?.cash.toDouble() ?? double.infinity,
-                    rentalCost: rentalCost,
+                    value: maxQuantity <= 0
+                        ? '0'
+                        : (maxQuantity / 4).floor().clamp(1, maxQuantity).toString(),
                   ),
-                  _buildQuickQuantityButton(
+                  NumericKeyboardShortcut(
                     label: 'Yari',
-                    value: maxQuantity <= 0 ? 0 : (maxQuantity / 2).floor(),
-                    playerCash: player?.cash.toDouble() ?? double.infinity,
-                    rentalCost: rentalCost,
+                    value: maxQuantity <= 0
+                        ? '0'
+                        : (maxQuantity / 2).floor().clamp(1, maxQuantity).toString(),
                   ),
-                  _buildQuickQuantityButton(
+                  NumericKeyboardShortcut(
                     label: 'Tamami',
-                    value: maxQuantity,
-                    playerCash: player?.cash.toDouble() ?? double.infinity,
-                    rentalCost: rentalCost,
+                    value: maxQuantity.toString(),
                   ),
                 ],
               ),
               SizedBox(height: 12.h),
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(12.w),
+                padding: EdgeInsets.all(10.w),
                 decoration: BoxDecoration(
                   color: AppColors.cardBg,
-                  borderRadius: BorderRadius.circular(14.r),
+                  borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: Column(
@@ -1627,13 +1807,13 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                   ],
                 ),
               ),
-              SizedBox(height: 14.h),
+              SizedBox(height: 10.h),
               if (!_isSameCityInstantPurchase) ...[
                 Text(
                   'Arac Secimi',
-                  style: AppTextStyles.h2.copyWith(fontSize: 15.sp),
+                  style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
                 ),
-                SizedBox(height: 8.h),
+                SizedBox(height: 6.h),
               ],
               optionsAsync.when(
                 data: (result) {
@@ -1654,7 +1834,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                       ],
                       SizedBox(
                         width: double.infinity,
-                        height: 44.h,
+                        height: 42.h,
                         child: ElevatedButton(
                           onPressed: _isSubmitting || maxQuantity <= 0
                               ? null
@@ -1679,7 +1859,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                                   'SATIN ALMAYI TAMAMLA',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 13.sp,
+                                    fontSize: 12.sp,
                                   ),
                                 ),
                         ),
@@ -1724,10 +1904,10 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       child: Container(
         width: double.infinity,
         margin: EdgeInsets.only(bottom: 10.h),
-        padding: EdgeInsets.all(14.w),
+        padding: EdgeInsets.all(11.w),
         decoration: BoxDecoration(
           color: cardColor,
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(14.r),
           border: Border.all(color: borderColor),
         ),
         child: Column(
@@ -1738,7 +1918,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 Expanded(
                   child: Text(
                     option.vehicleName,
-                    style: AppTextStyles.h2.copyWith(fontSize: 15.sp),
+                    style: AppTextStyles.h2.copyWith(fontSize: 13.sp),
                   ),
                 ),
                 if (option.isRental)
@@ -1747,10 +1927,10 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                   _buildTypeBadge('Kendi Aracin', AppColors.green),
               ],
             ),
-            SizedBox(height: 10.h),
+            SizedBox(height: 8.h),
             Wrap(
               spacing: 8.w,
-              runSpacing: 8.h,
+              runSpacing: 6.h,
               children: [
                 _buildInlineStat('Kapasite', '${option.capacity}'),
                 _buildInlineStat(
@@ -1773,46 +1953,13 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 option.disabledReason!,
                 style: TextStyle(
                   color: AppColors.red,
-                  fontSize: 11.sp,
+                  fontSize: 10.sp,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard(String title, String value, Color color) {
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 10.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 15.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
       ),
     );
   }

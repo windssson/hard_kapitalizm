@@ -242,6 +242,74 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         SizedBox(height: 24.h),
 
         // Ekonomi Özeti
+        Text('Seviye Ilerlemesi', style: AppTextStyles.h2),
+        SizedBox(height: 12.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color: AppColors.gold.withValues(alpha: 0.28),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.navBg,
+                      borderRadius: BorderRadius.circular(999.r),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: Text(
+                      'LV ${player.level}',
+                      style: AppTextStyles.titleGold.copyWith(fontSize: 12.sp),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${player.currentLevelExperience} / ${player.nextLevelRequiredExperience} XP',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999.r),
+                child: LinearProgressIndicator(
+                  value: player.expProgressRatio.clamp(0.0, 1.0),
+                  minHeight: 10.h,
+                  backgroundColor: AppColors.border.withValues(alpha: 0.35),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+                ),
+              ),
+              SizedBox(height: 10.h),
+              Text(
+                'Sonraki seviyeye kalan XP: ${player.remainingExperienceToNextLevel}',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 24.h),
         Text('Finansal Durum', style: AppTextStyles.h2),
         SizedBox(height: 12.h),
         Row(

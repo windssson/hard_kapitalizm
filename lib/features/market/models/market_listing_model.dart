@@ -1,4 +1,5 @@
 class MarketListingModel {
+  final String listingId;
   final String slotId;
   final String warehouseId;
   final String warehouseName;
@@ -17,6 +18,7 @@ class MarketListingModel {
   final bool isAvailableForSale;
 
   const MarketListingModel({
+    required this.listingId,
     required this.slotId,
     required this.warehouseId,
     required this.warehouseName,
@@ -48,6 +50,8 @@ class MarketListingModel {
     }
 
     return MarketListingModel(
+      listingId: (json['listing_id'] ?? json['id'] ?? json['slot_id'] ?? '')
+          .toString(),
       slotId: (json['slot_id'] ?? json['id'] ?? '').toString(),
       warehouseId: (json['warehouse_id'] ?? '').toString(),
       warehouseName:

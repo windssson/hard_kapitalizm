@@ -1,3 +1,4 @@
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -52,8 +53,8 @@ final mineListProvider =
 
 // Maden Tipleri Provider
 final mineTypesProvider = FutureProvider<List<dynamic>>((ref) async {
-  final supabase = Supabase.instance.client;
-  return await supabase.rpc('get_mine_types_catalog');
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.mineTypes;
 });
 
 final mineConstructionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
@@ -209,7 +210,10 @@ class MineActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
+  Future<Map<String, dynamic>> completeConstruction(
+    String constructionId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -221,9 +225,10 @@ class MineActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(mineListProvider);
-      _ref.invalidate(mineConstructionProvider);
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(mineListProvider);
+        _ref.invalidate(mineConstructionProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -232,6 +237,9 @@ class MineActionNotifier {
 
   Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId,
+    {
+    bool syncProviders = true,
+  }
   ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -246,16 +254,21 @@ class MineActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(mineListProvider);
-      _ref.invalidate(mineConstructionProvider);
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(mineListProvider);
+        _ref.invalidate(mineConstructionProvider);
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> startMineUpgrade(String mineId) async {
+  Future<Map<String, dynamic>> startMineUpgrade(
+    String mineId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -270,9 +283,11 @@ class MineActionNotifier {
           'p_entity_id': mineId,
         },
       );
-      _ref.invalidate(activeMineUpgradeProvider(mineId));
-      _ref.invalidate(mineDetailProvider(mineId));
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(activeMineUpgradeProvider(mineId));
+        _ref.invalidate(mineDetailProvider(mineId));
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -303,6 +318,9 @@ class MineActionNotifier {
 
   Future<Map<String, dynamic>> finishMineUpgradeWithGold(
     String upgradeId,
+    {
+    bool syncProviders = true,
+  }
   ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -317,10 +335,16 @@ class MineActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      _ref.invalidate(mineListProvider);
-      _ref.invalidate(mineDetailProvider);
-      _ref.invalidate(playerProvider);
-      return response as Map<String, dynamic>;
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders) {
+        _ref.invalidate(mineListProvider);
+        final entityId = responseMap['entity_id']?.toString();
+        if (entityId != null && entityId.isNotEmpty) {
+          _ref.invalidate(mineDetailProvider(entityId));
+        }
+        _ref.invalidate(playerProvider);
+      }
+      return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -330,6 +354,7 @@ class MineActionNotifier {
     required String mineId,
     required int durationHours,
     required int starCost,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -347,31 +372,12 @@ class MineActionNotifier {
           'p_star_cost': starCost,
         },
       );
-      _ref.invalidate(activeMineBoostProvider(mineId));
-      _ref.invalidate(mineDetailProvider(mineId));
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(activeMineBoostProvider(mineId));
+        _ref.invalidate(mineDetailProvider(mineId));
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeDueBuildingBoosts() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_due_building_boosts',
-        params: {
-          'p_limit': 100,
-        },
-      );
-      _ref.invalidate(mineListProvider);
-      _ref.invalidate(mineDetailProvider);
-      return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -390,6 +396,7 @@ class MineActionNotifier {
   Future<Map<String, dynamic>> setMineProduct({
     required String mineId,
     required String productId,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -405,8 +412,10 @@ class MineActionNotifier {
           'p_product_id': productId,
         },
       );
-      _ref.invalidate(mineListProvider);
-      _ref.invalidate(mineDetailProvider(mineId));
+      if (syncProviders) {
+        _ref.invalidate(mineListProvider);
+        _ref.invalidate(mineDetailProvider(mineId));
+      }
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       final message = e.toString();
@@ -424,6 +433,7 @@ class MineActionNotifier {
   Future<Map<String, dynamic>> setMineActive({
     required String mineId,
     required bool isActive,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -438,8 +448,10 @@ class MineActionNotifier {
           'p_is_active': isActive,
         },
       );
-      _ref.invalidate(mineListProvider);
-      _ref.invalidate(mineDetailProvider(mineId));
+      if (syncProviders) {
+        _ref.invalidate(mineListProvider);
+        _ref.invalidate(mineDetailProvider(mineId));
+      }
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -467,36 +479,10 @@ class MineActionNotifier {
     required String productionCityId,
     required String productId,
   }) async {
-    final warehouses = await _productionLogisticsService.getPlayerWarehouses();
-    final typesResponse = await _supabase.rpc('get_warehouse_types_catalog');
-    final typeRows = (typesResponse as List<dynamic>)
-        .map((row) => Map<String, dynamic>.from(row as Map))
-        .toList();
-
-    final eligibleWarehouses = warehouses.where((warehouse) {
-      final typeId = (warehouse['warehouse_type_id'] ?? '').toString();
-      if (typeId.isEmpty) return false;
-
-      final typeRow = typeRows.cast<Map<String, dynamic>?>().firstWhere(
-        (row) => row?['id']?.toString() == typeId,
-        orElse: () => null,
-      );
-      if (typeRow == null) return false;
-
-      final acceptedIds = _parseAcceptedProductIds(
-        typeRow['accepted_product_ids'],
-      );
-      return acceptedIds.contains(productId.toUpperCase());
-    }).toList();
-
-    return eligibleWarehouses
-        .map(
-          (row) => ProductionLogisticsWarehouseOption.fromJson(
-            row,
-            productionCityId: productionCityId,
-          ),
-        )
-        .toList();
+    return _productionLogisticsService.getWarehouseOptions(
+      productionCityId: productionCityId,
+      productId: productId,
+    );
   }
 
   List<String> _parseAcceptedProductIds(dynamic rawValue) {
@@ -522,6 +508,7 @@ class MineActionNotifier {
     required String productionInventoryId,
     required String warehouseId,
     required int quantity,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -538,7 +525,9 @@ class MineActionNotifier {
           'p_quantity': quantity,
         },
       );
-      _ref.invalidate(mineDetailProvider);
+      if (syncProviders) {
+        _ref.invalidate(mineDetailProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -564,6 +553,7 @@ class MineActionNotifier {
     required String buyerWarehouseId,
     required int quantity,
     String? vehicleId,
+    bool syncProviders = true,
   }) async {
     final result = await _productionLogisticsService.startProductionToWarehouseTransfer(
       productionInventoryId: productionInventoryId,
@@ -571,8 +561,10 @@ class MineActionNotifier {
       quantity: quantity,
       vehicleId: vehicleId,
     );
-    _ref.invalidate(mineDetailProvider);
-    _ref.invalidate(playerProvider);
+    if (syncProviders) {
+      _ref.invalidate(mineDetailProvider);
+      _ref.invalidate(playerProvider);
+    }
     return result;
   }
 }

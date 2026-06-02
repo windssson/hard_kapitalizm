@@ -6,6 +6,7 @@ import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -798,6 +799,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             '${result['product_name']} kalite ${result['new_quality_level']} seviyesine ulasti.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
     } else {
       AppSnackbar.show(
         context,
@@ -871,6 +873,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             '${result['product_name']} gelistirmesi tamamlandi. ${result['gold_spent']} yildiz harcandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
     } else {
       AppSnackbar.show(
         context,
@@ -1023,6 +1026,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             'AR-GE merkezi aninda tamamlandi. ${result['gold_spent']} yildiz harcandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
     } else {
       AppSnackbar.show(
         context,
@@ -1195,9 +1199,11 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
   Widget _buildConstructionState(Map<String, dynamic> construction) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final params = Map<String, dynamic>.from(
-      construction['params'] as Map<String, dynamic>? ?? const {},
-    );
+    final params = construction['params'] is Map<String, dynamic>
+        ? Map<String, dynamic>.from(construction['params'] as Map<String, dynamic>)
+        : construction['params'] is Map
+            ? Map<String, dynamic>.from(construction['params'] as Map)
+            : <String, dynamic>{};
     final finishAt = DateTime.tryParse(construction['finish_at']?.toString() ?? '');
     final remaining = finishAt == null ? Duration.zero : finishAt.difference(now);
     final isDone = !remaining.isNegative && remaining.inSeconds == 0 || (finishAt != null && !finishAt.isAfter(now));
@@ -1392,7 +1398,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     setState(() => _isCenterSubmitting = true);
     final result = await ref
         .read(argeActionProvider)
-        .completeConstruction(constructionId);
+        .completeConstruction(constructionId, syncProviders: false);
     setState(() => _isCenterSubmitting = false);
 
     if (!mounted) return;
@@ -1404,6 +1410,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
         message: 'AR-GE merkeziniz kullanima acildi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
     } else {
       AppSnackbar.show(
         context,
@@ -1479,6 +1486,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             'AR-GE merkeziniz acildi. ${result['gold_spent'] ?? goldCost} yildiz harcandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
     } else {
       AppSnackbar.show(
         context,

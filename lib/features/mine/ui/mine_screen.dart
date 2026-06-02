@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
@@ -64,11 +65,10 @@ class _MineScreenState extends ConsumerState<MineScreen>
   Future<void> _completeConstruction(String constructionId) async {
     final result = await ref
         .read(mineActionProvider)
-        .completeConstruction(constructionId);
+        .completeConstruction(constructionId, syncProviders: false);
 
     ref.invalidate(mineConstructionProvider);
     ref.invalidate(mineListProvider);
-    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] != true) {
@@ -78,13 +78,16 @@ class _MineScreenState extends ConsumerState<MineScreen>
         message: result['message'] ?? 'Maden insaati tamamlanamadi.',
         type: SnackbarType.error,
       );
+      return;
     }
+
+    await showExperienceFeedbackFromResult(context, result);
   }
 
   Future<void> _finishConstructionWithGold(String constructionId) async {
     final result = await ref
         .read(mineActionProvider)
-        .finishConstructionWithGold(constructionId);
+        .finishConstructionWithGold(constructionId, syncProviders: false);
 
     ref.invalidate(mineConstructionProvider);
     ref.invalidate(mineListProvider);
@@ -98,6 +101,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
         message: 'Insaat aninda tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
       return;
     }
 

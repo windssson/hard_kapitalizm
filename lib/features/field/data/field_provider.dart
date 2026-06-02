@@ -1,3 +1,4 @@
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -52,8 +53,8 @@ final fieldListProvider =
 });
 
 final fieldTypesProvider = FutureProvider<List<dynamic>>((ref) async {
-  final supabase = Supabase.instance.client;
-  return await supabase.rpc('get_field_types_catalog');
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.fieldTypes;
 });
 
 final fieldConstructionProvider =
@@ -214,7 +215,9 @@ class FieldActionNotifier {
   }
 
   Future<Map<String, dynamic>> completeConstruction(
-    String constructionId,
+    String constructionId, {
+    bool syncProviders = true,
+  }
   ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -229,9 +232,10 @@ class FieldActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(fieldListProvider);
-      _ref.invalidate(fieldConstructionProvider);
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(fieldListProvider);
+        _ref.invalidate(fieldConstructionProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -240,6 +244,9 @@ class FieldActionNotifier {
 
   Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId,
+    {
+    bool syncProviders = true,
+  }
   ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -254,16 +261,21 @@ class FieldActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(fieldListProvider);
-      _ref.invalidate(fieldConstructionProvider);
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(fieldListProvider);
+        _ref.invalidate(fieldConstructionProvider);
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> startFieldUpgrade(String fieldId) async {
+  Future<Map<String, dynamic>> startFieldUpgrade(
+    String fieldId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -278,9 +290,11 @@ class FieldActionNotifier {
           'p_entity_id': fieldId,
         },
       );
-      _ref.invalidate(activeFieldUpgradeProvider(fieldId));
-      _ref.invalidate(fieldDetailProvider(fieldId));
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(activeFieldUpgradeProvider(fieldId));
+        _ref.invalidate(fieldDetailProvider(fieldId));
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -311,6 +325,9 @@ class FieldActionNotifier {
 
   Future<Map<String, dynamic>> finishFieldUpgradeWithGold(
     String upgradeId,
+    {
+    bool syncProviders = true,
+  }
   ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -325,10 +342,16 @@ class FieldActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      _ref.invalidate(fieldListProvider);
-      _ref.invalidate(fieldDetailProvider);
-      _ref.invalidate(playerProvider);
-      return response as Map<String, dynamic>;
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders) {
+        _ref.invalidate(fieldListProvider);
+        final entityId = responseMap['entity_id']?.toString();
+        if (entityId != null && entityId.isNotEmpty) {
+          _ref.invalidate(fieldDetailProvider(entityId));
+        }
+        _ref.invalidate(playerProvider);
+      }
+      return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -338,6 +361,7 @@ class FieldActionNotifier {
     required String fieldId,
     required int durationHours,
     required int starCost,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -355,37 +379,21 @@ class FieldActionNotifier {
           'p_star_cost': starCost,
         },
       );
-      _ref.invalidate(activeFieldBoostProvider(fieldId));
-      _ref.invalidate(fieldDetailProvider(fieldId));
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(activeFieldBoostProvider(fieldId));
+        _ref.invalidate(fieldDetailProvider(fieldId));
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> completeDueBuildingBoosts() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_due_building_boosts',
-        params: {
-          'p_limit': 100,
-        },
-      );
-      _ref.invalidate(fieldListProvider);
-      _ref.invalidate(fieldDetailProvider);
-      return Map<String, dynamic>.from(response as Map);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> addProductionSlot(String fieldId) async {
+  Future<Map<String, dynamic>> addProductionSlot(
+    String fieldId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -400,9 +408,11 @@ class FieldActionNotifier {
           'p_owner_id': fieldId,
         },
       );
-      _ref.invalidate(fieldListProvider);
-      _ref.invalidate(fieldDetailProvider(fieldId));
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(fieldListProvider);
+        _ref.invalidate(fieldDetailProvider(fieldId));
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -413,6 +423,7 @@ class FieldActionNotifier {
     required String slotId,
     required String productId,
     required int qualityLevel,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -429,9 +440,15 @@ class FieldActionNotifier {
           'p_quality_level': qualityLevel,
         },
       );
-      _ref.invalidate(fieldListProvider);
-      _ref.invalidate(fieldDetailProvider);
-      return response as Map<String, dynamic>;
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders) {
+        _ref.invalidate(fieldListProvider);
+        final ownerId = responseMap['owner_id']?.toString();
+        if (ownerId != null && ownerId.isNotEmpty) {
+          _ref.invalidate(fieldDetailProvider(ownerId));
+        }
+      }
+      return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -441,6 +458,7 @@ class FieldActionNotifier {
     required String slotId,
     required String productId,
     required int qualityLevel,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -457,9 +475,15 @@ class FieldActionNotifier {
           'p_quality_level': qualityLevel,
         },
       );
-      _ref.invalidate(fieldListProvider);
-      _ref.invalidate(fieldDetailProvider);
-      return response as Map<String, dynamic>;
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders) {
+        _ref.invalidate(fieldListProvider);
+        final ownerId = responseMap['owner_id']?.toString();
+        if (ownerId != null && ownerId.isNotEmpty) {
+          _ref.invalidate(fieldDetailProvider(ownerId));
+        }
+      }
+      return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -468,6 +492,7 @@ class FieldActionNotifier {
   Future<Map<String, dynamic>> setProductionSlotActive({
     required String slotId,
     required bool isActive,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -483,9 +508,15 @@ class FieldActionNotifier {
           'p_is_active': isActive,
         },
       );
-      _ref.invalidate(fieldListProvider);
-      _ref.invalidate(fieldDetailProvider);
-      return response as Map<String, dynamic>;
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders) {
+        _ref.invalidate(fieldListProvider);
+        final ownerId = responseMap['owner_id']?.toString();
+        if (ownerId != null && ownerId.isNotEmpty) {
+          _ref.invalidate(fieldDetailProvider(ownerId));
+        }
+      }
+      return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -598,6 +629,7 @@ class FieldActionNotifier {
     required String warehouseSlotId,
     required String productionInventoryId,
     required int quantity,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -614,7 +646,9 @@ class FieldActionNotifier {
           'p_quantity': quantity,
         },
       );
-      _ref.invalidate(fieldDetailProvider);
+      if (syncProviders) {
+        _ref.invalidate(fieldDetailProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -625,6 +659,7 @@ class FieldActionNotifier {
     required String productionInventoryId,
     required String warehouseId,
     required int quantity,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -641,7 +676,9 @@ class FieldActionNotifier {
           'p_quantity': quantity,
         },
       );
-      _ref.invalidate(fieldDetailProvider);
+      if (syncProviders) {
+        _ref.invalidate(fieldDetailProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -653,36 +690,10 @@ class FieldActionNotifier {
     required String productionCityId,
     required String productId,
   }) async {
-    final warehouses = await _productionLogisticsService.getPlayerWarehouses();
-    final typesResponse = await _supabase.rpc('get_warehouse_types_catalog');
-    final typeRows = (typesResponse as List<dynamic>)
-        .map((row) => Map<String, dynamic>.from(row as Map))
-        .toList();
-
-    final eligibleWarehouses = warehouses.where((warehouse) {
-      final typeId = (warehouse['warehouse_type_id'] ?? '').toString();
-      if (typeId.isEmpty) return false;
-
-      final typeRow = typeRows.cast<Map<String, dynamic>?>().firstWhere(
-        (row) => row?['id']?.toString() == typeId,
-        orElse: () => null,
-      );
-      if (typeRow == null) return false;
-
-      final acceptedIds = _parseAcceptedProductIds(
-        typeRow['accepted_product_ids'],
-      );
-      return acceptedIds.contains(productId.toUpperCase());
-    }).toList();
-
-    return eligibleWarehouses
-        .map(
-          (row) => ProductionLogisticsWarehouseOption.fromJson(
-            row,
-            productionCityId: productionCityId,
-          ),
-        )
-        .toList();
+    return _productionLogisticsService.getWarehouseOptions(
+      productionCityId: productionCityId,
+      productId: productId,
+    );
   }
 
   List<String> _parseAcceptedProductIds(dynamic rawValue) {
@@ -736,6 +747,7 @@ class FieldActionNotifier {
     required String productionInventoryId,
     required int quantity,
     String? vehicleId,
+    bool syncProviders = true,
   }) async {
     final result = await _productionLogisticsService.startWarehouseToProductionTransfer(
       warehouseSlotId: warehouseSlotId,
@@ -743,8 +755,10 @@ class FieldActionNotifier {
       quantity: quantity,
       vehicleId: vehicleId,
     );
-    _ref.invalidate(fieldDetailProvider);
-    _ref.invalidate(playerProvider);
+    if (syncProviders) {
+      _ref.invalidate(fieldDetailProvider);
+      _ref.invalidate(playerProvider);
+    }
     return result;
   }
 
@@ -753,6 +767,7 @@ class FieldActionNotifier {
     required String buyerWarehouseId,
     required int quantity,
     String? vehicleId,
+    bool syncProviders = true,
   }) async {
     final result = await _productionLogisticsService.startProductionToWarehouseTransfer(
       productionInventoryId: productionInventoryId,
@@ -760,8 +775,10 @@ class FieldActionNotifier {
       quantity: quantity,
       vehicleId: vehicleId,
     );
-    _ref.invalidate(fieldDetailProvider);
-    _ref.invalidate(playerProvider);
+    if (syncProviders) {
+      _ref.invalidate(fieldDetailProvider);
+      _ref.invalidate(playerProvider);
+    }
     return result;
   }
 }

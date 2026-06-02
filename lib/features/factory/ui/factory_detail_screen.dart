@@ -9,7 +9,9 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
@@ -53,12 +55,18 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   Future<void> _refreshFactoryEcosystem({
     String? warehouseId,
     bool includeTransfers = false,
+    bool includeWarehouseList = false,
+    bool includePlayer = true,
   }) async {
     _refreshFactoryDetail();
     ref.invalidate(factoryListProvider);
-    ref.invalidate(playerProvider);
-    ref.invalidate(warehouseListProvider);
-    ref.invalidate(warehouseDetailProvider);
+    if (includePlayer) {
+      ref.invalidate(playerProvider);
+    }
+
+    if (includeWarehouseList || (warehouseId != null && warehouseId.isNotEmpty)) {
+      ref.invalidate(warehouseListProvider);
+    }
 
     if (warehouseId != null && warehouseId.isNotEmpty) {
       ref.invalidate(warehouseDetailProvider(warehouseId));
@@ -74,26 +82,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
-      activeFactoryUpgradeProvider(widget.factoryId),
-      (previous, next) {
-        final upgrade = next.value;
-        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
-          ref.read(factoryActionProvider).completeDueBuildingUpgrades();
-        }
-      },
-    );
-
-    ref.listen<AsyncValue<BuildingBoostModel?>>(
-      activeFactoryBoostProvider(widget.factoryId),
-      (previous, next) {
-        final boost = next.value;
-        if (boost != null && boost.finishAt.isBefore(DateTime.now())) {
-          ref.read(factoryActionProvider).completeDueBuildingBoosts();
-        }
-      },
-    );
-
     final detailAsync = ref.watch(factoryDetailProvider(widget.factoryId));
     final activeBoost = ref.watch(activeFactoryBoostProvider(widget.factoryId)).value;
     final activeUpgrade = ref.watch(
@@ -123,10 +111,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 ),
                 data: (detail) => RefreshIndicator(
                   onRefresh: () async {
-                    await ref.read(factoryActionProvider).completeDueBuildingBoosts();
-                    if (!mounted) return;
-                    await ref.read(factoryActionProvider).completeDueBuildingUpgrades();
-                    if (!mounted) return;
                     _refreshFactoryDetail();
                     await ref.read(factoryDetailProvider(widget.factoryId).future);
                   },
@@ -164,7 +148,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
-                      _buildProductionCard(context, ref, detail),
+                      _buildProductionCard(
+                        context,
+                        ref,
+                        detail,
+                        activeBoost,
+                      ),
                       if (detail.orphanInputInventories.isNotEmpty) ...[
                         SizedBox(height: 16.h),
                         _buildSectionHeader(
@@ -644,6 +633,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     BuildContext context,
     WidgetRef ref,
     FactoryDetailModel detail,
+    BuildingBoostModel? activeBoost,
   ) {
     if (detail.product == null) {
       return _buildEmptyCard(
@@ -835,9 +825,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             children: [
               Icon(Icons.schedule, color: AppColors.textMuted, size: 14.sp),
               SizedBox(width: 6.w),
-              Expanded(
-                child: Text(
-                  'Tahmini saatlik uretim: ${_estimateProductionPerHour(detail)}',
+                Expanded(
+                  child: Text(
+                  'Tahmini saatlik uretim: ${_estimateProductionPerHour(detail, activeBoost)}',
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 11.sp,
@@ -1367,10 +1357,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     return (current / max).clamp(0.0, 1.0);
   }
 
-  String _estimateProductionPerHour(FactoryDetailModel detail) {
+  String _estimateProductionPerHour(
+    FactoryDetailModel detail,
+    BuildingBoostModel? activeBoost,
+  ) {
     final product = detail.product;
     if (product == null) return '-';
-    final amount = product.uretimAdedi * detail.factory.boostMultiplier;
+    final amount = product.uretimAdedi * (activeBoost?.multiplier ?? 1);
     return amount % 1 == 0 ? amount.toInt().toString() : amount.toStringAsFixed(1);
   }
 
@@ -1470,13 +1463,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             factoryId: detail.factory.id,
                             durationHours: entry.key,
                             starCost: entry.value,
+                            syncProviders: false,
                           );
                       if (!context.mounted) return;
                       if (result['success'] == true) {
-                        ref.invalidate(activeFactoryBoostProvider(detail.factory.id));
-                        ref.invalidate(factoryDetailProvider(detail.factory.id));
-                        ref.invalidate(factoryListProvider);
-                        ref.invalidate(playerProvider);
+                        await _refreshFactoryEcosystem();
                         AppSnackbar.show(
                           context,
                           title: 'Basarili',
@@ -1682,17 +1673,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             Navigator.pop(sheetContext);
                             final result = await ref
                                 .read(factoryActionProvider)
-                                .startFactoryUpgrade(detail.factory.id);
+                                .startFactoryUpgrade(
+                                  detail.factory.id,
+                                  syncProviders: false,
+                                );
                             if (!context.mounted) return;
                             if (result['success'] == true) {
-                              ref.invalidate(
-                                activeFactoryUpgradeProvider(detail.factory.id),
-                              );
-                              ref.invalidate(
-                                factoryDetailProvider(detail.factory.id),
-                              );
-                              ref.invalidate(factoryListProvider);
-                              ref.invalidate(playerProvider);
+                              await _refreshFactoryEcosystem();
                               AppSnackbar.show(
                                 context,
                                 title: 'Basarili',
@@ -1733,18 +1720,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   ) async {
     final result = await ref
         .read(factoryActionProvider)
-        .finishFactoryUpgradeWithGold(upgrade.id);
+        .finishFactoryUpgradeWithGold(upgrade.id, syncProviders: false);
 
     if (!mounted) return;
 
     if (result['success'] == true) {
-      await _refreshFactoryEcosystem();
+      await _refreshFactoryEcosystem(includePlayer: false);
       AppSnackbar.show(
         context,
         title: 'Basarili',
         message: 'Fabrika yukseltmesi tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
       return;
     }
 
@@ -1818,11 +1806,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           factoryId: detail.factory.id,
           productId: product.id,
           qualityLevel: selectableProduct.maxQualityLevel,
+          syncProviders: false,
         );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshFactoryEcosystem();
+      await _refreshFactoryEcosystem(includePlayer: false);
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
       final cleanupNote = deletedObsoleteCount > 0
@@ -1854,6 +1843,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     final result = await ref.read(factoryActionProvider).setFactoryActive(
           factoryId: detail.factory.id,
           isActive: !detail.factory.isActive,
+          syncProviders: false,
         );
 
     if (!context.mounted) return;
@@ -1945,10 +1935,14 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           warehouseSlotId: slot['id'].toString(),
                           productionInventoryId: inventory.id,
                           quantity: quantity,
+                          syncProviders: false,
                         );
                     if (!context.mounted) return;
                     if (result['success'] == true) {
-                      await _refreshFactoryEcosystem();
+                      await _refreshFactoryEcosystem(
+                        includeWarehouseList: true,
+                        includePlayer: false,
+                      );
                       AppSnackbar.show(
                         context,
                         title: 'Basarili',
@@ -2039,11 +2033,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       productionInventoryId: inventory.id,
                       warehouseId: warehouseId,
                       quantity: quantity,
+                      syncProviders: false,
                     );
                 if (!context.mounted) return;
                 if (result['success'] == true) {
                   await _refreshFactoryEcosystem(
                     warehouseId: warehouseId,
+                    includePlayer: false,
                   );
                   AppSnackbar.show(
                     context,
@@ -2145,10 +2141,15 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               productionInventoryId: inventory.id,
               quantity: quantity,
               vehicleId: vehicleId,
+              syncProviders: false,
             );
         if (!context.mounted) return;
         if (result.success) {
-          await _refreshFactoryEcosystem(includeTransfers: true);
+          await _refreshFactoryEcosystem(
+            includeTransfers: true,
+            includeWarehouseList: true,
+            includePlayer: false,
+          );
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
@@ -2229,12 +2230,14 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               buyerWarehouseId: warehouseId,
               quantity: quantity,
               vehicleId: vehicleId,
+              syncProviders: false,
             );
         if (!context.mounted) return;
         if (result.success) {
           await _refreshFactoryEcosystem(
             warehouseId: warehouseId,
             includeTransfers: true,
+            includePlayer: false,
           );
           AppSnackbar.show(
             context,
@@ -2426,7 +2429,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             SizedBox(height: 12.h),
             TextField(
               controller: controller,
-              keyboardType: TextInputType.number,
+              readOnly: true,
+              showCursor: true,
+              enableInteractiveSelection: false,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 labelText: 'Miktar (Maks: $maxQuantity)',
@@ -2438,6 +2443,24 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   borderSide: BorderSide(color: AppColors.gold),
                 ),
               ),
+            ),
+            SizedBox(height: 12.h),
+            NumericKeyboard(
+              controller: controller,
+              shortcuts: [
+                NumericKeyboardShortcut(
+                  label: '1/4',
+                  value: (maxQuantity / 4).floor().toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Yari',
+                  value: (maxQuantity / 2).floor().toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Tamami',
+                  value: maxQuantity.toString(),
+                ),
+              ],
             ),
           ],
         ),

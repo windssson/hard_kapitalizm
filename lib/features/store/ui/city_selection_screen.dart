@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -36,7 +37,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Veritabanındaki güncel koordinatları tekrar çekmek için:
-          ref.invalidate(citiesProvider);
+          ref.read(staticCatalogControllerProvider).refresh();
         },
         backgroundColor: AppColors.gold,
         mini: true, // Çok yer kaplamasın

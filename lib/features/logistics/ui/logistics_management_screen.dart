@@ -6,6 +6,8 @@ import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
+import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
@@ -109,7 +111,13 @@ class LogisticsManagementScreen extends ConsumerWidget {
 
     final vehicleTypeMap = {for (final t in vehicleTypes) t.id: t};
     final cityMap = {for (final city in cities) city.id: city};
-    final constructionParams = construction?['params'] as Map<String, dynamic>?;
+    final rawConstructionParams = construction?['params'];
+    final Map<String, dynamic>? constructionParams =
+        rawConstructionParams is Map<String, dynamic>
+        ? rawConstructionParams
+        : rawConstructionParams is Map
+            ? Map<String, dynamic>.from(rawConstructionParams)
+            : null;
     final finishAt = construction?['finish_at'] != null
         ? DateTime.tryParse(construction!['finish_at'].toString())
         : null;
@@ -1286,9 +1294,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                                 playerLogisticsFuelWarehouseSourcesProvider,
                                               );
                                               ref.invalidate(
-                                                logisticsFuelMarketListingsProvider,
-                                              );
-                                              ref.invalidate(
                                                 warehouseListProvider,
                                               );
                                               Navigator.pop(sheetContext);
@@ -1378,13 +1383,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                                 playerLogisticsCompanyProvider,
                                               );
                                               ref.invalidate(
-                                                playerLogisticsFuelWarehouseSourcesProvider,
-                                              );
-                                              ref.invalidate(
                                                 logisticsFuelMarketListingsProvider,
-                                              );
-                                              ref.invalidate(
-                                                warehouseListProvider,
                                               );
                                               ref.invalidate(playerProvider);
                                               Navigator.pop(sheetContext);
@@ -1556,11 +1555,31 @@ class LogisticsManagementScreen extends ConsumerWidget {
             SizedBox(height: 12.h),
             TextField(
               controller: controller,
-              keyboardType: TextInputType.number,
+              readOnly: true,
+              showCursor: true,
+              enableInteractiveSelection: false,
               decoration: InputDecoration(
                 labelText: 'Miktar',
                 helperText: 'Maksimum: $maxQuantity L',
               ),
+            ),
+            SizedBox(height: 12.h),
+            NumericKeyboard(
+              controller: controller,
+              shortcuts: [
+                NumericKeyboardShortcut(
+                  label: '1/4',
+                  value: (maxQuantity / 4).floor().toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Yari',
+                  value: (maxQuantity / 2).floor().toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Tamami',
+                  value: maxQuantity.toString(),
+                ),
+              ],
             ),
           ],
         ),
@@ -1678,7 +1697,13 @@ class LogisticsManagementScreen extends ConsumerWidget {
     final result = await ref.read(logisticsActionProvider).repairVehicle(
           vehicle.id,
         );
-    _handleOpResult(context, ref, result, 'Bakim tamamlandi.');
+    _handleOpResult(
+      context,
+      ref,
+      result,
+      'Bakim tamamlandi.',
+      includeCompany: false,
+    );
   }
 
   Future<void> _handleActiveToggle(
@@ -1697,6 +1722,8 @@ class LogisticsManagementScreen extends ConsumerWidget {
       vehicle.status == 'inactive'
           ? 'Arac aktif edildi.'
           : 'Arac pasife alindi.',
+      includeCompany: false,
+      includePlayer: false,
     );
   }
 
@@ -1705,11 +1732,22 @@ class LogisticsManagementScreen extends ConsumerWidget {
     WidgetRef ref,
     Map<String, dynamic> result,
     String message,
+    {
+    bool includeVehicleList = true,
+    bool includeCompany = true,
+    bool includePlayer = true,
+  }
   ) {
     if (result['success'] == true) {
-      ref.invalidate(logisticsVehicleListProvider);
-      ref.invalidate(playerLogisticsCompanyProvider);
-      ref.invalidate(playerProvider);
+      if (includeVehicleList) {
+        ref.invalidate(logisticsVehicleListProvider);
+      }
+      if (includeCompany) {
+        ref.invalidate(playerLogisticsCompanyProvider);
+      }
+      if (includePlayer) {
+        ref.invalidate(playerProvider);
+      }
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1737,7 +1775,14 @@ class LogisticsManagementScreen extends ConsumerWidget {
             isAvailableForRent: false,
             rentalPrice: 0,
           );
-      _handleOpResult(context, ref, result, 'Kiralama kapatildi.');
+      _handleOpResult(
+        context,
+        ref,
+        result,
+        'Kiralama kapatildi.',
+        includeCompany: false,
+        includePlayer: false,
+      );
       return;
     }
 
@@ -1747,10 +1792,24 @@ class LogisticsManagementScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.cardBg,
         title: Text('Kira Fiyati Belirle', style: AppTextStyles.h2),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(hintText: 'Gunluk kira bedeli'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              readOnly: true,
+              showCursor: true,
+              enableInteractiveSelection: false,
+              decoration: const InputDecoration(
+                hintText: 'Gunluk kira bedeli',
+              ),
+            ),
+            SizedBox(height: 12.h),
+            NumericKeyboard(
+              controller: controller,
+              allowDecimal: true,
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -1772,7 +1831,14 @@ class LogisticsManagementScreen extends ConsumerWidget {
             isAvailableForRent: true,
             rentalPrice: rentalPrice,
           );
-      _handleOpResult(context, ref, result, 'Arac kiraya acildi.');
+      _handleOpResult(
+        context,
+        ref,
+        result,
+        'Arac kiraya acildi.',
+        includeCompany: false,
+        includePlayer: false,
+      );
     }
   }
 
@@ -1783,7 +1849,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
   ) async {
     final result = await ref
         .read(logisticsActionProvider)
-        .completeConstruction(constructionId);
+        .completeConstruction(constructionId, syncProviders: false);
     if (result['success'] == true) {
       ref.invalidate(playerLogisticsCompanyProvider);
       ref.invalidate(playerLogisticsConstructionProvider);
@@ -1794,6 +1860,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
         message: 'Lojistik merkezi tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
     } else {
       AppSnackbar.show(
         context,
@@ -1811,7 +1878,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
   ) async {
     final result = await ref
         .read(logisticsActionProvider)
-        .finishConstructionWithGold(constructionId);
+        .finishConstructionWithGold(constructionId, syncProviders: false);
     if (result['success'] == true) {
       ref.invalidate(playerLogisticsCompanyProvider);
       ref.invalidate(playerLogisticsConstructionProvider);
@@ -1822,6 +1889,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
         message: 'Insaat tamamlandi!',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
     }
   }
 
@@ -1885,6 +1953,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                               .purchaseVehicle(
                                 logisticsCompanyId: company.id,
                                 logisticsVehicleTypeId: types[index].id,
+                                syncProviders: false,
                               );
                           if (result['success'] == true) {
                             ref.invalidate(playerLogisticsCompanyProvider);

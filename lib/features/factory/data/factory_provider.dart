@@ -1,3 +1,4 @@
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -54,8 +55,8 @@ final factoryListProvider =
 
 // Fabrika Tipleri Provider
 final factoryTypesProvider = FutureProvider<List<dynamic>>((ref) async {
-  final supabase = Supabase.instance.client;
-  return await supabase.rpc('get_factory_types_catalog');
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.factoryTypes;
 });
 
 final factoryConstructionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
@@ -211,7 +212,10 @@ class FactoryActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
+  Future<Map<String, dynamic>> completeConstruction(
+    String constructionId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -223,9 +227,10 @@ class FactoryActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(factoryListProvider);
-      _ref.invalidate(factoryConstructionProvider);
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        _ref.invalidate(factoryConstructionProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -234,6 +239,9 @@ class FactoryActionNotifier {
 
   Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId,
+    {
+    bool syncProviders = true,
+  }
   ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -248,16 +256,21 @@ class FactoryActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(factoryListProvider);
-      _ref.invalidate(factoryConstructionProvider);
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        _ref.invalidate(factoryConstructionProvider);
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> startFactoryUpgrade(String factoryId) async {
+  Future<Map<String, dynamic>> startFactoryUpgrade(
+    String factoryId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -272,9 +285,11 @@ class FactoryActionNotifier {
           'p_entity_id': factoryId,
         },
       );
-      _ref.invalidate(activeFactoryUpgradeProvider(factoryId));
-      _ref.invalidate(factoryDetailProvider(factoryId));
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(activeFactoryUpgradeProvider(factoryId));
+        _ref.invalidate(factoryDetailProvider(factoryId));
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -305,6 +320,9 @@ class FactoryActionNotifier {
 
   Future<Map<String, dynamic>> finishFactoryUpgradeWithGold(
     String upgradeId,
+    {
+    bool syncProviders = true,
+  }
   ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -319,10 +337,16 @@ class FactoryActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      _ref.invalidate(factoryListProvider);
-      _ref.invalidate(factoryDetailProvider);
-      _ref.invalidate(playerProvider);
-      return response as Map<String, dynamic>;
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        final entityId = responseMap['entity_id']?.toString();
+        if (entityId != null && entityId.isNotEmpty) {
+          _ref.invalidate(factoryDetailProvider(entityId));
+        }
+        _ref.invalidate(playerProvider);
+      }
+      return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -332,6 +356,7 @@ class FactoryActionNotifier {
     required String factoryId,
     required int durationHours,
     required int starCost,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -349,31 +374,12 @@ class FactoryActionNotifier {
           'p_star_cost': starCost,
         },
       );
-      _ref.invalidate(activeFactoryBoostProvider(factoryId));
-      _ref.invalidate(factoryDetailProvider(factoryId));
-      _ref.invalidate(playerProvider);
+      if (syncProviders) {
+        _ref.invalidate(activeFactoryBoostProvider(factoryId));
+        _ref.invalidate(factoryDetailProvider(factoryId));
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeDueBuildingBoosts() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_due_building_boosts',
-        params: {
-          'p_limit': 100,
-        },
-      );
-      _ref.invalidate(factoryListProvider);
-      _ref.invalidate(factoryDetailProvider);
-      return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -383,6 +389,7 @@ class FactoryActionNotifier {
     required String factoryId,
     required String productId,
     required int qualityLevel,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -399,8 +406,10 @@ class FactoryActionNotifier {
           'p_quality_level': qualityLevel,
         },
       );
-      _ref.invalidate(factoryListProvider);
-      _ref.invalidate(factoryDetailProvider(factoryId));
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        _ref.invalidate(factoryDetailProvider(factoryId));
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -410,6 +419,7 @@ class FactoryActionNotifier {
   Future<Map<String, dynamic>> setFactoryActive({
     required String factoryId,
     required bool isActive,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -424,8 +434,10 @@ class FactoryActionNotifier {
           'p_is_active': isActive,
         },
       );
-      _ref.invalidate(factoryListProvider);
-      _ref.invalidate(factoryDetailProvider(factoryId));
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        _ref.invalidate(factoryDetailProvider(factoryId));
+      }
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -538,6 +550,7 @@ class FactoryActionNotifier {
     required String warehouseSlotId,
     required String productionInventoryId,
     required int quantity,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -554,8 +567,9 @@ class FactoryActionNotifier {
           'p_quantity': quantity,
         },
       );
-      // Invalidate factory details to show new inventory quantities
-      _ref.invalidate(factoryDetailProvider);
+      if (syncProviders) {
+        _ref.invalidate(factoryDetailProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -566,6 +580,7 @@ class FactoryActionNotifier {
     required String productionInventoryId,
     required String warehouseId,
     required int quantity,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -582,8 +597,9 @@ class FactoryActionNotifier {
           'p_quantity': quantity,
         },
       );
-      // Invalidate factory details to show updated inventory quantities
-      _ref.invalidate(factoryDetailProvider);
+      if (syncProviders) {
+        _ref.invalidate(factoryDetailProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -595,36 +611,10 @@ class FactoryActionNotifier {
     required String productionCityId,
     required String productId,
   }) async {
-    final warehouses = await _productionLogisticsService.getPlayerWarehouses();
-    final typesResponse = await _supabase.rpc('get_warehouse_types_catalog');
-    final typeRows = (typesResponse as List<dynamic>)
-        .map((row) => Map<String, dynamic>.from(row as Map))
-        .toList();
-
-    final eligibleWarehouses = warehouses.where((warehouse) {
-      final typeId = (warehouse['warehouse_type_id'] ?? '').toString();
-      if (typeId.isEmpty) return false;
-
-      final typeRow = typeRows.cast<Map<String, dynamic>?>().firstWhere(
-        (row) => row?['id']?.toString() == typeId,
-        orElse: () => null,
-      );
-      if (typeRow == null) return false;
-
-      final acceptedIds = _parseAcceptedProductIds(
-        typeRow['accepted_product_ids'],
-      );
-      return acceptedIds.contains(productId.toUpperCase());
-    }).toList();
-
-    return eligibleWarehouses
-        .map(
-          (row) => ProductionLogisticsWarehouseOption.fromJson(
-            row,
-            productionCityId: productionCityId,
-          ),
-        )
-        .toList();
+    return _productionLogisticsService.getWarehouseOptions(
+      productionCityId: productionCityId,
+      productId: productId,
+    );
   }
 
   List<String> _parseAcceptedProductIds(dynamic rawValue) {
@@ -678,6 +668,7 @@ class FactoryActionNotifier {
     required String productionInventoryId,
     required int quantity,
     String? vehicleId,
+    bool syncProviders = true,
   }) async {
     final result = await _productionLogisticsService.startWarehouseToProductionTransfer(
       warehouseSlotId: warehouseSlotId,
@@ -685,8 +676,10 @@ class FactoryActionNotifier {
       quantity: quantity,
       vehicleId: vehicleId,
     );
-    _ref.invalidate(factoryDetailProvider);
-    _ref.invalidate(playerProvider);
+    if (syncProviders) {
+      _ref.invalidate(factoryDetailProvider);
+      _ref.invalidate(playerProvider);
+    }
     return result;
   }
 
@@ -695,6 +688,7 @@ class FactoryActionNotifier {
     required String buyerWarehouseId,
     required int quantity,
     String? vehicleId,
+    bool syncProviders = true,
   }) async {
     final result = await _productionLogisticsService.startProductionToWarehouseTransfer(
       productionInventoryId: productionInventoryId,
@@ -702,8 +696,10 @@ class FactoryActionNotifier {
       quantity: quantity,
       vehicleId: vehicleId,
     );
-    _ref.invalidate(factoryDetailProvider);
-    _ref.invalidate(playerProvider);
+    if (syncProviders) {
+      _ref.invalidate(factoryDetailProvider);
+      _ref.invalidate(playerProvider);
+    }
     return result;
   }
 }

@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -36,6 +37,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final warehouseAsync = ref.watch(
       warehouseDetailProvider(widget.warehouseId),
     );
+    final allProducts = ref.watch(allProductsProvider).value ?? const [];
+    final warehouseTypes = ref.watch(warehouseTypesProvider).value ?? const [];
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -65,7 +68,14 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildHeaderCard(warehouse),
+                        _buildHeaderCard(
+                          warehouse,
+                          acceptedProductNames: _resolveAcceptedProductNames(
+                            warehouse,
+                            warehouseTypes,
+                            allProducts,
+                          ),
+                        ),
                         SizedBox(height: 18.h),
                         _buildSectionHeader(warehouse),
                         SizedBox(height: 10.h),
@@ -87,29 +97,23 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
   }
 
   Future<void> _refreshWarehouse(WidgetRef ref) async {
-    ref.invalidate(warehouseDetailProvider(widget.warehouseId));
-    ref.invalidate(warehouseListProvider);
-    await ref.read(warehouseDetailProvider(widget.warehouseId).future);
+    final warehouse = await ref
+        .read(warehouseDetailProvider(widget.warehouseId).notifier)
+        .refresh();
+    ref.read(warehouseListProvider.notifier).replaceWarehouse(warehouse);
   }
 
   void _showProductSelection(
     BuildContext context,
     WarehouseModel warehouse,
   ) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) =>
-          const Center(child: CircularProgressIndicator(color: AppColors.gold)),
-    );
-
     try {
       final allProducts = await ref.read(allProductsProvider.future);
-      final typeDetail = await ref.read(
-        warehouseTypeDetailProvider(warehouse.warehouseTypeId).future,
+      final warehouseTypes = await ref.read(warehouseTypesProvider.future);
+      final typeDetail = _findWarehouseTypeDetail(
+        warehouse.warehouseTypeId,
+        warehouseTypes,
       );
-
-      if (context.mounted) Navigator.pop(context);
 
       final acceptedIds = _parseAcceptedProductIds(
         typeDetail['accepted_product_ids'],
@@ -182,7 +186,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         options: options,
       );
     } catch (e) {
-      if (context.mounted) Navigator.pop(context);
       if (context.mounted) {
         AppSnackbar.show(
           context,
@@ -210,6 +213,44 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         .split(',')
         .map((e) => e.trim().toUpperCase())
         .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  Map<String, dynamic> _findWarehouseTypeDetail(
+    String warehouseTypeId,
+    List<dynamic> warehouseTypes,
+  ) {
+    for (final item in warehouseTypes) {
+      final map = Map<String, dynamic>.from(item as Map);
+      if (map['id']?.toString() == warehouseTypeId) {
+        return map;
+      }
+    }
+    return const {};
+  }
+
+  List<String> _resolveAcceptedProductNames(
+    WarehouseModel warehouse,
+    List<dynamic> warehouseTypes,
+    List<ProductModel> allProducts,
+  ) {
+    final typeDetail = _findWarehouseTypeDetail(
+      warehouse.warehouseTypeId,
+      warehouseTypes,
+    );
+    final acceptedIds = _parseAcceptedProductIds(
+      typeDetail['accepted_product_ids'],
+    );
+    if (acceptedIds.isEmpty) {
+      return const ['Tum urunler'];
+    }
+
+    final productById = {
+      for (final product in allProducts) product.id.trim().toUpperCase(): product,
+    };
+
+    return acceptedIds
+        .map((id) => productById[id]?.urunAdi ?? id)
         .toList();
   }
 
@@ -241,7 +282,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildHeaderCard(WarehouseModel warehouse) {
+  Widget _buildHeaderCard(
+    WarehouseModel warehouse, {
+    required List<String> acceptedProductNames,
+  }) {
     final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
     final listedSlots = filledSlots
         .where((slot) => slot.isAvailableForSale)
@@ -438,6 +482,81 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 ),
               ),
             ],
+          ),
+          SizedBox(height: 12.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: AppColors.blue.withValues(alpha: 0.22),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.rule_folder_outlined,
+                      color: AppColors.blue,
+                      size: 16.sp,
+                    ),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Text(
+                        'Bu deponun kabul ettigi urunler',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                Wrap(
+                  spacing: 8.w,
+                  runSpacing: 8.h,
+                  children: acceptedProductNames.take(4).map((name) {
+                    return Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(999.r),
+                        border: Border.all(
+                          color: AppColors.blue.withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: Text(
+                        name,
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                if (acceptedProductNames.length > 4) ...[
+                  SizedBox(height: 8.h),
+                  Text(
+                    '+${acceptedProductNames.length - 4} urun daha kabul ediliyor',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 10.sp,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
@@ -1184,7 +1303,23 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               // Keyboard
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: NumericKeyboard(controller: controller),
+                child: NumericKeyboard(
+                  controller: controller,
+                  shortcuts: [
+                    NumericKeyboardShortcut(
+                      label: '1/4',
+                      value: (slot.quantity / 4).floor().toString(),
+                    ),
+                    NumericKeyboardShortcut(
+                      label: 'Yari',
+                      value: (slot.quantity / 2).floor().toString(),
+                    ),
+                    NumericKeyboardShortcut(
+                      label: 'Tamami',
+                      value: slot.quantity.toString(),
+                    ),
+                  ],
+                ),
               ),
               // Cost info
               if (slot.cost > 0)
@@ -1272,7 +1407,16 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (!context.mounted) return;
 
     if (actionResult['success'] == true) {
-      await _refreshWarehouse(ref);
+      final nextPrice =
+          (actionResult['price'] as num?)?.toDouble() ?? result;
+      ref
+          .read(warehouseDetailProvider(widget.warehouseId).notifier)
+          .patchSlotPrice(slotId: slot.id, price: nextPrice);
+      ref.read(warehouseListProvider.notifier).patchSlotPrice(
+            warehouseId: widget.warehouseId,
+            slotId: slot.id,
+            price: nextPrice,
+          );
       AppSnackbar.show(
         context,
         title: 'Fiyat Guncellendi',
@@ -1332,7 +1476,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (!context.mounted) return;
 
     if (actionResult['success'] == true) {
-      await _refreshWarehouse(ref);
+      ref
+          .read(warehouseDetailProvider(widget.warehouseId).notifier)
+          .removeSlot(slot.id);
+      ref.read(warehouseListProvider.notifier).removeSlot(
+            warehouseId: widget.warehouseId,
+            slotId: slot.id,
+          );
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
@@ -1543,7 +1693,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 SizedBox(height: 16.h),
                 TextField(
                   controller: controller,
-                  keyboardType: TextInputType.number,
+                  readOnly: true,
+                  showCursor: true,
+                  enableInteractiveSelection: false,
                   style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Miktar',
@@ -1558,21 +1710,20 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   ),
                 ),
                 SizedBox(height: 12.h),
-                Wrap(
-                  spacing: 8.w,
-                  runSpacing: 8.h,
-                  children: [
-                    _buildQuickQuantityButton(
-                      '1/4',
-                      () => applyQuantity((limit / 4).ceil(), setState),
+                NumericKeyboard(
+                  controller: controller,
+                  shortcuts: [
+                    NumericKeyboardShortcut(
+                      label: '1/4',
+                      value: ((limit / 4).ceil().clamp(1, limit)).toString(),
                     ),
-                    _buildQuickQuantityButton(
-                      'Yari',
-                      () => applyQuantity((limit / 2).ceil(), setState),
+                    NumericKeyboardShortcut(
+                      label: 'Yari',
+                      value: ((limit / 2).ceil().clamp(1, limit)).toString(),
                     ),
-                    _buildQuickQuantityButton(
-                      'Tamami',
-                      () => applyQuantity(limit, setState),
+                    NumericKeyboardShortcut(
+                      label: 'Tamami',
+                      value: limit.toString(),
                     ),
                   ],
                 ),
@@ -1851,8 +2002,28 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      await _refreshWarehouse(ref);
-      ref.invalidate(warehouseListProvider);
+      final remainingQuantity =
+          (result['source_quantity_after'] as num?)?.toInt() ??
+          (slot.quantity - quantity).clamp(0, slot.quantity);
+      if (remainingQuantity <= 0) {
+        ref
+            .read(warehouseDetailProvider(widget.warehouseId).notifier)
+            .patchSlotQuantity(slotId: slot.id, quantity: 0);
+        ref.read(warehouseListProvider.notifier).patchSlotQuantity(
+              warehouseId: widget.warehouseId,
+              slotId: slot.id,
+              quantity: 0,
+            );
+      } else {
+        ref
+            .read(warehouseDetailProvider(widget.warehouseId).notifier)
+            .patchSlotQuantity(slotId: slot.id, quantity: remainingQuantity);
+        ref.read(warehouseListProvider.notifier).patchSlotQuantity(
+              warehouseId: widget.warehouseId,
+              slotId: slot.id,
+              quantity: remainingQuantity,
+            );
+      }
       ref.invalidate(warehouseDetailProvider(targetWarehouseId));
       ref.invalidate(playerProvider);
       final isInstant = result['mode']?.toString() == 'instant';
@@ -1900,7 +2071,17 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      await _refreshWarehouse(ref);
+      ref
+          .read(warehouseDetailProvider(widget.warehouseId).notifier)
+          .patchSlotSaleStatus(
+            slotId: slot.id,
+            isAvailableForSale: !slot.isAvailableForSale,
+          );
+      ref.read(warehouseListProvider.notifier).patchSlotSaleStatus(
+            warehouseId: widget.warehouseId,
+            slotId: slot.id,
+            isAvailableForSale: !slot.isAvailableForSale,
+          );
       AppSnackbar.show(
         context,
         title: slot.isAvailableForSale ? 'Satis Kapatildi' : 'Satisa Acildi',
@@ -1987,18 +2168,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           fontWeight: FontWeight.w700,
         ),
       ),
-    );
-  }
-
-  Widget _buildQuickQuantityButton(String label, VoidCallback onPressed) {
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.3)),
-        foregroundColor: AppColors.textPrimary,
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-      ),
-      onPressed: onPressed,
-      child: Text(label),
     );
   }
 

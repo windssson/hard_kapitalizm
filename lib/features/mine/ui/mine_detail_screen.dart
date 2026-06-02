@@ -9,7 +9,9 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -51,12 +53,18 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   Future<void> _refreshMineEcosystem({
     String? warehouseId,
     bool includeTransfers = false,
+    bool includeWarehouseList = false,
+    bool includePlayer = true,
   }) async {
     _refreshMineDetail();
     ref.invalidate(mineListProvider);
-    ref.invalidate(playerProvider);
-    ref.invalidate(warehouseListProvider);
-    ref.invalidate(warehouseDetailProvider);
+    if (includePlayer) {
+      ref.invalidate(playerProvider);
+    }
+
+    if (includeWarehouseList || (warehouseId != null && warehouseId.isNotEmpty)) {
+      ref.invalidate(warehouseListProvider);
+    }
 
     if (warehouseId != null && warehouseId.isNotEmpty) {
       ref.invalidate(warehouseDetailProvider(warehouseId));
@@ -72,26 +80,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
-      activeMineUpgradeProvider(widget.mineId),
-      (previous, next) {
-        final upgrade = next.value;
-        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
-          ref.read(mineActionProvider).completeDueBuildingUpgrades();
-        }
-      },
-    );
-
-    ref.listen<AsyncValue<BuildingBoostModel?>>(
-      activeMineBoostProvider(widget.mineId),
-      (previous, next) {
-        final boost = next.value;
-        if (boost != null && boost.finishAt.isBefore(DateTime.now())) {
-          ref.read(mineActionProvider).completeDueBuildingBoosts();
-        }
-      },
-    );
-
     final detailAsync = ref.watch(mineDetailProvider(widget.mineId));
     final activeBoost = ref.watch(activeMineBoostProvider(widget.mineId)).value;
     final activeUpgrade = ref.watch(activeMineUpgradeProvider(widget.mineId)).value;
@@ -119,10 +107,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 ),
                 data: (detail) => RefreshIndicator(
                   onRefresh: () async {
-                    await ref.read(mineActionProvider).completeDueBuildingBoosts();
-                    if (!mounted) return;
-                    await ref.read(mineActionProvider).completeDueBuildingUpgrades();
-                    if (!mounted) return;
                     _refreshMineDetail();
                     await ref.read(mineDetailProvider(widget.mineId).future);
                   },
@@ -160,7 +144,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
-                      _buildProductionCard(context, ref, detail),
+                      _buildProductionCard(
+                        context,
+                        ref,
+                        detail,
+                        activeBoost,
+                      ),
                     ],
                   ),
                 ),
@@ -606,6 +595,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     BuildContext context,
     WidgetRef ref,
     MineDetailModel detail,
+    BuildingBoostModel? activeBoost,
   ) {
     if (detail.product == null) {
       return _buildEmptyCard(
@@ -883,9 +873,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             children: [
               Icon(Icons.schedule, color: AppColors.textMuted, size: 14.sp),
               SizedBox(width: 6.w),
-              Expanded(
-                child: Text(
-                  'Tahmini saatlik uretim: ${_estimateProductionPerHour(detail)}',
+                Expanded(
+                  child: Text(
+                  'Tahmini saatlik uretim: ${_estimateProductionPerHour(detail, activeBoost)}',
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 11.sp,
@@ -932,10 +922,13 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     return (current / max).clamp(0.0, 1.0);
   }
 
-  String _estimateProductionPerHour(MineDetailModel detail) {
+  String _estimateProductionPerHour(
+    MineDetailModel detail,
+    BuildingBoostModel? activeBoost,
+  ) {
     final product = detail.product;
     if (product == null) return '-';
-    final amount = product.uretimAdedi * detail.mine.boostMultiplier;
+    final amount = product.uretimAdedi * (activeBoost?.multiplier ?? 1);
     return amount % 1 == 0
         ? amount.toInt().toString()
         : amount.toStringAsFixed(1);
@@ -1008,13 +1001,11 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             mineId: detail.mine.id,
                             durationHours: entry.key,
                             starCost: entry.value,
+                            syncProviders: false,
                           );
                       if (!context.mounted) return;
                       if (result['success'] == true) {
-                        ref.invalidate(activeMineBoostProvider(detail.mine.id));
-                        ref.invalidate(mineDetailProvider(detail.mine.id));
-                        ref.invalidate(mineListProvider);
-                        ref.invalidate(playerProvider);
+                        await _refreshMineEcosystem();
                         AppSnackbar.show(
                           context,
                           title: 'Basarili',
@@ -1210,13 +1201,13 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             Navigator.pop(sheetContext);
                             final result = await ref
                                 .read(mineActionProvider)
-                                .startMineUpgrade(detail.mine.id);
+                                .startMineUpgrade(
+                                  detail.mine.id,
+                                  syncProviders: false,
+                                );
                             if (!context.mounted) return;
                             if (result['success'] == true) {
-                              ref.invalidate(activeMineUpgradeProvider(detail.mine.id));
-                              ref.invalidate(mineDetailProvider(detail.mine.id));
-                              ref.invalidate(mineListProvider);
-                              ref.invalidate(playerProvider);
+                              await _refreshMineEcosystem();
                               AppSnackbar.show(
                                 context,
                                 title: 'Basarili',
@@ -1257,18 +1248,19 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   ) async {
     final result = await ref
         .read(mineActionProvider)
-        .finishMineUpgradeWithGold(upgrade.id);
+        .finishMineUpgradeWithGold(upgrade.id, syncProviders: false);
 
     if (!mounted) return;
 
     if (result['success'] == true) {
-      await _refreshMineEcosystem();
+      await _refreshMineEcosystem(includePlayer: false);
       AppSnackbar.show(
         context,
         title: 'Basarili',
         message: 'Maden yukseltmesi tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
       return;
     }
 
@@ -1402,11 +1394,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final result = await ref.read(mineActionProvider).setMineProduct(
           mineId: detail.mine.id,
           productId: product.id,
+          syncProviders: false,
         );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshMineEcosystem();
+      await _refreshMineEcosystem(includePlayer: false);
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1432,6 +1425,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final result = await ref.read(mineActionProvider).setMineActive(
           mineId: detail.mine.id,
           isActive: !detail.mine.isActive,
+          syncProviders: false,
         );
 
     if (!context.mounted) return;
@@ -1517,10 +1511,14 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       productionInventoryId: inventory.id,
                       warehouseId: warehouseId,
                       quantity: quantity,
+                      syncProviders: false,
                     );
                 if (!context.mounted) return;
                 if (result['success'] == true) {
-                  await _refreshMineEcosystem(warehouseId: warehouseId);
+                  await _refreshMineEcosystem(
+                    warehouseId: warehouseId,
+                    includePlayer: false,
+                  );
                   AppSnackbar.show(
                     context,
                     title: 'Başarılı',
@@ -1619,12 +1617,14 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               buyerWarehouseId: warehouseId,
               quantity: quantity,
               vehicleId: vehicleId,
+              syncProviders: false,
             );
         if (!context.mounted) return;
         if (result.success) {
           await _refreshMineEcosystem(
             warehouseId: warehouseId,
             includeTransfers: true,
+            includePlayer: false,
           );
           AppSnackbar.show(
             context,
@@ -1808,7 +1808,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             SizedBox(height: 12.h),
             TextField(
               controller: controller,
-              keyboardType: TextInputType.number,
+              readOnly: true,
+              showCursor: true,
+              enableInteractiveSelection: false,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 labelText: 'Miktar (Maks: $maxQuantity)',
@@ -1820,6 +1822,24 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   borderSide: BorderSide(color: AppColors.gold),
                 ),
               ),
+            ),
+            SizedBox(height: 12.h),
+            NumericKeyboard(
+              controller: controller,
+              shortcuts: [
+                NumericKeyboardShortcut(
+                  label: '1/4',
+                  value: (maxQuantity / 4).floor().toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Yari',
+                  value: (maxQuantity / 2).floor().toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Tamami',
+                  value: maxQuantity.toString(),
+                ),
+              ],
             ),
           ],
         ),

@@ -9,7 +9,9 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
@@ -52,12 +54,18 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   Future<void> _refreshFieldEcosystem({
     String? warehouseId,
     bool includeTransfers = false,
+    bool includeWarehouseList = false,
+    bool includePlayer = true,
   }) async {
     _refreshFieldDetail();
     ref.invalidate(fieldListProvider);
-    ref.invalidate(playerProvider);
-    ref.invalidate(warehouseListProvider);
-    ref.invalidate(warehouseDetailProvider);
+    if (includePlayer) {
+      ref.invalidate(playerProvider);
+    }
+
+    if (includeWarehouseList || (warehouseId != null && warehouseId.isNotEmpty)) {
+      ref.invalidate(warehouseListProvider);
+    }
 
     if (warehouseId != null && warehouseId.isNotEmpty) {
       ref.invalidate(warehouseDetailProvider(warehouseId));
@@ -73,26 +81,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
-      activeFieldUpgradeProvider(widget.fieldId),
-      (previous, next) {
-        final upgrade = next.value;
-        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
-          ref.read(fieldActionProvider).completeDueBuildingUpgrades();
-        }
-      },
-    );
-
-    ref.listen<AsyncValue<BuildingBoostModel?>>(
-      activeFieldBoostProvider(widget.fieldId),
-      (previous, next) {
-        final boost = next.value;
-        if (boost != null && boost.finishAt.isBefore(DateTime.now())) {
-          ref.read(fieldActionProvider).completeDueBuildingBoosts();
-        }
-      },
-    );
-
     final detailAsync = ref.watch(fieldDetailProvider(widget.fieldId));
     final activeBoost = ref.watch(activeFieldBoostProvider(widget.fieldId)).value;
     final activeUpgrade = ref.watch(
@@ -122,10 +110,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 ),
                 data: (detail) => RefreshIndicator(
                   onRefresh: () async {
-                    await ref.read(fieldActionProvider).completeDueBuildingBoosts();
-                    if (!mounted) return;
-                    await ref.read(fieldActionProvider).completeDueBuildingUpgrades();
-                    if (!mounted) return;
                     _refreshFieldDetail();
                     await ref.read(fieldDetailProvider(widget.fieldId).future);
                   },
@@ -169,7 +153,13 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                         )
                       else
                         ...detail.slots.map(
-                          (slot) => _buildSlotCard(context, ref, detail, slot),
+                          (slot) => _buildSlotCard(
+                            context,
+                            ref,
+                            detail,
+                            slot,
+                            activeBoost,
+                          ),
                         ),
                       if (detail.orphanInputInventories.isNotEmpty) ...[
                         SizedBox(height: 16.h),
@@ -602,6 +592,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     WidgetRef ref,
     FieldDetailModel detail,
     ProductionSlotModel slot,
+    BuildingBoostModel? activeBoost,
   ) {
     final slotActiveColor = slot.isActive ? AppColors.green : AppColors.red;
     final slotTitle = slot.isEmpty
@@ -809,7 +800,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 SizedBox(width: 6.w),
                 Expanded(
                   child: Text(
-                    'Tahmini saatlik uretim: ${_estimateProductionPerHour(slot)}',
+                    'Tahmini saatlik uretim: ${_estimateProductionPerHour(slot, activeBoost)}',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 11.sp,
@@ -894,13 +885,11 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                             fieldId: detail.field.id,
                             durationHours: entry.key,
                             starCost: entry.value,
+                            syncProviders: false,
                           );
                       if (!context.mounted) return;
                       if (result['success'] == true) {
-                        ref.invalidate(activeFieldBoostProvider(detail.field.id));
-                        ref.invalidate(fieldDetailProvider(detail.field.id));
-                        ref.invalidate(fieldListProvider);
-                        ref.invalidate(playerProvider);
+                        await _refreshFieldEcosystem();
                         AppSnackbar.show(
                           context,
                           title: 'Basarili',
@@ -1119,11 +1108,13 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   Navigator.pop(sheetContext);
                   final result = await ref
                       .read(fieldActionProvider)
-                      .startFieldUpgrade(detail.field.id);
+                      .startFieldUpgrade(
+                        detail.field.id,
+                        syncProviders: false,
+                      );
                   if (!context.mounted) return;
                   if (result['success'] == true) {
-                    ref.invalidate(playerProvider);
-                    _refreshFieldDetail();
+                    await _refreshFieldEcosystem();
                     AppSnackbar.show(
                       context,
                       title: 'Basarili',
@@ -1152,18 +1143,18 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   Future<void> _finishFieldUpgradeWithGold(BuildingUpgradeModel upgrade) async {
     final result = await ref
         .read(fieldActionProvider)
-        .finishFieldUpgradeWithGold(upgrade.id);
+        .finishFieldUpgradeWithGold(upgrade.id, syncProviders: false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(playerProvider);
-      _refreshFieldDetail();
+      await _refreshFieldEcosystem(includePlayer: false);
       AppSnackbar.show(
         context,
         title: 'Basarili',
         message: 'Ciftlik yukseltmesi tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
       return;
     }
 
@@ -1718,11 +1709,11 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   ) async {
     final result = await ref
         .read(fieldActionProvider)
-        .addProductionSlot(detail.field.id);
+        .addProductionSlot(detail.field.id, syncProviders: false);
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshFieldEcosystem();
+      await _refreshFieldEcosystem(includePlayer: false);
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1748,11 +1739,15 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   ) async {
     final result = await ref
         .read(fieldActionProvider)
-        .setProductionSlotActive(slotId: slot.id, isActive: !slot.isActive);
+        .setProductionSlotActive(
+          slotId: slot.id,
+          isActive: !slot.isActive,
+          syncProviders: false,
+        );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshFieldEcosystem();
+      await _refreshFieldEcosystem(includePlayer: false);
       return;
     }
 
@@ -1840,11 +1835,13 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             slotId: slot.id,
             productId: product.id,
             qualityLevel: selectableProduct.maxQualityLevel,
+            syncProviders: false,
           )
         : await action.changeProductionSlotProduct(
             slotId: slot.id,
             productId: product.id,
             qualityLevel: selectableProduct.maxQualityLevel,
+            syncProviders: false,
           );
 
     if (!context.mounted) return;
@@ -1939,11 +1936,14 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           warehouseSlotId: slot['id'].toString(),
                           productionInventoryId: inventory.id,
                           quantity: quantity,
+                          syncProviders: false,
                         );
                     if (!context.mounted) return;
                     if (result['success'] == true) {
                       await _refreshFieldEcosystem(
                         includeTransfers: true,
+                        includeWarehouseList: true,
+                        includePlayer: false,
                       );
                       AppSnackbar.show(
                         context,
@@ -2047,12 +2047,14 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                       productionInventoryId: inventory.id,
                       warehouseId: warehouseId,
                       quantity: quantity,
+                      syncProviders: false,
                     );
                 if (!context.mounted) return;
                 if (result['success'] == true) {
                   await _refreshFieldEcosystem(
                     warehouseId: warehouseId,
                     includeTransfers: true,
+                    includePlayer: false,
                   );
                   AppSnackbar.show(
                     context,
@@ -2154,10 +2156,15 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
               productionInventoryId: inventory.id,
               quantity: quantity,
               vehicleId: vehicleId,
+              syncProviders: false,
             );
         if (!context.mounted) return;
         if (result.success) {
-          await _refreshFieldEcosystem(includeTransfers: true);
+          await _refreshFieldEcosystem(
+            includeTransfers: true,
+            includeWarehouseList: true,
+            includePlayer: false,
+          );
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
@@ -2240,12 +2247,14 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
               buyerWarehouseId: warehouseId,
               quantity: quantity,
               vehicleId: vehicleId,
+              syncProviders: false,
             );
         if (!context.mounted) return;
         if (result.success) {
           await _refreshFieldEcosystem(
             warehouseId: warehouseId,
             includeTransfers: true,
+            includePlayer: false,
           );
           AppSnackbar.show(
             context,
@@ -2377,7 +2386,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             SizedBox(height: 12.h),
             TextField(
               controller: controller,
-              keyboardType: TextInputType.number,
+              readOnly: true,
+              showCursor: true,
+              enableInteractiveSelection: false,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 labelText: 'Miktar (Maks: $maxQuantity)',
@@ -2389,6 +2400,24 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   borderSide: BorderSide(color: AppColors.gold),
                 ),
               ),
+            ),
+            SizedBox(height: 12.h),
+            NumericKeyboard(
+              controller: controller,
+              shortcuts: [
+                NumericKeyboardShortcut(
+                  label: '1/4',
+                  value: (maxQuantity / 4).floor().toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Yari',
+                  value: (maxQuantity / 2).floor().toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Tamami',
+                  value: maxQuantity.toString(),
+                ),
+              ],
             ),
           ],
         ),
@@ -2450,10 +2479,13 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     return warehouseCityId.isNotEmpty && warehouseCityId == productionCityId;
   }
 
-  String _estimateProductionPerHour(ProductionSlotModel slot) {
+  String _estimateProductionPerHour(
+    ProductionSlotModel slot,
+    BuildingBoostModel? activeBoost,
+  ) {
     final product = slot.product;
     if (product == null) return '0';
-    final perHour = product.uretimAdedi * slot.boostMultiplier;
+    final perHour = product.uretimAdedi * (activeBoost?.multiplier ?? 1);
     return perHour.toStringAsFixed(perHour >= 10 ? 0 : 1);
   }
 

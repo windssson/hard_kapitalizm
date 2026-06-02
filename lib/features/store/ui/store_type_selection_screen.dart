@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/type_product_preview.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
@@ -30,6 +33,7 @@ class _StoreTypeSelectionScreenState
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(storeTypesProvider);
     final playerAsync = ref.watch(playerProvider);
+    final catalogsAsync = ref.watch(staticCatalogsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -39,18 +43,30 @@ class _StoreTypeSelectionScreenState
             SecondaryTopBar(title: '${widget.selectedCity.name} - Mağaza Türü'),
             Expanded(
               child: playerAsync.when(
-                data: (player) => typesAsync.when(
-                  data: (types) => _buildTypeList(
-                    types,
-                    player?.cash ?? 0,
-                    player?.level ?? 1,
+                data: (player) => catalogsAsync.when(
+                  data: (catalogs) => typesAsync.when(
+                    data: (types) => _buildTypeList(
+                      types,
+                      catalogs.products,
+                      player?.cash ?? 0,
+                      player?.level ?? 1,
+                    ),
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: AppColors.gold),
+                    ),
+                    error: (error, stack) => Center(
+                      child: Text(
+                        'Hata: $error',
+                        style: TextStyle(color: AppColors.red),
+                      ),
+                    ),
                   ),
                   loading: () => const Center(
                     child: CircularProgressIndicator(color: AppColors.gold),
                   ),
                   error: (error, stack) => Center(
                     child: Text(
-                      'Hata: $error',
+                      'Urun katalogu yuklenemedi.',
                       style: TextStyle(color: AppColors.red),
                     ),
                   ),
@@ -75,6 +91,7 @@ class _StoreTypeSelectionScreenState
 
   Widget _buildTypeList(
     List<StoreTypeModel> types,
+    List<ProductModel> products,
     double playerCash,
     int playerLevel,
   ) {
@@ -200,6 +217,14 @@ class _StoreTypeSelectionScreenState
                             ),
                           ),
                         ],
+                        SizedBox(height: 10.h),
+                        TypeProductPreview(
+                          title: 'Satabilecegi urunler',
+                          products: resolveAcceptedProducts(
+                            type.acceptedProductIds,
+                            products,
+                          ),
+                        ),
                       ],
                     ),
                   ),

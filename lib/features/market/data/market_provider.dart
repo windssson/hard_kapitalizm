@@ -199,15 +199,15 @@ class MarketActionNotifier {
         params: (buyerStoreSlotId != null && buyerStoreSlotId.isNotEmpty)
             ? {
                 'p_store_slot_id': buyerStoreSlotId,
-                'p_seller_slot_id': sellerSlotId,
+                'p_market_listing_id': sellerSlotId,
                 'p_quantity': quantity,
-                'p_vehicle_id': vehicleId,
+                if (vehicleId != null) 'p_vehicle_id': vehicleId,
               }
             : {
                 'p_buyer_warehouse_id': buyerWarehouseId,
                 'p_seller_slot_id': sellerSlotId,
                 'p_quantity': quantity,
-                'p_vehicle_id': vehicleId,
+                if (vehicleId != null) 'p_vehicle_id': vehicleId,
               },
       );
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
@@ -324,7 +325,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildConstructionCard(StoreModel store) {
-    final starCost = _calculateStarCost(store.finishAt!.toLocal());
+    final finishAt = store.finishAt;
+    final starCost = finishAt == null ? 0 : _calculateStarCost(finishAt.toLocal());
 
     return Column(
       children: [
@@ -410,16 +412,31 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       ),
                     ),
                     SizedBox(height: 12.h),
-                    _ConstructionCountdown(
-                      startedAt: store.startedAt ?? DateTime.now(),
-                      finishAt: store.finishAt!,
-                      onFinish: () async {
-                        await ref
-                            .read(storeActionProvider)
-                            .completeConstruction(store.id);
-                        await ref.read(storesListProvider.notifier).refresh();
-                      },
-                    ),
+                    if (finishAt != null)
+                      _ConstructionCountdown(
+                        startedAt: store.startedAt ?? DateTime.now(),
+                        finishAt: finishAt,
+                        onFinish: () async {
+                          final result = await ref
+                              .read(storeActionProvider)
+                              .completeConstruction(store.id);
+                          if (mounted && result['success'] == true) {
+                            await showExperienceFeedbackFromResult(
+                              context,
+                              result,
+                            );
+                          }
+                          await ref.read(storesListProvider.notifier).refresh();
+                        },
+                      )
+                    else
+                      Text(
+                        'Insaat verisi guncelleniyor...',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12.sp,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -508,6 +525,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           message: 'Insaat basariyla tamamlandi!',
           type: SnackbarType.success,
         );
+        await showExperienceFeedbackFromResult(context, result);
       }
     } else {
       if (mounted) {
