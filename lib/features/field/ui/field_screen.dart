@@ -4,12 +4,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 
@@ -28,7 +30,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
@@ -57,12 +58,13 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(fieldListProvider);
     ref.invalidate(fieldConstructionProvider);
+    ref.invalidate(playerProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
     final result = await ref
         .read(fieldActionProvider)
-        .completeConstruction(constructionId);
+        .completeConstruction(constructionId, syncProviders: false);
 
     ref.invalidate(fieldConstructionProvider);
     ref.invalidate(fieldListProvider);
@@ -75,16 +77,20 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         message: result['message'] ?? 'Ciftlik insaati tamamlanamadi.',
         type: SnackbarType.error,
       );
+      return;
     }
+
+    await showExperienceFeedbackFromResult(context, result);
   }
 
   Future<void> _finishConstructionWithGold(String constructionId) async {
     final result = await ref
         .read(fieldActionProvider)
-        .finishConstructionWithGold(constructionId);
+        .finishConstructionWithGold(constructionId, syncProviders: false);
 
     ref.invalidate(fieldConstructionProvider);
     ref.invalidate(fieldListProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -94,6 +100,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         message: 'Insaat aninda tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
       return;
     }
 

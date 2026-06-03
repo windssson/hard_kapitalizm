@@ -35,6 +35,9 @@ import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_detail_screen.dart';
 import 'package:hard_kapitalizm/features/arge/ui/arge_screen.dart';
+import 'package:hard_kapitalizm/features/mission/ui/mission_screen.dart';
+import 'package:hard_kapitalizm/features/notification/ui/notification_screen.dart';
+import 'package:hard_kapitalizm/features/achievement/ui/achievement_screen.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/navigation/app_route_observer.dart';
@@ -64,6 +67,18 @@ final _router = GoRouter(
   routes: [
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      path: '/missions',
+      builder: (context, state) => const MissionScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationScreen(),
+    ),
+    GoRoute(
+      path: '/achievements',
+      builder: (context, state) => const AchievementScreen(),
+    ),
     GoRoute(
       path: '/transfer-map',
       builder: (context, state) => const TransferMapScreen(),
@@ -285,14 +300,14 @@ class HardKapitalizmApp extends StatelessWidget {
                 Container(color: AppColors.background),
                 Positioned.fill(
                   child: Opacity(
-                    opacity: 0.10,
+                    opacity: 0.06,
                     child: Image.asset(
                       'assets/back.png',
                       fit: BoxFit.cover,
                     ),
                   ),
                 ),
-                ?materialChild,
+                materialChild!,
               ],
             );
           },

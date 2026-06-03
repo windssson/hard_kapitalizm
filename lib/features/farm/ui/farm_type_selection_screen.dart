@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/type_product_preview.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 
@@ -28,7 +31,8 @@ class _FarmTypeSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(farmTypesProvider);
-    final playerAsync = ref.watch(playerStreamProvider);
+    final playerAsync = ref.watch(playerProvider);
+    final catalogsAsync = ref.watch(staticCatalogsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -40,21 +44,29 @@ class _FarmTypeSelectionScreenState
             ),
             Expanded(
               child: playerAsync.when(
-                data: (player) => typesAsync.when(
-                  data: (types) => _buildTypeList(
-                    types,
-                    (player?.cash ?? 0).toDouble(),
-                    player?.level ?? 1,
+                data: (player) => catalogsAsync.when(
+                  data: (catalogs) => typesAsync.when(
+                    data: (types) => _buildTypeList(
+                      types,
+                      catalogs.products,
+                      (player?.cash ?? 0).toDouble(),
+                      player?.level ?? 1,
+                    ),
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: AppColors.gold),
+                    ),
+                    error: (error, stack) => Center(
+                      child: Text(
+                        'Hata: $error',
+                        style: const TextStyle(color: AppColors.red),
+                      ),
+                    ),
                   ),
                   loading: () => const Center(
                     child: CircularProgressIndicator(color: AppColors.gold),
                   ),
-                  error: (error, stack) => Center(
-                    child: Text(
-                      'Hata: $error',
-                      style: const TextStyle(color: AppColors.red),
-                    ),
-                  ),
+                  error: (error, stack) =>
+                      const Center(child: Text('Urun katalogu yuklenemedi.')),
                 ),
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.gold),
@@ -70,7 +82,12 @@ class _FarmTypeSelectionScreenState
     );
   }
 
-  Widget _buildTypeList(List<dynamic> types, double playerCash, int playerLevel) {
+  Widget _buildTypeList(
+    List<dynamic> types,
+    List<ProductModel> products,
+    double playerCash,
+    int playerLevel,
+  ) {
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       itemCount: types.length,
@@ -177,6 +194,14 @@ class _FarmTypeSelectionScreenState
                                   : Colors.blueAccent,
                             ),
                           ],
+                        ),
+                        SizedBox(height: 10.h),
+                        TypeProductPreview(
+                          title: 'Uretebilecegi urunler',
+                          products: resolveAcceptedProducts(
+                            parseAcceptedProductIds(type['accepted_product_ids']),
+                            products,
+                          ),
                         ),
                       ],
                     ),
@@ -293,7 +318,7 @@ class _FarmTypeSelectionScreenState
       );
       if (result['success'] == true) {
         if (mounted) {
-          ref.invalidate(playerStreamProvider);
+          ref.invalidate(playerProvider);
           ref.invalidate(farmListProvider);
           ref.invalidate(farmConstructionProvider);
           AppSnackbar.show(

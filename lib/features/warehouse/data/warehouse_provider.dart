@@ -1,94 +1,238 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 
-final warehouseListProvider = FutureProvider<List<WarehouseModel>>((ref) async {
+Future<List<WarehouseModel>> _fetchWarehouseList() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
-  if (user == null) return [];
+  if (user == null) return const [];
 
   try {
-    final response = await supabase.rpc('get_player_warehouses_raw');
-
-    final List<dynamic> data = response as List<dynamic>;
-    List<WarehouseModel> allWarehouses =
-        data.map((json) => WarehouseModel.fromJson(json)).toList();
-
-    final constructionResponse = await supabase.rpc(
-      'get_player_building_constructions',
-      params: {
-        'p_building_kind': 'warehouse',
-        'p_status': 'in_progress',
-      },
-    );
-
-    if (constructionResponse.isNotEmpty) {
-      final typesResponse = await supabase.rpc('get_warehouse_types_catalog');
-      final citiesResponse = await supabase.rpc('get_cities_catalog');
-
-      for (var constr in constructionResponse) {
-        final params = constr['params'] as Map<String, dynamic>;
-        final typeId = params['warehouse_type_id'] as String?;
-        final cityId = params['city_id'] as String?;
-
-        final type = (typesResponse as List).firstWhere(
-          (t) => t['id'] == typeId,
-          orElse: () => {'name': 'Depo', 'icon': 'warehouse.webp'},
-        );
-        final city = (citiesResponse as List).firstWhere(
-          (c) => c['id'] == cityId,
-          orElse: () => {'name': 'Bilinmeyen'},
-        );
-
-        allWarehouses.add(
-          WarehouseModel(
-            id: constr['id'],
-            playerId: user.id,
-            warehouseTypeId: typeId ?? '',
-            typeIcon: type['icon'],
-            cityId: cityId ?? '',
-            cityName: city['name'] ?? 'Bilinmeyen',
-            name: params['name'] ?? type['name'],
-            level: 1,
-            capacity: (params['base_capacity'] ?? 0).toDouble(),
-            reservedCapacity: 0,
-            isActive: false,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            isUnderConstruction: true,
-            finishAt: DateTime.parse(constr['finish_at']),
-          ),
-        );
-      }
-    }
-
-    return allWarehouses;
+    final response = await supabase.rpc('get_warehouse_list_page_data');
+    final data = response['warehouses'] as List<dynamic>? ?? const [];
+    return data
+        .map((json) => WarehouseModel.fromJson(Map<String, dynamic>.from(json as Map)))
+        .toList();
   } catch (e) {
     throw Exception('Depo listesi alinamadi: $e');
   }
-});
+}
 
-final warehouseDetailProvider =
-    FutureProvider.family<WarehouseModel, String>((ref, warehouseId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+Future<WarehouseModel> _fetchWarehouseDetail(String warehouseId) async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
 
-      if (user == null) throw Exception('Oturum acilmamis.');
+  if (user == null) throw Exception('Oturum acilmamis.');
 
-      final response = await supabase.rpc(
-        'get_player_warehouse_detail',
-        params: {'p_warehouse_id': warehouseId},
-      );
+  final response = await supabase.rpc(
+    'get_player_warehouse_detail',
+    params: {'p_warehouse_id': warehouseId},
+  );
 
-      if (response == null) {
-        throw Exception('Depo bulunamadi.');
-      }
+  if (response == null) {
+    throw Exception('Depo bulunamadi.');
+  }
 
-      return WarehouseModel.fromJson(response as Map<String, dynamic>);
-    });
+  return WarehouseModel.fromJson(response as Map<String, dynamic>);
+}
+
+class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
+  @override
+  Future<List<WarehouseModel>> build() => _fetchWarehouseList();
+
+  Future<List<WarehouseModel>> refresh() async {
+    final warehouses = await _fetchWarehouseList();
+    state = AsyncData(warehouses);
+    return warehouses;
+  }
+
+  void replaceWarehouse(WarehouseModel warehouse) {
+    final current = state.value;
+    if (current == null) return;
+
+    final index = current.indexWhere((item) => item.id == warehouse.id);
+    if (index < 0) return;
+
+    final next = [...current];
+    next[index] = warehouse;
+    state = AsyncData(next);
+  }
+
+  void prependWarehouse(WarehouseModel warehouse) {
+    final current = state.value ?? const <WarehouseModel>[];
+    state = AsyncData([
+      warehouse,
+      ...current.where((item) => item.id != warehouse.id),
+    ]);
+  }
+
+  void patchSlotPrice({
+    required String warehouseId,
+    required String slotId,
+    required double price,
+  }) {
+    _patchSlot(
+      warehouseId: warehouseId,
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(price: price),
+    );
+  }
+
+  void patchSlotSaleStatus({
+    required String warehouseId,
+    required String slotId,
+    required bool isAvailableForSale,
+  }) {
+    _patchSlot(
+      warehouseId: warehouseId,
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(isAvailableForSale: isAvailableForSale),
+    );
+  }
+
+  void removeSlot({
+    required String warehouseId,
+    required String slotId,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final index = current.indexWhere((item) => item.id == warehouseId);
+    if (index < 0) return;
+
+    final warehouse = current[index];
+    final next = [...current];
+    next[index] = warehouse.copyWith(
+      slots: warehouse.slots.where((slot) => slot.id != slotId).toList(),
+    );
+    state = AsyncData(next);
+  }
+
+  void patchSlotQuantity({
+    required String warehouseId,
+    required String slotId,
+    required int quantity,
+  }) {
+    _patchSlot(
+      warehouseId: warehouseId,
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(quantity: quantity),
+    );
+  }
+
+  void _patchSlot({
+    required String warehouseId,
+    required String slotId,
+    required WarehouseSlotModel Function(WarehouseSlotModel slot) patcher,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final index = current.indexWhere((item) => item.id == warehouseId);
+    if (index < 0) return;
+
+    final warehouse = current[index];
+    final slots = warehouse.slots
+        .map((slot) => slot.id == slotId ? patcher(slot) : slot)
+        .toList();
+
+    final next = [...current];
+    next[index] = warehouse.copyWith(slots: slots);
+    state = AsyncData(next);
+  }
+}
+
+final warehouseListProvider =
+    AsyncNotifierProvider<WarehouseListNotifier, List<WarehouseModel>>(
+      WarehouseListNotifier.new,
+    );
+
+class WarehouseDetailNotifier extends AsyncNotifier<WarehouseModel> {
+  WarehouseDetailNotifier(this._warehouseId);
+
+  final String _warehouseId;
+
+  @override
+  Future<WarehouseModel> build() => _fetchWarehouseDetail(_warehouseId);
+
+  Future<WarehouseModel> refresh() async {
+    final warehouse = await _fetchWarehouseDetail(_warehouseId);
+    state = AsyncData(warehouse);
+    return warehouse;
+  }
+
+  void replaceWarehouse(WarehouseModel warehouse) {
+    state = AsyncData(warehouse);
+  }
+
+  void patchSlotPrice({
+    required String slotId,
+    required double price,
+  }) {
+    _patchSlot(
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(price: price),
+    );
+  }
+
+  void patchSlotSaleStatus({
+    required String slotId,
+    required bool isAvailableForSale,
+  }) {
+    _patchSlot(
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(isAvailableForSale: isAvailableForSale),
+    );
+  }
+
+  void removeSlot(String slotId) {
+    final current = state.value;
+    if (current == null) return;
+
+    state = AsyncData(
+      current.copyWith(
+        slots: current.slots.where((slot) => slot.id != slotId).toList(),
+      ),
+    );
+  }
+
+  void patchSlotQuantity({
+    required String slotId,
+    required int quantity,
+  }) {
+    _patchSlot(
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(quantity: quantity),
+    );
+  }
+
+  void _patchSlot({
+    required String slotId,
+    required WarehouseSlotModel Function(WarehouseSlotModel slot) patcher,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    state = AsyncData(
+      current.copyWith(
+        slots: current.slots
+            .map((slot) => slot.id == slotId ? patcher(slot) : slot)
+            .toList(),
+      ),
+    );
+  }
+}
+
+final warehouseDetailProvider = AsyncNotifierProvider.family<
+    WarehouseDetailNotifier,
+    WarehouseModel,
+    String
+  >(WarehouseDetailNotifier.new);
 
 final warehouseTypeDetailProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, typeId) async {
@@ -101,18 +245,19 @@ final warehouseTypeDetailProvider =
     });
 
 final allProductsProvider = FutureProvider<List<ProductModel>>((ref) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase.rpc('get_all_products_catalog');
-  return (response as List).map((json) => ProductModel.fromJson(json)).toList();
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.products;
 });
 
 final warehouseTypesProvider = FutureProvider<List<dynamic>>((ref) async {
-  final supabase = Supabase.instance.client;
-  return await supabase.rpc('get_warehouse_types_catalog');
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.warehouseTypes;
 });
 
 class WarehouseActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final TransferVehicleOptionsService _vehicleOptionsService =
+      TransferVehicleOptionsService();
 
   Future<Map<String, dynamic>> addProductToWarehouse({
     required String warehouseId,
@@ -265,33 +410,26 @@ class WarehouseActionNotifier {
         .toList();
   }
 
-  Future<List<MarketTransferVehicleOptionModel>>
+  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
       getWarehouseToWarehouseVehicleOptions({
     required String warehouseSlotId,
     required String buyerWarehouseId,
     required int quantity,
   }) async {
-    final response = await _supabase.rpc(
-      'get_warehouse_to_warehouse_vehicle_options',
-      params: {
-        'p_warehouse_slot_id': warehouseSlotId,
-        'p_buyer_warehouse_id': buyerWarehouseId,
-        'p_quantity': quantity,
-      },
+    final response = await _vehicleOptionsService.getOptions(
+      TransferVehicleOptionsRequest(
+        sourceKind: 'warehouse_slot',
+        sourceId: warehouseSlotId,
+        targetKind: 'warehouse',
+        targetId: buyerWarehouseId,
+        quantity: quantity,
+      ),
     );
 
-    return (response as List<dynamic>)
-        .map(
-          (json) => MarketTransferVehicleOptionModel.fromJson(
-            json as Map<String, dynamic>,
-          ),
-        )
-        .where(
-          (option) =>
-              option.disabledReason !=
-              'Aracin rotasi bu sehir ciftini desteklemiyor.',
-        )
-        .toList();
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: MarketTransferVehicleOptionModel.fromJson,
+    );
   }
 
   Future<Map<String, dynamic>> startWarehouseToWarehouseTransfer({
@@ -313,6 +451,26 @@ class WarehouseActionNotifier {
           'p_buyer_warehouse_id': buyerWarehouseId,
           'p_quantity': quantity,
           'p_vehicle_id': vehicleId,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteWarehouseSlot({
+    required String warehouseSlotId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'delete_warehouse_slot',
+        params: {
+          'p_player_id': user.id,
+          'p_warehouse_slot_id': warehouseSlotId,
         },
       );
       return Map<String, dynamic>.from(response as Map);

@@ -16,7 +16,7 @@ class AuthManager {
   AuthManager(this._supabase);
 
   /// Oyuncu oturumunu kontrol eder. Yoksa cihaz kimligine ozel
-  /// benzersiz bir e-posta/sifre hesabÄ± ile giris yapar veya olusturur.
+  /// benzersiz bir e-posta/sifre hesabi ile giris yapar veya olusturur.
   Future<void> signInAnonymouslyIfNeeded() async {
     try {
       final session = _supabase.auth.currentSession;
@@ -49,8 +49,6 @@ class AuthManager {
             rethrow;
           }
         }
-      } else {
-        await _ensurePlayerRecordExists(session.user.id);
       }
     } catch (e) {
       throw Exception(

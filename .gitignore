@@ -46,3 +46,6 @@ app.*.map.json
 
 # Env
 .env
+
+# Supabase local temp metadata
+supabase/.temp/

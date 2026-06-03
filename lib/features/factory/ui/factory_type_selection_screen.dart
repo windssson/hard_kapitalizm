@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hard_kapitalizm/core/theme/app_theme.dart';
-import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
-import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/type_product_preview.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 
 class FactoryTypeSelectionScreen extends ConsumerStatefulWidget {
   final CityModel selectedCity;
@@ -28,27 +31,48 @@ class _FactoryTypeSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(factoryTypesProvider);
-    final playerAsync = ref.watch(playerStreamProvider);
+    final playerAsync = ref.watch(playerProvider);
+    final catalogsAsync = ref.watch(staticCatalogsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [
-            SecondaryTopBar(title: '${widget.selectedCity.name} - Fabrika Türü'),
+            SecondaryTopBar(
+              title: '${widget.selectedCity.name} - Fabrika Turu',
+            ),
             Expanded(
               child: playerAsync.when(
-                data: (player) => typesAsync.when(
-                  data: (types) => _buildTypeList(
-                    types,
-                    (player?.cash ?? 0).toDouble(),
-                    player?.level ?? 1,
+                data: (player) => catalogsAsync.when(
+                  data: (catalogs) => typesAsync.when(
+                    data: (types) => _buildTypeList(
+                      types,
+                      catalogs.products,
+                      (player?.cash ?? 0).toDouble(),
+                      player?.level ?? 1,
+                    ),
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: AppColors.gold),
+                    ),
+                    error: (error, stack) => Center(
+                      child: Text(
+                        'Hata: $error',
+                        style: const TextStyle(color: AppColors.red),
+                      ),
+                    ),
                   ),
-                  loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
-                  error: (error, stack) => Center(child: Text('Hata: $error', style: TextStyle(color: AppColors.red))),
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(color: AppColors.gold),
+                  ),
+                  error: (error, stack) =>
+                      const Center(child: Text('Urun katalogu yuklenemedi.')),
                 ),
-                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
-                error: (error, stack) => const Center(child: Text('Oyuncu bilgisi alınamadı.')),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppColors.gold),
+                ),
+                error: (error, stack) =>
+                    const Center(child: Text('Oyuncu bilgisi alinamadi.')),
               ),
             ),
             _buildActionPanel(),
@@ -58,17 +82,22 @@ class _FactoryTypeSelectionScreenState
     );
   }
 
-  Widget _buildTypeList(List<dynamic> types, double playerCash, int playerLevel) {
+  Widget _buildTypeList(
+    List<dynamic> types,
+    List<ProductModel> products,
+    double playerCash,
+    int playerLevel,
+  ) {
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       itemCount: types.length,
       itemBuilder: (context, index) {
-        final type = types[index] as Map<String, dynamic>;
+        final type = Map<String, dynamic>.from(types[index] as Map);
         final isSelected = _selectedType?['id'] == type['id'];
 
-        final bool levelLocked = playerLevel < (type['required_level'] ?? 1);
-        final bool cashLocked = playerCash < (type['cost'] ?? 0);
-        final bool isLocked = levelLocked || cashLocked;
+        final levelLocked = playerLevel < (type['required_level'] ?? 1);
+        final cashLocked = playerCash < (type['cost'] ?? 0);
+        final isLocked = levelLocked || cashLocked;
 
         return GestureDetector(
           onTap: isLocked ? null : () => setState(() => _selectedType = type),
@@ -77,10 +106,14 @@ class _FactoryTypeSelectionScreenState
             margin: EdgeInsets.only(bottom: 12.h),
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.gold.withValues(alpha: 0.1) : AppColors.cardBg,
+              color: isSelected
+                  ? AppColors.gold.withValues(alpha: 0.1)
+                  : AppColors.cardBg,
               borderRadius: BorderRadius.circular(16.r),
               border: Border.all(
-                color: isSelected ? AppColors.gold : AppColors.border.withValues(alpha: isLocked ? 0.2 : 0.5),
+                color: isSelected
+                    ? AppColors.gold
+                    : AppColors.border.withValues(alpha: isLocked ? 0.2 : 0.5),
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -98,16 +131,28 @@ class _FactoryTypeSelectionScreenState
                         decoration: BoxDecoration(
                           color: AppColors.cardBgLight,
                           borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(color: isSelected ? AppColors.gold : AppColors.border),
+                          border: Border.all(
+                            color: isSelected ? AppColors.gold : AppColors.border,
+                          ),
                         ),
-                        child: CachedAssetImage(fileName: type['icon'] ?? 'factory.webp', fit: BoxFit.contain),
+                        child: CachedAssetImage(
+                          fileName: (type['icon'] ?? 'factory.webp').toString(),
+                          fit: BoxFit.contain,
+                        ),
                       ),
                       if (isLocked)
                         Container(
                           width: 65.w,
                           height: 65.w,
-                          decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(12.r)),
-                          child: Icon(Icons.lock, color: AppColors.gold, size: 24.sp),
+                          decoration: BoxDecoration(
+                            color: Colors.black45,
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(
+                            Icons.lock,
+                            color: AppColors.gold,
+                            size: 24.sp,
+                          ),
                         ),
                     ],
                   ),
@@ -117,23 +162,54 @@ class _FactoryTypeSelectionScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          type['name'] ?? 'Bilinmeyen Fabrika',
-                          style: TextStyle(color: isSelected ? AppColors.gold : Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold),
+                          (type['name'] ?? 'Bilinmeyen Fabrika').toString(),
+                          style: TextStyle(
+                            color: isSelected ? AppColors.gold : Colors.white,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         SizedBox(height: 4.h),
-                        Row(
+                        Wrap(
+                          spacing: 8.w,
+                          runSpacing: 4.h,
                           children: [
-                            _buildDetailChip(Icons.monetization_on, _formatMoney((type['cost'] ?? 0).toDouble()), cashLocked ? AppColors.red : AppColors.gold),
-                            SizedBox(width: 8.w),
-                            _buildDetailChip(Icons.settings, '${type['output_capacity'] ?? 0} Kap.', AppColors.blue),
-                            SizedBox(width: 8.w),
-                            _buildDetailChip(Icons.stars, 'Lv. ${type['required_level'] ?? 1}', levelLocked ? AppColors.red : Colors.blueAccent),
+                            _buildDetailChip(
+                              Icons.monetization_on,
+                              _formatMoney((type['cost'] ?? 0).toDouble()),
+                              cashLocked ? AppColors.red : AppColors.gold,
+                            ),
+                            _buildDetailChip(
+                              Icons.inventory_2_outlined,
+                              '${type['output_capacity'] ?? 0} Kap.',
+                              AppColors.blue,
+                            ),
+                            _buildDetailChip(
+                              Icons.stars,
+                              'Lv. ${type['required_level'] ?? 1}',
+                              levelLocked
+                                  ? AppColors.red
+                                  : Colors.blueAccent,
+                            ),
                           ],
+                        ),
+                        SizedBox(height: 10.h),
+                        TypeProductPreview(
+                          title: 'Uretebilecegi urunler',
+                          products: resolveAcceptedProducts(
+                            parseAcceptedProductIds(type['accepted_product_ids']),
+                            products,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  if (isSelected) Icon(Icons.check_circle, color: AppColors.gold, size: 24.sp),
+                  if (isSelected)
+                    Icon(
+                      Icons.check_circle,
+                      color: AppColors.gold,
+                      size: 24.sp,
+                    ),
                 ],
               ),
             ),
@@ -149,7 +225,10 @@ class _FactoryTypeSelectionScreenState
       children: [
         Icon(icon, color: color, size: 10.sp),
         SizedBox(width: 4.w),
-        Text(label, style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp)),
+        Text(
+          label,
+          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+        ),
       ],
     );
   }
@@ -161,14 +240,16 @@ class _FactoryTypeSelectionScreenState
         color: AppColors.cardBg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-        boxShadow: [BoxShadow(color: Colors.black54, blurRadius: 20, offset: const Offset(0, -5))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black54, blurRadius: 20, offset: Offset(0, -5)),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (_selectedType != null) ...[
             Text(
-              '${widget.selectedCity.name} şehrinde ${_selectedType!['name']} inşa edilecek.',
+              '${widget.selectedCity.name} sehrinde ${_selectedType!['name']} insa edilecek.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
               textAlign: TextAlign.center,
             ),
@@ -178,15 +259,35 @@ class _FactoryTypeSelectionScreenState
             width: double.infinity,
             height: 55.h,
             child: ElevatedButton(
-              onPressed: (_selectedType != null && !_isProcessing) ? _handleEstablish : null,
+              onPressed: (_selectedType != null && !_isProcessing)
+                  ? _handleEstablish
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
-                disabledBackgroundColor: AppColors.gold.withValues(alpha: 0.1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                disabledBackgroundColor:
+                    AppColors.gold.withValues(alpha: 0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
               ),
               child: _isProcessing
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                  : Text('FABRİKAYI İNŞA ET', style: TextStyle(color: _selectedType != null ? Colors.black : Colors.white30, fontSize: 14.sp, fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.black,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'FABRIKAYI INSA ET',
+                      style: TextStyle(
+                        color:
+                            _selectedType != null ? Colors.black : Colors.white30,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -206,16 +307,31 @@ class _FactoryTypeSelectionScreenState
     try {
       final result = await ref.read(factoryActionProvider).createFactory(
         cityId: widget.selectedCity.id,
-        typeId: _selectedType!['id'],
-        name: _selectedType!['name'],
+        typeId: _selectedType!['id'].toString(),
+        name: _selectedType!['name'].toString(),
       );
       if (result['success'] == true) {
+        ref.invalidate(playerProvider);
+        ref.invalidate(factoryListProvider);
+        ref.invalidate(factoryConstructionProvider);
         if (mounted) {
-          AppSnackbar.show(context, title: 'Başarılı', message: 'Fabrika inşaatı başladı!', type: SnackbarType.success);
+          AppSnackbar.show(
+            context,
+            title: 'Basarili',
+            message: 'Fabrika insaati basladi!',
+            type: SnackbarType.success,
+          );
           context.go('/factories');
         }
       } else {
-        if (mounted) AppSnackbar.show(context, title: 'Hata', message: result['message'] ?? 'Islem basarisiz.', type: SnackbarType.error);
+        if (mounted) {
+          AppSnackbar.show(
+            context,
+            title: 'Hata',
+            message: result['message'] ?? 'Islem basarisiz.',
+            type: SnackbarType.error,
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isProcessing = false);

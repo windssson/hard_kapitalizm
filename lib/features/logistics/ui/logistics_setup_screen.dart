@@ -23,7 +23,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final playerAsync = ref.watch(playerStreamProvider);
+    final playerAsync = ref.watch(playerProvider);
     final typesAsync = ref.watch(logisticsCompanyTypesProvider);
     final companyAsync = ref.watch(playerLogisticsCompanyProvider);
     final constructionAsync = ref.watch(playerLogisticsConstructionProvider);
@@ -48,7 +48,13 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                     data: (construction) {
                       if (construction != null) {
                         final params =
-                            construction['params'] as Map<String, dynamic>?;
+                            construction['params'] is Map<String, dynamic>
+                            ? construction['params'] as Map<String, dynamic>
+                            : construction['params'] is Map
+                                ? Map<String, dynamic>.from(
+                                    construction['params'] as Map,
+                                  )
+                                : null;
                         return _buildRedirectState(
                           title:
                               (params?['name'] ?? 'Lojistik Firmasi').toString(),
@@ -95,7 +101,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
     required int playerLevel,
   }) {
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 100.h),
+      padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 100.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -449,13 +455,14 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       final res = await ref.read(logisticsActionProvider).createLogisticsCompany(
             typeId: _selectedType!.id,
             name: _selectedType!.name,
+            syncProviders: false,
           );
       if (!mounted) return;
 
       if (res['success'] == true) {
         ref.invalidate(playerLogisticsCompanyProvider);
         ref.invalidate(playerLogisticsConstructionProvider);
-        ref.invalidate(playerStreamProvider);
+        ref.invalidate(playerProvider);
         AppSnackbar.show(
           context,
           title: 'Basarili',

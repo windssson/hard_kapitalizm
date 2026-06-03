@@ -8,11 +8,7 @@ class GoldFinishButton extends StatelessWidget {
   final int starCost;
   final VoidCallback? onPressed;
 
-  const GoldFinishButton({
-    super.key,
-    required this.starCost,
-    this.onPressed,
-  });
+  const GoldFinishButton({super.key, required this.starCost, this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +21,7 @@ class GoldFinishButton extends StatelessWidget {
           backgroundColor: const Color(0xFFB8860B),
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
             side: BorderSide(
@@ -36,7 +32,7 @@ class GoldFinishButton extends StatelessWidget {
         ),
         icon: Icon(Icons.star_rounded, size: 18.sp, color: AppColors.gold),
         label: Text(
-          '$starCost ⭐ ile Bitir',
+          '$starCost ile Bitir',
           style: TextStyle(
             fontSize: 13.sp,
             fontWeight: FontWeight.bold,

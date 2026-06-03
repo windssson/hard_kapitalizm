@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
-import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/features/achievement/models/achievement_badge_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,11 +19,11 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final int _selectedIndex = 4; // Profil index'i
+  final int _selectedIndex = 4;
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
-    
+
     switch (index) {
       case 0:
         context.go('/home');
@@ -38,7 +39,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final playerAsyncValue = ref.watch(playerStreamProvider);
+    final playerAsyncValue = ref.watch(playerProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -52,12 +53,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: playerAsyncValue.when(
                   data: (player) {
                     if (player == null) {
-                      return Center(child: Text('Kullanıcı bulunamadı', style: AppTextStyles.body));
+                      return Center(
+                        child: Text(
+                          'Kullanici bulunamadi',
+                          style: AppTextStyles.body,
+                        ),
+                      );
                     }
                     return _buildProfileContent(player);
                   },
-                  loading: () => Center(child: CircularProgressIndicator(color: AppColors.gold)),
-                  error: (err, stack) => Center(child: Text('Hata: $err', style: AppTextStyles.body)),
+                  loading: () => Center(
+                    child: CircularProgressIndicator(color: AppColors.gold),
+                  ),
+                  error: (err, stack) => Center(
+                    child: Text('Hata: $err', style: AppTextStyles.body),
+                  ),
                 ),
               ),
             ),
@@ -72,8 +82,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _showAvatarSelectionSheet(BuildContext context, PlayerModel player) {
-    final avatars = ['ae1.webp', 'ae2.webp', 'ae3.webp', 'ak1.webp', 'ak2.webp', 'ak3.webp'];
-    
+    final avatars = [
+      'ae1.webp',
+      'ae2.webp',
+      'ae3.webp',
+      'ak1.webp',
+      'ak2.webp',
+      'ak3.webp',
+    ];
+
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.cardBg,
@@ -86,7 +103,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Avatar Seç', style: AppTextStyles.h2),
+              Text('Avatar Sec', style: AppTextStyles.h2),
               SizedBox(height: 16.h),
               GridView.builder(
                 shrinkWrap: true,
@@ -103,10 +120,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   return GestureDetector(
                     onTap: () async {
                       Navigator.pop(context);
-                      await Supabase.instance.client.rpc(
-                        'set_player_avatar',
-                        params: {'p_avatar_id': avatar},
-                      );
+                      await ref.read(playerActionProvider).setPlayerAvatar(avatar);
                     },
                     child: Container(
                       decoration: BoxDecoration(
@@ -140,8 +154,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       children: [
         Text('Profilim', style: AppTextStyles.h1),
         SizedBox(height: 16.h),
-        
-        // Kimlik Kartı
         Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
@@ -151,12 +163,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [AppColors.gold.withValues(alpha: 0.1), AppColors.cardBg],
+              colors: [
+                AppColors.gold.withValues(alpha: 0.1),
+                AppColors.cardBg,
+              ],
             ),
           ),
           child: Row(
             children: [
-              // Avatar
               GestureDetector(
                 onTap: () => _showAvatarSelectionSheet(context, player),
                 child: Stack(
@@ -174,8 +188,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: CachedAssetImage(
                           fileName: player.avatarId,
                           fit: BoxFit.cover,
-                          placeholder: Icon(Icons.person, color: AppColors.gold, size: 40.sp),
-                          errorWidget: Icon(Icons.person, color: AppColors.gold, size: 40.sp),
+                          placeholder: Icon(
+                            Icons.person,
+                            color: AppColors.gold,
+                            size: 40.sp,
+                          ),
+                          errorWidget: Icon(
+                            Icons.person,
+                            color: AppColors.gold,
+                            size: 40.sp,
+                          ),
                         ),
                       ),
                     ),
@@ -189,14 +211,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: AppColors.gold, width: 1.w),
                         ),
-                        child: Icon(Icons.edit, color: AppColors.gold, size: 12.sp),
+                        child: Icon(
+                          Icons.edit,
+                          color: AppColors.gold,
+                          size: 12.sp,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               SizedBox(width: 16.w),
-              // Bilgiler
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,15 +243,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 4.h,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.navBg,
                             borderRadius: BorderRadius.circular(8.r),
-                            border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.5),
+                            ),
                           ),
                           child: Text(
                             'Seviye ${player.level}',
-                            style: AppTextStyles.titleGold.copyWith(fontSize: 12.sp),
+                            style: AppTextStyles.titleGold.copyWith(
+                              fontSize: 12.sp,
+                            ),
                           ),
                         ),
                         SizedBox(width: 8.w),
@@ -243,20 +275,194 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
         SizedBox(height: 24.h),
-
-        // Ekonomi Özeti
+        Text('Seviye Ilerlemesi', style: AppTextStyles.h2),
+        SizedBox(height: 12.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.navBg,
+                      borderRadius: BorderRadius.circular(999.r),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: Text(
+                      'LV ${player.level}',
+                      style: AppTextStyles.titleGold.copyWith(fontSize: 12.sp),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${player.currentLevelExperience} / ${player.nextLevelRequiredExperience} XP',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999.r),
+                child: LinearProgressIndicator(
+                  value: player.expProgressRatio.clamp(0.0, 1.0),
+                  minHeight: 10.h,
+                  backgroundColor: AppColors.border.withValues(alpha: 0.35),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+                ),
+              ),
+              SizedBox(height: 10.h),
+              Text(
+                'Sonraki seviyeye kalan XP: ${player.remainingExperienceToNextLevel}',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 24.h),
+        Text('Rozetler ve Basarilar', style: AppTextStyles.h2),
+        SizedBox(height: 12.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${player.achievementUnlockedCount} / ${player.achievementTotalCount} rozet acildi',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.go('/achievements'),
+                    child: Text(
+                      'Tumunu Gor',
+                      style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildAchievementStatCard(
+                      label: 'Acilan',
+                      value: player.achievementUnlockedCount.toString(),
+                      color: AppColors.green,
+                      icon: Icons.workspace_premium_rounded,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: _buildAchievementStatCard(
+                      label: 'Kalan',
+                      value:
+                          (player.achievementTotalCount -
+                                  player.achievementUnlockedCount)
+                              .clamp(0, player.achievementTotalCount)
+                              .toString(),
+                      color: AppColors.gold,
+                      icon: Icons.lock_open_rounded,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              if (player.featuredBadges.isEmpty)
+                Text(
+                  'Ilk rozetlerini acmak icin gorevlerini ve buyume adimlarini tamamla.',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12.sp,
+                  ),
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'One Cikan Rozetler',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    SizedBox(
+                      height: 82.h,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: player.featuredBadges.length,
+                        separatorBuilder: (_, __) => SizedBox(width: 10.w),
+                        itemBuilder: (_, index) =>
+                            _buildBadgeChip(player.featuredBadges[index]),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        SizedBox(height: 24.h),
         Text('Finansal Durum', style: AppTextStyles.h2),
         SizedBox(height: 12.h),
         Row(
           children: [
-            _buildStatCard(Icons.attach_money, 'Nakit', player.cash.toString(), AppColors.green),
+            _buildStatCard(
+              Icons.attach_money,
+              'Nakit',
+              player.cash.toString(),
+              AppColors.green,
+            ),
             SizedBox(width: 12.w),
-            _buildStatCard(Icons.star, 'Altın', player.gold.toString(), AppColors.gold),
+            _buildStatCard(
+              Icons.star,
+              'Altin',
+              player.gold.toString(),
+              AppColors.gold,
+            ),
           ],
         ),
         SizedBox(height: 24.h),
-
-        // Çıkış Butonu
         SizedBox(
           width: double.infinity,
           height: 48.h,
@@ -270,8 +476,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             icon: Icon(Icons.logout, color: AppColors.red),
             label: Text(
-              'Hesaptan Çıkış Yap',
-              style: TextStyle(color: AppColors.red, fontSize: 14.sp, fontWeight: FontWeight.bold),
+              'Hesaptan Cikis Yap',
+              style: TextStyle(
+                color: AppColors.red,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             onPressed: () async {
               await Supabase.instance.client.auth.signOut();
@@ -317,5 +527,173 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildBadgeChip(AchievementBadgeModel badge) {
+    final color = _badgeColor(badge.badgeColor);
+
+    return Container(
+      width: 164.w,
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(
+        color: AppColors.navBg,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34.w,
+            height: 34.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withValues(alpha: 0.12),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: Icon(_badgeIcon(badge.badgeKey), color: color, size: 18.sp),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  badge.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  badge.categoryLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementStatCard({
+    required String label,
+    required String value,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 30.w,
+            height: 30.w,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 16.sp),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _badgeIcon(String key) {
+    switch (key) {
+      case 'store':
+        return Icons.storefront_rounded;
+      case 'warehouse':
+        return Icons.warehouse_rounded;
+      case 'factory':
+        return Icons.precision_manufacturing_rounded;
+      case 'field':
+      case 'farm':
+        return Icons.agriculture_rounded;
+      case 'mine':
+        return Icons.landscape_rounded;
+      case 'builder':
+        return Icons.handyman_rounded;
+      case 'trade':
+        return Icons.point_of_sale_rounded;
+      case 'truck':
+        return Icons.local_shipping_rounded;
+      case 'science':
+        return Icons.science_rounded;
+      case 'upgrade':
+        return Icons.trending_up_rounded;
+      case 'crown':
+        return Icons.workspace_premium_rounded;
+      default:
+        return Icons.military_tech_rounded;
+    }
+  }
+
+  Color _badgeColor(String key) {
+    switch (key) {
+      case 'blue':
+        return Colors.lightBlueAccent;
+      case 'red':
+        return Colors.redAccent;
+      case 'green':
+        return Colors.greenAccent;
+      case 'lime':
+        return Colors.lightGreenAccent;
+      case 'slate':
+        return Colors.blueGrey;
+      case 'orange':
+        return Colors.orangeAccent;
+      case 'deepOrange':
+        return Colors.deepOrangeAccent;
+      case 'cyan':
+        return Colors.cyanAccent;
+      case 'purple':
+        return Colors.purpleAccent;
+      case 'teal':
+        return Colors.tealAccent;
+      case 'amber':
+      default:
+        return Colors.amberAccent;
+    }
   }
 }

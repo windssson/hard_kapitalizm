@@ -10,6 +10,8 @@ class FieldTypeDetailModel {
   final int inputCapacity;
   final int outputCapacity;
   final int slotCapacity;
+  final int cost;
+  final int constructionTimeMinutes;
 
   const FieldTypeDetailModel({
     required this.id,
@@ -20,6 +22,8 @@ class FieldTypeDetailModel {
     required this.inputCapacity,
     required this.outputCapacity,
     required this.slotCapacity,
+    required this.cost,
+    required this.constructionTimeMinutes,
   });
 
   factory FieldTypeDetailModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +36,9 @@ class FieldTypeDetailModel {
       inputCapacity: (json['input_capacity'] as num?)?.toInt() ?? 0,
       outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
       slotCapacity: (json['slot_capacity'] as num?)?.toInt() ?? 0,
+      cost: (json['cost'] as num?)?.toInt() ?? 0,
+      constructionTimeMinutes:
+          (json['construction_time_minutes'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -173,6 +180,17 @@ class FieldDetailModel {
       inventories
           .where(
             (e) => e.isInput && _activeInputProductIds.contains(e.productId),
+          )
+          .toList()
+        ..sort((a, b) => a.productId.compareTo(b.productId));
+
+  List<ProductionInventoryModel> get orphanInputInventories =>
+      inventories
+          .where(
+            (e) =>
+                e.isInput &&
+                !_activeInputProductIds.contains(e.productId) &&
+                (e.quantity > 0 || e.pendingQuantity > 0),
           )
           .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));

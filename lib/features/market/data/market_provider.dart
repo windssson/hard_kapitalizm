@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_store_slot_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
@@ -7,9 +8,6 @@ import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart
 import 'package:hard_kapitalizm/features/market/models/market_transfer_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
-
-const _routeMismatchReason =
-    'Aracin rotasi bu sehir ciftini desteklemiyor.';
 
 class MarketVehicleOptionsParams {
   final String? buyerWarehouseId;
@@ -156,35 +154,26 @@ final buyerActiveMarketTransfersProvider =
     });
 
 final marketTransferVehicleOptionsProvider = FutureProvider.family<
-  List<MarketTransferVehicleOptionModel>,
+  TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>,
   MarketVehicleOptionsParams
 >((ref, params) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase.rpc(
-    params.isStoreTarget
-        ? 'get_market_transfer_vehicle_options_for_store'
-        : 'get_market_transfer_vehicle_options',
-    params: params.isStoreTarget
-        ? {
-            'p_store_slot_id': params.buyerStoreSlotId,
-            'p_seller_slot_id': params.sellerSlotId,
-            'p_quantity': params.quantity,
-          }
-        : {
-            'p_buyer_warehouse_id': params.buyerWarehouseId,
-            'p_seller_slot_id': params.sellerSlotId,
-            'p_quantity': params.quantity,
-          },
+  final service = TransferVehicleOptionsService();
+  final response = await service.getOptions(
+    TransferVehicleOptionsRequest(
+      sourceKind: 'market_slot',
+      sourceId: params.sellerSlotId,
+      targetKind: params.isStoreTarget ? 'store_slot' : 'warehouse',
+      targetId: params.isStoreTarget
+          ? params.buyerStoreSlotId!
+          : params.buyerWarehouseId!,
+      quantity: params.quantity,
+    ),
   );
 
-  return (response as List<dynamic>)
-      .map(
-        (json) => MarketTransferVehicleOptionModel.fromJson(
-          json as Map<String, dynamic>,
-        ),
-      )
-      .where((option) => option.disabledReason != _routeMismatchReason)
-      .toList();
+  return mapTransferVehicleOptions(
+    rows: response,
+    mapper: MarketTransferVehicleOptionModel.fromJson,
+  );
 });
 
 class MarketActionNotifier {
@@ -194,6 +183,7 @@ class MarketActionNotifier {
     String? buyerWarehouseId,
     String? buyerStoreSlotId,
     required String sellerSlotId,
+    required String productId,
     required int quantity,
     String? vehicleId,
   }) async {
@@ -203,6 +193,37 @@ class MarketActionNotifier {
     }
 
     try {
+      if (sellerSlotId.startsWith('npc:')) {
+        final isStoreTarget =
+            buyerStoreSlotId != null && buyerStoreSlotId.isNotEmpty;
+        if (!isStoreTarget &&
+            (buyerWarehouseId == null || buyerWarehouseId.isEmpty)) {
+          return {
+            'success': false,
+            'message': 'Alici depo bilgisi bulunamadi.',
+          };
+        }
+
+        final response = await _supabase.rpc(
+          isStoreTarget
+              ? 'buy_npc_market_product_to_store'
+              : 'buy_npc_market_product_to_warehouse',
+          params: isStoreTarget
+              ? {
+                  'p_store_slot_id': buyerStoreSlotId,
+                  'p_product_id': productId,
+                  'p_quantity': quantity,
+                }
+              : {
+                  'p_buyer_warehouse_id': buyerWarehouseId,
+                  'p_product_id': productId,
+                  'p_quantity': quantity,
+                },
+        );
+
+        return Map<String, dynamic>.from(response as Map);
+      }
+
       final response = await _supabase.rpc(
         (buyerStoreSlotId != null && buyerStoreSlotId.isNotEmpty)
             ? 'start_market_to_store_transfer'
@@ -210,15 +231,15 @@ class MarketActionNotifier {
         params: (buyerStoreSlotId != null && buyerStoreSlotId.isNotEmpty)
             ? {
                 'p_store_slot_id': buyerStoreSlotId,
-                'p_seller_slot_id': sellerSlotId,
+                'p_market_listing_id': sellerSlotId,
                 'p_quantity': quantity,
-                'p_vehicle_id': vehicleId,
+                if (vehicleId != null) 'p_vehicle_id': vehicleId,
               }
             : {
                 'p_buyer_warehouse_id': buyerWarehouseId,
                 'p_seller_slot_id': sellerSlotId,
                 'p_quantity': quantity,
-                'p_vehicle_id': vehicleId,
+                if (vehicleId != null) 'p_vehicle_id': vehicleId,
               },
       );
 
@@ -264,6 +285,26 @@ class MarketActionNotifier {
           'p_buyer_player_id': buyerPlayerId ?? user.id,
           'p_limit': limit,
         },
+      );
+
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> finishMarketTransferWithStars(
+    String transferId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'finish_market_transfer_with_stars',
+        params: {'p_transfer_id': transferId},
       );
 
       return Map<String, dynamic>.from(response as Map);

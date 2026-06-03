@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/type_product_preview.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
@@ -29,28 +32,41 @@ class _StoreTypeSelectionScreenState
   @override
   Widget build(BuildContext context) {
     final typesAsync = ref.watch(storeTypesProvider);
-    final playerAsync = ref.watch(playerStreamProvider);
+    final playerAsync = ref.watch(playerProvider);
+    final catalogsAsync = ref.watch(staticCatalogsProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [
-            SecondaryTopBar(title: '${widget.selectedCity.name} - Mağaza Türü'),
+            SecondaryTopBar(title: '${widget.selectedCity.name} - Magaza Turu'),
             Expanded(
               child: playerAsync.when(
-                data: (player) => typesAsync.when(
-                  data: (types) => _buildTypeList(
-                    types,
-                    player?.cash ?? 0,
-                    player?.level ?? 1,
+                data: (player) => catalogsAsync.when(
+                  data: (catalogs) => typesAsync.when(
+                    data: (types) => _buildTypeList(
+                      types,
+                      catalogs.products,
+                      player?.cash ?? 0,
+                      player?.level ?? 1,
+                    ),
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: AppColors.gold),
+                    ),
+                    error: (error, stack) => Center(
+                      child: Text(
+                        'Hata: $error',
+                        style: TextStyle(color: AppColors.red),
+                      ),
+                    ),
                   ),
                   loading: () => const Center(
                     child: CircularProgressIndicator(color: AppColors.gold),
                   ),
                   error: (error, stack) => Center(
                     child: Text(
-                      'Hata: $error',
+                      'Urun katalogu yuklenemedi.',
                       style: TextStyle(color: AppColors.red),
                     ),
                   ),
@@ -60,7 +76,7 @@ class _StoreTypeSelectionScreenState
                 ),
                 error: (error, stack) => Center(
                   child: Text(
-                    'Oyuncu bilgisi alınamadı.',
+                    'Oyuncu bilgisi alinamadi.',
                     style: TextStyle(color: AppColors.red),
                   ),
                 ),
@@ -75,17 +91,18 @@ class _StoreTypeSelectionScreenState
 
   Widget _buildTypeList(
     List<StoreTypeModel> types,
+    List<ProductModel> products,
     double playerCash,
     int playerLevel,
   ) {
     return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 12.h),
       itemCount: types.length,
       itemBuilder: (context, index) {
         final type = types[index];
         final isSelected = _selectedType?.id == type.id;
 
-        // Kilit kontrolü
+        // Kilit kontrolu
         final bool levelLocked = playerLevel < type.requiredLevel;
         final bool cashLocked = playerCash < type.cost;
         final bool isLocked = levelLocked || cashLocked;
@@ -107,115 +124,147 @@ class _StoreTypeSelectionScreenState
             onTap: isLocked ? null : () => setState(() => _selectedType = type),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              margin: EdgeInsets.only(bottom: 12.h),
-              padding: EdgeInsets.all(12.w),
+              margin: EdgeInsets.only(bottom: 10.h),
+              padding: EdgeInsets.all(10.w),
               decoration: AppDecorations.premiumCard(
                 isSelected
                     ? AppColors.gold
                     : (isLocked
-                        ? AppColors.border.withValues(alpha: 0.2)
-                        : AppColors.border.withValues(alpha: 0.5)),
+                          ? AppColors.border.withValues(alpha: 0.2)
+                          : AppColors.border.withValues(alpha: 0.5)),
                 16.r,
               ),
-            child: Opacity(
-              opacity: isLocked ? 0.6 : 1.0,
-              child: Row(
-                children: [
-                  // İkon
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 65.w,
-                        height: 65.w,
-                        padding: EdgeInsets.all(10.w),
-                        decoration: BoxDecoration(
-                          color: AppColors.cardBgLight,
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.gold
-                                : AppColors.border,
-                          ),
-                        ),
-                        child: CachedAssetImage(
-                          fileName: type.icon,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      if (isLocked)
-                        Container(
-                          width: 65.w,
-                          height: 65.w,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Icon(
-                            Icons.lock,
-                            color: AppColors.gold,
-                            size: 24.sp,
-                          ),
-                        ),
-                    ],
-                  ),
-                  SizedBox(width: 16.w),
-                  // Bilgiler
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: Opacity(
+                opacity: isLocked ? 0.6 : 1.0,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          type.name,
-                          style: TextStyle(
-                            color: isSelected ? AppColors.gold : Colors.white,
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        Row(
+                        Stack(
+                          alignment: Alignment.center,
                           children: [
-                            _buildDetailChip(
-                              Icons.monetization_on,
-                              _formatMoney(type.cost.toDouble()),
-                              cashLocked ? AppColors.red : AppColors.gold,
+                            Container(
+                              width: 84.w,
+                              height: 84.w,
+                              padding: EdgeInsets.zero,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.gold
+                                      : AppColors.border,
+                                ),
+                              ),
+                              child: CachedAssetImage(
+                                fileName: type.icon,
+                                width: 84.w,
+                                height: 84.w,
+                                fit: BoxFit.contain,
+                                placeholder: Icon(
+                                  Icons.storefront_rounded,
+                                  color: AppColors.gold.withValues(alpha: 0.7),
+                                  size: 48.sp,
+                                ),
+                                errorWidget: Icon(
+                                  Icons.storefront_rounded,
+                                  color: AppColors.gold,
+                                  size: 48.sp,
+                                ),
+                              ),
                             ),
-                            SizedBox(width: 8.w),
-                            _buildDetailChip(
-                              Icons.stars,
-                              'Lv. ${type.requiredLevel}',
-                              levelLocked ? AppColors.red : Colors.blueAccent,
-                            ),
+                            if (isLocked)
+                              Container(
+                                width: 84.w,
+                                height: 84.w,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                child: Icon(
+                                  Icons.lock,
+                                  color: AppColors.gold,
+                                  size: 24.sp,
+                                ),
+                              ),
                           ],
                         ),
-                        if (isLocked) ...[
-                          SizedBox(height: 4.h),
-                          Text(
-                            levelLocked ? 'Yetersiz Seviye' : 'Yetersiz Para',
-                            style: TextStyle(
-                              color: AppColors.red,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.bold,
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                type.name,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? AppColors.gold
+                                      : Colors.white,
+                                  fontSize: 17.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 6.h),
+                              Wrap(
+                                spacing: 8.w,
+                                runSpacing: 6.h,
+                                children: [
+                                  _buildDetailChip(
+                                    Icons.monetization_on,
+                                    _formatMoney(type.cost.toDouble()),
+                                    cashLocked ? AppColors.red : AppColors.gold,
+                                  ),
+                                  _buildDetailChip(
+                                    Icons.stars,
+                                    'Lv. ${type.requiredLevel}',
+                                    levelLocked
+                                        ? AppColors.red
+                                        : Colors.blueAccent,
+                                  ),
+                                ],
+                              ),
+                              if (isLocked) ...[
+                                SizedBox(height: 5.h),
+                                Text(
+                                  levelLocked
+                                      ? 'Yetersiz Seviye'
+                                      : 'Yetersiz Para',
+                                  style: TextStyle(
+                                    color: AppColors.red,
+                                    fontSize: 10.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (isSelected)
+                          Padding(
+                            padding: EdgeInsets.only(left: 8.w),
+                            child: Icon(
+                              Icons.check_circle,
+                              color: AppColors.gold,
+                              size: 24.sp,
                             ),
                           ),
-                        ],
                       ],
                     ),
-                  ),
-                  if (isSelected)
-                    Icon(
-                      Icons.check_circle,
-                      color: AppColors.gold,
-                      size: 24.sp,
+                    SizedBox(height: 10.h),
+                    TypeProductPreview(
+                      title: 'Satılabilir Ürünler',
+                      products: resolveAcceptedProducts(
+                        type.acceptedProductIds,
+                        products,
+                      ),
                     ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-    },
+        );
+      },
     );
   }
 
@@ -242,7 +291,7 @@ class _StoreTypeSelectionScreenState
         children: [
           if (_selectedType != null) ...[
             Text(
-              '${widget.selectedCity.name} şehrinde ${_selectedType!.name} kurmak üzeresin.',
+              '${widget.selectedCity.name} sehrinde ${_selectedType!.name} kurmak uzeresin.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
               textAlign: TextAlign.center,
             ),
@@ -309,8 +358,9 @@ class _StoreTypeSelectionScreenState
       if (result['success'] == true) {
         if (mounted) {
           // Listeyi yenilemesi için provider'ı invalidate et
-          ref.invalidate(storesListProvider);
-          
+          await ref.read(storesListProvider.notifier).refresh();
+          ref.invalidate(playerProvider);
+
           AppSnackbar.show(
             context,
             title: 'Başarılı',

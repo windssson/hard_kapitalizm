@@ -1,5 +1,10 @@
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
+import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/data/production_product_service.dart';
+import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
@@ -8,14 +13,20 @@ import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 // Fabrika Listesi Provider
 final factoryListProvider =
-    FutureProvider.autoDispose<List<FactoryListItemModel>>((ref) async {
+    FutureProvider<List<FactoryListItemModel>>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
   if (user == null) return const [];
+
+  await processProductionEntry(
+    supabase: supabase,
+    ownerKind: 'factory',
+  );
 
   final response = await supabase.rpc('get_factory_list_items');
   final rows = response as List<dynamic>;
@@ -44,11 +55,11 @@ final factoryListProvider =
 
 // Fabrika Tipleri Provider
 final factoryTypesProvider = FutureProvider<List<dynamic>>((ref) async {
-  final supabase = Supabase.instance.client;
-  return await supabase.rpc('get_factory_types_catalog');
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.factoryTypes;
 });
 
-final factoryConstructionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
+final factoryConstructionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -77,6 +88,12 @@ final factoryDetailProvider = FutureProvider.family<FactoryDetailModel, String>(
   if (user == null) {
     throw Exception('Kullanici girisi yapilmamis.');
   }
+
+  await processProductionEntry(
+    supabase: supabase,
+    ownerKind: 'factory',
+    ownerId: factoryId,
+  );
 
   final response = await supabase.rpc(
     'get_factory_detail_data',
@@ -107,11 +124,66 @@ final factoryDetailProvider = FutureProvider.family<FactoryDetailModel, String>(
   );
 });
 
+final activeFactoryUpgradeProvider =
+    FutureProvider.family<BuildingUpgradeModel?, String>((ref, factoryId) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        return null;
+      }
+
+      final response = await supabase.rpc(
+        'get_player_active_building_upgrade',
+        params: {
+          'p_building_kind': 'factory',
+          'p_entity_id': factoryId,
+        },
+      );
+
+      if (response == null) {
+        return null;
+      }
+
+      return BuildingUpgradeModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    });
+
+final activeFactoryBoostProvider =
+    FutureProvider.family<BuildingBoostModel?, String>((ref, factoryId) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        return null;
+      }
+
+      final response = await supabase.rpc(
+        'get_player_active_building_boost',
+        params: {
+          'p_building_kind': 'factory',
+          'p_entity_id': factoryId,
+        },
+      );
+
+      if (response == null) {
+        return null;
+      }
+
+      return BuildingBoostModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    });
+
 // Fabrika Aksiyonları
 class FactoryActionNotifier {
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   final ProductionLogisticsService _productionLogisticsService =
       ProductionLogisticsService();
+
+  FactoryActionNotifier(this._ref);
 
   Future<Map<String, dynamic>> createFactory({
     required String cityId,
@@ -132,13 +204,18 @@ class FactoryActionNotifier {
           'p_name': name,
         },
       );
+      _ref.invalidate(factoryConstructionProvider);
+      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
+  Future<Map<String, dynamic>> completeConstruction(
+    String constructionId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -150,6 +227,10 @@ class FactoryActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        _ref.invalidate(factoryConstructionProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -158,6 +239,9 @@ class FactoryActionNotifier {
 
   Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId,
+    {
+    bool syncProviders = true,
+  }
   ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -172,6 +256,129 @@ class FactoryActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        _ref.invalidate(factoryConstructionProvider);
+        _ref.invalidate(playerProvider);
+      }
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> startFactoryUpgrade(
+    String factoryId, {
+    bool syncProviders = true,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_building_upgrade',
+        params: {
+          'p_player_id': user.id,
+          'p_building_kind': 'factory',
+          'p_entity_id': factoryId,
+        },
+      );
+      if (syncProviders) {
+        _ref.invalidate(activeFactoryUpgradeProvider(factoryId));
+        _ref.invalidate(factoryDetailProvider(factoryId));
+        _ref.invalidate(playerProvider);
+      }
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'complete_due_building_upgrades',
+        params: {
+          'p_limit': 100,
+        },
+      );
+      _ref.invalidate(factoryListProvider);
+      _ref.invalidate(factoryDetailProvider);
+      _ref.invalidate(playerProvider);
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> finishFactoryUpgradeWithGold(
+    String upgradeId,
+    {
+    bool syncProviders = true,
+  }
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'finish_building_upgrade_with_gold',
+        params: {
+          'p_player_id': user.id,
+          'p_upgrade_id': upgradeId,
+        },
+      );
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        final entityId = responseMap['entity_id']?.toString();
+        if (entityId != null && entityId.isNotEmpty) {
+          _ref.invalidate(factoryDetailProvider(entityId));
+        }
+        _ref.invalidate(playerProvider);
+      }
+      return responseMap;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> startFactoryBoost({
+    required String factoryId,
+    required int durationHours,
+    required int starCost,
+    bool syncProviders = true,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_building_boost',
+        params: {
+          'p_player_id': user.id,
+          'p_building_kind': 'factory',
+          'p_entity_id': factoryId,
+          'p_duration_hours': durationHours,
+          'p_star_cost': starCost,
+        },
+      );
+      if (syncProviders) {
+        _ref.invalidate(activeFactoryBoostProvider(factoryId));
+        _ref.invalidate(factoryDetailProvider(factoryId));
+        _ref.invalidate(playerProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -182,6 +389,7 @@ class FactoryActionNotifier {
     required String factoryId,
     required String productId,
     required int qualityLevel,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -198,6 +406,10 @@ class FactoryActionNotifier {
           'p_quality_level': qualityLevel,
         },
       );
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        _ref.invalidate(factoryDetailProvider(factoryId));
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -207,6 +419,7 @@ class FactoryActionNotifier {
   Future<Map<String, dynamic>> setFactoryActive({
     required String factoryId,
     required bool isActive,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -221,6 +434,10 @@ class FactoryActionNotifier {
           'p_is_active': isActive,
         },
       );
+      if (syncProviders) {
+        _ref.invalidate(factoryListProvider);
+        _ref.invalidate(factoryDetailProvider(factoryId));
+      }
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -333,6 +550,7 @@ class FactoryActionNotifier {
     required String warehouseSlotId,
     required String productionInventoryId,
     required int quantity,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -349,6 +567,9 @@ class FactoryActionNotifier {
           'p_quantity': quantity,
         },
       );
+      if (syncProviders) {
+        _ref.invalidate(factoryDetailProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -359,6 +580,7 @@ class FactoryActionNotifier {
     required String productionInventoryId,
     required String warehouseId,
     required int quantity,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -375,6 +597,9 @@ class FactoryActionNotifier {
           'p_quantity': quantity,
         },
       );
+      if (syncProviders) {
+        _ref.invalidate(factoryDetailProvider);
+      }
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -384,13 +609,34 @@ class FactoryActionNotifier {
   Future<List<ProductionLogisticsWarehouseOption>>
   getWarehousesForProductionLogistics({
     required String productionCityId,
-  }) {
+    required String productId,
+  }) async {
     return _productionLogisticsService.getWarehouseOptions(
       productionCityId: productionCityId,
+      productId: productId,
     );
   }
 
-  Future<List<ProductionLogisticsVehicleOption>>
+  List<String> _parseAcceptedProductIds(dynamic rawValue) {
+    if (rawValue == null) return const [];
+
+    final cleaned = rawValue
+        .toString()
+        .replaceAll('[', '')
+        .replaceAll(']', '')
+        .replaceAll('{', '')
+        .replaceAll('}', '')
+        .replaceAll('"', '')
+        .replaceAll("'", '');
+
+    return cleaned
+        .split(',')
+        .map((e) => e.trim().toUpperCase())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
   getProductionInputTransferVehicleOptions({
     required String warehouseSlotId,
     required String productionInventoryId,
@@ -403,7 +649,7 @@ class FactoryActionNotifier {
     );
   }
 
-  Future<List<ProductionLogisticsVehicleOption>>
+  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
   getProductionOutputTransferVehicleOptions({
     required String productionInventoryId,
     required String buyerWarehouseId,
@@ -422,13 +668,19 @@ class FactoryActionNotifier {
     required String productionInventoryId,
     required int quantity,
     String? vehicleId,
-  }) {
-    return _productionLogisticsService.startWarehouseToProductionTransfer(
+    bool syncProviders = true,
+  }) async {
+    final result = await _productionLogisticsService.startWarehouseToProductionTransfer(
       warehouseSlotId: warehouseSlotId,
       productionInventoryId: productionInventoryId,
       quantity: quantity,
       vehicleId: vehicleId,
     );
+    if (syncProviders) {
+      _ref.invalidate(factoryDetailProvider);
+      _ref.invalidate(playerProvider);
+    }
+    return result;
   }
 
   Future<ProductionLogisticsStartResult> startProductionToWarehouseTransfer({
@@ -436,14 +688,20 @@ class FactoryActionNotifier {
     required String buyerWarehouseId,
     required int quantity,
     String? vehicleId,
-  }) {
-    return _productionLogisticsService.startProductionToWarehouseTransfer(
+    bool syncProviders = true,
+  }) async {
+    final result = await _productionLogisticsService.startProductionToWarehouseTransfer(
       productionInventoryId: productionInventoryId,
       buyerWarehouseId: buyerWarehouseId,
       quantity: quantity,
       vehicleId: vehicleId,
     );
+    if (syncProviders) {
+      _ref.invalidate(factoryDetailProvider);
+      _ref.invalidate(playerProvider);
+    }
+    return result;
   }
 }
 
-final factoryActionProvider = Provider((ref) => FactoryActionNotifier());
+final factoryActionProvider = Provider((ref) => FactoryActionNotifier(ref));

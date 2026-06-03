@@ -1,137 +1,41 @@
-import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
+import 'package:hard_kapitalizm/features/store/models/store_detail_page_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_history_item_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_performance_model.dart';
-import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-const _routeMismatchReason =
-    'Aracin rotasi bu sehir ciftini desteklemiyor.';
+final storeHistoryDirtyProvider = StateProvider.family<bool, String>(
+  (ref, storeId) => false,
+);
 
-final storesListProvider = FutureProvider<List<StoreModel>>((ref) async {
+final storePerformanceDirtyProvider = StateProvider.family<bool, String>(
+  (ref, storeId) => false,
+);
+
+Future<List<StoreModel>> _fetchStoresList() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
   if (user == null) return [];
 
   try {
-    final results = await Future.wait([
-      supabase.rpc(
-        'get_stores_list',
-        params: {'p_player_id': user.id},
-      ),
-      supabase.rpc(
-        'get_player_building_constructions',
-        params: {
-          'p_building_kind': 'store',
-          'p_status': 'in_progress',
-        },
-      ),
-    ]);
-    final response = results[0];
-    final constructionResponse = results[1] as List<dynamic>;
-
-    List<StoreModel> allStores = [];
-
-    if (response != null && response['success'] == true) {
-      final storesJson = response['stores'] as List<dynamic>;
-      allStores = storesJson
-          .map((json) => StoreModel.fromJson(json))
-          .toList();
-    }
-
-    if (constructionResponse.isNotEmpty) {
-      final catalogResults = await Future.wait([
-        supabase.rpc('get_store_types_catalog'),
-        supabase.rpc('get_cities_catalog'),
-      ]);
-      final allTypes = (catalogResults[0] as List)
-          .map((json) => StoreTypeModel.fromJson(json))
-          .toList();
-      final allCities = (catalogResults[1] as List)
-          .map((json) => CityModel.fromJson(json))
-          .toList();
-
-      for (final constr in constructionResponse) {
-        final params = constr['params'] as Map<String, dynamic>;
-        final storeTypeId = params['store_type_id'] as String?;
-        final cityId = params['city_id'] as String?;
-
-        final type = allTypes.firstWhere(
-          (t) => t.id == storeTypeId,
-          orElse: () => StoreTypeModel(
-            id: 'unknown',
-            name: 'Bilinmeyen',
-            icon: 'default.webp',
-          ),
-        );
-
-        final city = allCities.firstWhere(
-          (c) => c.id == cityId,
-          orElse: () => CityModel(
-            id: '',
-            name: 'Bilinmeyen Sehir',
-            population: 0,
-            taxRate: 0.0,
-            mapPositionX: 0,
-            mapPositionY: 0,
-            isActive: true,
-          ),
-        );
-
-        final startedAt = DateTime.parse(constr['started_at'] as String);
-        final finishAt = DateTime.parse(constr['finish_at'] as String);
-        final now = DateTime.now();
-
-        final totalDuration = finishAt.difference(startedAt).inSeconds;
-        final elapsed = now.difference(startedAt).inSeconds;
-        final progress = totalDuration > 0
-            ? (elapsed / totalDuration).clamp(0.0, 1.0)
-            : 0.0;
-
-        allStores.add(
-          StoreModel(
-            id: constr['id'] as String,
-            name: params['name'] as String? ?? type.name,
-            cityId: cityId,
-            cityName: city.name,
-            level: 1,
-            isActive: false,
-            currentSlotCount: 0,
-            maxSlotCount: params['max_slot_count'] as int? ?? 0,
-            slotCapacity: params['slot_capacity'] as int? ?? 0,
-            storeType: type,
-            summary: StoreSummaryModel(
-              totalQuantity: 0,
-              totalCapacity: params['slot_capacity'] as int? ?? 0,
-              pendingQuantity: 0,
-              availableCapacity: params['slot_capacity'] as int? ?? 0,
-              usedCapacityRatio: 0.0,
-            ),
-            slots: const [],
-            isUnderConstruction: true,
-            startedAt: startedAt,
-            finishAt: finishAt,
-            constructionProgress: progress,
-          ),
-        );
-      }
-    }
-
-    return allStores;
+    final response = await supabase.rpc('get_store_list_page_data');
+    final storesJson = (response['stores'] as List<dynamic>? ?? const []);
+    return storesJson
+        .map((json) => StoreModel.fromJson(Map<String, dynamic>.from(json as Map)))
+        .toList();
   } catch (e) {
     return [];
   }
-});
+}
 
-final storeDetailProvider = FutureProvider.family<StoreModel, String>((
-  ref,
-  storeId,
-) async {
+Future<StoreDetailPageModel> _fetchStoreDetailPage(String storeId) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -140,21 +44,319 @@ final storeDetailProvider = FutureProvider.family<StoreModel, String>((
   }
 
   final response = await supabase.rpc(
-    'get_store_detail',
+    'open_store_detail_page',
     params: {
-      'p_player_id': user.id,
       'p_store_id': storeId,
     },
   );
 
-  if (response['success'] == true) {
-    return StoreModel.fromJson(response['store']);
+  final json = Map<String, dynamic>.from(response as Map);
+  if (json['success'] != true) {
+    throw Exception(
+      json['message'] ?? 'Magaza detay sayfasi acilirken hata olustu.',
+    );
   }
 
-  throw Exception(
-    response['message'] ?? 'Magaza detaylari alinirken hata olustu.',
-  );
-});
+  return StoreDetailPageModel.fromJson(json);
+}
+
+class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
+  @override
+  Future<List<StoreModel>> build() => _fetchStoresList();
+
+  Future<List<StoreModel>> refresh() async {
+    final stores = await _fetchStoresList();
+    state = AsyncData(stores);
+    return stores;
+  }
+
+  void replaceStore(StoreModel store) {
+    final current = state.value;
+    if (current == null) return;
+
+    final index = current.indexWhere((item) => item.id == store.id);
+    if (index < 0) return;
+
+    final next = [...current];
+    next[index] = store;
+    state = AsyncData(next);
+  }
+
+  void patchStoreActive({
+    required String storeId,
+    required bool isActive,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final storeIndex = current.indexWhere((item) => item.id == storeId);
+    if (storeIndex < 0) return;
+
+    final next = [...current];
+    next[storeIndex] = next[storeIndex].copyWith(isActive: isActive);
+    state = AsyncData(next);
+  }
+
+  void removeStore(String storeId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((item) => item.id != storeId).toList());
+  }
+
+  void patchSlotActive({
+    required String storeId,
+    required String slotId,
+    required bool isActive,
+  }) {
+    _patchStoreSlot(
+      storeId: storeId,
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(isActive: isActive),
+    );
+  }
+
+  void patchSlotPrice({
+    required String storeId,
+    required String slotId,
+    required double price,
+  }) {
+    _patchStoreSlot(
+      storeId: storeId,
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(price: price),
+    );
+  }
+
+  void patchSlotCleared({
+    required String storeId,
+    required String slotId,
+  }) {
+    _patchStoreSlot(
+      storeId: storeId,
+      slotId: slotId,
+      patcher: (slot) => StoreSlotModel(
+        id: slot.id,
+        storeId: slot.storeId,
+        slotIndex: slot.slotIndex,
+        productId: null,
+        productName: null,
+        productIcon: null,
+        quantity: slot.quantity,
+        pendingQuantity: slot.pendingQuantity,
+        qualityLevel: 0,
+        price: 0,
+        cost: 0,
+        capacity: slot.capacity,
+        boostMultiplier: slot.boostMultiplier,
+        pendingSale: 0,
+        isActive: slot.isActive,
+        isEmpty: true,
+        usedCapacityRatio: slot.usedCapacityRatio,
+        product: null,
+      ),
+    );
+  }
+
+  void patchSlotProduct({
+    required String storeId,
+    required String slotId,
+    required String productId,
+    required int qualityLevel,
+    String? productName,
+    String? productIcon,
+  }) {
+    _patchStoreSlot(
+      storeId: storeId,
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(
+        productId: productId,
+        productName: productName ?? slot.productName,
+        productIcon: productIcon ?? slot.productIcon,
+        qualityLevel: qualityLevel,
+        isEmpty: false,
+      ),
+    );
+  }
+
+  void _patchStoreSlot({
+    required String storeId,
+    required String slotId,
+    required StoreSlotModel Function(StoreSlotModel slot) patcher,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final storeIndex = current.indexWhere((item) => item.id == storeId);
+    if (storeIndex < 0) return;
+
+    final store = current[storeIndex];
+    final slots = store.slots
+        .map((slot) => slot.id == slotId ? patcher(slot) : slot)
+        .toList();
+
+    final next = [...current];
+    next[storeIndex] = store.copyWith(slots: slots);
+    state = AsyncData(next);
+  }
+}
+
+final storesListProvider =
+    AsyncNotifierProvider<StoresListNotifier, List<StoreModel>>(
+      StoresListNotifier.new,
+    );
+
+class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
+  StoreDetailPageNotifier(this._storeId);
+
+  final String _storeId;
+
+  @override
+  Future<StoreDetailPageModel> build() => _fetchStoreDetailPage(_storeId);
+
+  Future<StoreDetailPageModel> refresh() async {
+    final page = await _fetchStoreDetailPage(_storeId);
+    state = AsyncData(page);
+    return page;
+  }
+
+  void replacePage(StoreDetailPageModel page) {
+    state = AsyncData(page);
+  }
+
+  void patchStoreActive(bool isActive) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(store: current.store.copyWith(isActive: isActive)),
+    );
+  }
+
+  void clearSaleResult() {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      StoreDetailPageModel(
+        success: current.success,
+        store: current.store,
+        activeBoost: current.activeBoost,
+        activeUpgrade: current.activeUpgrade,
+        saleResult: null,
+        changed: current.changed,
+      ),
+    );
+  }
+
+  void patchSlotActive({
+    required String slotId,
+    required bool isActive,
+  }) {
+    _patchStoreSlot(
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(isActive: isActive),
+    );
+  }
+
+  void patchSlotPrice({
+    required String slotId,
+    required double price,
+  }) {
+    _patchStoreSlot(
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(price: price),
+    );
+  }
+
+  void patchSlotCleared({
+    required String slotId,
+  }) {
+    _patchStoreSlot(
+      slotId: slotId,
+      patcher: (slot) => StoreSlotModel(
+        id: slot.id,
+        storeId: slot.storeId,
+        slotIndex: slot.slotIndex,
+        productId: null,
+        productName: null,
+        productIcon: null,
+        quantity: slot.quantity,
+        pendingQuantity: slot.pendingQuantity,
+        qualityLevel: 0,
+        price: 0,
+        cost: 0,
+        capacity: slot.capacity,
+        boostMultiplier: slot.boostMultiplier,
+        pendingSale: 0,
+        isActive: slot.isActive,
+        isEmpty: true,
+        usedCapacityRatio: slot.usedCapacityRatio,
+        product: null,
+      ),
+    );
+  }
+
+  void patchSlotProduct({
+    required String slotId,
+    required String productId,
+    required int qualityLevel,
+    String? productName,
+    String? productIcon,
+  }) {
+    _patchStoreSlot(
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(
+        productId: productId,
+        productName: productName ?? slot.productName,
+        productIcon: productIcon ?? slot.productIcon,
+        qualityLevel: qualityLevel,
+        isEmpty: false,
+      ),
+    );
+  }
+
+  void markHistoryDirty([bool value = true]) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        changed: current.changed.copyWith(historyDirty: value),
+      ),
+    );
+  }
+
+  void markPerformanceDirty([bool value = true]) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        changed: current.changed.copyWith(performanceDirty: value),
+      ),
+    );
+  }
+
+  void _patchStoreSlot({
+    required String slotId,
+    required StoreSlotModel Function(StoreSlotModel slot) patcher,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final slots = current.store.slots
+        .map((slot) => slot.id == slotId ? patcher(slot) : slot)
+        .toList();
+
+    state = AsyncData(
+      current.copyWith(
+        store: current.store.copyWith(slots: slots),
+      ),
+    );
+  }
+}
+
+final storeDetailPageProvider = AsyncNotifierProvider.family<
+    StoreDetailPageNotifier,
+    StoreDetailPageModel,
+    String
+  >(StoreDetailPageNotifier.new);
 
 final storePerformanceProvider =
     FutureProvider.family<StorePerformanceResponseModel, String>((
@@ -222,76 +424,20 @@ final storeHistoryProvider =
       }).toList();
     });
 
-final activeStoreUpgradeProvider =
-    FutureProvider.family<BuildingUpgradeModel?, String>((ref, storeId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-
-      if (user == null) {
-        return null;
-      }
-
-      final response = await supabase.rpc(
-        'get_player_active_building_upgrade',
-        params: {
-          'p_building_kind': 'store',
-          'p_entity_id': storeId,
-        },
-      );
-
-      if (response == null) {
-        return null;
-      }
-
-      return BuildingUpgradeModel.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
-
-final activeStoreBoostProvider =
-    FutureProvider.family<BuildingBoostModel?, String>((ref, storeId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-
-      if (user == null) {
-        return null;
-      }
-
-      final response = await supabase.rpc(
-        'get_player_active_building_boost',
-        params: {
-          'p_building_kind': 'store',
-          'p_entity_id': storeId,
-        },
-      );
-
-      if (response == null) {
-        return null;
-      }
-
-      return BuildingBoostModel.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
-
 final citiesProvider = FutureProvider<List<CityModel>>((ref) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase.rpc('get_active_cities');
-
-  return (response as List).map((json) => CityModel.fromJson(json)).toList();
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.cities;
 });
 
 final storeTypesProvider = FutureProvider<List<StoreTypeModel>>((ref) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase.rpc('get_store_types_catalog');
-
-  return (response as List)
-      .map((json) => StoreTypeModel.fromJson(json))
-      .toList();
+  final catalogs = await ref.watch(staticCatalogsProvider.future);
+  return catalogs.storeTypes;
 });
 
 class StoreActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final TransferVehicleOptionsService _vehicleOptionsService =
+      TransferVehicleOptionsService();
 
   Future<Map<String, dynamic>> createStore({
     required String cityId,
@@ -580,6 +726,52 @@ class StoreActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> setStoreActive({
+    required String storeId,
+    required bool isActive,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_store_active',
+        params: {
+          'p_store_id': storeId,
+          'p_is_active': isActive,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> sellStore({
+    required String storeId,
+    required bool confirm,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'sell_store',
+        params: {
+          'p_store_id': storeId,
+          'p_confirm': confirm,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> getEligibleWarehousesForStock({
     required String productId,
     String? cityId,
@@ -651,28 +843,26 @@ class StoreActionNotifier {
     }
   }
 
-  Future<List<MarketTransferVehicleOptionModel>> getStoreTransferVehicleOptions({
+  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
+      getStoreTransferVehicleOptions({
     required String storeSlotId,
     required String warehouseSlotId,
     required int quantity,
   }) async {
-    final response = await _supabase.rpc(
-      'get_store_transfer_vehicle_options',
-      params: {
-        'p_store_slot_id': storeSlotId,
-        'p_warehouse_slot_id': warehouseSlotId,
-        'p_quantity': quantity,
-      },
+    final response = await _vehicleOptionsService.getOptions(
+      TransferVehicleOptionsRequest(
+        sourceKind: 'warehouse_slot',
+        sourceId: warehouseSlotId,
+        targetKind: 'store_slot',
+        targetId: storeSlotId,
+        quantity: quantity,
+      ),
     );
 
-    return (response as List<dynamic>)
-        .map(
-          (json) => MarketTransferVehicleOptionModel.fromJson(
-            json as Map<String, dynamic>,
-          ),
-        )
-        .where((option) => option.disabledReason != _routeMismatchReason)
-        .toList();
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: MarketTransferVehicleOptionModel.fromJson,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getPlayerWarehouses() async {
@@ -717,29 +907,26 @@ class StoreActionNotifier {
     }
   }
 
-  Future<List<MarketTransferVehicleOptionModel>>
+  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
       getStoreToWarehouseVehicleOptions({
     required String storeSlotId,
     required String warehouseId,
     required int quantity,
   }) async {
-    final response = await _supabase.rpc(
-      'get_store_to_warehouse_vehicle_options',
-      params: {
-        'p_store_slot_id': storeSlotId,
-        'p_buyer_warehouse_id': warehouseId,
-        'p_quantity': quantity,
-      },
+    final response = await _vehicleOptionsService.getOptions(
+      TransferVehicleOptionsRequest(
+        sourceKind: 'store_slot',
+        sourceId: storeSlotId,
+        targetKind: 'warehouse',
+        targetId: warehouseId,
+        quantity: quantity,
+      ),
     );
 
-    return (response as List<dynamic>)
-        .map(
-          (json) => MarketTransferVehicleOptionModel.fromJson(
-            json as Map<String, dynamic>,
-          ),
-        )
-        .where((option) => option.disabledReason != _routeMismatchReason)
-        .toList();
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: MarketTransferVehicleOptionModel.fromJson,
+    );
   }
 
   Future<Map<String, dynamic>> startStoreToWarehouseTransfer({
@@ -769,50 +956,6 @@ class StoreActionNotifier {
     }
   }
 
-  Future<StoreSaleResultModel> processStoreSalesOnEntry(String storeId) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return const StoreSaleResultModel(
-        success: false,
-        processed: false,
-        message: 'Oturum acilmamis.',
-        processedAt: null,
-        elapsedMinutes: 0,
-        totalRevenue: 0,
-        totalProfit: 0,
-        totalSoldQuantity: 0,
-        completedBoostCount: 0,
-        items: [],
-      );
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'process_store_sales_on_entry',
-        params: {
-          'p_player_id': user.id,
-          'p_store_id': storeId,
-        },
-      );
-
-      return StoreSaleResultModel.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
-    } catch (e) {
-      return StoreSaleResultModel(
-        success: false,
-        processed: false,
-        message: e.toString(),
-        processedAt: null,
-        elapsedMinutes: 0,
-        totalRevenue: 0,
-        totalProfit: 0,
-        totalSoldQuantity: 0,
-        completedBoostCount: 0,
-        items: const [],
-      );
-    }
-  }
 }
 
 final storeActionProvider = Provider((ref) => StoreActionNotifier());

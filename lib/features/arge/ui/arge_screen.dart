@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
-import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/arge/data/arge_provider.dart';
+import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_product_model.dart';
 import 'package:hard_kapitalizm/features/arge/ui/widgets/live_active_research_card.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -25,12 +28,13 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   String _searchQuery = '';
   String _selectedUnit = 'TUMU';
   bool _isUpgrading = false;
+  bool _isCenterSubmitting = false;
 
   static const _unitFilters = [
-    ('TUMU', 'Tümü'),
+    ('TUMU', 'Tumu'),
     ('FABRIKA', 'Fabrika'),
     ('TARLA', 'Tarla'),
-    ('CIFTLIK', 'Çiftlik'),
+    ('CIFTLIK', 'Ciftlik'),
     ('MADEN', 'Maden'),
   ];
 
@@ -63,26 +67,63 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }
 
   Future<void> _refresh() async {
+    await ref.read(argeActionProvider).completeDueBuildingUpgrades();
+    if (!mounted) return;
+    _refreshCenterEcosystem();
+  }
+
+  void _refreshCenterEcosystem([String? centerId]) {
     ref.invalidate(argeProductsProvider);
+    ref.invalidate(playerArgeCenterProvider);
+    ref.invalidate(playerArgeConstructionProvider);
+    ref.invalidate(activeArgeResearchesProvider);
+    ref.invalidate(activeArgeResearchProvider);
+    ref.invalidate(playerProvider);
+    if (centerId != null && centerId.isNotEmpty) {
+      ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
+    }
   }
 
   List<ArgeProductModel> _filter(List<ArgeProductModel> products) {
-    return products.where((p) {
+    return products.where((product) {
       final matchesSearch = _searchQuery.isEmpty ||
-          p.urunAdi.toLowerCase().contains(_searchQuery);
+          product.urunAdi.toLowerCase().contains(_searchQuery);
       final matchesUnit =
-          _selectedUnit == 'TUMU' || p.uretimBirimi == _selectedUnit;
+          _selectedUnit == 'TUMU' || product.uretimBirimi == _selectedUnit;
       return matchesSearch && matchesUnit;
     }).toList();
   }
 
-  // ──────────────────────────────────────────────────────── BUILD ─────────────
-
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<ArgeResearchModel?>>(
+      activeArgeResearchProvider,
+      (previous, next) {
+        final research = next.value;
+        if (research != null && research.isDone) {
+          ref.read(argeActionProvider).completeResearch(research.id);
+        }
+      },
+    );
+
+    final centerAsync = ref.watch(playerArgeCenterProvider);
+    final centerId = centerAsync.value?.id ?? '';
+
+    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
+      activeArgeCenterUpgradeProvider(centerId),
+      (previous, next) {
+        final upgrade = next.value;
+        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
+          ref.read(argeActionProvider).completeDueBuildingUpgrades();
+        }
+      },
+    );
+
     final productsAsync = ref.watch(argeProductsProvider);
-    final researchAsync = ref.watch(activeArgeResearchProvider);
-    final player = ref.watch(playerStreamProvider).value;
+    final researchesAsync = ref.watch(activeArgeResearchesProvider);
+    final playerAsync = ref.watch(playerProvider);
+    final constructionAsync = ref.watch(playerArgeConstructionProvider);
+    final player = playerAsync.value;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -95,72 +136,135 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           children: [
             const SecondaryTopBar(title: 'AR-GE Merkezi'),
             Expanded(
-              child: productsAsync.when(
+              child: centerAsync.when(
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.gold),
                 ),
-                error: (e, _) => _buildError(e),
-                data: (products) => RefreshIndicator(
-                  onRefresh: _refresh,
-                  color: AppColors.gold,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      // Stats banner
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
-                          child: _buildStatsBanner(products, player),
-                        ),
+                error: (error, _) => _buildError(error),
+                data: (center) {
+                  if (center == null) {
+                    return constructionAsync.when(
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(color: AppColors.gold),
                       ),
+                      error: (error, _) => _buildError(error),
+                      data: (construction) {
+                        if (construction != null) {
+                          return _buildConstructionState(construction);
+                        }
 
-                      // Active research card
-                      SliverToBoxAdapter(
-                        child: researchAsync.when(
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (research) => research == null
-                              ? const SizedBox.shrink()
-                              : Padding(
-                                  padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
-                                  child: LiveActiveResearchCard(
-                                    research: research,
-                                    isUpgrading: _isUpgrading,
-                                    onCollect: _onCollect,
-                                    onFinishWithGold: _onFinishWithGold,
-                                  ),
-                                ),
-                        ),
-                      ),
+                        return playerAsync.when(
+                          loading: () => const Center(
+                            child: CircularProgressIndicator(color: AppColors.gold),
+                          ),
+                          error: (error, _) => _buildError(error),
+                          data: (player) => _buildSetupState(player),
+                        );
+                      },
+                    );
+                  }
 
-                      // Search bar
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
-                          child: _buildSearchBar(),
-                        ),
-                      ),
+                  final activeUpgradeAsync = ref.watch(
+                    activeArgeCenterUpgradeProvider(center.id),
+                  );
 
-                      // Unit filter chips
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: EdgeInsets.fromLTRB(0, 10.h, 0, 0),
-                          child: _buildUnitFilters(),
-                        ),
+                  return productsAsync.when(
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(color: AppColors.gold),
+                    ),
+                    error: (error, _) => _buildError(error),
+                    data: (products) => RefreshIndicator(
+                      onRefresh: _refresh,
+                      color: AppColors.gold,
+                      child: CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                              child: _buildStatsBanner(center),
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: _buildCenterActions(
+                              center,
+                              activeUpgradeAsync.value,
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: activeUpgradeAsync.when(
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, _) => const SizedBox.shrink(),
+                              data: (upgrade) => upgrade == null
+                                  ? const SizedBox.shrink()
+                                  : Padding(
+                                      padding:
+                                          EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                                      child: _ActiveArgeUpgradeCard(
+                                        upgrade: upgrade,
+                                        onFinishWithGold: () =>
+                                            _finishCenterUpgradeWithGold(upgrade),
+                                        calculateStarCost:
+                                            _calculateUpgradeStarCost,
+                                        formatCountdown: _formatCountdown,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: researchesAsync.when(
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, _) => const SizedBox.shrink(),
+                              data: (researches) => researches.isEmpty
+                                  ? const SizedBox.shrink()
+                                  : Padding(
+                                      padding:
+                                          EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                                      child: Column(
+                                        children: [
+                                          for (final research in researches) ...[
+                                            LiveActiveResearchCard(
+                                              research: research,
+                                              isUpgrading: _isUpgrading,
+                                              onCollect: _onCollect,
+                                              onFinishWithGold: _onFinishWithGold,
+                                            ),
+                                            if (research != researches.last)
+                                              SizedBox(height: 10.h),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                              child: _buildSearchBar(),
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 0),
+                              child: _buildUnitFilters(),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 24.h),
+                            sliver: _buildProductGrid(
+                              context,
+                              _filter(products),
+                              player?.level ?? 1,
+                              (player?.cash ?? 0).toDouble(),
+                              researchesAsync.value?.length ?? 0,
+                              center.maxConcurrentResearches,
+                            ),
+                          ),
+                        ],
                       ),
-
-                      // Product grid
-                      SliverPadding(
-                        padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 24.h),
-                        sliver: _buildProductGrid(
-                          _filter(products),
-                          player,
-                          researchAsync.value,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -169,16 +273,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     );
   }
 
-  // ─── Stats Banner ────────────────────────────────────────────────────────────
-
-  Widget _buildStatsBanner(
-    List<ArgeProductModel> products,
-    dynamic player,
-  ) {
-    final upgraded = products.where((p) => p.currentQualityLevel > 1).length;
-    final maxed = products.where((p) => p.isMaxQuality).length;
-    final cash = double.tryParse(player?.cash?.toString() ?? '0') ?? 0;
-
+  Widget _buildStatsBanner(ArgeCenterModel center) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
       decoration: BoxDecoration(
@@ -196,24 +291,115 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       ),
       child: Row(
         children: [
-          _buildStatItem(Icons.science, AppColors.blue, 'Geliştirilen',
-              '$upgraded ürün', Colors.white),
-          Container(
-            width: 1.w,
-            height: 36.h,
-            color: AppColors.border.withValues(alpha: 0.5),
+          _buildStatItem(
+            Icons.apartment_rounded,
+            AppColors.blue,
+            center.name,
+            'Lv.${center.level}',
+            Colors.white,
           ),
-          _buildStatItem(Icons.star, AppColors.gold, 'Max Seviye',
-              '$maxed ürün', AppColors.goldLight),
-          Container(
-            width: 1.w,
-            height: 36.h,
-            color: AppColors.border.withValues(alpha: 0.5),
+          _buildDivider(),
+          _buildStatItem(
+            Icons.star,
+            AppColors.gold,
+            'Arastirma Slotu',
+            '${center.maxConcurrentResearches} eszamanli',
+            AppColors.goldLight,
           ),
-          _buildStatItem(Icons.account_balance_wallet, AppColors.green,
-              'Bakiye', _formatMoney(cash), AppColors.green),
+          _buildDivider(),
+          _buildStatItem(
+            Icons.bolt_rounded,
+            AppColors.green,
+            'Sure Bonusu',
+            '%${center.durationReductionPct.toStringAsFixed(0)}',
+            AppColors.green,
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCenterActions(
+    ArgeCenterModel center,
+    BuildingUpgradeModel? activeUpgrade,
+  ) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+              decoration: BoxDecoration(
+                color: AppColors.cardBg,
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.inventory_2_outlined, color: AppColors.blue, size: 16.sp),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      'Arastirma slotu: ${_slotPreviewText(center, activeUpgrade)}',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(width: 10.w),
+          FilledButton.icon(
+            onPressed: (_isCenterSubmitting || activeUpgrade != null)
+                ? null
+                : () => _showCenterUpgradeSheet(center),
+            icon: Icon(Icons.upgrade_rounded, size: 16.sp),
+            label: Text(
+              activeUpgrade != null ? 'Yukseliyor' : 'Yukselt',
+              style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black,
+              disabledBackgroundColor: AppColors.cardBgLight,
+              disabledForegroundColor: AppColors.textMuted,
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _slotPreviewText(
+    ArgeCenterModel center,
+    BuildingUpgradeModel? activeUpgrade,
+  ) {
+    if (activeUpgrade == null) {
+      return center.maxConcurrentResearches.toString();
+    }
+
+    final nextSlots =
+        (activeUpgrade.params['next_concurrent_researches'] as num?)?.toInt() ??
+            center.maxConcurrentResearches;
+    return '${center.maxConcurrentResearches} -> $nextSlots';
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      width: 1.w,
+      height: 36.h,
+      color: AppColors.border.withValues(alpha: 0.5),
     );
   }
 
@@ -228,7 +414,6 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 6.w),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: EdgeInsets.all(7.w),
@@ -244,359 +429,85 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(label,
-                      style:
-                          TextStyle(color: AppColors.textMuted, fontSize: 9.sp)),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 9.sp,
+                    ),
+                  ),
                   SizedBox(height: 2.h),
-                  Text(value,
-                      style: TextStyle(
-                          color: valueColor,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─── Active Research Card ─────────────────────────────────────────────────
-
-  Widget _buildActiveResearchCard(ArgeResearchModel research) {
-    final remaining = research.remaining;
-    final isDone = research.isDone;
-    final goldCost = research.goldCostToFinish;
-
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF0A1A3A),
-            AppColors.cardBgLight.withValues(alpha: 0.7),
-          ],
-        ),
-        border: Border.all(
-          color: isDone
-              ? AppColors.green.withValues(alpha: 0.7)
-              : AppColors.blue.withValues(alpha: 0.5),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isDone ? AppColors.green : AppColors.blue)
-                .withValues(alpha: 0.12),
-            blurRadius: 12,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: AppColors.blue.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.science, color: AppColors.blue, size: 18.sp),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Araştırma Devam Ediyor',
-                      style: TextStyle(
-                        color: AppColors.blue,
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
-                      ),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      color: valueColor,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      research.productName,
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildQualityBadge(research.currentQuality, research.targetQuality),
-            ],
-          ),
-          SizedBox(height: 12.h),
-
-          // Progress bar
-          _buildResearchProgressBar(research),
-          SizedBox(height: 12.h),
-
-          // Timer row
-          Row(
-            children: [
-              Icon(
-                isDone ? Icons.check_circle : Icons.access_time,
-                color: isDone ? AppColors.green : AppColors.textSecondary,
-                size: 14.sp,
-              ),
-              SizedBox(width: 6.w),
-              Text(
-                isDone
-                    ? 'Tamamlandı! Alabilirsin.'
-                    : _formatDuration(remaining),
-                style: TextStyle(
-                  color: isDone ? AppColors.green : AppColors.textPrimary,
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.bold,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              const Spacer(),
-              if (isDone)
-                _buildActionButton(
-                  label: 'TOPLA',
-                  icon: Icons.download_done,
-                  color: AppColors.green,
-                  onTap: () => _onCollect(research.id),
-                ),
-            ],
-          ),
-          // Gold speedup button
-          if (!isDone && goldCost > 0) ...[
-            SizedBox(height: 10.h),
-            GoldFinishButton(
-              starCost: goldCost,
-              onPressed: _isUpgrading
-                  ? null
-                  : () => _onFinishWithGold(research.id, goldCost),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResearchProgressBar(ArgeResearchModel research) {
-    final totalDuration = research.finishAt.difference(research.startedAt);
-    final elapsed = DateTime.now().toUtc().difference(research.startedAt);
-    final ratio = (elapsed.inSeconds / totalDuration.inSeconds).clamp(0.0, 1.0);
-    final isDone = research.isDone;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Kalite ${research.currentQuality} → ${research.targetQuality}',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 10.sp),
-            ),
-            Text(
-              '${(ratio * 100).toStringAsFixed(0)}%',
-              style: TextStyle(
-                  color: isDone ? AppColors.green : AppColors.blue,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        SizedBox(height: 6.h),
-        Container(
-          height: 8.h,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(4.r),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: ratio,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4.r),
-                gradient: LinearGradient(
-                  colors: isDone
-                      ? [AppColors.green.withValues(alpha: 0.7), AppColors.green]
-                      : [
-                          AppColors.blue.withValues(alpha: 0.7),
-                          AppColors.blue,
-                        ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: (isDone ? AppColors.green : AppColors.blue)
-                        .withValues(alpha: 0.4),
-                    blurRadius: 6,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQualityBadge(int current, int target) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-      decoration: BoxDecoration(
-        color: AppColors.blue.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: AppColors.blue.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('$current',
-              style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.bold)),
-          Icon(Icons.arrow_forward, color: AppColors.blue, size: 12.sp),
-          Text('$target',
-              style: TextStyle(
-                  color: AppColors.blue,
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.bold)),
-          SizedBox(width: 3.w),
-          Icon(Icons.star, color: AppColors.gold, size: 11.sp),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _isUpgrading ? null : onTap,
-        borderRadius: BorderRadius.circular(8.r),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8.r),
-            border: Border.all(color: color.withValues(alpha: 0.5)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 13.sp),
-              SizedBox(width: 5.w),
-              Text(label,
-                  style: TextStyle(
-                      color: color,
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.bold)),
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
-
-  // ─── Search Bar ──────────────────────────────────────────────────────────────
 
   Widget _buildSearchBar() {
     return Container(
       height: 42.h,
       decoration: BoxDecoration(
-        color: AppColors.cardBgLight,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: TextField(
         controller: _searchController,
-        style: TextStyle(color: AppColors.textPrimary, fontSize: 13.sp),
+        style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
-          hintText: 'Ürün ara...',
-          hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
-          prefixIcon:
-              Icon(Icons.search, color: AppColors.textMuted, size: 18.sp),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? GestureDetector(
-                  onTap: () => _searchController.clear(),
-                  child: Icon(Icons.close,
-                      color: AppColors.textMuted, size: 16.sp),
-                )
-              : null,
+          hintText: 'Urun ara...',
+          hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+          prefixIcon: Icon(Icons.search, color: AppColors.textMuted, size: 18.sp),
           border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
         ),
       ),
     );
   }
 
-  // ─── Unit Filters ────────────────────────────────────────────────────────────
-
   Widget _buildUnitFilters() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.symmetric(horizontal: 10.w),
       child: Row(
         children: _unitFilters.map((filter) {
-          final key = filter.$1;
-          final label = filter.$2;
-          final isSelected = _selectedUnit == key;
+          final isSelected = _selectedUnit == filter.$1;
           return Padding(
             padding: EdgeInsets.only(right: 8.w),
             child: GestureDetector(
-              onTap: () => setState(() => _selectedUnit = key),
+              onTap: () => setState(() => _selectedUnit = filter.$1),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    EdgeInsets.symmetric(horizontal: 14.w, vertical: 7.h),
+                duration: const Duration(milliseconds: 180),
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.gold.withValues(alpha: 0.15)
-                      : AppColors.cardBg,
-                  borderRadius: BorderRadius.circular(10.r),
+                      ? AppColors.gold.withValues(alpha: 0.14)
+                      : AppColors.cardBg.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(999.r),
                   border: Border.all(
                     color: isSelected
                         ? AppColors.gold
                         : AppColors.border.withValues(alpha: 0.5),
-                    width: isSelected ? 1.5 : 1,
                   ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: AppColors.gold.withValues(alpha: 0.12),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          )
-                        ]
-                      : null,
                 ),
                 child: Text(
-                  label,
+                  filter.$2,
                   style: TextStyle(
-                    color: isSelected
-                        ? AppColors.goldLight
-                        : AppColors.textSecondary,
-                    fontSize: 12.sp,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color:
+                        isSelected ? AppColors.goldLight : AppColors.textSecondary,
+                    fontSize: 11.sp,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   ),
                 ),
               ),
@@ -607,42 +518,41 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     );
   }
 
-  // ─── Product Grid ─────────────────────────────────────────────────────────
-
   Widget _buildProductGrid(
+    BuildContext context,
     List<ArgeProductModel> products,
-    dynamic player,
-    ArgeResearchModel? activeResearch,
+    int playerLevel,
+    double playerCash,
+    int activeResearchCount,
+    int maxConcurrentResearches,
   ) {
     if (products.isEmpty) {
       return SliverToBoxAdapter(child: _buildEmptyState());
     }
 
-    final playerLevel = (player?.level as num?)?.toInt() ?? 1;
-    final cash =
-        double.tryParse(player?.cash?.toString() ?? '0') ?? 0;
-    final hasActiveResearch = activeResearch != null;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cardAspectRatio = screenWidth < 380
+        ? 0.52
+        : screenWidth < 430
+            ? 0.56
+            : 0.60;
 
     return SliverGrid(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => _buildProductCard(
+          products[index],
+          playerLevel: playerLevel,
+          playerCash: playerCash,
+          activeResearchCount: activeResearchCount,
+          maxConcurrentResearches: maxConcurrentResearches,
+        ),
+        childCount: products.length,
+      ),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 10.w,
         mainAxisSpacing: 10.h,
-        childAspectRatio: 0.82,
-      ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final product = products[index];
-          return _buildProductCard(
-            product,
-            playerLevel: playerLevel,
-            playerCash: cash,
-            hasActiveResearch: hasActiveResearch,
-            isBeingResearched:
-                activeResearch?.productId == product.id,
-          );
-        },
-        childCount: products.length,
+        childAspectRatio: cardAspectRatio,
       ),
     );
   }
@@ -651,320 +561,145 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     ArgeProductModel product, {
     required int playerLevel,
     required double playerCash,
-    required bool hasActiveResearch,
-    required bool isBeingResearched,
+    required int activeResearchCount,
+    required int maxConcurrentResearches,
   }) {
-    final isMax = product.isMaxQuality;
     final hasLevel = product.hasLevelRequirement(playerLevel: playerLevel);
     final hasCash = product.hasCashRequirement(playerCash: playerCash);
-    final canUpgrade =
-        !isMax && hasLevel && hasCash && !hasActiveResearch;
-
-    // Renk durumu
-    Color borderColor;
-    if (isBeingResearched) {
-      borderColor = AppColors.blue.withValues(alpha: 0.7);
-    } else if (isMax) {
-      borderColor = AppColors.green.withValues(alpha: 0.4);
-    } else if (canUpgrade) {
-      borderColor = AppColors.borderGold;
-    } else {
-      borderColor = AppColors.border.withValues(alpha: 0.3);
-    }
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(14.r),
-      child: InkWell(
-        onTap: isMax
-            ? null
-            : () => _showUpgradeSheet(
-                  product,
-                  playerLevel: playerLevel,
-                  playerCash: playerCash,
-                  hasActiveResearch: hasActiveResearch,
-                ),
-        borderRadius: BorderRadius.circular(14.r),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(14.r),
-            border: Border.all(color: borderColor),
-            gradient: isBeingResearched
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.cardBg,
-                      AppColors.blue.withValues(alpha: 0.08),
-                    ],
-                  )
-                : null,
-          ),
-          child: Stack(
-            children: [
-              Padding(
-                padding: EdgeInsets.all(10.w),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Icon
-                    _buildProductIcon(product, isMax, isBeingResearched),
-                    SizedBox(height: 8.h),
-
-                    // Name
-                    Text(
-                      product.urunAdi,
-                      style: TextStyle(
-                        color: isMax
-                            ? AppColors.textSecondary
-                            : AppColors.textPrimary,
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 2,
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 6.h),
-
-                    // Quality stars
-                    _buildQualityStars(product.currentQualityLevel),
-                    SizedBox(height: 8.h),
-
-                    // Bottom area
-                    _buildCardBottom(
-                      product,
-                      isMax: isMax,
-                      hasLevel: hasLevel,
-                      hasCash: hasCash,
-                      hasActiveResearch: hasActiveResearch,
-                      isBeingResearched: isBeingResearched,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Lock overlay
-              if (!isMax &&
-                  (!hasLevel || !hasCash || hasActiveResearch) &&
-                  !isBeingResearched)
-                Positioned(
-                  top: 6.h,
-                  right: 6.w,
-                  child: Container(
-                    padding: EdgeInsets.all(4.w),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.lock,
-                      color: AppColors.textMuted,
-                      size: 11.sp,
-                    ),
-                  ),
-                ),
-
-              // MAX badge
-              if (isMax)
-                Positioned(
-                  top: 6.h,
-                  right: 6.w,
-                  child: Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4.r),
-                      border: Border.all(
-                          color: AppColors.green.withValues(alpha: 0.5)),
-                    ),
-                    child: Text(
-                      'MAX',
-                      style: TextStyle(
-                          color: AppColors.green,
-                          fontSize: 8.sp,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductIcon(
-      ArgeProductModel product, bool isMax, bool isBeingResearched) {
-    final glowColor = isBeingResearched
-        ? AppColors.blue
-        : isMax
-            ? AppColors.green
-            : AppColors.gold;
+    final hasFreeResearchSlot = activeResearchCount < maxConcurrentResearches;
+    final canUpgrade = product.canUpgrade(
+          playerLevel: playerLevel,
+          playerCash: playerCash,
+        ) &&
+        hasFreeResearchSlot;
 
     return Container(
-      width: 56.w,
-      height: 56.w,
-      padding: EdgeInsets.all(8.w),
+      padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
-        shape: BoxShape.circle,
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
-          color: glowColor.withValues(alpha: 0.3),
-          width: 1.5,
+          color: product.isMaxQuality
+              ? AppColors.green.withValues(alpha: 0.3)
+              : AppColors.border.withValues(alpha: 0.5),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: glowColor.withValues(alpha: 0.15),
-            blurRadius: 10,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: CachedAssetImage(
-        fileName: product.urunIconu,
-        fit: BoxFit.contain,
-        errorWidget: Icon(Icons.science, color: AppColors.gold, size: 24.sp),
-      ),
-    );
-  }
-
-  Widget _buildQualityStars(int level) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(ArgeProductModel.maxQualityLevel, (i) {
-        final filled = i < level;
-        return Icon(
-          filled ? Icons.star : Icons.star_border,
-          color: filled
-              ? AppColors.gold
-              : AppColors.textMuted.withValues(alpha: 0.5),
-          size: 13.sp,
-        );
-      }),
-    );
-  }
-
-  Widget _buildCardBottom(
-    ArgeProductModel product, {
-    required bool isMax,
-    required bool hasLevel,
-    required bool hasCash,
-    required bool hasActiveResearch,
-    required bool isBeingResearched,
-  }) {
-    if (isBeingResearched) {
-      return Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 6.h),
-        decoration: BoxDecoration(
-          color: AppColors.blue.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(color: AppColors.blue.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 10.w,
-              height: 10.w,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                color: AppColors.blue,
-              ),
-            ),
-            SizedBox(width: 5.w),
-            Text(
-              'Araştırılıyor',
-              style: TextStyle(
-                  color: AppColors.blue,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold),
-            ),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.cardBg,
+            AppColors.cardBgLight.withValues(alpha: 0.4),
           ],
         ),
-      );
-    }
-
-    if (isMax) {
-      return Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 6.h),
-        decoration: BoxDecoration(
-          color: AppColors.green.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8.r),
-        ),
-        child: Text(
-          'Maksimum Kalite',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-              color: AppColors.green.withValues(alpha: 0.7),
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600),
-        ),
-      );
-    }
-
-    // Requirement hint
-    if (!hasLevel) {
-      return _buildRequirementChip(
-        Icons.lock,
-        'Seviye ${product.requiredPlayerLevel} gerekli',
-        AppColors.red,
-      );
-    }
-
-    if (hasActiveResearch) {
-      return _buildRequirementChip(
-        Icons.hourglass_top,
-        'Araştırma devam ediyor',
-        AppColors.textMuted,
-      );
-    }
-
-    // Can upgrade — show cost
-    final cost = product.upgradeCost;
-    final hours = product.upgradeDurationHours;
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(vertical: 5.h),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppColors.gold.withValues(alpha: 0.2),
-                AppColors.goldDark.withValues(alpha: 0.3),
-              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 64.w,
+              height: 64.w,
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.22),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.3),
+                ),
+              ),
+              child: CachedAssetImage(
+                fileName: product.urunIconu,
+                fit: BoxFit.contain,
+                errorWidget: Icon(
+                  Icons.science,
+                  color: AppColors.gold,
+                  size: 28.sp,
+                ),
+              ),
             ),
-            borderRadius: BorderRadius.circular(8.r),
-            border:
-                Border.all(color: AppColors.gold.withValues(alpha: hasCash ? 0.6 : 0.2)),
           ),
-          child: Column(
-            children: [
-              Text(
-                _formatMoney(cost),
-                textAlign: TextAlign.center,
+          SizedBox(height: 8.h),
+          Text(
+            product.urunAdi,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 13.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Row(
+            children: List.generate(ArgeProductModel.maxQualityLevel, (index) {
+              final filled = index < product.currentQualityLevel;
+              return Padding(
+                padding: EdgeInsets.only(right: 2.w),
+                child: Icon(
+                  filled ? Icons.star : Icons.star_border,
+                  color: filled ? AppColors.gold : AppColors.textMuted,
+                  size: 14.sp,
+                ),
+              );
+            }),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            'Kalite ${product.currentQualityLevel} -> ${product.targetQuality}',
+            style: TextStyle(color: AppColors.blue, fontSize: 10.sp),
+          ),
+          SizedBox(height: 6.h),
+          _buildRequirementChip(
+            Icons.account_balance_wallet_outlined,
+            _formatMoney(product.upgradeCost),
+            hasCash ? AppColors.gold : AppColors.red,
+          ),
+          SizedBox(height: 5.h),
+          _buildRequirementChip(
+            Icons.workspace_premium_outlined,
+            'Seviye ${product.requiredPlayerLevel}',
+            hasLevel ? AppColors.green : AppColors.red,
+          ),
+          SizedBox(height: 5.h),
+          _buildRequirementChip(
+            Icons.schedule,
+            '${product.upgradeDurationHours} saat',
+            AppColors.textSecondary,
+          ),
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: product.isMaxQuality
+                  ? null
+                  : () => _showUpgradeSheet(
+                        product,
+                        playerLevel: playerLevel,
+                        playerCash: playerCash,
+                        hasAvailableResearchSlot: hasFreeResearchSlot,
+                      ),
+              style: FilledButton.styleFrom(
+                backgroundColor:
+                    canUpgrade ? AppColors.gold : AppColors.cardBgLight,
+                foregroundColor: canUpgrade ? Colors.black : AppColors.textMuted,
+                disabledBackgroundColor: AppColors.cardBgLight,
+                disabledForegroundColor: AppColors.textMuted,
+                padding: EdgeInsets.symmetric(vertical: 9.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              child: Text(
+                product.isMaxQuality ? 'MAX' : 'Gelistir',
                 style: TextStyle(
-                  color: hasCash ? AppColors.goldLight : AppColors.red,
                   fontSize: 11.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Text(
-                '⏱ ${hours}sa',
-                textAlign: TextAlign.center,
-                style:
-                    TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -994,18 +729,18 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     );
   }
 
-  // ─── Upgrade Bottom Sheet ─────────────────────────────────────────────────
-
   void _showUpgradeSheet(
     ArgeProductModel product, {
     required int playerLevel,
     required double playerCash,
-    required bool hasActiveResearch,
+    required bool hasAvailableResearchSlot,
   }) {
-    final hasLevel =
-        product.hasLevelRequirement(playerLevel: playerLevel);
+    final hasLevel = product.hasLevelRequirement(playerLevel: playerLevel);
     final hasCash = product.hasCashRequirement(playerCash: playerCash);
-    final canStart = hasLevel && hasCash && !hasActiveResearch && !product.isMaxQuality;
+    final canStart = hasLevel &&
+        hasCash &&
+        hasAvailableResearchSlot &&
+        !product.isMaxQuality;
 
     showModalBottomSheet(
       context: context,
@@ -1016,7 +751,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
         playerLevel: playerLevel,
         playerCash: playerCash,
         canStart: canStart,
-        hasActiveResearch: hasActiveResearch,
+        hasActiveResearch: !hasAvailableResearchSlot,
         onStart: () async {
           Navigator.of(context).pop();
           await _onStartResearch(product.id);
@@ -1025,21 +760,18 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     );
   }
 
-  // ─── Actions ─────────────────────────────────────────────────────────────
-
   Future<void> _onStartResearch(String productId) async {
     setState(() => _isUpgrading = true);
-    final result =
-        await ref.read(argeActionProvider).startResearch(productId);
+    final result = await ref.read(argeActionProvider).startResearch(productId);
     setState(() => _isUpgrading = false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(argeProductsProvider);
+      _refreshCenterEcosystem(ref.read(playerArgeCenterProvider).value?.id);
       AppSnackbar.show(
         context,
-        title: 'Araştırma Başladı',
-        message: '${result['product_name']} için geliştirme başlatıldı.',
+        title: 'Arastirma Basladi',
+        message: '${result['product_name']} icin gelistirme baslatildi.',
         type: SnackbarType.success,
       );
     } else {
@@ -1054,20 +786,20 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
   Future<void> _onCollect(String researchId) async {
     setState(() => _isUpgrading = true);
-    final result =
-        await ref.read(argeActionProvider).completeResearch(researchId);
+    final result = await ref.read(argeActionProvider).completeResearch(researchId);
     setState(() => _isUpgrading = false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(argeProductsProvider);
+      _refreshCenterEcosystem(ref.read(playerArgeCenterProvider).value?.id);
       AppSnackbar.show(
         context,
-        title: 'Geliştirme Tamamlandı!',
+        title: 'Gelistirme Tamamlandi!',
         message:
-            '${result['product_name']} kalite ${result['new_quality_level']} seviyesine ulaştı.',
+            '${result['product_name']} kalite ${result['new_quality_level']} seviyesine ulasti.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
     } else {
       AppSnackbar.show(
         context,
@@ -1087,33 +819,39 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           borderRadius: BorderRadius.circular(16.r),
           side: const BorderSide(color: AppColors.borderGold),
         ),
-        title: Text('Anında Tamamla',
-            style: TextStyle(
-                color: AppColors.goldLight,
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold)),
+        title: Text(
+          'Aninda Tamamla',
+          style: TextStyle(
+            color: AppColors.goldLight,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Text(
-          '$goldCost ⭐ yıldız kullanarak araştırmayı anında tamamlamak istiyor musunuz?',
+          '$goldCost yildiz kullanarak arastirmayi aninda tamamlamak istiyor musunuz?',
           style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('İptal',
-                style:
-                    TextStyle(color: AppColors.textMuted, fontSize: 13.sp)),
+            child: Text(
+              'Iptal',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: Colors.black,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.r)),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Tamamla',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 13.sp)),
+            child: Text(
+              'Tamamla',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+            ),
           ),
         ],
       ),
@@ -1122,18 +860,145 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     if (confirm != true || !mounted) return;
 
     setState(() => _isUpgrading = true);
-    final result =
-        await ref.read(argeActionProvider).finishWithGold(researchId);
+    final result = await ref.read(argeActionProvider).finishWithGold(researchId);
     setState(() => _isUpgrading = false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      ref.invalidate(argeProductsProvider);
+      _refreshCenterEcosystem(ref.read(playerArgeCenterProvider).value?.id);
       AppSnackbar.show(
         context,
-        title: 'Tamamlandı!',
+        title: 'Tamamlandi!',
         message:
-            '${result['product_name']} geliştirmesi tamamlandı. ${result['gold_spent']} ⭐ harcandı.',
+            '${result['product_name']} gelistirmesi tamamlandi. ${result['gold_spent']} yildiz harcandi.',
+        type: SnackbarType.success,
+      );
+      await showExperienceFeedbackFromResult(context, result);
+    } else {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: result['message']?.toString() ?? 'Bilinmeyen hata.',
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  int _calculateUpgradeStarCost(DateTime finishAt) {
+    final now = DateTime.now();
+    final remaining = finishAt.difference(now);
+    if (remaining.inMinutes <= 0) return 0;
+    return ((remaining.inMinutes + 29) ~/ 30).clamp(1, 999999);
+  }
+
+  String _formatCountdown(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    final safe = remaining.isNegative ? Duration.zero : remaining;
+    final hours = safe.inHours.toString().padLeft(2, '0');
+    final minutes = (safe.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (safe.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
+
+  void _showCenterUpgradeSheet(ArgeCenterModel center) {
+    final nextLevel = center.level + 1;
+    final nextSlots = nextLevel >= 6
+        ? 4
+        : nextLevel >= 4
+            ? 3
+            : nextLevel >= 2
+                ? 2
+                : 1;
+    final nextDurationReduction = switch (nextLevel) {
+      1 => 0.0,
+      2 => 5.0,
+      3 => 10.0,
+      4 => 15.0,
+      5 => 20.0,
+      _ => 25.0,
+    };
+    final durationMinutes = 60 * nextLevel;
+    final upgradeCost = 25000.0 * nextLevel;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          border: Border.all(color: AppColors.borderGold),
+        ),
+        padding: EdgeInsets.fromLTRB(5.w, 18.h, 5.w, 24.h),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'AR-GE Merkezini Yukselt',
+                style: TextStyle(
+                  color: AppColors.goldLight,
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 14.h),
+              _buildSetupRow('Seviye', '${center.level} -> $nextLevel'),
+              _buildSetupRow(
+                'Arastirma Slotu',
+                '${center.maxConcurrentResearches} -> $nextSlots',
+              ),
+              _buildSetupRow(
+                'Sure Bonusu',
+                '%${center.durationReductionPct.toStringAsFixed(0)} -> %${nextDurationReduction.toStringAsFixed(0)}',
+              ),
+              _buildSetupRow('Yukseltme Suresi', '$durationMinutes dakika'),
+              _buildSetupRow('Maliyet', _formatMoney(upgradeCost)),
+              SizedBox(height: 18.h),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    await _startCenterUpgrade(center.id);
+                  },
+                  icon: Icon(Icons.upgrade_rounded, size: 18.sp),
+                  label: Text(
+                    'Yukseltmeyi Baslat',
+                    style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: Colors.black,
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14.r),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startCenterUpgrade(String centerId) async {
+    setState(() => _isCenterSubmitting = true);
+    final result = await ref.read(argeActionProvider).startCenterUpgrade(centerId);
+    setState(() => _isCenterSubmitting = false);
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      _refreshCenterEcosystem(centerId);
+      AppSnackbar.show(
+        context,
+        title: 'Yukseltme Basladi',
+        message: 'AR-GE merkezi icin yeni seviye calismasi baslatildi.',
         type: SnackbarType.success,
       );
     } else {
@@ -1146,7 +1011,491 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     }
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
+  Future<void> _finishCenterUpgradeWithGold(BuildingUpgradeModel upgrade) async {
+    final result = await ref
+        .read(argeActionProvider)
+        .finishCenterUpgradeWithGold(upgrade.id);
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      _refreshCenterEcosystem(upgrade.entityId);
+      AppSnackbar.show(
+        context,
+        title: 'Yukseltme Tamamlandi',
+        message:
+            'AR-GE merkezi aninda tamamlandi. ${result['gold_spent']} yildiz harcandi.',
+        type: SnackbarType.success,
+      );
+      await showExperienceFeedbackFromResult(context, result);
+    } else {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: result['message']?.toString() ?? 'Bilinmeyen hata.',
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  Widget _buildSetupState(dynamic player) {
+    final playerCash = double.tryParse(player?.cash?.toString() ?? '0') ?? 0;
+    const setupCost = 25000.0;
+    const setupDurationMinutes = 60;
+    final hasCash = playerCash >= setupCost;
+
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 32.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg,
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(color: AppColors.borderGold),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.cardBg,
+                  AppColors.cardBgLight.withValues(alpha: 0.45),
+                ],
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 58.w,
+                  height: 58.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.blue.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                  child: Icon(Icons.science_outlined, color: AppColors.blue, size: 30.sp),
+                ),
+                SizedBox(width: 14.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AR-GE Merkezi Kur',
+                        style: AppTextStyles.h2.copyWith(color: AppColors.gold),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        'Kalite gelistirmelerini baslatmak icin once arastirma merkezinizi faaliyete gecirin.',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.textMuted,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20.h),
+          Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg,
+              borderRadius: BorderRadius.circular(18.r),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Merkez Bilgileri',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                _buildSetupRow('Kurulum Maliyeti', _formatMoney(setupCost)),
+                _buildSetupRow('Insaat Suresi', '$setupDurationMinutes dakika'),
+                _buildSetupRow('Baslangic Slotu', '1 arastirma'),
+                _buildSetupRow('Sure Bonusu', '%0'),
+              ],
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Container(
+            padding: EdgeInsets.all(14.w),
+            decoration: BoxDecoration(
+              color: hasCash
+                  ? AppColors.green.withValues(alpha: 0.08)
+                  : AppColors.red.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: hasCash
+                    ? AppColors.green.withValues(alpha: 0.3)
+                    : AppColors.red.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  hasCash ? Icons.check_circle_outline : Icons.error_outline,
+                  color: hasCash ? AppColors.green : AppColors.red,
+                  size: 18.sp,
+                ),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Text(
+                    hasCash
+                        ? 'Kurulum icin yeterli bakiyeniz var.'
+                        : 'Yetersiz bakiye. Mevcut: ${_formatMoney(playerCash)}',
+                    style: TextStyle(
+                      color: hasCash ? AppColors.green : AppColors.red,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 24.h),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: (_isCenterSubmitting || !hasCash)
+                  ? null
+                  : _onStartCenterConstruction,
+              icon: _isCenterSubmitting
+                  ? SizedBox(
+                      width: 16.w,
+                      height: 16.w,
+                      child: const CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(Icons.construction_outlined, size: 18.sp),
+              label: Text(
+                _isCenterSubmitting ? 'Kuruluyor...' : 'AR-GE MERKEZINI KUR',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                foregroundColor: Colors.black,
+                disabledBackgroundColor: AppColors.cardBgLight,
+                disabledForegroundColor: AppColors.textMuted,
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14.r),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConstructionState(Map<String, dynamic> construction) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final params = construction['params'] is Map<String, dynamic>
+        ? Map<String, dynamic>.from(construction['params'] as Map<String, dynamic>)
+        : construction['params'] is Map
+            ? Map<String, dynamic>.from(construction['params'] as Map)
+            : <String, dynamic>{};
+    final finishAt = DateTime.tryParse(construction['finish_at']?.toString() ?? '');
+    final remaining = finishAt == null ? Duration.zero : finishAt.difference(now);
+    final isDone = !remaining.isNegative && remaining.inSeconds == 0 || (finishAt != null && !finishAt.isAfter(now));
+    final remainingMinutes = remaining.isNegative
+        ? 0
+        : (remaining.inSeconds / 60).ceil();
+    final goldCost = remainingMinutes <= 0 ? 0 : ((remainingMinutes + 29) ~/ 30);
+
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 32.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg,
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(color: AppColors.borderGold),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 58.w,
+                  height: 58.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                  child: Icon(Icons.construction, color: AppColors.gold, size: 30.sp),
+                ),
+                SizedBox(width: 14.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        (params['name'] ?? 'AR-GE Merkezi').toString(),
+                        style: AppTextStyles.h2.copyWith(color: AppColors.gold),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        'Merkez kurulumu devam ediyor. Insaat tamamlaninca arastirmalar aktif olacak.',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.textMuted,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg,
+              borderRadius: BorderRadius.circular(18.r),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSetupRow(
+                  'Kalan Sure',
+                  isDone ? 'Hazir' : _formatRemaining(remaining),
+                ),
+                _buildSetupRow(
+                  'Bitis Zamani',
+                  finishAt == null ? '-' : _formatDateTime(finishAt),
+                ),
+                _buildSetupRow(
+                  'Kurulum Maliyeti',
+                  _formatMoney(
+                    double.tryParse(params['cost']?.toString() ?? '0') ?? 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20.h),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: isDone
+                  ? () => _onCompleteCenterConstruction(
+                        construction['id'].toString(),
+                      )
+                  : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.green,
+                disabledBackgroundColor: AppColors.cardBgLight,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14.r),
+                ),
+              ),
+              child: Text(
+                isDone ? 'KURULUMU TAMAMLA' : 'KURULUM DEVAM EDIYOR',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+              ),
+            ),
+          ),
+          if (!isDone) ...[
+            SizedBox(height: 10.h),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: goldCost <= 0
+                    ? null
+                    : () => _onFinishCenterConstructionWithGold(
+                          construction['id'].toString(),
+                          goldCost,
+                        ),
+                icon: Icon(Icons.bolt, size: 16.sp, color: AppColors.gold),
+                label: Text(
+                  '$goldCost yildiz ile hemen bitir',
+                  style: TextStyle(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.gold.withValues(alpha: 0.35)),
+                  padding: EdgeInsets.symmetric(vertical: 13.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14.r),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSetupRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10.h),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+            ),
+          ),
+          SizedBox(width: 10.w),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onStartCenterConstruction() async {
+    setState(() => _isCenterSubmitting = true);
+    final result = await ref.read(argeActionProvider).startCenterConstruction();
+    setState(() => _isCenterSubmitting = false);
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      _refreshCenterEcosystem();
+      AppSnackbar.show(
+        context,
+        title: 'Kurulum Basladi',
+        message: 'AR-GE merkezinizin kurulumu baslatildi.',
+        type: SnackbarType.success,
+      );
+    } else {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: result['message']?.toString() ?? 'Bilinmeyen hata.',
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  Future<void> _onCompleteCenterConstruction(String constructionId) async {
+    setState(() => _isCenterSubmitting = true);
+    final result = await ref
+        .read(argeActionProvider)
+        .completeConstruction(constructionId, syncProviders: false);
+    setState(() => _isCenterSubmitting = false);
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      _refreshCenterEcosystem();
+      AppSnackbar.show(
+        context,
+        title: 'Kurulum Tamamlandi',
+        message: 'AR-GE merkeziniz kullanima acildi.',
+        type: SnackbarType.success,
+      );
+      await showExperienceFeedbackFromResult(context, result);
+    } else {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: result['message']?.toString() ?? 'Bilinmeyen hata.',
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  Future<void> _onFinishCenterConstructionWithGold(
+    String constructionId,
+    int goldCost,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: const BorderSide(color: AppColors.borderGold),
+        ),
+        title: Text(
+          'Kurulumu Bitir',
+          style: TextStyle(
+            color: AppColors.goldLight,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '$goldCost yildiz kullanarak AR-GE merkezini hemen kullanima acmak istiyor musunuz?',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Iptal',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Bitir',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    setState(() => _isCenterSubmitting = true);
+    final result = await ref
+        .read(argeActionProvider)
+        .finishConstructionWithGold(constructionId);
+    setState(() => _isCenterSubmitting = false);
+
+    if (!mounted) return;
+    if (result['success'] == true) {
+      _refreshCenterEcosystem();
+      AppSnackbar.show(
+        context,
+        title: 'Kurulum Tamamlandi',
+        message:
+            'AR-GE merkeziniz acildi. ${result['gold_spent'] ?? goldCost} yildiz harcandi.',
+        type: SnackbarType.success,
+      );
+      await showExperienceFeedbackFromResult(context, result);
+    } else {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: result['message']?.toString() ?? 'Bilinmeyen hata.',
+        type: SnackbarType.error,
+      );
+    }
+  }
 
   Widget _buildEmptyState() {
     return Center(
@@ -1157,32 +1506,38 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             SizedBox(height: 40.h),
             Icon(Icons.search_off, color: AppColors.textMuted, size: 60.sp),
             SizedBox(height: 16.h),
-            Text('Ürün bulunamadı.',
-                style: TextStyle(
-                    color: AppColors.textMuted, fontSize: 14.sp)),
+            Text(
+              'Urun bulunamadi.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildError(Object e) {
+  Widget _buildError(Object error) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.error_outline, color: AppColors.red, size: 48.sp),
           SizedBox(height: 12.h),
-          Text(e.toString(),
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
-              textAlign: TextAlign.center),
+          Text(
+            error.toString(),
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+            textAlign: TextAlign.center,
+          ),
           SizedBox(height: 12.h),
           ElevatedButton(
             onPressed: _refresh,
             style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.cardBgLight),
-            child:
-                Text('Tekrar Dene', style: TextStyle(color: AppColors.gold)),
+              backgroundColor: AppColors.cardBgLight,
+            ),
+            child: Text(
+              'Tekrar Dene',
+              style: TextStyle(color: AppColors.gold),
+            ),
           ),
         ],
       ),
@@ -1190,21 +1545,215 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }
 
   String _formatMoney(double amount) {
-    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M₺';
-    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K₺';
-    return '${amount.toStringAsFixed(0)}₺';
+    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M TL';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K TL';
+    return '${amount.toStringAsFixed(0)} TL';
   }
 
-  String _formatDuration(Duration d) {
-    if (d.inSeconds <= 0) return '00:00:00';
-    final h = d.inHours.toString().padLeft(2, '0');
-    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
-    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
-    return '$h:$m:$s';
+  String _formatRemaining(Duration duration) {
+    final safe = duration.isNegative ? Duration.zero : duration;
+    final hours = safe.inHours.toString().padLeft(2, '0');
+    final minutes = (safe.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (safe.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
+
+  String _formatDateTime(DateTime value) {
+    final safe = value.toLocal();
+    final day = safe.day.toString().padLeft(2, '0');
+    final month = safe.month.toString().padLeft(2, '0');
+    final hour = safe.hour.toString().padLeft(2, '0');
+    final minute = safe.minute.toString().padLeft(2, '0');
+    return '$day.$month $hour:$minute';
   }
 }
 
-// ─── Upgrade Bottom Sheet ─────────────────────────────────────────────────────
+class _ActiveArgeUpgradeCard extends ConsumerWidget {
+  final BuildingUpgradeModel upgrade;
+  final Future<void> Function() onFinishWithGold;
+  final int Function(DateTime finishAt) calculateStarCost;
+  final String Function(DateTime finishAt) formatCountdown;
+
+  const _ActiveArgeUpgradeCard({
+    required this.upgrade,
+    required this.onFinishWithGold,
+    required this.calculateStarCost,
+    required this.formatCountdown,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final total = upgrade.finishAt.difference(upgrade.startedAt).inSeconds;
+    final elapsed = now.difference(upgrade.startedAt).inSeconds;
+    final progress = total <= 0 ? 1.0 : (elapsed / total).clamp(0.0, 1.0);
+    final starCost = calculateStarCost(upgrade.finishAt);
+    final nextSlots =
+        (upgrade.params['next_concurrent_researches'] as num?)?.toInt() ?? 1;
+    final prevSlots =
+        (upgrade.params['previous_concurrent_researches'] as num?)?.toInt() ?? 1;
+    final nextReduction =
+        (upgrade.params['next_duration_reduction_pct'] as num?)?.toDouble() ?? 0;
+    final prevReduction =
+        (upgrade.params['previous_duration_reduction_pct'] as num?)?.toDouble() ?? 0;
+
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.borderGold),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.cardBg,
+            AppColors.cardBgLight.withValues(alpha: 0.55),
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.upgrade_rounded, color: AppColors.gold, size: 18.sp),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Merkez Yukseliyor',
+                      style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '${upgrade.name ?? 'AR-GE Merkezi'}  Lv.${upgrade.currentLevel} -> Lv.${upgrade.targetLevel}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                formatCountdown(upgrade.finishAt),
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 8.h,
+            backgroundColor: Colors.black.withValues(alpha: 0.3),
+            color: AppColors.gold,
+            borderRadius: BorderRadius.circular(999.r),
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _ArgeUpgradeMeta(
+                  label: 'Arastirma Slotu',
+                  value: '$prevSlots -> $nextSlots',
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: _ArgeUpgradeMeta(
+                  label: 'Sure Bonusu',
+                  value:
+                      '%${prevReduction.toStringAsFixed(0)} -> %${nextReduction.toStringAsFixed(0)}',
+                ),
+              ),
+            ],
+          ),
+          if (starCost > 0) ...[
+            SizedBox(height: 12.h),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: onFinishWithGold,
+                icon: Icon(Icons.flash_on_rounded, size: 16.sp),
+                label: Text(
+                  '$starCost yildizla bitir',
+                  style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: Colors.black,
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ArgeUpgradeMeta extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ArgeUpgradeMeta({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+          ),
+          SizedBox(height: 3.h),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _UpgradeBottomSheet extends StatelessWidget {
   final ArgeProductModel product;
@@ -1225,8 +1774,7 @@ class _UpgradeBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasLevel =
-        product.hasLevelRequirement(playerLevel: playerLevel);
+    final hasLevel = product.hasLevelRequirement(playerLevel: playerLevel);
     final hasCash = product.hasCashRequirement(playerCash: playerCash);
 
     return Container(
@@ -1235,11 +1783,10 @@ class _UpgradeBottomSheet extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.5)),
       ),
-      padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 32.h),
+      padding: EdgeInsets.fromLTRB(5.w, 20.h, 5.w, 32.h),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
           Container(
             width: 40.w,
             height: 4.h,
@@ -1249,8 +1796,6 @@ class _UpgradeBottomSheet extends StatelessWidget {
             ),
           ),
           SizedBox(height: 20.h),
-
-          // Product header
           Row(
             children: [
               Container(
@@ -1260,19 +1805,24 @@ class _UpgradeBottomSheet extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
-                  border:
-                      Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.4),
+                  ),
                   boxShadow: [
                     BoxShadow(
-                        color: AppColors.gold.withValues(alpha: 0.15),
-                        blurRadius: 12),
+                      color: AppColors.gold.withValues(alpha: 0.15),
+                      blurRadius: 12,
+                    ),
                   ],
                 ),
                 child: CachedAssetImage(
                   fileName: product.urunIconu,
                   fit: BoxFit.contain,
-                  errorWidget: Icon(Icons.science,
-                      color: AppColors.gold, size: 28.sp),
+                  errorWidget: Icon(
+                    Icons.science,
+                    color: AppColors.gold,
+                    size: 28.sp,
+                  ),
                 ),
               ),
               SizedBox(width: 14.w),
@@ -1280,43 +1830,42 @@ class _UpgradeBottomSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(product.urunAdi,
-                        style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.bold)),
+                    Text(
+                      product.urunAdi,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     SizedBox(height: 4.h),
                     Row(
                       children: List.generate(
-                          ArgeProductModel.maxQualityLevel, (i) {
-                        return Icon(
-                          i < product.currentQualityLevel
+                        ArgeProductModel.maxQualityLevel,
+                        (index) => Icon(
+                          index < product.currentQualityLevel
                               ? Icons.star
                               : Icons.star_border,
-                          color: i < product.currentQualityLevel
+                          color: index < product.currentQualityLevel
                               ? AppColors.gold
                               : AppColors.textMuted,
                           size: 16.sp,
-                        );
-                      }),
+                        ),
+                      ),
                     ),
                     SizedBox(height: 2.h),
                     Text(
-                      'Kalite ${product.currentQualityLevel} → ${product.targetQuality}',
-                      style: TextStyle(
-                          color: AppColors.blue, fontSize: 12.sp),
+                      'Kalite ${product.currentQualityLevel} -> ${product.targetQuality}',
+                      style: TextStyle(color: AppColors.blue, fontSize: 12.sp),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-
           SizedBox(height: 20.h),
           Divider(color: AppColors.border, height: 1),
           SizedBox(height: 16.h),
-
-          // Requirements
           _buildRequirementRow(
             icon: Icons.military_tech,
             label: 'Gerekli Seviye',
@@ -1327,82 +1876,77 @@ class _UpgradeBottomSheet extends StatelessWidget {
           SizedBox(height: 10.h),
           _buildRequirementRow(
             icon: Icons.account_balance_wallet,
-            label: 'Araştırma Maliyeti',
+            label: 'Arastirma Maliyeti',
             value: _formatMoney(product.upgradeCost),
             ok: hasCash,
-            currentValue:
-                '(Mevcut: ${_formatMoney(playerCash)})',
+            currentValue: '(Mevcut: ${_formatMoney(playerCash)})',
           ),
           SizedBox(height: 10.h),
           _buildRequirementRow(
             icon: Icons.access_time,
-            label: 'Araştırma Süresi',
+            label: 'Arastirma Suresi',
             value: '${product.upgradeDurationHours} saat',
             ok: true,
-            currentValue: 'Her 30 dk = 1 ⭐',
+            currentValue: 'Her 30 dk = 1 yildiz',
           ),
-
           SizedBox(height: 16.h),
           Divider(color: AppColors.border, height: 1),
           SizedBox(height: 14.h),
-
-          // Info
           Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
               color: AppColors.cardBgLight,
               borderRadius: BorderRadius.circular(10.r),
               border: Border.all(
-                  color: AppColors.borderGold.withValues(alpha: 0.3)),
+                color: AppColors.borderGold.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline,
-                    color: AppColors.gold, size: 16.sp),
+                Icon(Icons.info_outline, color: AppColors.gold, size: 16.sp),
                 SizedBox(width: 8.w),
                 Expanded(
                   child: Text(
-                    'Geliştirme tamamlandığında bu ürünü daha yüksek kalite '
-                    'seviyesinde üretebileceksiniz. Araştırma sırasında para iadesi yapılmaz.',
+                    'Gelistirme tamamlandiginda bu urunu daha yuksek kalite seviyesinde uretebileceksiniz. Arastirma sirasinda para iadesi yapilmaz.',
                     style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 11.sp),
+                      color: AppColors.textSecondary,
+                      fontSize: 11.sp,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-
           if (hasActiveResearch) ...[
             SizedBox(height: 12.h),
             Container(
-              padding:
-                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
               decoration: BoxDecoration(
                 color: AppColors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8.r),
                 border: Border.all(
-                    color: AppColors.red.withValues(alpha: 0.3)),
+                  color: AppColors.red.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded,
-                      color: AppColors.red, size: 14.sp),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.red,
+                    size: 14.sp,
+                  ),
                   SizedBox(width: 8.w),
                   Expanded(
                     child: Text(
-                      'Zaten devam eden bir araştırmanız var.',
-                      style: TextStyle(
-                          color: AppColors.red, fontSize: 11.sp),
+                      'Tum arastirma slotlariniz dolu.',
+                      style: TextStyle(color: AppColors.red, fontSize: 11.sp),
                     ),
                   ),
                 ],
               ),
             ),
           ],
-
           SizedBox(height: 20.h),
-
-          // Start button
           SizedBox(
             width: double.infinity,
             height: 50.h,
@@ -1410,9 +1954,8 @@ class _UpgradeBottomSheet extends StatelessWidget {
               onPressed: canStart ? onStart : null,
               icon: Icon(Icons.science, size: 18.sp),
               label: Text(
-                canStart ? 'ARAŞTIRMAYI BAŞLAT' : 'KOŞULLAR KARŞILANMADI',
-                style: TextStyle(
-                    fontSize: 13.sp, fontWeight: FontWeight.bold),
+                canStart ? 'ARASTIRMAYI BASLAT' : 'KOSULLAR KARSILANMADI',
+                style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor:
@@ -1421,7 +1964,8 @@ class _UpgradeBottomSheet extends StatelessWidget {
                 disabledBackgroundColor: AppColors.cardBgLight,
                 disabledForegroundColor: AppColors.textMuted,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14.r)),
+                  borderRadius: BorderRadius.circular(14.r),
+                ),
               ),
             ),
           ),
@@ -1442,8 +1986,7 @@ class _UpgradeBottomSheet extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(6.w),
           decoration: BoxDecoration(
-            color: (ok ? AppColors.green : AppColors.red)
-                .withValues(alpha: 0.12),
+            color: (ok ? AppColors.green : AppColors.red).withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -1455,21 +1998,26 @@ class _UpgradeBottomSheet extends StatelessWidget {
         SizedBox(width: 10.w),
         Icon(icon, color: AppColors.textMuted, size: 14.sp),
         SizedBox(width: 6.w),
-        Text(label,
-            style:
-                TextStyle(color: AppColors.textSecondary, fontSize: 12.sp)),
+        Text(
+          label,
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 12.sp),
+        ),
         const Spacer(),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(value,
-                style: TextStyle(
-                    color: ok ? AppColors.textPrimary : AppColors.red,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold)),
-            Text(currentValue,
-                style: TextStyle(
-                    color: AppColors.textMuted, fontSize: 10.sp)),
+            Text(
+              value,
+              style: TextStyle(
+                color: ok ? AppColors.textPrimary : AppColors.red,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              currentValue,
+              style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+            ),
           ],
         ),
       ],
@@ -1478,9 +2026,9 @@ class _UpgradeBottomSheet extends StatelessWidget {
 
   String _formatMoney(double amount) {
     if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)}M₺';
+      return '${(amount / 1000000).toStringAsFixed(1)}M TL';
     }
-    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K₺';
-    return '${amount.toStringAsFixed(0)}₺';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K TL';
+    return '${amount.toStringAsFixed(0)} TL';
   }
 }

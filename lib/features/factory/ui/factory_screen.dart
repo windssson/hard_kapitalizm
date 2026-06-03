@@ -4,12 +4,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
 
@@ -28,13 +30,13 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
   void refreshRouteData() {
     ref.invalidate(factoryListProvider);
     ref.invalidate(factoryConstructionProvider);
+    ref.invalidate(playerProvider);
     ref.read(factoryListProvider.future);
     ref.read(factoryConstructionProvider.future);
   }
@@ -57,12 +59,13 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(factoryListProvider);
     ref.invalidate(factoryConstructionProvider);
+    ref.invalidate(playerProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
     final result = await ref
         .read(factoryActionProvider)
-        .completeConstruction(constructionId);
+        .completeConstruction(constructionId, syncProviders: false);
 
     ref.invalidate(factoryConstructionProvider);
     ref.invalidate(factoryListProvider);
@@ -75,16 +78,20 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
         message: result['message'] ?? 'Fabrika insaati tamamlanamadi.',
         type: SnackbarType.error,
       );
+      return;
     }
+
+    await showExperienceFeedbackFromResult(context, result);
   }
 
   Future<void> _finishConstructionWithGold(String constructionId) async {
     final result = await ref
         .read(factoryActionProvider)
-        .finishConstructionWithGold(constructionId);
+        .finishConstructionWithGold(constructionId, syncProviders: false);
 
     ref.invalidate(factoryConstructionProvider);
     ref.invalidate(factoryListProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -94,6 +101,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
         message: 'Insaat aninda tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
       return;
     }
 
@@ -393,14 +401,17 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   }
 
   Widget _buildFilters() {
-    return Row(
-      children: [
-        _buildFilterChip('Tumu', null),
-        SizedBox(width: 8.w),
-        _buildFilterChip('Aktif', AppColors.green),
-        SizedBox(width: 8.w),
-        _buildFilterChip('Pasif', AppColors.red),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildFilterChip('Tumu', null),
+          SizedBox(width: 8.w),
+          _buildFilterChip('Aktif', AppColors.green),
+          SizedBox(width: 8.w),
+          _buildFilterChip('Pasif', AppColors.red),
+        ],
+      ),
     );
   }
 
@@ -494,21 +505,10 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     );
   }
 
-  Widget _buildFactoryList(List<FactoryListItemModel> factories) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: factories.length,
-      itemBuilder: (context, index) {
-        return _buildAdvancedFactoryCard(factories[index]);
-      },
-    );
-  }
-
   Widget _buildAdvancedFactoryCard(FactoryListItemModel item) {
     final factory = item.factory;
     return Container(
-      margin: EdgeInsets.only(bottom: 14.h),
+      margin: EdgeInsets.only(bottom: 10.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20.r),
         color: AppColors.cardBg,
@@ -571,7 +571,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                 splashColor: AppColors.gold.withValues(alpha: 0.1),
                 highlightColor: AppColors.gold.withValues(alpha: 0.05),
                 child: Padding(
-                  padding: EdgeInsets.all(14.w),
+                  padding: EdgeInsets.all(12.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -579,18 +579,16 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildFactoryImage(item),
-                          SizedBox(width: 14.w),
+                          SizedBox(width: 10.w),
                           Expanded(
                             child: _buildFactoryHeader(item),
                           ),
                         ],
                       ),
-                      SizedBox(height: 12.h),
-                      _buildProductionStateSection(item),
-                      SizedBox(height: 12.h),
-                      _buildOutputSection(item),
-                      SizedBox(height: 12.h),
+                      SizedBox(height: 8.h),
                       _buildResourceSection(item),
+                      SizedBox(height: 8.h),
+                      _buildOutputSection(item),
                     ],
                   ),
                 ),
@@ -604,9 +602,9 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
 
   Widget _buildFactoryImage(FactoryListItemModel item) {
     return Container(
-      width: 76.w,
-      height: 76.w,
-      padding: EdgeInsets.all(10.w),
+      width: 64.w,
+      height: 64.w,
+      padding: EdgeInsets.all(8.w),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16.r),
@@ -647,7 +645,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                 factory.name,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 15.sp,
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
@@ -670,22 +668,22 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                 item.cityName,
                 style: TextStyle(
                   color: AppColors.gold,
-                  fontSize: 11.sp,
+                  fontSize: 10.sp,
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            _buildSmallBadge('Seviye ${factory.level}', Colors.orangeAccent),
+            _buildSmallBadge('Lv ${factory.level}', Colors.orangeAccent),
           ],
         ),
-        SizedBox(height: 6.h),
+        SizedBox(height: 4.h),
         Text(
           item.factoryTypeName,
           style: TextStyle(
             color: AppColors.textMuted,
-            fontSize: 11.sp,
+            fontSize: 10.sp,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -698,7 +696,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     final ratio = item.outputStockRatio;
     final color = _getRatioColor(ratio);
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12.r),
@@ -715,14 +713,14 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                   Icon(
                     Icons.inventory_2,
                     color: AppColors.textSecondary,
-                    size: 14.sp,
+                    size: 13.sp,
                   ),
-                  SizedBox(width: 6.w),
+                  SizedBox(width: 5.w),
                   Text(
-                    'Cikis Deposu',
+                    'Output',
                     style: TextStyle(
                       color: AppColors.textSecondary,
-                      fontSize: 11.sp,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -732,15 +730,15 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                 '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.factory.outputCapacity)}',
                 style: TextStyle(
                   color: ratio >= 0.9 ? AppColors.red : Colors.white,
-                  fontSize: 12.sp,
+                  fontSize: 10.sp,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 6.h),
           Container(
-            height: 6.h,
+            height: 5.h,
             width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.4),
@@ -773,83 +771,13 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     );
   }
 
-  Widget _buildProductionStateSection(FactoryListItemModel item) {
-    final state = _resolveFactoryState(item);
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: state.color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: state.color.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: state.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: Icon(state.icon, color: state.color, size: 16.sp),
-          ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  state.title,
-                  style: TextStyle(
-                    color: state.color,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  state.subtitle,
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 10.sp,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: 10.w),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'Input ${_formatCompact(item.inputStockQuantity)}',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(height: 2.h),
-              Text(
-                'Output ${_formatCompact(item.outputStockQuantity)}',
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 10.sp,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildResourceSection(FactoryListItemModel item) {
     final factory = item.factory;
     final product = item.selectedProduct;
     final hasProduct = item.hasSelectedProduct;
 
     return Container(
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
         color: hasProduct
             ? AppColors.cardBgLight.withValues(alpha: 0.3)
@@ -895,10 +823,10 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  hasProduct ? 'Uretilen Urun' : 'Urun Ayari Gerekli',
+                  hasProduct ? 'Uretilen urun' : 'Urun ayari gerekli',
                   style: TextStyle(
                     color: hasProduct ? AppColors.textSecondary : AppColors.gold.withValues(alpha: 0.8),
-                    fontSize: 11.sp,
+                    fontSize: 10.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -907,14 +835,14 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                   hasProduct ? product!.urunAdi : 'Urun secilmedi',
                   style: TextStyle(
                     color: hasProduct ? Colors.white : AppColors.textMuted,
-                    fontSize: 13.sp,
+                    fontSize: 12.sp,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 SizedBox(height: 2.h),
                 Text(
                   hasProduct
-                      ? 'Kalite ${factory.qualityLevel} | Saatlik ${product!.uretimAdedi}'
+                      ? 'Kalite ${factory.qualityLevel} | Saatlik ${product!.uretimAdedi} | Hammadde ${_formatCompact(item.inputStockQuantity)}'
                       : 'Detay ekranindan urun secerek uretimi baslat.',
                   style: TextStyle(
                     color: AppColors.textMuted,
@@ -954,9 +882,9 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   }
 
   Color _getRatioColor(double ratio) {
-    if (ratio >= 0.8) return AppColors.green;
+    if (ratio >= 0.8) return AppColors.red;
     if (ratio >= 0.4) return Colors.orange;
-    return AppColors.red;
+    return AppColors.green;
   }
 
   String _formatCompact(int value) {
@@ -986,64 +914,5 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
       ),
     );
   }
-
-  _FactoryCardState _resolveFactoryState(FactoryListItemModel item) {
-    if (!item.hasSelectedProduct) {
-      return const _FactoryCardState(
-        title: 'Urun Secimi Bekliyor',
-        subtitle: 'Uretim baslamadan once urun tanimlanmali.',
-        color: AppColors.gold,
-        icon: Icons.playlist_add_check_circle_outlined,
-      );
-    }
-
-    if (!item.factory.isActive) {
-      return const _FactoryCardState(
-        title: 'Hat Pasif',
-        subtitle: 'Makine kapali oldugu icin uretim beklemede.',
-        color: AppColors.red,
-        icon: Icons.pause_circle_outline,
-      );
-    }
-
-    if (item.isOutputFull) {
-      return const _FactoryCardState(
-        title: 'Output Dolu',
-        subtitle: 'Depoya aktarim yapilmadan yeni cikis zorlasir.',
-        color: AppColors.red,
-        icon: Icons.inventory_2_outlined,
-      );
-    }
-
-    if (!item.hasInputStock) {
-      return const _FactoryCardState(
-        title: 'Input Takviyesi Gerekli',
-        subtitle: 'Uretimi surdurmek icin girdi stogu cekilmeli.',
-        color: AppColors.gold,
-        icon: Icons.south_west,
-      );
-    }
-
-    return const _FactoryCardState(
-      title: 'Uretime Hazir',
-      subtitle: 'Urun secili, stok var ve hat calismaya uygun.',
-      color: AppColors.green,
-      icon: Icons.check_circle_outline,
-    );
-  }
-}
-
-class _FactoryCardState {
-  final String title;
-  final String subtitle;
-  final Color color;
-  final IconData icon;
-
-  const _FactoryCardState({
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.icon,
-  });
 }
 

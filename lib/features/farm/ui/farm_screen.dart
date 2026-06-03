@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
@@ -29,14 +30,13 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => refreshRouteData());
   }
 
   @override
   void refreshRouteData() {
     ref.invalidate(farmListProvider);
     ref.invalidate(farmConstructionProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
     ref.read(farmListProvider.future);
     ref.read(farmConstructionProvider.future);
   }
@@ -59,17 +59,16 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(farmListProvider);
     ref.invalidate(farmConstructionProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
     final result = await ref
         .read(farmActionProvider)
-        .completeConstruction(constructionId);
+        .completeConstruction(constructionId, syncProviders: false);
 
     ref.invalidate(farmConstructionProvider);
     ref.invalidate(farmListProvider);
-    ref.invalidate(playerStreamProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -79,6 +78,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
         message: 'Tarla insaati tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
       return;
     }
 
@@ -95,11 +95,11 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   Future<void> _finishConstructionWithGold(String constructionId) async {
     final result = await ref
         .read(farmActionProvider)
-        .finishConstructionWithGold(constructionId);
+        .finishConstructionWithGold(constructionId, syncProviders: false);
 
     ref.invalidate(farmConstructionProvider);
     ref.invalidate(farmListProvider);
-    ref.invalidate(playerStreamProvider);
+    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {
@@ -109,6 +109,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
         message: 'Insaat aninda tamamlandi.',
         type: SnackbarType.success,
       );
+      await showExperienceFeedbackFromResult(context, result);
       return;
     }
 
@@ -174,7 +175,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                               ),
                             ),
                           SliverPadding(
-                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 80.h),
+                            padding: EdgeInsets.fromLTRB(5.w, 16.h, 5.w, 80.h),
                             sliver: filteredFarms.isEmpty
                                 ? SliverToBoxAdapter(
                                     child: construction == null
@@ -512,17 +513,6 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     );
   }
 
-  Widget _buildFarmList(List<FarmListItemModel> farms) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: farms.length,
-      itemBuilder: (context, index) {
-        return _buildAdvancedFarmCard(farms[index]);
-      },
-    );
-  }
-
   Widget _buildAdvancedFarmCard(FarmListItemModel item) {
     final farm = item.farm;
     return Container(
@@ -714,7 +704,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     final ratio = item.outputStockRatio;
     final color = _getRatioColor(ratio);
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12.r),

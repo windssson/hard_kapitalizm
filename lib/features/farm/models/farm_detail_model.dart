@@ -9,6 +9,8 @@ class FarmTypeDetailModel {
   final int maxSlotCount;
   final int inputCapacity;
   final int outputCapacity;
+  final int cost;
+  final int constructionTimeMinutes;
 
   const FarmTypeDetailModel({
     required this.id,
@@ -18,6 +20,8 @@ class FarmTypeDetailModel {
     required this.maxSlotCount,
     required this.inputCapacity,
     required this.outputCapacity,
+    required this.cost,
+    required this.constructionTimeMinutes,
   });
 
   factory FarmTypeDetailModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +33,9 @@ class FarmTypeDetailModel {
       maxSlotCount: (json['max_slot_count'] as num?)?.toInt() ?? 5,
       inputCapacity: (json['input_capacity'] as num?)?.toInt() ?? 0,
       outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
+      cost: (json['cost'] as num?)?.toInt() ?? 0,
+      constructionTimeMinutes:
+          (json['construction_time_minutes'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -170,6 +177,17 @@ class FarmDetailModel {
       inventories
           .where(
             (e) => e.isInput && _activeInputProductIds.contains(e.productId),
+          )
+          .toList()
+        ..sort((a, b) => a.productId.compareTo(b.productId));
+
+  List<FarmProductionInventoryModel> get orphanInputInventories =>
+      inventories
+          .where(
+            (e) =>
+                e.isInput &&
+                !_activeInputProductIds.contains(e.productId) &&
+                (e.quantity > 0 || e.pendingQuantity > 0),
           )
           .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));

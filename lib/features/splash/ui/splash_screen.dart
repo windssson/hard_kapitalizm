@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
+import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -16,6 +18,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   int _totalFiles = 0;
   int _currentFile = 0;
+  bool _isStarting = false;
 
   String? _error;
 
@@ -26,6 +29,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _startDownload() async {
+    if (_isStarting) return;
+    _isStarting = true;
     try {
       final authManager = ref.read(authManagerProvider);
       await authManager.signInAnonymouslyIfNeeded();
@@ -34,25 +39,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (user != null) {
         try {
           await Supabase.instance.client.rpc(
-            'complete_due_building_upgrades',
-            params: {
-              'p_limit': 100,
-            },
+            'bootstrap_game_session',
           );
         } catch (_) {
-          // Gecikmis yukseltmeler basarisiz olsa bile giris akisini bloklamiyoruz.
+          // Bootstrap basarisiz olsa bile asset yukleme ve giris akisina devam ediyoruz.
         }
+      }
 
+      await ref.read(staticCatalogsProvider.future);
+
+      if (user != null) {
         try {
-          await Supabase.instance.client.rpc(
-            'complete_due_market_transfers',
-            params: {
-              'p_buyer_player_id': user.id,
-              'p_limit': 100,
-            },
-          );
+          await ref.read(notificationActionProvider).refreshAttention();
         } catch (_) {
-          // Gecikmis transfer tamamlama basarisiz olsa bile giris akisini bloklamiyoruz.
+          // Bildirim attention refresh basarisiz olsa da giris akisina devam.
         }
       }
 
@@ -80,6 +80,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         });
         // %100 doluluk animasyonunun görünmesi için yarım saniye bekle
         await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
         context.go('/home');
       }
     } catch (e) {
@@ -88,6 +89,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           _error = e.toString();
         });
       }
+    } finally {
+      _isStarting = false;
     }
   }
 
@@ -138,7 +141,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                       ),
                     ],
                   ),
-                  child: Icon(Icons.monetization_on_rounded, size: 72.sp, color: AppColors.gold),
+                  child: Image.asset('assets/logo.png', width: 80.sp, height: 80.sp, fit: BoxFit.contain),
                 ),
                 SizedBox(height: 40.h),
                 // Title
