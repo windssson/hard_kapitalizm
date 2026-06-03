@@ -23,18 +23,38 @@ List<String> parseAcceptedProductIds(dynamic rawValue) {
       .toList();
 }
 
+String _normalizeProductId(String value) {
+  return value
+      .trim()
+      .toUpperCase()
+      .replaceAll('\u0130', 'I')
+      .replaceAll('I\u0307', 'I')
+      .replaceAll('\u011E', 'G')
+      .replaceAll('\u00DC', 'U')
+      .replaceAll('\u015E', 'S')
+      .replaceAll('\u00D6', 'O')
+      .replaceAll('\u00C7', 'C');
+}
+
 List<ProductModel> resolveAcceptedProducts(
   List<String> acceptedIds,
   List<ProductModel> products,
 ) {
   if (acceptedIds.isEmpty) return const [];
 
-  final productById = {
-    for (final product in products) product.id.trim().toUpperCase(): product,
-  };
+  final productById = <String, ProductModel>{};
+  for (final product in products) {
+    final rawId = product.id.trim().toUpperCase();
+    productById[rawId] = product;
+    productById[_normalizeProductId(rawId)] = product;
+  }
 
   return acceptedIds
-      .map((id) => productById[id])
+      .map(
+        (id) =>
+            productById[id.trim().toUpperCase()] ??
+            productById[_normalizeProductId(id)],
+      )
       .whereType<ProductModel>()
       .toList();
 }
@@ -54,10 +74,7 @@ class TypeProductPreview extends StatelessWidget {
     if (products.isEmpty) {
       return Text(
         'Bu tur icin urun listesi bulunamadi.',
-        style: TextStyle(
-          color: AppColors.textMuted,
-          fontSize: 10.sp,
-        ),
+        style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
       );
     }
 
@@ -68,61 +85,61 @@ class TypeProductPreview extends StatelessWidget {
           title,
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 11.sp,
+            fontSize: 10.sp,
             fontWeight: FontWeight.w700,
           ),
         ),
-        SizedBox(height: 8.h),
+        SizedBox(height: 6.h),
         SizedBox(
-          height: 106.h,
-          child: GridView.builder(
+          height: 78.h,
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 8.w,
-              crossAxisSpacing: 8.h,
-              childAspectRatio: 2.9,
-            ),
             itemCount: products.length,
+            separatorBuilder: (_, __) => SizedBox(width: 8.w),
             itemBuilder: (context, index) {
               final product = products[index];
               return Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+                width: 58.w,
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: AppColors.cardBgLight.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(9.r),
                   border: Border.all(
                     color: AppColors.border.withValues(alpha: 0.45),
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 28.w,
-                      height: 28.w,
-                      padding: EdgeInsets.all(4.w),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(8.r),
+                    CachedAssetImage(
+                      fileName: product.urunIconu.isEmpty
+                          ? 'default.webp'
+                          : product.urunIconu,
+                      width: 38.w,
+                      height: 38.w,
+                      fit: BoxFit.contain,
+                      placeholder: Icon(
+                        Icons.inventory_2_rounded,
+                        color: AppColors.gold.withValues(alpha: 0.65),
+                        size: 20.sp,
                       ),
-                      child: CachedAssetImage(
-                        fileName: product.urunIconu,
-                        fit: BoxFit.contain,
+                      errorWidget: Icon(
+                        Icons.inventory_2_rounded,
+                        color: AppColors.gold,
+                        size: 20.sp,
                       ),
                     ),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Text(
-                        product.urunAdi,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w600,
-                          height: 1.15,
-                        ),
+                    SizedBox(height: 5.h),
+                    Text(
+                      product.urunAdi,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 8.sp,
+                        fontWeight: FontWeight.w600,
+                        height: 1.05,
                       ),
                     ),
                   ],

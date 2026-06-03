@@ -1,10 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 
@@ -21,63 +21,80 @@ class AppTopBar extends ConsumerWidget {
     final player = playerAsyncValue.value;
     final claimableMissionCount = missionDashboard?.claimableCount ?? 0;
     final unreadNotificationCount = notificationDashboard?.unreadCount ?? 0;
-    final progress = (player?.expProgressRatio as double?) ?? 0.0;
+    final progress = player?.expProgressRatio ?? 0.0;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-          decoration: BoxDecoration(
-            color: AppColors.navBg,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 10.r,
+            offset: const Offset(0, 3),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _buildLevelCircle(player?.level ?? 1, progress),
-              const Spacer(),
-              Row(
-                children: [
-                  _buildCompactCurrency(
-                    Icons.payments_rounded,
-                    _formatMoney(player?.cash ?? 0),
-                    AppColors.green,
-                  ),
-                  SizedBox(width: 6.w),
-                  _buildCompactCurrency(
-                    Icons.star_rounded,
-                    player?.gold.toInt().toString() ?? '0',
-                    AppColors.goldLight,
-                  ),
-                  SizedBox(width: 10.w),
-                  Row(
-                    children: [
-                      _buildActionIcon(
-                        icon: Icons.notifications_none_rounded,
-                        badgeCount: unreadNotificationCount,
-                        onTap: () => context.push('/notifications'),
-                      ),
-                      SizedBox(width: 8.w),
-                      _buildActionIcon(
-                        icon: Icons.flag_outlined,
-                        badgeCount: claimableMissionCount,
-                        onTap: () => context.push('/missions'),
-                      ),
-                    ],
-                  ),
+        ],
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.cardBg.withValues(alpha: 0.85),
+                  AppColors.navBg.withValues(alpha: 0.9),
                 ],
               ),
-            ],
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.borderGold.withValues(alpha: 0.4),
+                  width: 1.5.h,
+                ),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildLevelCircle(player?.level ?? 1, progress),
+                const Spacer(),
+                Row(
+                  children: [
+                    _buildCompactCurrency(
+                      Icons.payments_rounded,
+                      _formatMoney(player?.cash ?? 0),
+                      AppColors.green,
+                    ),
+                    SizedBox(width: 6.w),
+                    _buildCompactCurrency(
+                      Icons.star_rounded,
+                      player?.gold.toInt().toString() ?? '0',
+                      AppColors.goldLight,
+                    ),
+                    SizedBox(width: 10.w),
+                    Row(
+                      children: [
+                        _buildActionIcon(
+                          icon: Icons.notifications_none_rounded,
+                          badgeCount: unreadNotificationCount,
+                          onTap: () => context.push('/notifications'),
+                        ),
+                        SizedBox(width: 8.w),
+                        _buildActionIcon(
+                          icon: Icons.flag_outlined,
+                          badgeCount: claimableMissionCount,
+                          onTap: () => context.push('/missions'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 

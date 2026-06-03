@@ -66,41 +66,15 @@ class NumericKeyboard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (shortcuts.isNotEmpty) ...[
-            SizedBox(
-              height: 34.h,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemBuilder: (context, index) {
-                  final shortcut = shortcuts[index];
-                  return GestureDetector(
-                    onTap: () => _applyShortcut(shortcut.value),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 6.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(999.r),
-                        border: Border.all(
-                          color: AppColors.gold.withValues(alpha: 0.28),
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          shortcut.label,
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                separatorBuilder: (_, __) => SizedBox(width: 6.w),
-                itemCount: shortcuts.length,
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (var index = 0; index < shortcuts.length; index++) ...[
+                    _buildShortcutChip(shortcuts[index]),
+                    if (index < shortcuts.length - 1) SizedBox(width: 6.w),
+                  ],
+                ],
               ),
             ),
             SizedBox(height: 8.h),
@@ -152,6 +126,31 @@ class NumericKeyboard extends StatelessWidget {
               color: Colors.white,
               fontSize: isIcon ? 12.sp : 14.sp,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShortcutChip(NumericKeyboardShortcut shortcut) {
+    return GestureDetector(
+      onTap: () => _applyShortcut(shortcut.value),
+      child: Container(
+        constraints: BoxConstraints(minHeight: 34.h),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: AppColors.gold.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(999.r),
+          border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+        ),
+        child: Center(
+          child: Text(
+            shortcut.label,
+            style: TextStyle(
+              color: AppColors.gold,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),

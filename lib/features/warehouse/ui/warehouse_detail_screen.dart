@@ -246,12 +246,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     }
 
     final productById = {
-      for (final product in allProducts) product.id.trim().toUpperCase(): product,
+      for (final product in allProducts)
+        product.id.trim().toUpperCase(): product,
     };
 
-    return acceptedIds
-        .map((id) => productById[id]?.urunAdi ?? id)
-        .toList();
+    return acceptedIds.map((id) => productById[id]?.urunAdi ?? id).toList();
   }
 
   void _openMarketForSlot(
@@ -323,7 +322,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   Container(
                     width: 68.w,
                     height: 68.w,
-                    padding: EdgeInsets.all(10.w),
+                    padding: EdgeInsets.all(5.w),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16.r),
@@ -490,9 +489,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(14.r),
-              border: Border.all(
-                color: AppColors.blue.withValues(alpha: 0.22),
-              ),
+              border: Border.all(color: AppColors.blue.withValues(alpha: 0.22)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1407,12 +1404,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (!context.mounted) return;
 
     if (actionResult['success'] == true) {
-      final nextPrice =
-          (actionResult['price'] as num?)?.toDouble() ?? result;
+      final nextPrice = (actionResult['price'] as num?)?.toDouble() ?? result;
       ref
           .read(warehouseDetailProvider(widget.warehouseId).notifier)
           .patchSlotPrice(slotId: slot.id, price: nextPrice);
-      ref.read(warehouseListProvider.notifier).patchSlotPrice(
+      ref
+          .read(warehouseListProvider.notifier)
+          .patchSlotPrice(
             warehouseId: widget.warehouseId,
             slotId: slot.id,
             price: nextPrice,
@@ -1479,10 +1477,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       ref
           .read(warehouseDetailProvider(widget.warehouseId).notifier)
           .removeSlot(slot.id);
-      ref.read(warehouseListProvider.notifier).removeSlot(
-            warehouseId: widget.warehouseId,
-            slotId: slot.id,
-          );
+      ref
+          .read(warehouseListProvider.notifier)
+          .removeSlot(warehouseId: widget.warehouseId, slotId: slot.id);
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
@@ -2009,7 +2006,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         ref
             .read(warehouseDetailProvider(widget.warehouseId).notifier)
             .patchSlotQuantity(slotId: slot.id, quantity: 0);
-        ref.read(warehouseListProvider.notifier).patchSlotQuantity(
+        ref
+            .read(warehouseListProvider.notifier)
+            .patchSlotQuantity(
               warehouseId: widget.warehouseId,
               slotId: slot.id,
               quantity: 0,
@@ -2018,7 +2017,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         ref
             .read(warehouseDetailProvider(widget.warehouseId).notifier)
             .patchSlotQuantity(slotId: slot.id, quantity: remainingQuantity);
-        ref.read(warehouseListProvider.notifier).patchSlotQuantity(
+        ref
+            .read(warehouseListProvider.notifier)
+            .patchSlotQuantity(
               warehouseId: widget.warehouseId,
               slotId: slot.id,
               quantity: remainingQuantity,
@@ -2077,7 +2078,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             slotId: slot.id,
             isAvailableForSale: !slot.isAvailableForSale,
           );
-      ref.read(warehouseListProvider.notifier).patchSlotSaleStatus(
+      ref
+          .read(warehouseListProvider.notifier)
+          .patchSlotSaleStatus(
             warehouseId: widget.warehouseId,
             slotId: slot.id,
             isAvailableForSale: !slot.isAvailableForSale,

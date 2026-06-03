@@ -24,10 +24,16 @@ class StoreTypeModel {
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
       icon: (json['icon'] ?? '').toString(),
-      acceptedProductIds: _parseAcceptedProductIds(json['accepted_product_ids']),
+      acceptedProductIds: _parseAcceptedProductIds(
+        json['accepted_product_ids'] ??
+            json['sellable_product_ids'] ??
+            json['product_ids'] ??
+            json['allowed_product_ids'],
+      ),
       cost: (json['cost'] as num?)?.toInt() ?? 0,
       requiredLevel: (json['required_level'] as num?)?.toInt() ?? 1,
-      constructionTimeMinutes: (json['construction_time_minutes'] as num?)?.toInt() ?? 30,
+      constructionTimeMinutes:
+          (json['construction_time_minutes'] as num?)?.toInt() ?? 30,
     );
   }
 

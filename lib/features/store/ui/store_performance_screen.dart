@@ -42,7 +42,7 @@ class _StorePerformanceScreenState
     final performanceAsync = ref.watch(storePerformanceProvider(widget.storeId));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [

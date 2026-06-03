@@ -1371,7 +1371,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$totalStock stok � ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
+            '$totalStock stok | ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11.sp,

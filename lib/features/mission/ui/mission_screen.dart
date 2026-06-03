@@ -370,6 +370,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     PlayerMissionModel mission, {
     bool featured = false,
   }) {
+    final missionTypeColor = _missionTypeColor(mission);
     final isLoading = _claimingMissionIds.contains(mission.id);
     final canClaim = mission.claimable && !isLoading;
     final accentColor = mission.claimable
@@ -408,16 +409,44 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      mission.title,
-                      style: AppTextStyles.body.copyWith(
-                        fontSize: featured ? 14.sp : 13.sp,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          margin: EdgeInsets.only(right: 8.w),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 4.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: missionTypeColor.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(999.r),
+                            border: Border.all(
+                              color: missionTypeColor.withValues(alpha: 0.28),
+                            ),
+                          ),
+                          child: Text(
+                            mission.missionTypeLabel,
+                            style: TextStyle(
+                              color: missionTypeColor,
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            mission.title,
+                            style: AppTextStyles.body.copyWith(
+                              fontSize: featured ? 14.sp : 13.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 2.h),
+                    SizedBox(height: 4.h),
                     Text(
-                      mission.missionTypeLabel,
+                      _eventHintLabel(mission.eventKey),
                       style: TextStyle(
                         color: accentColor,
                         fontSize: 10.sp,
@@ -449,12 +478,19 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  mission.compactStatusText,
-                  style: AppTextStyles.body.copyWith(
-                    fontSize: 10.sp,
-                    color: AppColors.textMuted,
-                  ),
+                child: Wrap(
+                  spacing: 6.w,
+                  runSpacing: 6.h,
+                  children: [
+                    _buildInfoChip(
+                      _missionProgressLabel(mission),
+                      AppColors.textMuted,
+                    ),
+                    _buildInfoChip(
+                      mission.compactRewardText,
+                      AppColors.goldLight,
+                    ),
+                  ],
                 ),
               ),
               if (mission.claimable || isLoading)
@@ -527,6 +563,31 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildInfoChip(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  String _missionProgressLabel(PlayerMissionModel mission) {
+    if (mission.claimable) return 'Odul Hazir';
+    if (mission.isClaimed) return 'Tamamlandi';
+    return '${mission.progressCount}/${mission.targetCount}';
   }
 
   Widget _buildEmptyState() => Center(
@@ -636,6 +697,29 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       default:
         return Icons.flag_rounded;
     }
+  }
+
+  Color _missionTypeColor(PlayerMissionModel mission) {
+    switch (mission.missionType) {
+      case 'main':
+        return AppColors.gold;
+      case 'daily':
+        return Colors.orangeAccent;
+      case 'achievement':
+        return Colors.purpleAccent;
+      case 'side':
+      default:
+        return AppColors.blue;
+    }
+  }
+
+  String _eventHintLabel(String eventKey) {
+    if (eventKey.contains('construction')) return 'Insaat ilerlemesi';
+    if (eventKey.contains('upgrade')) return 'Yukseltme ilerlemesi';
+    if (eventKey.contains('sale')) return 'Satis ilerlemesi';
+    if (eventKey.contains('transfer')) return 'Transfer ilerlemesi';
+    if (eventKey.contains('research')) return 'Arastirma ilerlemesi';
+    return 'Genel ilerleme';
   }
 
   String _formatMoney(dynamic amount) {

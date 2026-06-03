@@ -53,7 +53,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
     final historyAsync = ref.watch(storeHistoryProvider(widget.storeId));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [

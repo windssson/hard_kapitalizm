@@ -82,6 +82,27 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
     state = AsyncData(next);
   }
 
+  void patchStoreActive({
+    required String storeId,
+    required bool isActive,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final storeIndex = current.indexWhere((item) => item.id == storeId);
+    if (storeIndex < 0) return;
+
+    final next = [...current];
+    next[storeIndex] = next[storeIndex].copyWith(isActive: isActive);
+    state = AsyncData(next);
+  }
+
+  void removeStore(String storeId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((item) => item.id != storeId).toList());
+  }
+
   void patchSlotActive({
     required String storeId,
     required String slotId,
@@ -200,6 +221,14 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
 
   void replacePage(StoreDetailPageModel page) {
     state = AsyncData(page);
+  }
+
+  void patchStoreActive(bool isActive) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(store: current.store.copyWith(isActive: isActive)),
+    );
   }
 
   void clearSaleResult() {
@@ -692,6 +721,52 @@ class StoreActionNotifier {
         },
       );
       return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> setStoreActive({
+    required String storeId,
+    required bool isActive,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_store_active',
+        params: {
+          'p_store_id': storeId,
+          'p_is_active': isActive,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> sellStore({
+    required String storeId,
+    required bool confirm,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'sell_store',
+        params: {
+          'p_store_id': storeId,
+          'p_confirm': confirm,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

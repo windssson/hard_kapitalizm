@@ -183,6 +183,7 @@ class MarketActionNotifier {
     String? buyerWarehouseId,
     String? buyerStoreSlotId,
     required String sellerSlotId,
+    required String productId,
     required int quantity,
     String? vehicleId,
   }) async {
@@ -192,6 +193,37 @@ class MarketActionNotifier {
     }
 
     try {
+      if (sellerSlotId.startsWith('npc:')) {
+        final isStoreTarget =
+            buyerStoreSlotId != null && buyerStoreSlotId.isNotEmpty;
+        if (!isStoreTarget &&
+            (buyerWarehouseId == null || buyerWarehouseId.isEmpty)) {
+          return {
+            'success': false,
+            'message': 'Alici depo bilgisi bulunamadi.',
+          };
+        }
+
+        final response = await _supabase.rpc(
+          isStoreTarget
+              ? 'buy_npc_market_product_to_store'
+              : 'buy_npc_market_product_to_warehouse',
+          params: isStoreTarget
+              ? {
+                  'p_store_slot_id': buyerStoreSlotId,
+                  'p_product_id': productId,
+                  'p_quantity': quantity,
+                }
+              : {
+                  'p_buyer_warehouse_id': buyerWarehouseId,
+                  'p_product_id': productId,
+                  'p_quantity': quantity,
+                },
+        );
+
+        return Map<String, dynamic>.from(response as Map);
+      }
+
       final response = await _supabase.rpc(
         (buyerStoreSlotId != null && buyerStoreSlotId.isNotEmpty)
             ? 'start_market_to_store_transfer'

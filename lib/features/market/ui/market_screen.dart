@@ -14,7 +14,6 @@ import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_store_slot_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_warehouse_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
-import 'package:hard_kapitalizm/features/market/models/market_transfer_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -243,6 +242,46 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
+  List<MarketListingModel> _withNpcListing({
+    required List<MarketListingModel> listings,
+    required ProductModel? product,
+    required Map<String, dynamic>? fallbackCity,
+    required MarketBuyerWarehouseModel? buyer,
+    required MarketBuyerStoreSlotModel? buyerStoreSlot,
+  }) {
+    if (product == null || product.bazSatisFiyati <= 0) return listings;
+
+    final cityId =
+        (buyerStoreSlot?.cityId ?? buyer?.cityId ?? widget.cityId).toString();
+    if (cityId.isEmpty) return listings;
+
+    final cityName = (buyerStoreSlot?.cityName ??
+            buyer?.cityName ??
+            fallbackCity?['name'] ??
+            'Pazar')
+        .toString();
+    final cityX = _resolveCoordinate(
+      buyerStoreSlot?.cityX ?? buyer?.cityX,
+      fallbackCity?['map_position_x'],
+    );
+    final cityY = _resolveCoordinate(
+      buyerStoreSlot?.cityY ?? buyer?.cityY,
+      fallbackCity?['map_position_y'],
+    );
+
+    return [
+      ...listings,
+      MarketListingModel.npc(
+        productId: product.id,
+        price: product.bazSatisFiyati * 1.25,
+        cityId: cityId,
+        cityName: cityName,
+        cityX: cityX,
+        cityY: cityY,
+      ),
+    ];
+  }
+
   List<MarketListingModel> _filterListingsForTargetSlot(
     List<MarketListingModel> listings,
     MarketBuyerStoreSlotModel? buyerStoreSlot,
@@ -262,89 +301,42 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         .toList();
   }
 
-  List<MarketTransferModel> _filterTransfersForCurrentTarget(
-    List<MarketTransferModel> transfers,
-  ) {
-    return transfers.where((transfer) {
-      if (transfer.productId != widget.productId) {
-        return false;
-      }
-
-      if (_isStoreTarget) {
-        return transfer.buyerStoreSlotId == widget.storeSlotId;
-      }
-
-      return transfer.buyerWarehouseId == widget.warehouseId;
-    }).toList();
-  }
-
-  Widget _buildActiveTransferSummary(List<MarketTransferModel> transfers) {
-    if (transfers.isEmpty) {
-      return _buildInfoBox(
-        'Bu hedef icin yolda aktif alim yok.',
-        AppColors.textMuted,
-      );
-    }
-
-    final nearestFinishAt = transfers
-        .map((transfer) => transfer.finishAt)
-        .reduce((a, b) => a.isBefore(b) ? a : b);
-    final remaining = nearestFinishAt.difference(DateTime.now());
-    final safe = remaining.isNegative ? Duration.zero : remaining;
-    final hours = safe.inHours.toString().padLeft(2, '0');
-    final minutes = (safe.inMinutes % 60).toString().padLeft(2, '0');
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.local_shipping_outlined, color: AppColors.gold, size: 18.sp),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Text(
-              '${transfers.length} aktif alim yolda',
-              style: AppTextStyles.body.copyWith(
-                color: Colors.white,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Text(
-            'En yakin: $hours:$minutes',
-            style: AppTextStyles.body.copyWith(
-              color: AppColors.gold,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTargetSummaryCard({
     required ProductModel? product,
     required MarketBuyerWarehouseModel? buyerWarehouse,
     required MarketBuyerStoreSlotModel? buyerStoreSlot,
     required WarehouseCapacityStatusModel? capacity,
   }) {
-    final targetName = _isStoreTarget
+    final bool isStore = _isStoreTarget;
+    final String targetName = isStore
         ? (buyerStoreSlot?.storeName ?? 'Magaza')
         : (buyerWarehouse?.warehouseName ?? 'Merkez Depo');
-    final cityName = _isStoreTarget
+    final String cityName = isStore
         ? (buyerStoreSlot?.cityName ?? 'Sehir bekleniyor...')
         : (buyerWarehouse?.cityName ?? 'Sehir bekleniyor...');
-    final availableText = _isStoreTarget
-        ? '${buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'} bos alan'
-        : '${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m3 bos kapasite';
-    final productText = product?.urunAdi ?? 'Urun';
+    final bool isActive = isStore
+        ? (buyerStoreSlot?.isActive ?? false)
+        : (buyerWarehouse?.isActive ?? false);
+    final String productText = product?.urunAdi ?? 'Urun';
+
+    // Capacity & Progress Bar Calculations
+    double fillRatio = 0.0;
+    String totalText = '';
+    String availableText = '';
+    if (isStore) {
+      final used = (buyerStoreSlot?.quantity ?? 0) + (buyerStoreSlot?.pendingQuantity ?? 0);
+      final total = (buyerStoreSlot?.capacity ?? 0) <= 0 ? 1 : buyerStoreSlot!.capacity;
+      fillRatio = (used / total).clamp(0.0, 1.0);
+      totalText = '$total';
+      availableText = '${buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'} bos alan';
+    } else {
+      final available = capacity?.availableCapacity ?? 0.0;
+      final totalCandidate = capacity?.totalCapacity ?? 1.0;
+      final total = totalCandidate <= 0 ? 1.0 : totalCandidate;
+      fillRatio = (1.0 - (available / total)).clamp(0.0, 1.0);
+      totalText = '${capacity?.totalCapacity.toStringAsFixed(1) ?? '0'} m3';
+      availableText = '${available.toStringAsFixed(1)} m3 bos kapasite';
+    }
 
     return Container(
       width: double.infinity,
@@ -373,7 +365,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
-                  _isStoreTarget
+                  isStore
                       ? Icons.storefront_outlined
                       : Icons.warehouse_outlined,
                   color: AppColors.gold,
@@ -386,7 +378,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Alim Hedefi',
+                      'Alim Hedefi: $productText',
                       style: AppTextStyles.body.copyWith(
                         color: AppColors.textMuted,
                         fontSize: 10.sp,
@@ -394,7 +386,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     ),
                     SizedBox(height: 2.h),
                     Text(
-                      '$targetName icin $productText',
+                      targetName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
@@ -402,22 +394,46 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   ],
                 ),
               ),
+              _buildStatusBadge(isActive),
+              SizedBox(width: 6.w),
               _buildTypeBadge(_targetTypeLabel, AppColors.gold),
             ],
           ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 12.h),
+
+          // Progress bar & Capacity Info
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Doluluk: %${(fillRatio * 100).toInt()}',
+                style: AppTextStyles.body.copyWith(
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.gold,
+                ),
+              ),
+              Text(
+                isStore
+                  ? 'Bos: ${buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'} / Toplam: $totalText'
+                  : 'Bos: ${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m3 / Toplam: $totalText',
+                style: AppTextStyles.body.copyWith(
+                  fontSize: 10.sp,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 6.h),
+          _buildPremiumProgressBar(fillRatio, AppColors.gold),
+
+          SizedBox(height: 12.h),
           Wrap(
             spacing: 8.w,
             runSpacing: 8.h,
             children: [
               _buildInlineStat('Sehir', cityName),
-              _buildInlineStat('Durum', availableText),
-              _buildInlineStat(
-                'Teslimat',
-                widget.cityId.isNotEmpty && widget.cityId == (buyerStoreSlot?.cityId ?? buyerWarehouse?.cityId)
-                    ? 'Ayni sehir'
-                    : 'Sehirler arasi olabilir',
-              ),
+              _buildInlineStat('Kapasite Durumu', availableText),
             ],
           ),
         ],
@@ -453,7 +469,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final capacityAsync = _isStoreTarget
         ? AsyncValue<WarehouseCapacityStatusModel?>.data(null)
         : ref.watch(warehouseCapacityStatusProvider(widget.warehouseId));
-    final transfersAsync = ref.watch(buyerActiveMarketTransfersProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -490,24 +505,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             buyerStoreSlot: buyerStoreSlot,
                             capacity: capacityAsync.value,
                           ),
-                          SizedBox(height: 12.h),
-                          _isStoreTarget
-                              ? _buildBuyerStoreSlotCard(buyerStoreSlot)
-                              : _buildBuyerWarehouseCard(
-                                  buyerWarehouseAsync.value,
-                                  capacityAsync.value,
-                                ),
-                          SizedBox(height: 16.h),
-                          transfersAsync.when(
-                            data: (transfers) => _buildActiveTransferSummary(
-                              _filterTransfersForCurrentTarget(transfers),
-                            ),
-                            loading: _buildLoadingCard,
-                            error: (e, s) => _buildErrorCard(
-                              'Transfer ozeti alinamadi.',
-                            ),
-                          ),
-                          SizedBox(height: 16.h),
                         ]),
                       ),
                     ),
@@ -521,8 +518,15 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                       sliver: listingsAsync.when(
                         data: (listings) {
+                          final listingsWithNpc = _withNpcListing(
+                            listings: listings,
+                            product: productAsync.value,
+                            fallbackCity: fallbackCityAsync.value,
+                            buyer: buyerWarehouseAsync.value,
+                            buyerStoreSlot: buyerStoreSlot,
+                          );
                           final filteredListings = _filterListingsForTargetSlot(
-                            listings,
+                            listingsWithNpc,
                             buyerStoreSlot,
                           );
 
@@ -616,189 +620,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
-  Widget _buildBuyerWarehouseCard(
-    MarketBuyerWarehouseModel? buyer,
-    WarehouseCapacityStatusModel? capacity,
-  ) {
-    final available = capacity?.availableCapacity ?? 0.0;
-    final totalCandidate = capacity?.totalCapacity ?? 1.0;
-    final total = totalCandidate <= 0 ? 1.0 : totalCandidate;
-    final fillRatio = (1 - (available / total)).clamp(0.0, 1.0);
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42.w,
-                height: 42.w,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBgLight,
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(
-                  Icons.warehouse_outlined,
-                  color: AppColors.gold,
-                  size: 20.sp,
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      buyer?.warehouseName ?? 'Merkez Depo',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
-                    ),
-                    Text(
-                      buyer?.cityName ?? 'Sehir bekleniyor...',
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.gold,
-                        fontSize: 11.sp,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Text(
-                '%${(fillRatio * 100).toInt()}',
-                style: TextStyle(
-                  color: AppColors.gold,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11.sp,
-                ),
-              ),
-              SizedBox(width: 8.w),
-              _buildStatusBadge(buyer?.isActive ?? false),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          _buildPremiumProgressBar(fillRatio, AppColors.gold),
-          SizedBox(height: 6.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Bos kapasite: ${available.toStringAsFixed(1)} m3',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 10.sp,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              Text(
-                'Toplam: ${capacity?.totalCapacity.toStringAsFixed(1) ?? '0'} m3',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 10.sp,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBuyerStoreSlotCard(MarketBuyerStoreSlotModel? storeSlot) {
-    final used = (storeSlot?.quantity ?? 0) + (storeSlot?.pendingQuantity ?? 0);
-    final total = (storeSlot?.capacity ?? 0) <= 0 ? 1 : storeSlot!.capacity;
-    final fillRatio = (used / total).clamp(0.0, 1.0);
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42.w,
-                height: 42.w,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBgLight,
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(
-                  Icons.storefront_outlined,
-                  color: AppColors.gold,
-                  size: 20.sp,
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      storeSlot?.storeName ?? 'Magaza',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
-                    ),
-                    Text(
-                      storeSlot?.cityName ?? 'Sehir bekleniyor...',
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.gold,
-                        fontSize: 11.sp,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Text(
-                '%${(fillRatio * 100).toInt()}',
-                style: TextStyle(
-                  color: AppColors.gold,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11.sp,
-                ),
-              ),
-              SizedBox(width: 8.w),
-              _buildStatusBadge(storeSlot?.isActive ?? false),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          _buildPremiumProgressBar(fillRatio, AppColors.gold),
-          SizedBox(height: 6.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Kapasite: ${storeSlot?.capacity ?? 0}',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 10.sp,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              Text(
-                'Bos alan: ${storeSlot?.availableCapacity.toStringAsFixed(0) ?? '0'}',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 10.sp,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
   Widget _buildListingsSliver({
     required List<MarketListingModel> listings,
     required MarketBuyerWarehouseModel? buyer,
@@ -886,163 +708,183 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               ),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 12.h),
-                  child: Column(
+                  padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 12.h),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 42.w,
-                          height: 42.w,
-                          decoration: BoxDecoration(
-                            color: AppColors.cardBgLight,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.borderGold.withValues(alpha: 0.35),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 42.w,
+                                  height: 42.w,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cardBgLight,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.borderGold.withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: ClipOval(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(5.w),
+                                      child: CachedAssetImage(
+                                        fileName: listing.sellerAvatarId,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 10.w),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        listing.sellerPlayerName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        '${listing.warehouseName} • ${listing.cityName}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTextStyles.body.copyWith(
+                                          fontSize: 10.sp,
+                                          color: AppColors.textMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          child: ClipOval(
-                            child: Padding(
-                              padding: EdgeInsets.all(5.w),
-                              child: CachedAssetImage(
-                                fileName: listing.sellerAvatarId,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 10.w),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                listing.sellerPlayerName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.w800,
+                            SizedBox(height: 10.h),
+                            Wrap(
+                              spacing: 10.w,
+                              runSpacing: 4.h,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                _buildInlineMetric(
+                                  icon: Icons.inventory_2_outlined,
+                                  label: 'Stok',
+                                  value: listing.quantity.toString(),
+                                  color: AppColors.blue,
                                 ),
-                              ),
-                              SizedBox(height: 2.h),
-                              Text(
-                                '${listing.warehouseName} • ${listing.cityName}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.body.copyWith(
-                                  fontSize: 10.sp,
-                                  color: AppColors.textMuted,
+                                _buildInlineQualityMetric(
+                                  label: 'Kalite',
+                                  qualityLevel: listing.qualityLevel,
+                                  color: AppColors.gold,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8.w,
-                            vertical: 6.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: distanceColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10.r),
-                            border: Border.all(
-                              color: distanceColor.withValues(alpha: 0.35),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                '${distanceKm.toStringAsFixed(0)} km',
-                                style: TextStyle(
-                                  color: distanceColor,
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'rota',
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 8.sp,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10.h),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Wrap(
-                            spacing: 10.w,
-                            runSpacing: 4.h,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              _buildInlineMetric(
-                                icon: Icons.inventory_2_outlined,
-                                label: 'Stok',
-                                value: listing.quantity.toString(),
-                                color: AppColors.blue,
-                              ),
-                              _buildInlineQualityMetric(
-                                label: 'Kalite',
-                                qualityLevel: listing.qualityLevel,
-                                color: AppColors.gold,
-                              ),
-                              _buildInlineMetric(
-                                icon: Icons.payments_outlined,
-                                label: 'Fiyat',
-                                value: listing.price.toStringAsFixed(1),
-                                color: AppColors.green,
-                              ),
-                              _buildTypeBadge(
-                                isInstantDelivery
-                                    ? 'Ayni sehir / Aninda'
-                                    : 'Sehirler arasi / Arac',
-                                isInstantDelivery
-                                    ? AppColors.green
-                                    : AppColors.gold,
-                              ),
-                              if (priceDeltaBadge != null)
+                                if (listing.isNpc)
+                                  _buildTypeBadge(
+                                    'NPC / Kalite 1',
+                                    AppColors.blue,
+                                  ),
                                 _buildTypeBadge(
-                                  priceDeltaBadge.$1,
-                                  priceDeltaBadge.$2,
+                                  isInstantDelivery
+                                      ? 'Ayni sehir / Aninda'
+                                      : 'Sehirler arasi / Arac',
+                                  isInstantDelivery
+                                      ? AppColors.green
+                                      : AppColors.gold,
                                 ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        SizedBox(
-                          height: 34.h,
-                          child: ElevatedButton(
-                            onPressed: () => _openPurchaseSheet(
-                              listing,
-                              product,
-                              buyerStoreSlot,
+                                if (priceDeltaBadge != null)
+                                  _buildTypeBadge(
+                                    priceDeltaBadge.$1,
+                                    priceDeltaBadge.$2,
+                                  ),
+                              ],
                             ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.gold,
-                              padding: EdgeInsets.symmetric(horizontal: 12.w),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.r),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 4.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.green.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: AppColors.green.withValues(alpha: 0.35),
                               ),
                             ),
                             child: Text(
-                              'AL',
+                              '₺${listing.price.toStringAsFixed(1)}',
                               style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.w900,
+                                color: AppColors.green,
                                 fontSize: 11.sp,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          SizedBox(height: 6.h),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 4.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: distanceColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: distanceColor.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Text(
+                              '${distanceKm.toStringAsFixed(0)} km',
+                              style: TextStyle(
+                                color: distanceColor,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 6.h),
+                          SizedBox(
+                            height: 28.h,
+                            child: ElevatedButton(
+                              onPressed: () => _openPurchaseSheet(
+                                listing,
+                                product,
+                                buyerStoreSlot,
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.gold,
+                                padding: EdgeInsets.symmetric(horizontal: 12.w),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10.r),
+                                ),
+                              ),
+                              child: Text(
+                                'AL',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11.sp,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -1325,9 +1167,6 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
     return widget.targetCityId == widget.listing.cityId;
   }
 
-  String get _deliveryModeLabel =>
-      _isSameCityInstantPurchase ? 'Anlik Teslimat' : 'Lojistik Transfer';
-
   String get _targetLabel =>
       _isStoreTarget ? 'Magaza Slotu' : 'Depo';
 
@@ -1499,6 +1338,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
             sellerSlotId: _isStoreTarget
                 ? widget.listing.slotId
                 : widget.listing.slotId,
+            productId: widget.product.id,
             quantity: _quantity,
             vehicleId: selected?.vehicleId,
           );
@@ -1673,7 +1513,9 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
               ),
               SizedBox(height: 6.h),
               Text(
-                '${widget.listing.sellerPlayerName} oyuncusundan alim yapacaksiniz.',
+                widget.listing.isNpc
+                    ? 'NPC tedarikciden kalite 1 urun alacaksiniz.'
+                    : '${widget.listing.sellerPlayerName} oyuncusundan alim yapacaksiniz.',
                 style: AppTextStyles.body,
               ),
               SizedBox(height: 10.h),

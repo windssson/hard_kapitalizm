@@ -101,7 +101,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                   itemBuilder: (context, index) {
                                     final store = filteredStores[index];
                                     return TweenAnimationBuilder<double>(
-                                      duration: Duration(milliseconds: 300 + (index * 100).clamp(0, 600)),
+                                      duration: Duration(
+                                        milliseconds:
+                                            300 + (index * 100).clamp(0, 600),
+                                      ),
                                       curve: Curves.easeOutCubic,
                                       tween: Tween<double>(begin: 0, end: 1),
                                       builder: (context, value, child) {
@@ -179,52 +182,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  String _formatCompactValue(num value) {
-    if (value.abs() >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    }
-    if (value.abs() >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-    return value.toStringAsFixed(value % 1 == 0 ? 0 : 1);
-  }
-
-  double _calculateStoreStockCost(StoreModel store) {
-    final summaryCost = store.summary.totalStockCostValue;
-    if (summaryCost != null && summaryCost > 0) {
-      return summaryCost;
-    }
-
-    return store.slots.fold<double>(
-      0,
-      (total, slot) => total + ((slot.cost ?? 0) * slot.quantity),
-    );
-  }
-
-  double _calculateStoreStockSaleValue(StoreModel store) {
-    final summarySaleValue = store.summary.totalStockSaleValue;
-    if (summarySaleValue != null && summarySaleValue > 0) {
-      return summarySaleValue;
-    }
-
-    return store.slots.fold<double>(
-      0,
-      (total, slot) => total + ((slot.price ?? 0) * slot.quantity),
-    );
-  }
-
-  double _calculatePendingSaleValue(StoreModel store) {
-    final summaryPending = store.summary.pendingSaleTotal;
-    if (summaryPending != null && summaryPending > 0) {
-      return summaryPending;
-    }
-
-    return store.slots.fold<double>(
-      0,
-      (total, slot) => total + (slot.pendingSale ?? 0),
     );
   }
 
@@ -313,8 +270,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               label,
               style: TextStyle(
                 color: isSelected ? AppColors.gold : AppColors.textMuted,
-                fontWeight:
-                    isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 13.sp,
               ),
             ),
@@ -326,14 +282,19 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
   Widget _buildConstructionCard(StoreModel store) {
     final finishAt = store.finishAt;
-    final starCost = finishAt == null ? 0 : _calculateStarCost(finishAt.toLocal());
+    final starCost = finishAt == null
+        ? 0
+        : _calculateStarCost(finishAt.toLocal());
 
     return Column(
       children: [
         Container(
           margin: EdgeInsets.only(bottom: starCost > 0 ? 0 : 10.h),
           padding: EdgeInsets.all(8.w),
-          decoration: AppDecorations.premiumCard(AppColors.gold.withValues(alpha: 0.4), 24.r),
+          decoration: AppDecorations.premiumCard(
+            AppColors.gold.withValues(alpha: 0.4),
+            24.r,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -397,7 +358,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                               color: AppColors.textPrimary,
                               fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
-                              
                             ),
                           ),
                           TextSpan(
@@ -501,10 +461,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               'Tamamla',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13.sp,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
             ),
           ),
         ],
@@ -540,10 +497,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildAdvancedStoreCard(StoreModel store) {
-    final stockCost = _calculateStoreStockCost(store);
-    final stockSaleValue = _calculateStoreStockSaleValue(store);
-    final pendingSaleValue = _calculatePendingSaleValue(store);
-
     return GestureDetector(
       onTap: () => context.go('/store/${store.id}'),
       child: Container(
@@ -557,9 +510,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             Column(
               children: [
                 Container(
-                  width: 56.w,
-                  height: 56.w,
-                  padding: EdgeInsets.all(8.w),
+                  width: 68.w,
+                  height: 68.w,
+                  padding: EdgeInsets.all(1.w),
                   decoration: BoxDecoration(
                     color: AppColors.cardBgLight.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12.r),
@@ -570,10 +523,12 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   ),
                   child: CachedAssetImage(
                     fileName: store.storeType.icon,
+                    width: 68.w,
+                    height: 68.w,
                     fit: BoxFit.contain,
                   ),
                 ),
-                SizedBox(height: 6.h),
+                SizedBox(height: 4.h),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -583,7 +538,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       store.cityName ?? 'Bilinmiyor',
                       style: TextStyle(
                         color: AppColors.gold,
-                        fontSize: 10.sp,
+                        fontSize: 11.sp,
                         fontWeight: FontWeight.bold,
                       ),
                       maxLines: 1,
@@ -599,115 +554,72 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    store.name,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 8.h),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // MIDDLE TOP
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Wrap(
+                          spacing: 6.w,
+                          runSpacing: 6.h,
                           children: [
-                            Text(
-                              store.name,
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            _buildInfoPill(
+                              icon: Icons.grid_view_rounded,
+                              label: 'Slot',
+                              value:
+                                  '${store.currentSlotCount}/${store.maxSlotCount}',
+                              color: AppColors.gold,
                             ),
-                            SizedBox(height: 4.h),
-                            _buildSmallBadge('Lv. ${store.level}', AppColors.gold),
+                            _buildInfoPill(
+                              icon: Icons.inventory_2_rounded,
+                              label: 'Doluluk',
+                              value:
+                                  '%${(store.summary.usedCapacityRatio * 100).round()}',
+                              color: store.summary.usedCapacityRatio >= 0.85
+                                  ? AppColors.red
+                                  : AppColors.green,
+                            ),
                           ],
                         ),
                       ),
-                      // RIGHT TOP
-                      _buildSmallBadge(
-                        store.isActive ? 'Aktif' : 'Pasif',
-                        store.isActive ? AppColors.green : AppColors.red,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10.h),
-                  Wrap(
-                    spacing: 8.w,
-                    runSpacing: 8.h,
-                    children: [
-                      _buildInfoPill(
-                        icon: Icons.grid_view_rounded,
-                        label: 'Slot',
-                        value: '${store.currentSlotCount}/${store.maxSlotCount}',
-                        color: AppColors.gold,
-                      ),
-                      _buildInfoPill(
-                        icon: Icons.inventory_2_rounded,
-                        label: 'Doluluk',
-                        value: '%${(store.summary.usedCapacityRatio * 100).round()}',
-                        color: store.summary.usedCapacityRatio >= 0.85
-                            ? AppColors.red
-                            : AppColors.green,
-                      ),
-                      _buildInfoPill(
-                        icon: Icons.schedule_rounded,
-                        label: 'Bekleyen',
-                        value: _formatCompactValue(pendingSaleValue),
-                        color: AppColors.blue,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10.h),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 8.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardBgLight.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(
-                        color: AppColors.borderGoldLight.withValues(alpha: 0.1),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _buildValueColumn(
-                            'Maliyet',
-                            'TL ${_formatCompactValue(stockCost)}',
-                            AppColors.textSecondary,
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildValueColumn(
-                            'Liste Degeri',
-                            'TL ${_formatCompactValue(stockSaleValue)}',
-                            AppColors.green,
-                          ),
-                        ),
-                        Expanded(
-                          child: _buildValueColumn(
-                            'Bos Kap.',
-                            _formatCompactValue(
-                              store.summary.availableCapacity,
-                            ),
+                      SizedBox(width: 8.w),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildSmallBadge(
+                            'Lv. ${store.level}',
                             AppColors.gold,
                           ),
-                        ),
-                      ],
-                    ),
+                          SizedBox(width: 6.w),
+                          _buildSmallBadge(
+                            store.isActive ? 'Aktif' : 'Pasif',
+                            store.isActive ? AppColors.green : AppColors.red,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                   if (store.slots.isNotEmpty) ...[
                     SizedBox(height: 12.h),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: store.slots.map((slot) => _buildSlotItem(slot)).toList(),
+                        children: store.slots
+                            .map((slot) => _buildSlotItem(slot))
+                            .toList(),
                       ),
                     ),
-                  ]
+                  ],
                 ],
               ),
             ),
@@ -748,98 +660,89 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     );
   }
 
-  Widget _buildValueColumn(String label, String value, Color valueColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
-        ),
-        SizedBox(height: 2.h),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: valueColor,
-            fontSize: 11.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildSlotItem(StoreSlotModel slot) {
-    final double fillRatio = slot.capacity > 0 ? (slot.quantity / slot.capacity).clamp(0.0, 1.0) : 0.0;
-    
+    final double fillRatio = slot.capacity > 0
+        ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
+        : 0.0;
+
     // Color transitions from red to green based on fill ratio
-    final Color progressColor = Color.lerp(AppColors.red, AppColors.green, fillRatio) ?? AppColors.green;
+    final Color progressColor =
+        Color.lerp(AppColors.red, AppColors.green, fillRatio) ??
+        AppColors.green;
 
     return Container(
       margin: EdgeInsets.only(right: 8.w),
       width: 48.w,
       height: 48.w,
-      decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: AppColors.borderGoldLight.withValues(alpha: 0.1)),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10.r),
-        child: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            // Fill Progress Background
-            if (!slot.isEmpty && slot.isActive)
-              FractionallySizedBox(
-                heightFactor: fillRatio,
-                widthFactor: 1.0,
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  color: progressColor.withValues(alpha: 0.3),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (!slot.isEmpty && slot.isActive) ...[
+            SizedBox(
+              width: 48.w,
+              height: 48.w,
+              child: CircularProgressIndicator(
+                value: 1.0,
+                strokeWidth: 2.5.w,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.borderGoldLight.withValues(alpha: 0.18),
                 ),
-              ),
-            // Bottom solid line indicating it's a progress bar
-            if (!slot.isEmpty && slot.isActive)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 3.h,
-                child: FractionallySizedBox(
-                  widthFactor: fillRatio,
-                  alignment: Alignment.bottomLeft,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: progressColor,
-                      boxShadow: [
-                        BoxShadow(color: progressColor.withValues(alpha: 0.5), blurRadius: 4, offset: const Offset(0, -1)),
-                      ]
-                    )
-                  ),
-                ),
-              ),
-            // Icon
-            Center(
-              child: Padding(
-                padding: EdgeInsets.all(8.w),
-                child: slot.isEmpty 
-                  ? Icon(Icons.add, color: AppColors.textMuted.withValues(alpha: 0.3), size: 20.sp) 
-                  : CachedAssetImage(fileName: slot.productIcon ?? 'default.webp'),
               ),
             ),
-            // Pasif indicator
-            if (!slot.isEmpty && !slot.isActive)
-              Container(
-                color: Colors.black.withValues(alpha: 0.6),
-                child: Center(
-                  child: Icon(Icons.pause, color: AppColors.red, size: 20.sp),
+            SizedBox(
+              width: 48.w,
+              height: 48.w,
+              child: CircularProgressIndicator(
+                value: fillRatio,
+                strokeWidth: 2.5.w,
+                backgroundColor: Colors.transparent,
+                valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+              ),
+            ),
+          ] else
+            Container(
+              width: 48.w,
+              height: 48.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.borderGoldLight.withValues(alpha: 0.18),
                 ),
               ),
-          ],
-        ),
+            ),
+          Container(
+            width: 38.w,
+            height: 38.w,
+            padding: EdgeInsets.all(5.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBgLight.withValues(alpha: 0.45),
+              shape: BoxShape.circle,
+            ),
+            child: slot.isEmpty
+                ? Icon(
+                    Icons.add,
+                    color: AppColors.textMuted.withValues(alpha: 0.3),
+                    size: 18.sp,
+                  )
+                : CachedAssetImage(
+                    fileName: slot.productIcon ?? 'default.webp',
+                    fit: BoxFit.contain,
+                  ),
+          ),
+          // Pasif indicator
+          if (!slot.isEmpty && !slot.isActive)
+            Container(
+              width: 48.w,
+              height: 48.w,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.62),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(Icons.pause, color: AppColors.red, size: 18.sp),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -896,13 +799,16 @@ class _ConstructionCountdown extends ConsumerStatefulWidget {
       _ConstructionCountdownState();
 }
 
-class _ConstructionCountdownState extends ConsumerState<_ConstructionCountdown> {
+class _ConstructionCountdownState
+    extends ConsumerState<_ConstructionCountdown> {
   bool _triggered = false;
 
   @override
   Widget build(BuildContext context) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final totalDuration = widget.finishAt.difference(widget.startedAt).inSeconds;
+    final totalDuration = widget.finishAt
+        .difference(widget.startedAt)
+        .inSeconds;
     final elapsed = now.difference(widget.startedAt).inSeconds;
     final double progress = totalDuration > 0
         ? (elapsed / totalDuration).clamp(0.0, 1.0)

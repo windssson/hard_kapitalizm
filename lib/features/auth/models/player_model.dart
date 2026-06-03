@@ -1,3 +1,5 @@
+import 'package:hard_kapitalizm/features/achievement/models/achievement_badge_model.dart';
+
 class PlayerModel {
   final String id;
   final String playerName;
@@ -11,6 +13,9 @@ class PlayerModel {
   final int nextLevelRequiredExperience;
   final int remainingExperienceToNextLevel;
   final double expProgressRatio;
+  final int achievementUnlockedCount;
+  final int achievementTotalCount;
+  final List<AchievementBadgeModel> featuredBadges;
   final double cash;
   final double gold;
   final DateTime createdAt;
@@ -28,12 +33,17 @@ class PlayerModel {
     required this.nextLevelRequiredExperience,
     required this.remainingExperienceToNextLevel,
     required this.expProgressRatio,
+    required this.achievementUnlockedCount,
+    required this.achievementTotalCount,
+    required this.featuredBadges,
     required this.cash,
     required this.gold,
     required this.createdAt,
   });
 
   factory PlayerModel.fromJson(Map<String, dynamic> json) {
+    final rawBadges = (json['featured_badges'] as List?) ?? const [];
+
     return PlayerModel(
       id: json['id'] as String,
       playerName: json['player_name'] as String? ?? 'Oyuncu',
@@ -53,12 +63,24 @@ class PlayerModel {
           (json['next_level_required_experience'] as num?)?.toInt() ?? 1,
       remainingExperienceToNextLevel:
           (json['remaining_experience_to_next_level'] as num?)?.toInt() ?? 0,
-      expProgressRatio:
-          (json['exp_progress_ratio'] as num?)?.toDouble() ?? 0,
+      expProgressRatio: (json['exp_progress_ratio'] as num?)?.toDouble() ?? 0,
+      achievementUnlockedCount:
+          (json['achievement_unlocked_count'] as num?)?.toInt() ?? 0,
+      achievementTotalCount:
+          (json['achievement_total_count'] as num?)?.toInt() ?? 0,
+      featuredBadges: rawBadges
+          .map(
+            (item) => AchievementBadgeModel.fromJson(
+              item is Map<String, dynamic>
+                  ? item
+                  : Map<String, dynamic>.from(item as Map),
+            ),
+          )
+          .toList(),
       cash: (json['cash'] as num?)?.toDouble() ?? 100000.0,
       gold: (json['gold'] as num?)?.toDouble() ?? 100.0,
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at'] as String) 
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
     );
   }
@@ -77,6 +99,30 @@ class PlayerModel {
       'next_level_required_experience': nextLevelRequiredExperience,
       'remaining_experience_to_next_level': remainingExperienceToNextLevel,
       'exp_progress_ratio': expProgressRatio,
+      'achievement_unlocked_count': achievementUnlockedCount,
+      'achievement_total_count': achievementTotalCount,
+      'featured_badges': featuredBadges
+          .map(
+            (badge) => {
+              'id': badge.id,
+              'category': badge.category,
+              'title': badge.title,
+              'description': badge.description,
+              'badge_key': badge.badgeKey,
+              'badge_color': badge.badgeColor,
+              'target_count': badge.targetCount,
+              'progress_count': badge.progressCount,
+              'is_unlocked': badge.isUnlocked,
+              'unlocked_at': badge.unlockedAt?.toIso8601String(),
+              'progress_ratio': badge.progressRatio,
+              'reward': {
+                'xp': badge.rewardXp,
+                'cash': badge.rewardCash,
+                'gold': badge.rewardGold,
+              },
+            },
+          )
+          .toList(),
       'cash': cash,
       'gold': gold,
       'created_at': createdAt.toIso8601String(),

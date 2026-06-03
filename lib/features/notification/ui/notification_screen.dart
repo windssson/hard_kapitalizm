@@ -402,6 +402,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       return '/arge';
     }
 
+    if (notification.category == 'achievement_unlocked') {
+      return '/achievements';
+    }
+
     if (notification.entityKind == 'logistics') {
       return '/logistics';
     }
@@ -435,6 +439,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return Icons.local_shipping_rounded;
       case 'arge_completed':
         return Icons.science_rounded;
+      case 'achievement_unlocked':
+        return Icons.workspace_premium_rounded;
       case 'store_blocked':
         return Icons.storefront_outlined;
       case 'production_blocked':
@@ -462,6 +468,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return 'Transfer Tamam';
       case 'arge_completed':
         return 'AR-GE Tamam';
+      case 'achievement_unlocked':
+        return 'Rozet Acildi';
       case 'logistics_attention':
         return 'Nakliye Uyarisi';
       case 'inactive_reminder':
@@ -490,6 +498,8 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return 'Nakliye';
       case 'inactive_reminder':
         return 'Pasif';
+      case 'achievement_unlocked':
+        return 'Rozet';
       default:
         return null;
     }

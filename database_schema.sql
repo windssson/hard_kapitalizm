@@ -7858,6 +7858,23 @@ $$;
 ALTER FUNCTION "public"."now_turkey"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) RETURNS numeric
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO 'public'
+    AS $$
+  select case greatest(1, least(coalesce(p_quality_level, 1), 5))
+    when 1 then 1.00::numeric
+    when 2 then 1.10::numeric
+    when 3 then 1.22::numeric
+    when 4 then 1.35::numeric
+    else 1.50::numeric
+  end;
+$$;
+
+
+ALTER FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."open_store_detail_page"("p_store_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -7991,7 +8008,7 @@ begin
       if coalesce(v_slot.baz_satis_fiyati, 0) <= 0 then
         v_price_multiplier := 1.0;
       else
-        v_price_ratio := v_slot.price / v_slot.baz_satis_fiyati;
+        v_price_ratio := v_slot.price / (v_slot.baz_satis_fiyati * public.store_quality_price_multiplier(v_slot.quality_level));
 
         if v_price_ratio <= 1 then
           v_price_multiplier := least(1.75, 1 + ((1 - v_price_ratio) * 0.75));
@@ -10341,6 +10358,183 @@ $$;
 
 
 ALTER FUNCTION "public"."set_production_slot_active"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_is_active" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_player_id uuid := auth.uid();
+  v_store record;
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  update public.stores
+  set is_active = coalesce(p_is_active, true),
+      updated_at = timezone('utc'::text, now())
+  where id = p_store_id
+    and player_id = v_player_id
+  returning id, is_active
+  into v_store;
+
+  if not found then
+    raise exception 'Magaza bulunamadi veya size ait degil.';
+  end if;
+
+  return jsonb_build_object(
+    'success', true,
+    'store_id', v_store.id,
+    'is_active', v_store.is_active
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean DEFAULT false) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_player_id uuid := auth.uid();
+  v_store record;
+  v_construction_refund numeric := 0;
+  v_stock_refund numeric := 0;
+  v_total_refund numeric := 0;
+  v_active_transfer_count integer := 0;
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  select
+    s.id,
+    s.player_id,
+    s.name,
+    coalesce(st.cost, 0)::numeric as store_cost
+  into v_store
+  from public.stores s
+  join public.store_types st on st.id = s.store_type_id
+  where s.id = p_store_id
+    and s.player_id = v_player_id
+  for update;
+
+  if not found then
+    raise exception 'Magaza bulunamadi veya size ait degil.';
+  end if;
+
+  select count(*)
+  into v_active_transfer_count
+  from public.logistics_transfers lt
+  where lt.status = 'in_transit'
+    and (
+      lt.buyer_store_id = p_store_id
+      or lt.seller_store_id = p_store_id
+      or lt.buyer_store_slot_id in (
+        select ss.id from public.store_slots ss where ss.store_id = p_store_id
+      )
+      or lt.seller_store_slot_id in (
+        select ss.id from public.store_slots ss where ss.store_id = p_store_id
+      )
+    );
+
+  if v_active_transfer_count > 0 then
+    return jsonb_build_object(
+      'success', false,
+      'can_sell', false,
+      'message', 'Bu magazaya bagli aktif transfer varken satis yapilamaz.',
+      'active_transfer_count', v_active_transfer_count
+    );
+  end if;
+
+  v_construction_refund := round(v_store.store_cost * 0.50, 2);
+
+  select round(
+    coalesce(sum(coalesce(ss.quantity, 0)::numeric * coalesce(ss.cost, 0)), 0)
+    * 0.50,
+    2
+  )
+  into v_stock_refund
+  from public.store_slots ss
+  where ss.store_id = p_store_id;
+
+  v_total_refund := coalesce(v_construction_refund, 0) + coalesce(v_stock_refund, 0);
+
+  if p_confirm is not true then
+    return jsonb_build_object(
+      'success', true,
+      'can_sell', true,
+      'store_id', p_store_id,
+      'store_name', v_store.name,
+      'construction_refund', v_construction_refund,
+      'stock_refund', v_stock_refund,
+      'total_refund', v_total_refund
+    );
+  end if;
+
+  update public.players
+  set cash = cash + v_total_refund
+  where id = v_player_id;
+
+  update public.logistics_transfers
+  set buyer_store_id = case when buyer_store_id = p_store_id then null else buyer_store_id end,
+      buyer_store_slot_id = case
+        when buyer_store_slot_id in (
+          select ss.id from public.store_slots ss where ss.store_id = p_store_id
+        ) then null
+        else buyer_store_slot_id
+      end,
+      seller_store_id = case when seller_store_id = p_store_id then null else seller_store_id end,
+      seller_store_slot_id = case
+        when seller_store_slot_id in (
+          select ss.id from public.store_slots ss where ss.store_id = p_store_id
+        ) then null
+        else seller_store_slot_id
+      end,
+      updated_at = timezone('utc'::text, now())
+  where status = 'completed'
+    and (
+      buyer_store_id = p_store_id
+      or seller_store_id = p_store_id
+      or buyer_store_slot_id in (
+        select ss.id from public.store_slots ss where ss.store_id = p_store_id
+      )
+      or seller_store_slot_id in (
+        select ss.id from public.store_slots ss where ss.store_id = p_store_id
+      )
+    );
+
+  delete from public.building_boosts
+  where building_kind = 'store'
+    and entity_id = p_store_id;
+
+  delete from public.building_upgrades
+  where building_kind = 'store'
+    and entity_id = p_store_id;
+
+  delete from public.stores
+  where id = p_store_id
+    and player_id = v_player_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'can_sell', true,
+    'store_id', p_store_id,
+    'store_name', v_store.name,
+    'construction_refund', v_construction_refund,
+    'stock_refund', v_stock_refund,
+    'total_refund', v_total_refund
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."set_store_slot_active"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_is_active" boolean) RETURNS "jsonb"
@@ -17447,6 +17641,11 @@ GRANT ALL ON FUNCTION "public"."now_turkey"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."now_turkey"() TO "service_role";
 
 
+GRANT ALL ON FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) TO "service_role";
+
+
 
 GRANT ALL ON FUNCTION "public"."open_store_detail_page"("p_store_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."open_store_detail_page"("p_store_id" "uuid") TO "authenticated";
@@ -17559,6 +17758,16 @@ GRANT ALL ON FUNCTION "public"."set_player_avatar"("p_avatar_id" "text") TO "ser
 GRANT ALL ON FUNCTION "public"."set_production_slot_active"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_is_active" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_production_slot_active"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_is_active" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_production_slot_active"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_is_active" boolean) TO "service_role";
+
+
+GRANT ALL ON FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) TO "anon";
+GRANT ALL ON FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) TO "service_role";
+
+
+GRANT ALL ON FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean) TO "anon";
+GRANT ALL ON FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean) TO "service_role";
 
 
 
@@ -17972,12 +18181,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
-
-
-
 
 
 

@@ -226,7 +226,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: () {},
+                            onTap: () => context.push('/profile'),
                             borderRadius: BorderRadius.circular(10.r),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -775,6 +775,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         return Icons.local_shipping_rounded;
       case 'arge_completed':
         return Icons.science_rounded;
+      case 'achievement_unlocked':
+        return Icons.workspace_premium_rounded;
       case 'store_blocked':
         return Icons.storefront_outlined;
       case 'production_blocked':
@@ -811,6 +813,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         return 'Transfer';
       case 'arge_completed':
         return 'AR-GE';
+      case 'achievement_unlocked':
+        return 'Rozet';
       case 'logistics_attention':
         return 'Nakliye';
       case 'inactive_reminder':

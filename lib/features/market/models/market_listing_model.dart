@@ -16,6 +16,7 @@ class MarketListingModel {
   final double price;
   final double cost;
   final bool isAvailableForSale;
+  final bool isNpc;
 
   const MarketListingModel({
     required this.listingId,
@@ -35,7 +36,38 @@ class MarketListingModel {
     required this.price,
     required this.cost,
     required this.isAvailableForSale,
+    this.isNpc = false,
   });
+
+  factory MarketListingModel.npc({
+    required String productId,
+    required double price,
+    required String cityId,
+    required String cityName,
+    required double cityX,
+    required double cityY,
+  }) {
+    return MarketListingModel(
+      listingId: 'npc:$productId',
+      slotId: 'npc:$productId',
+      warehouseId: 'npc',
+      warehouseName: 'Toptan Depo',
+      warehouseIcon: 'market.webp',
+      cityId: cityId,
+      cityName: cityName,
+      cityX: cityX,
+      cityY: cityY,
+      sellerPlayerId: 'npc',
+      sellerPlayerName: 'Toptan Ticaret',
+      sellerAvatarId: 'ae1.webp',
+      quantity: 18500,
+      qualityLevel: 1,
+      price: price,
+      cost: price,
+      isAvailableForSale: true,
+      isNpc: true,
+    );
+  }
 
   factory MarketListingModel.fromJson(Map<String, dynamic> json) {
     final warehouseJson = json['warehouse'] as Map<String, dynamic>? ?? {};
@@ -77,6 +109,7 @@ class MarketListingModel {
       price: (json['price'] as num?)?.toDouble() ?? 0,
       cost: (json['cost'] as num?)?.toDouble() ?? 0,
       isAvailableForSale: json['is_available_for_sale'] as bool? ?? false,
+      isNpc: json['is_npc'] as bool? ?? false,
     );
   }
 }

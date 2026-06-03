@@ -118,8 +118,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   }
 
   Widget _buildStatsHeader(List<WarehouseModel> warehouses) {
-    final activeCount =
-        warehouses.where((warehouse) => warehouse.isActive).length;
+    final activeCount = warehouses
+        .where((warehouse) => warehouse.isActive)
+        .length;
     final totalCapacity = warehouses.fold(
       0.0,
       (sum, warehouse) => sum + warehouse.capacity,
@@ -228,8 +229,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                   filter,
                   style: TextStyle(
                     color: isSelected ? AppColors.gold : AppColors.textMuted,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                     fontSize: 12.sp,
                   ),
                 ),
@@ -248,14 +250,16 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
       (sum, slot) => sum + (slot.quantity * slot.unitVolume),
     );
     final ratio = warehouse.capacity > 0
-        ? ((usedStockCapacity + warehouse.reservedCapacity) / warehouse.capacity)
+        ? ((usedStockCapacity + warehouse.reservedCapacity) /
+                  warehouse.capacity)
               .clamp(0.0, 1.0)
         : 0.0;
     final saleReadyCount = filledSlots
         .where((slot) => slot.isAvailableForSale)
         .length;
-    final availableCapacity = (warehouse.capacity - warehouse.reservedCapacity)
-        .clamp(0.0, warehouse.capacity);
+    final availableCapacity =
+        (warehouse.capacity - usedStockCapacity - warehouse.reservedCapacity)
+            .clamp(0.0, warehouse.capacity);
     final statusColor = warehouse.isActive ? AppColors.green : AppColors.red;
 
     return GestureDetector(
@@ -267,55 +271,60 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 90.w,
-              height: 90.w,
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.gold.withValues(alpha: 0.08),
-                    Colors.black.withValues(alpha: 0.32),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(
-                  color: AppColors.gold.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: CachedAssetImage(
-                      fileName: warehouse.typeIcon ?? 'depolar.webp',
-                      fit: BoxFit.contain,
+            Column(
+              children: [
+                Container(
+                  width: 90.w,
+                  height: 90.w,
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.gold.withValues(alpha: 0.08),
+                        Colors.black.withValues(alpha: 0.32),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.2),
                     ),
                   ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 4.h),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(8.r),
+                  child: CachedAssetImage(
+                    fileName: warehouse.typeIcon ?? 'depolar.webp',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                SizedBox(
+                  width: 90.w,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        color: AppColors.gold,
+                        size: 12.sp,
                       ),
-                      child: Text(
-                        '${filledSlots.length} slot dolu',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 8.sp,
-                          fontWeight: FontWeight.w700,
+                      SizedBox(width: 3.w),
+                      Flexible(
+                        child: Text(
+                          warehouse.cityName ?? 'Bilinmiyor',
+                          style: TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             SizedBox(width: 12.w),
             Expanded(
@@ -326,26 +335,14 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: warehouse.name,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' - ${warehouse.cityName ?? 'Bilinmiyor'}',
-                                style: TextStyle(
-                                  color: AppColors.gold,
-                                  fontSize: 11.sp,
-                                ),
-                              ),
-                            ],
+                        child: Text(
+                          warehouse.name,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -372,7 +369,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     children: [
                       _buildInfoPill(
                         Icons.inventory_2_outlined,
-                        '${filledSlots.length} slot',
+                        '${filledSlots.length} Slot',
                         AppColors.blue,
                       ),
                       _buildInfoPill(
@@ -400,7 +397,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                           ),
                         )
                       : SizedBox(
-                          height: 44.h,
+                          height: 52.h,
                           child: ListView.separated(
                             scrollDirection: Axis.horizontal,
                             physics: const BouncingScrollPhysics(),
@@ -423,38 +420,32 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     if (slot.isEmpty) return const SizedBox();
 
     return Container(
-      width: 40.w,
-      height: 40.w,
-      padding: EdgeInsets.all(5.w),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
-      ),
+      width: 50.w,
+      height: 50.w,
       child: Stack(
-        clipBehavior: Clip.none,
+        alignment: Alignment.center,
         children: [
-          CachedAssetImage(
-            fileName: slot.productIcon ?? 'default',
-            fit: BoxFit.contain,
+          Container(
+            width: 50.w,
+            height: 50.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.borderGoldLight.withValues(alpha: 0.18),
+              ),
+            ),
           ),
-          Positioned(
-            bottom: -8.h,
-            right: -4.w,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
-              decoration: BoxDecoration(
-                color: AppColors.cardBg,
-                borderRadius: BorderRadius.circular(4.r),
-              ),
-              child: Text(
-                _formatQuantity(slot.quantity),
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 7.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+          Container(
+            width: 40.w,
+            height: 40.w,
+            padding: EdgeInsets.all(5.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBgLight.withValues(alpha: 0.45),
+              shape: BoxShape.circle,
+            ),
+            child: CachedAssetImage(
+              fileName: slot.productIcon ?? 'default.webp',
+              fit: BoxFit.contain,
             ),
           ),
         ],
@@ -589,7 +580,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                           .read(warehouseActionProvider)
                           .completeConstruction(warehouse.id);
                       if (result['success'] == true) {
-                        await ref.read(warehouseListProvider.notifier).refresh();
+                        await ref
+                            .read(warehouseListProvider.notifier)
+                            .refresh();
                         ref.invalidate(playerProvider);
                         if (mounted) {
                           await showExperienceFeedbackFromResult(
@@ -722,10 +715,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             Text(
               error.toString(),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
-              ),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
             ),
           ],
         ),
@@ -737,11 +727,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
     return value.toStringAsFixed(0);
-  }
-
-  String _formatQuantity(int quantity) {
-    if (quantity >= 1000) return '${(quantity / 1000).toStringAsFixed(1)}k';
-    return quantity.toString();
   }
 }
 
