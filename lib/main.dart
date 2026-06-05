@@ -28,6 +28,7 @@ import 'package:hard_kapitalizm/features/mine/ui/mine_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_detail_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/market/ui/market_screen.dart';
+import 'package:hard_kapitalizm/features/logistics/ui/logistics_finance_report_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_setup_screen.dart';
 import 'package:hard_kapitalizm/features/transfer_map/ui/transfer_map_screen.dart';
@@ -214,6 +215,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/logistics',
       builder: (context, state) => const LogisticsManagementScreen(),
+    ),
+    GoRoute(
+      path: '/logistics/finance',
+      builder: (context, state) => const LogisticsFinanceReportScreen(),
     ),
     GoRoute(
       path: '/logistics/setup',

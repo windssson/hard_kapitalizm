@@ -1222,7 +1222,17 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
     double playerCash = 0,
     double rentalCost = 0,
   }) {
-    final parsed = int.tryParse(value) ?? 1;
+    if (value.trim().isEmpty) {
+      if (_quantity != 0 || _selectedVehicleId != null) {
+        setState(() {
+          _quantity = 0;
+          _selectedVehicleId = null;
+        });
+      }
+      return;
+    }
+
+    final parsed = int.tryParse(value) ?? 0;
     final maxQuantity = _computeMaxQuantity(
       playerCash: playerCash,
       rentalCost: rentalCost,
@@ -1441,7 +1451,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       sellerSlotId: widget.listing.slotId,
       quantity: _quantity,
     );
-    final optionsAsync = _isSameCityInstantPurchase
+    final optionsAsync = _isSameCityInstantPurchase || _quantity <= 0
         ? const AsyncValue<
             TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>
           >.data(
@@ -1457,7 +1467,9 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
         ? currentOptions.where((e) => e.vehicleId == _selectedVehicleId).firstOrNull
         : null;
     final rentalCost = selectedOption?.rentalCost ?? 0.0;
-    final totalCost = totalPrice + rentalCost;
+    final transportCost = selectedOption?.transportCost ?? rentalCost;
+    final totalPayment = totalPrice + rentalCost;
+    final totalCost = totalPrice + transportCost;
     final maxQuantity = _computeMaxQuantity(
       playerCash: player?.cash.toDouble() ?? double.infinity,
       rentalCost: rentalCost,
@@ -1639,13 +1651,27 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                     if (!_isSameCityInstantPurchase) ...[
                       SizedBox(height: 6.h),
                       _buildCostRow('Kira Bedeli', rentalCost.toStringAsFixed(1)),
+                      if ((transportCost - rentalCost).abs() > 0.01) ...[
+                        SizedBox(height: 6.h),
+                        _buildCostRow(
+                          'Nakliye Maliyeti',
+                          transportCost.toStringAsFixed(1),
+                        ),
+                      ],
                     ],
                     SizedBox(height: 6.h),
                     _buildCostRow(
-                      'Toplam',
-                      totalCost.toStringAsFixed(1),
+                      'Odenecek',
+                      totalPayment.toStringAsFixed(1),
                       highlight: true,
                     ),
+                    if ((totalCost - totalPayment).abs() > 0.01) ...[
+                      SizedBox(height: 6.h),
+                      _buildCostRow(
+                        'Toplam Maliyet',
+                        totalCost.toStringAsFixed(1),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1660,6 +1686,13 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
               optionsAsync.when(
                 data: (result) {
                   final options = result.options;
+                  if (!_isSameCityInstantPurchase && _quantity <= 0) {
+                    return _buildInfoBox(
+                      'Arac secimi icin once miktar girin.',
+                      AppColors.gold,
+                    );
+                  }
+
                   if (!_isSameCityInstantPurchase && options.isEmpty) {
                     return _buildInfoBox(
                       result.unavailableReason ??
@@ -1678,7 +1711,8 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                         width: double.infinity,
                         height: 42.h,
                         child: ElevatedButton(
-                          onPressed: _isSubmitting || maxQuantity <= 0
+                          onPressed:
+                              _isSubmitting || maxQuantity <= 0 || _quantity <= 0
                               ? null
                               : () => _submit(options),
                           style: ElevatedButton.styleFrom(
@@ -1784,8 +1818,8 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                   _formatDuration(option.estimatedDurationSeconds),
                 ),
                 _buildInlineStat(
-                  option.isRental ? 'Kira' : 'Maliyet',
-                  option.isRental ? option.rentalCost.toStringAsFixed(1) : '0',
+                  'Nakliye',
+                  option.transportCost.toStringAsFixed(1),
                 ),
               ],
             ),

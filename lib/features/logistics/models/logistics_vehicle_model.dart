@@ -9,6 +9,7 @@ class LogisticsVehicleModel {
   final int speedKmh;
   final int fuelCapacity;
   final int currentFuel;
+  final double fuelCost;
   final double fuelRate;
   final int condition;
   final String status;
@@ -28,6 +29,7 @@ class LogisticsVehicleModel {
     required this.speedKmh,
     required this.fuelCapacity,
     required this.currentFuel,
+    required this.fuelCost,
     required this.fuelRate,
     required this.condition,
     required this.status,
@@ -49,6 +51,7 @@ class LogisticsVehicleModel {
       speedKmh: json['speed_kmh'] as int? ?? 0,
       fuelCapacity: json['fuel_capacity'] as int? ?? 0,
       currentFuel: json['current_fuel'] as int? ?? 0,
+      fuelCost: (json['fuel_cost'] as num?)?.toDouble() ?? 0.0,
       fuelRate: (json['fuel_rate'] as num?)?.toDouble() ?? 0.0,
       condition: json['condition'] as int? ?? 100,
       status: json['status'] as String? ?? 'idle',
@@ -71,6 +74,7 @@ class LogisticsVehicleModel {
       'speed_kmh': speedKmh,
       'fuel_capacity': fuelCapacity,
       'current_fuel': currentFuel,
+      'fuel_cost': fuelCost,
       'fuel_rate': fuelRate,
       'condition': condition,
       'status': status,

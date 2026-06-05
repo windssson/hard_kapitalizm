@@ -11,6 +11,7 @@ class MarketTransferModel {
   final bool isRental;
   final double totalPrice;
   final double rentalCost;
+  final double transportCost;
 
   const MarketTransferModel({
     required this.id,
@@ -25,6 +26,7 @@ class MarketTransferModel {
     required this.isRental,
     required this.totalPrice,
     required this.rentalCost,
+    required this.transportCost,
   });
 
   factory MarketTransferModel.fromJson(Map<String, dynamic> json) {
@@ -42,6 +44,7 @@ class MarketTransferModel {
       isRental: json['is_rental'] as bool? ?? false,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
       rentalCost: (json['rental_cost'] as num?)?.toDouble() ?? 0,
+      transportCost: (json['transport_cost'] as num?)?.toDouble() ?? 0,
     );
   }
 }

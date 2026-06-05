@@ -7,10 +7,10 @@ Bu dosya aktif gelistirme durumunu ozetler. Yuzdeler "ozellik kapsami + entegras
 - Istemci (Flutter UI): ~%97
 - Veritabani / RPC (Supabase): ~%96
 - Performans refactor fazi: ~%96
-- UX / UI iyilestirme fazi: ~%88
+- UX / UI iyilestirme fazi: ~%90
 - Progression sistemleri (EXP + Gorev + Rozet): ~%86
 - Bildirim sistemi: ~%82
-- Gercek cihaz test guveni: ~%70
+- Gercek cihaz test guveni: ~%74
 
 ---
 
@@ -48,11 +48,14 @@ Bu dosya aktif gelistirme durumunu ozetler. Yuzdeler "ozellik kapsami + entegras
   - Etkilenen hedeflere gore refresh mantigi kuruldu.
   - Kalan is: transfer tamamlaninca hedef ekranlarin dogru guncellenmesini cihazda test etmek.
 
-- [x] Warehouse - %95
+- [x] Warehouse - %100 KILITLI
   - Liste/detail state akisi notifier tabanli hale getirildi.
   - Depo tipi seciminde kabul edilen urunler gosteriliyor.
   - Miktar girislerinde ozel numpad ve hizli miktar kisayollari aktif.
-  - Kalan is: kapasite, pending ve transfer kabul senaryolari testi.
+  - Liste kartlari, detay kapasite ozeti ve slot kartlari cihaz testiyle sadelestirildi.
+  - Kapasite dagilimi `m3` cinsinden gosteriliyor; stok/yolda/bos alan ayrimi netlestirildi.
+  - Depodan depoya transfer hedefleri artik urunu kabul eden aktif depolara filtreleniyor.
+  - Cihaz testi tamamlandi; bu modul yeni bug disinda kilitli kabul ediliyor.
 
 - [x] Store - %100 KILITLI
   - Liste ve detay sorgulari tekillestirildi.
@@ -159,6 +162,7 @@ Bu dosya aktif gelistirme durumunu ozetler. Yuzdeler "ozellik kapsami + entegras
 
 - AppBar alani sadeletildi, gorev/bildirim badge'leri eklendi.
 - Store, warehouse, market ve transfer ekranlarinda kart yogunlugu azaltildi.
+- Warehouse liste/detail kartlari son cihaz testine gore yeniden duzenlendi.
 - Kurulum/tip secim kartlarina urun onizlemeleri eklendi.
 - Satin alma ve transfer miktar popup'larinda numpad standardi getirildi.
 - Gorev kartlari kompakt hale getirildi.
@@ -169,24 +173,28 @@ Bu dosya aktif gelistirme durumunu ozetler. Yuzdeler "ozellik kapsami + entegras
 
 ## Siradaki En Mantikli Isler
 
-1. Gercek cihaz test turu
-   - Market -> store satin alma
-   - Warehouse transfer kabul/kapasite
-   - Field/Farm/Factory/Mine uretim engelleri
-   - Gorev claim ve gunluk gorevler
-   - Bildirim badge ve attention refresh
+1. Logistics / Transfer Map cihaz testi ve son UX turu
+   - Arac secim popup'i
+   - Transfer baslatma
+   - Transfer tamamlaninca hedef ekran refresh'i
+   - Depo/store/farm/factory kaynakli transferlerin ortak davranisi
 
-2. Testten gelen bugfix turu
+2. Uretim modulleri cihaz test turu
+   - Field/Farm/Factory/Mine uretim engelleri
+   - Output dolu, hammadde yok, pasif durumlari
+   - Boost aktif/pasif davranisi
+
+3. Testten gelen bugfix turu
    - Runtime hatalari
    - Eksik refresh senaryolari
    - Layout overflow ve popup boyutlari
 
-3. Icerik genisletme
+4. Icerik genisletme
    - Daha fazla gorev
    - Daha fazla rozet
    - EXP/odul dengelemesi
 
-4. Build ve kalite turu
+5. Build ve kalite turu
    - Analyzer timeout sorununun temiz ortamda kontrolu
    - Release build
    - GitHub yedegi

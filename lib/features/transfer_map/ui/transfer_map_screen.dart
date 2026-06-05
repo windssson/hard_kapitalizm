@@ -220,7 +220,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       transfer.sellerWarehouse.city,
       transfer.buyerWarehouse.city,
     );
-    final totalCost = transfer.totalPrice + transfer.rentalCost;
+    final totalCost = transfer.totalPrice + transfer.transportCost;
     final unitCost = transfer.quantity > 0 ? totalCost / transfer.quantity : 0.0;
     await showDialog<void>(
       context: context,
@@ -353,6 +353,10 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                             _buildDialogDetailRow(
                               'Kira Bedeli',
                               _formatCurrency(transfer.rentalCost),
+                            ),
+                            _buildDialogDetailRow(
+                              'Nakliye Maliyeti',
+                              _formatCurrency(transfer.transportCost),
                             ),
                             _buildDialogDetailRow(
                               'Toplam Maliyet',
@@ -1114,7 +1118,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     final rentalCount = history.where((item) => item.isRental).length;
     final totalValue = history.fold<double>(
       0,
-      (sum, item) => sum + item.totalPrice + item.rentalCost,
+      (sum, item) => sum + item.totalPrice + item.transportCost,
     );
 
     return _buildOverviewStrip([
@@ -1246,8 +1250,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         break;
       case _HistorySortOption.expensive:
         items.sort(
-          (a, b) => (b.totalPrice + b.rentalCost).compareTo(
-            a.totalPrice + a.rentalCost,
+          (a, b) => (b.totalPrice + b.transportCost).compareTo(
+            a.totalPrice + a.transportCost,
           ),
         );
         break;
@@ -1735,9 +1739,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       transfer.sellerWarehouse.city,
       transfer.buyerWarehouse.city,
     );
-    final totalCost = transfer.totalPrice + transfer.rentalCost;
+    final totalCost = transfer.totalPrice + transfer.transportCost;
     final unitLogisticsCost = transfer.quantity > 0
-        ? transfer.rentalCost / transfer.quantity
+        ? transfer.transportCost / transfer.quantity
         : 0.0;
     final logisticsLabel = transfer.isRental
         ? 'Nakliye ${_formatCurrency(unitLogisticsCost)} / adet'
@@ -2154,9 +2158,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         : _formatDateTime(item.completedAt!);
     final totalMinutes = item.finishAt.difference(item.startedAt).inMinutes;
     final unitLogisticsCost = item.quantity > 0
-        ? item.rentalCost / item.quantity
+        ? item.transportCost / item.quantity
         : 0.0;
-    final totalCost = item.totalPrice + item.rentalCost;
+    final totalCost = item.totalPrice + item.transportCost;
 
     return Container(
       padding: EdgeInsets.all(14.w),

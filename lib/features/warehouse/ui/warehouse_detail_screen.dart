@@ -8,7 +8,6 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
-import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -37,8 +36,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final warehouseAsync = ref.watch(
       warehouseDetailProvider(widget.warehouseId),
     );
-    final allProducts = ref.watch(allProductsProvider).value ?? const [];
-    final warehouseTypes = ref.watch(warehouseTypesProvider).value ?? const [];
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -68,17 +65,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildHeaderCard(
-                          warehouse,
-                          acceptedProductNames: _resolveAcceptedProductNames(
-                            warehouse,
-                            warehouseTypes,
-                            allProducts,
-                          ),
-                        ),
+                        _buildHeaderCard(warehouse),
                         SizedBox(height: 18.h),
-                        _buildSectionHeader(warehouse),
-                        SizedBox(height: 10.h),
                         _buildSlotList(context, ref, warehouse),
                       ],
                     ),
@@ -128,7 +116,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         return ProductSelectionOption(
           id: product.id,
           title: product.urunAdi,
-          subtitle: 'Birim Hacim: ${product.birimHacim} m³',
+          subtitle: 'Birim Hacim: ${product.birimHacim} m3',
           iconPath: product.urunIconu,
           trailingWidget: OutlinedButton(
             onPressed: () {
@@ -182,7 +170,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       if (!context.mounted) return;
       await ProductSelectionSheet.show(
         context: context,
-        title: 'Deponun Alabildiği Ürünler',
+        title: 'Deponun Alabildigi Urunler',
         options: options,
       );
     } catch (e) {
@@ -190,7 +178,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         AppSnackbar.show(
           context,
           title: 'Hata',
-          message: 'Ürün listesi yüklenemedi: $e',
+          message: 'Urun listesi yuklenemedi: $e',
           type: SnackbarType.error,
         );
       }
@@ -229,30 +217,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     return const {};
   }
 
-  List<String> _resolveAcceptedProductNames(
-    WarehouseModel warehouse,
-    List<dynamic> warehouseTypes,
-    List<ProductModel> allProducts,
-  ) {
-    final typeDetail = _findWarehouseTypeDetail(
-      warehouse.warehouseTypeId,
-      warehouseTypes,
-    );
-    final acceptedIds = _parseAcceptedProductIds(
-      typeDetail['accepted_product_ids'],
-    );
-    if (acceptedIds.isEmpty) {
-      return const ['Tum urunler'];
-    }
-
-    final productById = {
-      for (final product in allProducts)
-        product.id.trim().toUpperCase(): product,
-    };
-
-    return acceptedIds.map((id) => productById[id]?.urunAdi ?? id).toList();
-  }
-
   void _openMarketForSlot(
     BuildContext context,
     WarehouseModel warehouse,
@@ -281,10 +245,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildHeaderCard(
-    WarehouseModel warehouse, {
-    required List<String> acceptedProductNames,
-  }) {
+  Widget _buildHeaderCard(WarehouseModel warehouse) {
     final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
     final listedSlots = filledSlots
         .where((slot) => slot.isAvailableForSale)
@@ -294,15 +255,22 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       (sum, slot) => sum + slot.quantity,
     );
     final totalStock = totalQuantity.toDouble();
+    final usedCapacity = filledSlots.fold<double>(
+      0,
+      (sum, slot) => sum + (slot.quantity * slot.unitVolume),
+    );
     final reserved = warehouse.reservedCapacity;
     final capacity = warehouse.capacity;
-    final availableCapacity = (capacity - reserved).clamp(0.0, capacity);
+    final availableCapacity = (capacity - usedCapacity - reserved).clamp(
+      0.0,
+      capacity,
+    );
     final averageQuality = filledSlots.isEmpty
         ? 0.0
         : filledSlots.fold<int>(0, (sum, slot) => sum + slot.qualityLevel) /
               filledSlots.length;
     final stockRatio = capacity > 0
-        ? (totalStock / capacity).clamp(0.0, 1.0)
+        ? (usedCapacity / capacity).clamp(0.0, 1.0)
         : 0.0;
     final reserveRatio = capacity > 0
         ? (reserved / capacity).clamp(0.0, 1.0)
@@ -447,190 +415,149 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   icon: Icons.straighten,
                   color: AppColors.red,
                 ),
-                _buildHeaderMetricCard(
-                  label: 'Ort. Kalite',
-                  value: averageQuality <= 0
-                      ? '-'
-                      : averageQuality.toStringAsFixed(1),
-                  icon: Icons.star_outline,
-                  color: AppColors.goldLight,
-                ),
               ],
             ),
           ),
           SizedBox(height: 12.h),
-          Row(
-            children: [
-              Expanded(
-                child: _buildHeroStat(
-                  'Stok',
-                  '${_formatValue(totalStock)}/${_formatValue(capacity)}',
-                  AppColors.blue,
-                  ratio: stockRatio,
-                  icon: Icons.inventory_2_outlined,
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: _buildHeroStat(
-                  'Rezerve',
-                  '${_formatValue(reserved)}/${_formatValue(capacity)}',
-                  AppColors.gold,
-                  ratio: reserveRatio,
-                  icon: Icons.lock_outline,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(14.r),
-              border: Border.all(color: AppColors.blue.withValues(alpha: 0.22)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.rule_folder_outlined,
-                      color: AppColors.blue,
-                      size: 16.sp,
-                    ),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Text(
-                        'Bu deponun kabul ettigi urunler',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Wrap(
-                  spacing: 8.w,
-                  runSpacing: 8.h,
-                  children: acceptedProductNames.take(4).map((name) {
-                    return Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 6.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.blue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(999.r),
-                        border: Border.all(
-                          color: AppColors.blue.withValues(alpha: 0.18),
-                        ),
-                      ),
-                      child: Text(
-                        name,
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                if (acceptedProductNames.length > 4) ...[
-                  SizedBox(height: 8.h),
-                  Text(
-                    '+${acceptedProductNames.length - 4} urun daha kabul ediliyor',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 10.sp,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+          _buildCapacityBreakdown(
+            totalCapacity: capacity,
+            usedCapacity: usedCapacity,
+            reservedCapacity: reserved,
+            availableCapacity: availableCapacity,
+            stockRatio: stockRatio,
+            reserveRatio: reserveRatio,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeroStat(
-    String label,
-    String value,
-    Color color, {
-    required double ratio,
-    required IconData icon,
+  Widget _buildCapacityBreakdown({
+    required double totalCapacity,
+    required double usedCapacity,
+    required double reservedCapacity,
+    required double availableCapacity,
+    required double stockRatio,
+    required double reserveRatio,
   }) {
+    final availableRatio = totalCapacity > 0
+        ? (availableCapacity / totalCapacity).clamp(0.0, 1.0)
+        : 0.0;
+    String formatVolume(double value) => '${_formatValue(value)} m3';
+
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
+      width: double.infinity,
+      padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
+        border: Border.all(
+          color: AppColors.borderGoldLight.withValues(alpha: 0.18),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 14.sp),
-              SizedBox(width: 7.w),
+              Icon(Icons.straighten, color: AppColors.gold, size: 14.sp),
+              SizedBox(width: 6.w),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 9.sp,
-                      ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Kapasite Dagilimi',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Text(
+                '${formatVolume(usedCapacity + reservedCapacity)}/${formatVolume(totalCapacity)}',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 7.h),
+          SizedBox(height: 8.h),
           Container(
-            height: 5.h,
+            height: 10.h,
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(999.r),
             ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: ratio.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(999.r),
-                ),
-              ),
+            child: Row(
+              children: [
+                if (stockRatio > 0)
+                  Flexible(
+                    flex: (stockRatio * 1000).round().clamp(1, 1000),
+                    child: Container(color: AppColors.blue),
+                  ),
+                if (reserveRatio > 0)
+                  Flexible(
+                    flex: (reserveRatio * 1000).round().clamp(1, 1000),
+                    child: Container(color: AppColors.gold),
+                  ),
+                if (availableRatio > 0)
+                  Flexible(
+                    flex: (availableRatio * 1000).round().clamp(1, 1000),
+                    child: Container(
+                      color: AppColors.textMuted.withValues(alpha: 0.35),
+                    ),
+                  ),
+              ],
             ),
+          ),
+          SizedBox(height: 8.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 6.h,
+            children: [
+              _buildCapacityLegend(
+                'Stok',
+                formatVolume(usedCapacity),
+                AppColors.blue,
+              ),
+              _buildCapacityLegend(
+                'Yolda',
+                formatVolume(reservedCapacity),
+                AppColors.gold,
+              ),
+              _buildCapacityLegend(
+                'Bos',
+                formatVolume(availableCapacity),
+                AppColors.textMuted,
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCapacityLegend(String label, String value, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7.w,
+          height: 7.w,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        SizedBox(width: 4.w),
+        Text(
+          '$label: $value',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 9.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 
@@ -676,7 +603,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     return Container(
       width: 110.w,
       margin: EdgeInsets.only(right: 10.w),
-      padding: EdgeInsets.all(10.w),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(14.r),
@@ -684,60 +611,39 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 16.sp),
+          Row(
+            children: [
+              Icon(icon, color: color, size: 14.sp),
+              SizedBox(width: 5.w),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
           Text(
             value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title, {String? subtitle}) {
-    return Padding(
-      padding: EdgeInsets.only(left: 4.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: Colors.white,
               fontSize: 16.sp,
               fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
             ),
           ),
-          if (subtitle != null) ...[
-            SizedBox(height: 4.h),
-            Text(
-              subtitle,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
-            ),
-          ],
         ],
       ),
-    );
-  }
-
-  Widget _buildSectionHeader(WarehouseModel warehouse) {
-    final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
-    final emptyCount = warehouse.slots.length - filledSlots.length;
-    return _buildSectionTitle(
-      'Satis Slotlari',
-      subtitle:
-          'Dolu: ${filledSlots.length} | Bos: $emptyCount | Toplam: ${warehouse.slots.length}',
     );
   }
 
@@ -791,29 +697,151 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildSlotMetricChip({
-    required IconData icon,
+  Widget _buildSlotValueTile({
     required String label,
+    required String value,
+    required IconData icon,
     required Color color,
+    VoidCallback? onTap,
+    String? suffix,
+    Color? suffixColor,
   }) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+    final content = Container(
+      constraints: BoxConstraints(minHeight: 58.h),
+      padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 12.sp),
+              SizedBox(width: 4.w),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 5.h),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (suffix != null) ...[
+                SizedBox(width: 4.w),
+                Text(
+                  suffix,
+                  style: TextStyle(
+                    color: suffixColor ?? color,
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (onTap == null) return content;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(14.r),
+      onTap: onTap,
+      child: content,
+    );
+  }
+
+  Widget _buildSaleToggleChip({
+    required bool isActive,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final color = isActive ? AppColors.green : AppColors.textMuted;
+
+    return Container(
+      height: 30.h,
+      padding: EdgeInsets.only(left: 8.w, right: 2.w),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 11.sp),
-          SizedBox(width: 4.w),
           Text(
-            label,
+            isActive ? 'Satisa Acik' : 'Satisa Kapali',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
+              color: color,
+              fontSize: 9.sp,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          SizedBox(width: 4.w),
+          SizedBox(
+            height: 24.h,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: Switch(
+                value: isActive,
+                activeColor: AppColors.green,
+                inactiveThumbColor: AppColors.textMuted,
+                inactiveTrackColor: Colors.black26,
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildSlotMenuItem({
+    required String value,
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18.sp),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -943,264 +971,179 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final marginPercent = (slot.price > 0 && slot.cost > 0)
         ? ((slot.price - slot.cost) / slot.cost) * 100
         : null;
+    final marginColor = marginPercent == null
+        ? AppColors.textMuted
+        : marginPercent >= 0
+        ? AppColors.green
+        : AppColors.red;
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(12.w),
+      padding: EdgeInsets.all(13.w),
       decoration: AppDecorations.premiumCard(
         slot.isAvailableForSale ? AppColors.green : null,
         18.r,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left Side: Icon, Name, Quality
-          SizedBox(
-            width: 76.w,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 58.w,
-                  height: 58.w,
-                  padding: EdgeInsets.all(9.w),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(
-                      color: slot.isAvailableForSale
-                          ? AppColors.green.withValues(alpha: 0.3)
-                          : Colors.white10,
-                    ),
-                  ),
-                  child: CachedAssetImage(
-                    fileName: slot.productIcon ?? 'default',
-                    fit: BoxFit.contain,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 58.w,
+                height: 58.w,
+                padding: EdgeInsets.all(7.w),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.24),
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(
+                    color: slot.isAvailableForSale
+                        ? AppColors.green.withValues(alpha: 0.32)
+                        : Colors.white10,
                   ),
                 ),
-                SizedBox(height: 8.h),
-                Text(
-                  slot.productName ?? 'Urun',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.bold,
-                    height: 1.1,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: CachedAssetImage(
+                  fileName: slot.productIcon ?? 'default.webp',
+                  fit: BoxFit.contain,
                 ),
-                SizedBox(height: 4.h),
-                _buildQualityStars(slot.qualityLevel),
-              ],
-            ),
-          ),
-          SizedBox(width: 12.w),
-
-          // Middle Side: Chips and other elements
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildTag(
-                      slot.isAvailableForSale ? 'SATISTA' : 'BEKLEMEDE',
-                      slot.isAvailableForSale
-                          ? AppColors.green
-                          : AppColors.textMuted,
+                    Text(
+                      slot.productName ?? 'Urun',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.bold,
+                        height: 1.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    SizedBox(height: 5.h),
                     Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
-                          height: 24.h,
-                          child: FittedBox(
-                            fit: BoxFit.contain,
-                            child: Switch(
-                              value: slot.isAvailableForSale,
-                              activeColor: AppColors.green,
-                              inactiveThumbColor: AppColors.textMuted,
-                              inactiveTrackColor: Colors.black26,
-                              onChanged: (_) =>
-                                  _toggleSaleStatus(context, ref, slot),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        SizedBox(
-                          height: 24.h,
-                          width: 24.h,
-                          child: PopupMenuButton<String>(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              Icons.more_vert,
-                              color: AppColors.textMuted,
-                              size: 20.sp,
-                            ),
-                            color: AppColors.cardBg,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                              side: BorderSide(
-                                color: AppColors.border.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            onSelected: (value) {
-                              if (value == 'market') {
-                                _openMarketForSlot(context, warehouse, slot);
-                              } else if (value == 'transfer') {
-                                _startWarehouseOutboundFlow(
-                                  context,
-                                  ref,
-                                  warehouse,
-                                  slot,
-                                );
-                              } else if (value == 'delete') {
-                                _deleteWarehouseSlot(context, ref, slot);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'market',
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.storefront_outlined,
-                                      color: Colors.white,
-                                      size: 18.sp,
-                                    ),
-                                    SizedBox(width: 8.w),
-                                    Text(
-                                      'Pazar',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13.sp,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem(
-                                value: 'transfer',
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.local_shipping_outlined,
-                                      color: Colors.white,
-                                      size: 18.sp,
-                                    ),
-                                    SizedBox(width: 8.w),
-                                    Text(
-                                      'Depoya',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13.sp,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (slot.quantity <= 0)
-                                PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.delete_outline,
-                                        color: AppColors.red,
-                                        size: 18.sp,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        'Sil',
-                                        style: TextStyle(
-                                          color: AppColors.red,
-                                          fontSize: 13.sp,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
+                        _buildQualityStars(slot.qualityLevel),
                       ],
                     ),
                   ],
                 ),
-                SizedBox(height: 10.h),
-                Wrap(
-                  spacing: 6.w,
-                  runSpacing: 6.h,
-                  children: [
-                    _buildSlotMetricChip(
-                      icon: Icons.inventory_2,
-                      label: 'Stok: ${slot.quantity}',
-                      color: AppColors.blue,
-                    ),
-                    _buildSlotMetricChip(
-                      icon: Icons.payments_outlined,
-                      label: 'Maliyet ${slot.cost.toStringAsFixed(1)}',
-                      color: AppColors.textMuted,
-                    ),
-                    GestureDetector(
-                      onTap: () => _showPriceDialog(context, ref, slot),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 6.w,
-                          vertical: 4.h,
+              ),
+              SizedBox(width: 6.w),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildSaleToggleChip(
+                    isActive: slot.isAvailableForSale,
+                    onChanged: (_) => _toggleSaleStatus(context, ref, slot),
+                  ),
+                  SizedBox(width: 4.w),
+                  SizedBox(
+                    height: 30.h,
+                    width: 30.h,
+                    child: PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      icon: Icon(
+                        Icons.more_vert,
+                        color: AppColors.textMuted,
+                        size: 22.sp,
+                      ),
+                      color: AppColors.cardBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        side: BorderSide(
+                          color: AppColors.border.withValues(alpha: 0.2),
                         ),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8.r),
-                          border: Border.all(
-                            color: AppColors.gold.withValues(alpha: 0.3),
+                      ),
+                      onSelected: (value) {
+                        if (value == 'price') {
+                          _showPriceDialog(context, ref, slot);
+                        } else if (value == 'market') {
+                          _openMarketForSlot(context, warehouse, slot);
+                        } else if (value == 'transfer') {
+                          _startWarehouseOutboundFlow(
+                            context,
+                            ref,
+                            warehouse,
+                            slot,
+                          );
+                        } else if (value == 'delete') {
+                          _deleteWarehouseSlot(context, ref, slot);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        _buildSlotMenuItem(
+                          value: 'price',
+                          icon: Icons.sell_outlined,
+                          label: 'Fiyat Duzenle',
+                          color: AppColors.gold,
+                        ),
+                        _buildSlotMenuItem(
+                          value: 'market',
+                          icon: Icons.storefront_outlined,
+                          label: 'Pazardan Al',
+                          color: Colors.white,
+                        ),
+                        _buildSlotMenuItem(
+                          value: 'transfer',
+                          icon: Icons.local_shipping_outlined,
+                          label: 'Baska Depoya Gonder',
+                          color: Colors.white,
+                        ),
+                        if (slot.quantity <= 0)
+                          _buildSlotMenuItem(
+                            value: 'delete',
+                            icon: Icons.delete_outline,
+                            label: 'Slotu Sil',
+                            color: AppColors.red,
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.sell_outlined,
-                              color: AppColors.gold,
-                              size: 12.sp,
-                            ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              slot.price > 0
-                                  ? 'Fiyat ${slot.price.toStringAsFixed(1)}'
-                                  : 'Fiyat yok',
-                              style: TextStyle(
-                                color: AppColors.gold,
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(width: 4.w),
-                            Icon(
-                              Icons.edit,
-                              color: AppColors.gold,
-                              size: 12.sp,
-                            ),
-                          ],
-                        ),
-                      ),
+                      ],
                     ),
-                    if (marginPercent != null)
-                      _buildSlotMetricChip(
-                        icon: Icons.trending_up,
-                        label: '%${marginPercent.toStringAsFixed(0)}',
-                        color: slot.price >= slot.cost
-                            ? AppColors.green
-                            : AppColors.red,
-                      ),
-                  ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSlotValueTile(
+                  label: 'Stok',
+                  value: slot.quantity.toString(),
+                  icon: Icons.inventory_2_outlined,
+                  color: AppColors.blue,
                 ),
-              ],
-            ),
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: _buildSlotValueTile(
+                  label: 'Maliyet',
+                  value: slot.cost > 0 ? slot.cost.toStringAsFixed(1) : '-',
+                  icon: Icons.payments_outlined,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: _buildSlotValueTile(
+                  label: 'Satis',
+                  value: slot.price > 0 ? slot.price.toStringAsFixed(1) : '-',
+                  suffix: marginPercent != null
+                      ? '%${marginPercent.toStringAsFixed(0)}'
+                      : null,
+                  suffixColor: marginColor,
+                  icon: Icons.sell_outlined,
+                  color: AppColors.gold,
+                  onTap: () => _showPriceDialog(context, ref, slot),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1212,9 +1155,39 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     WidgetRef ref,
     WarehouseSlotModel slot,
   ) async {
+    String priceShortcut(double value) {
+      if (value <= 0) return '';
+      return value.toStringAsFixed(1);
+    }
+
+    double parsePrice(String value) {
+      return double.tryParse(value.trim().replaceAll(',', '.')) ?? 0;
+    }
+
     final controller = TextEditingController(
       text: slot.price > 0 ? slot.price.toStringAsFixed(1) : '',
     );
+    final shortcuts = <NumericKeyboardShortcut>[
+      if (slot.price > 0)
+        NumericKeyboardShortcut(
+          label: 'Mevcut',
+          value: priceShortcut(slot.price),
+        ),
+      if (slot.cost > 0) ...[
+        NumericKeyboardShortcut(
+          label: 'Maliyet',
+          value: priceShortcut(slot.cost),
+        ),
+        NumericKeyboardShortcut(
+          label: 'Kar +%25',
+          value: priceShortcut(slot.cost * 1.25),
+        ),
+        NumericKeyboardShortcut(
+          label: 'Kar +%50',
+          value: priceShortcut(slot.cost * 1.5),
+        ),
+      ],
+    ];
 
     final result = await showDialog<double>(
       context: context,
@@ -1224,116 +1197,154 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           borderRadius: BorderRadius.circular(16.r),
         ),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: 650.h, maxWidth: 400.w),
+          constraints: BoxConstraints(maxHeight: 680.h, maxWidth: 400.w),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               Padding(
                 padding: EdgeInsets.all(16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(
-                      'Satis Fiyati',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      width: 46.w,
+                      height: 46.w,
+                      padding: EdgeInsets.all(6.w),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.28),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: CachedAssetImage(
+                        fileName: slot.productIcon ?? 'default.webp',
+                        fit: BoxFit.contain,
                       ),
                     ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      slot.productName ?? 'Urun',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12.sp,
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Satis Fiyati',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            slot.productName ?? 'Urun',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
               Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
-              // Price Display
               Padding(
                 padding: EdgeInsets.all(16.w),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 12.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(10.r),
-                    border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.25),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Birim Satis Fiyati',
-                        style: TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 11.sp,
-                        ),
-                      ),
-                      SizedBox(height: 6.h),
-                      ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: controller,
-                        builder: (context, value, _) => Text(
-                          value.text.isEmpty ? '0' : value.text,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.bold,
+                child: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: controller,
+                  builder: (context, value, _) {
+                    final price = parsePrice(value.text);
+                    final profit = slot.cost > 0 ? price - slot.cost : 0.0;
+                    final profitPercent = slot.cost > 0
+                        ? (profit / slot.cost) * 100
+                        : 0.0;
+                    final profitColor = slot.cost <= 0
+                        ? AppColors.textMuted
+                        : profit >= 0
+                        ? AppColors.green
+                        : AppColors.red;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12.w,
+                            vertical: 12.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.25),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Birim satis fiyati',
+                                style: TextStyle(
+                                  color: AppColors.gold,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              SizedBox(height: 6.h),
+                              Text(
+                                value.text.isEmpty ? '0.0' : value.text,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        SizedBox(height: 10.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildPriceInfoTile(
+                                'Maliyet',
+                                slot.cost > 0
+                                    ? slot.cost.toStringAsFixed(1)
+                                    : '-',
+                                AppColors.textMuted,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: _buildPriceInfoTile(
+                                'Kar',
+                                slot.cost > 0
+                                    ? '${profit.toStringAsFixed(1)} (${profitPercent.toStringAsFixed(0)}%)'
+                                    : '-',
+                                profitColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
-              // Keyboard
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: NumericKeyboard(
                   controller: controller,
-                  shortcuts: [
-                    NumericKeyboardShortcut(
-                      label: '1/4',
-                      value: (slot.quantity / 4).floor().toString(),
-                    ),
-                    NumericKeyboardShortcut(
-                      label: 'Yari',
-                      value: (slot.quantity / 2).floor().toString(),
-                    ),
-                    NumericKeyboardShortcut(
-                      label: 'Tamami',
-                      value: slot.quantity.toString(),
-                    ),
-                  ],
+                  allowDecimal: true,
+                  shortcuts: shortcuts,
+                  buttonHeight: 44.h,
                 ),
               ),
-              // Cost info
-              if (slot.cost > 0)
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16.w,
-                    vertical: 8.h,
-                  ),
-                  child: Text(
-                    'Maliyet: ${slot.cost.toStringAsFixed(1)}',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 10.sp,
-                    ),
-                  ),
-                ),
-              // Action Buttons
               Padding(
                 padding: EdgeInsets.all(16.w),
                 child: Row(
@@ -1357,10 +1368,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          final parsed = double.tryParse(
-                            controller.text.trim().replaceAll(',', '.'),
-                          );
-                          if (parsed == null || parsed <= 0) {
+                          final parsed = parsePrice(controller.text);
+                          if (parsed <= 0) {
                             Navigator.pop(dialogContext);
                             AppSnackbar.show(
                               context,
@@ -1394,6 +1403,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         ),
       ),
     );
+
+    controller.dispose();
 
     if (result == null || !context.mounted) return;
 
@@ -1429,6 +1440,37 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         type: SnackbarType.error,
       );
     }
+  }
+
+  Widget _buildPriceInfoTile(String label, String value, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+          ),
+          SizedBox(height: 3.h),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _deleteWarehouseSlot(
@@ -1521,10 +1563,12 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
 
     List<Map<String, dynamic>> warehouses = const [];
+    List<dynamic> warehouseTypes = const [];
     try {
       warehouses = await ref
           .read(warehouseActionProvider)
           .getPlayerActiveWarehousesBasic();
+      warehouseTypes = await ref.read(warehouseTypesProvider.future);
     } catch (e) {
       if (context.mounted) Navigator.of(context).pop();
       if (context.mounted) {
@@ -1541,14 +1585,29 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (context.mounted) Navigator.of(context).pop();
 
     final candidates = warehouses
-        .where((item) => item['id']?.toString() != warehouse.id)
+        .where((item) {
+          if (item['id']?.toString() == warehouse.id) return false;
+
+          final productId = slot.productId?.trim().toUpperCase();
+          if (productId == null || productId.isEmpty) return false;
+
+          final typeDetail = _findWarehouseTypeDetail(
+            item['warehouse_type_id']?.toString() ?? '',
+            warehouseTypes,
+          );
+          final acceptedIds = _parseAcceptedProductIds(
+            typeDetail['accepted_product_ids'],
+          );
+          if (acceptedIds.isEmpty) return true;
+          return acceptedIds.contains(productId);
+        })
         .toList();
 
     if (candidates.isEmpty) {
       AppSnackbar.show(
         context,
         title: 'Hedef Depo Yok',
-        message: 'Transfer icin baska aktif deponuz bulunmuyor.',
+        message: 'Bu urunu kabul eden baska aktif deponuz bulunmuyor.',
         type: SnackbarType.info,
       );
       return;
@@ -1573,8 +1632,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         id: target['id'].toString(),
         title: (target['name'] ?? 'Depo').toString(),
         subtitle: '$cityName | Seviye: ${target['level'] ?? 1}',
-        badgeText: sameCity ? 'Aynı Şehir' : 'Şehirler Arası',
-        infoText: sameCity ? 'Anlık' : 'Lojistik',
+        badgeText: sameCity ? 'Ayni Sehir' : 'Sehirler Arasi',
+        infoText: sameCity ? 'Anlik' : 'Lojistik',
         isHighlightBadge: sameCity,
         onTap: () {
           Navigator.pop(context);
@@ -1592,19 +1651,19 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     WarehouseSelectionSheet.show(
       context: context,
-      title: 'Hedef Depo Seçin',
+      title: 'Hedef Depo Secin',
       options: options,
     );
   }
 
-  void _showWarehouseOutboundQuantityDialog(
+  Future<void> _showWarehouseOutboundQuantityDialog(
     BuildContext context,
     WidgetRef ref,
     WarehouseModel sourceWarehouse,
     WarehouseSlotModel slot,
     Map<String, dynamic> targetWarehouse,
     String targetCityName,
-  ) {
+  ) async {
     final controller = TextEditingController(text: '1');
     final limit = slot.quantity;
     final isSameCity =
@@ -1621,7 +1680,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       });
     }
 
-    showDialog(
+    await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) => AlertDialog(
@@ -1764,6 +1823,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         ),
       ),
     );
+    controller.dispose();
   }
 
   Future<void> _maybeStartWarehouseOutboundTransfer(
@@ -1948,7 +2008,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           ),
                           SizedBox(height: 4.h),
                           Text(
-                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Kira: ${option.rentalCost.toStringAsFixed(0)}',
+                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Nakliye: ${option.transportCost.toStringAsFixed(0)}',
                             style: TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 11.sp,

@@ -1742,7 +1742,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           ),
                           SizedBox(height: 4.h),
                           Text(
-                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Kira: ${option.rentalCost.toStringAsFixed(0)}',
+                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Nakliye: ${option.totalPrice.toStringAsFixed(0)}',
                             style: TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 11.sp,

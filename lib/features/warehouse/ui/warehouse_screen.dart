@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -333,6 +334,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
                     children: [
                       Expanded(
                         child: Text(
@@ -539,135 +541,173 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   }
 
   Widget _buildConstructionCard(WarehouseModel warehouse) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
-      padding: EdgeInsets.all(12.w),
-      decoration: AppDecorations.premiumCard(AppColors.gold, 16.r),
-      child: Row(
-        children: [
-          Container(
-            width: 70.w,
-            height: 70.w,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(Icons.construction, color: AppColors.gold, size: 28.sp),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  warehouse.name,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
+    final finishAt = warehouse.finishAt;
+    final starCost = finishAt == null
+        ? 0
+        : _calculateStarCost(finishAt.toLocal());
+
+    return Column(
+      children: [
+        Container(
+          margin: EdgeInsets.only(bottom: starCost > 0 ? 0 : 16.h),
+          padding: EdgeInsets.all(12.w),
+          decoration: AppDecorations.premiumCard(AppColors.gold, 16.r),
+          child: Row(
+            children: [
+              Container(
+                width: 70.w,
+                height: 70.w,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
-                Text(
-                  warehouse.cityName ?? 'Bilinmeyen Sehir',
-                  style: TextStyle(color: AppColors.gold, fontSize: 11.sp),
+                child: Icon(
+                  Icons.construction,
+                  color: AppColors.gold,
+                  size: 28.sp,
                 ),
-                SizedBox(height: 8.h),
-                if (warehouse.finishAt != null)
-                  _ConstructionCountdown(
-                    finishAt: warehouse.finishAt!,
-                    onFinish: () async {
-                      final result = await ref
-                          .read(warehouseActionProvider)
-                          .completeConstruction(warehouse.id);
-                      if (result['success'] == true) {
-                        await ref
-                            .read(warehouseListProvider.notifier)
-                            .refresh();
-                        ref.invalidate(playerProvider);
-                        if (mounted) {
-                          await showExperienceFeedbackFromResult(
-                            context,
-                            result,
-                          );
-                        }
-                      }
-                    },
-                  )
-                else
-                  Text(
-                    'Insaat verisi guncelleniyor...',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      warehouse.name,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-              ],
+                    Text(
+                      warehouse.cityName ?? 'Bilinmeyen Sehir',
+                      style: TextStyle(color: AppColors.gold, fontSize: 11.sp),
+                    ),
+                    SizedBox(height: 8.h),
+                    if (finishAt != null)
+                      _ConstructionCountdown(
+                        finishAt: finishAt,
+                        onFinish: () async {
+                          final result = await ref
+                              .read(warehouseActionProvider)
+                              .completeConstruction(warehouse.id);
+                          if (result['success'] == true) {
+                            await ref
+                                .read(warehouseListProvider.notifier)
+                                .refresh();
+                            ref.invalidate(playerProvider);
+                            if (mounted) {
+                              await showExperienceFeedbackFromResult(
+                                context,
+                                result,
+                              );
+                            }
+                          }
+                        },
+                      )
+                    else
+                      Text(
+                        'Insaat verisi guncelleniyor...',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11.sp,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (starCost > 0)
+          Padding(
+            padding: EdgeInsets.only(bottom: 16.h),
+            child: GoldFinishButton(
+              starCost: starCost,
+              onPressed: () => _handleQuickFinish(warehouse.id, starCost),
+            ),
+          ),
+      ],
+    );
+  }
+
+  int _calculateStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
+  }
+
+  Future<void> _handleQuickFinish(String id, int starCost) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: const BorderSide(color: AppColors.borderGold),
+        ),
+        title: Text(
+          'Depo Insaatini Bitir',
+          style: TextStyle(
+            color: AppColors.goldLight,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '$starCost yildiz kullanarak depo insaatini aninda tamamlamak istiyor musunuz?',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Iptal',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
             ),
           ),
           ElevatedButton(
-            onPressed: () => _handleQuickFinish(warehouse.id),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: Colors.black,
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.r),
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.bolt, size: 14.sp),
-                Text(
-                  'Hizli Bitir',
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Tamamla',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
             ),
           ),
         ],
       ),
     );
-  }
 
-  Future<void> _handleQuickFinish(String id) async {
-    final finishResult = await ref
+    if (confirm != true) return;
+
+    final result = await ref
         .read(warehouseActionProvider)
         .finishConstructionWithGold(id);
 
-    if (finishResult['success'] == true) {
-      final completeResult = await ref
-          .read(warehouseActionProvider)
-          .completeConstruction(id);
-
-      if (completeResult['success'] == true) {
-        await ref.read(warehouseListProvider.notifier).refresh();
-        ref.invalidate(playerProvider);
-        if (mounted) {
-          AppSnackbar.show(
-            context,
-            title: 'Basarili',
-            message: 'Depo insaati aninda tamamlandi!',
-            type: SnackbarType.success,
-          );
-          await showExperienceFeedbackFromResult(context, completeResult);
-        }
-      } else if (mounted) {
+    if (result['success'] == true) {
+      await ref.read(warehouseListProvider.notifier).refresh();
+      ref.invalidate(playerProvider);
+      if (mounted) {
         AppSnackbar.show(
           context,
-          title: 'Hata',
-          message: completeResult['message'] ?? 'Tamamlama basarisiz.',
-          type: SnackbarType.error,
+          title: 'Basarili',
+          message: 'Depo insaati aninda tamamlandi!',
+          type: SnackbarType.success,
         );
+        await showExperienceFeedbackFromResult(context, result);
       }
     } else if (mounted) {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: finishResult['message'] ?? 'Altin islemi basarisiz.',
+        message: result['message'] ?? 'Altin ile bitirme islemi basarisiz.',
         type: SnackbarType.error,
       );
     }

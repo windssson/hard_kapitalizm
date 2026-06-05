@@ -77,6 +77,7 @@ class TransferHistoryItemModel {
   final bool isRental;
   final double totalPrice;
   final double rentalCost;
+  final double transportCost;
   final DateTime startedAt;
   final DateTime finishAt;
   final DateTime? completedAt;
@@ -93,6 +94,7 @@ class TransferHistoryItemModel {
     required this.isRental,
     required this.totalPrice,
     required this.rentalCost,
+    required this.transportCost,
     required this.startedAt,
     required this.finishAt,
     required this.completedAt,
@@ -126,6 +128,7 @@ class TransferHistoryItemModel {
       isRental: json['is_rental'] as bool? ?? false,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
       rentalCost: (json['rental_cost'] as num?)?.toDouble() ?? 0,
+      transportCost: (json['transport_cost'] as num?)?.toDouble() ?? 0,
       startedAt: DateTime.parse(json['started_at'].toString()),
       finishAt: DateTime.parse(json['finish_at'].toString()),
       completedAt: json['completed_at'] == null

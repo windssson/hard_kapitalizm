@@ -7,6 +7,7 @@ import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
+import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -16,6 +17,7 @@ import 'package:hard_kapitalizm/features/logistics/models/logistics_company_mode
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_performance_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_type_model.dart';
+import 'package:hard_kapitalizm/features/logistics/ui/logistics_route_selection_screen.dart';
 
 class LogisticsManagementScreen extends ConsumerWidget {
   const LogisticsManagementScreen({super.key});
@@ -130,7 +132,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
         if (company != null) ...[
           _buildCompanyCard(context, ref, company, playerCash),
           SizedBox(height: 24.h),
-          _buildFleetOverview(vehicles, performanceByVehicle, cityMap),
+          _buildFleetOverview(ref, vehicles, performanceByVehicle),
           SizedBox(height: 24.h),
           _buildSectionHeader('FILO YONETIMI', '${vehicles.length} Arac'),
           SizedBox(height: 12.h),
@@ -336,35 +338,65 @@ class LogisticsManagementScreen extends ConsumerWidget {
           SizedBox(height: 8.h),
           _buildPremiumProgressBar(fuelRatio, AppColors.gold),
           SizedBox(height: 14.h),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: company.currentFuel >= company.fuelCapacity
-                  ? null
-                  : () => _showFuelSupplySheet(context, ref, company, playerCash),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.cardBgLight,
-                disabledBackgroundColor: AppColors.border,
-                foregroundColor: AppColors.gold,
-                padding: EdgeInsets.symmetric(vertical: 12.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                  side: BorderSide(
-                    color: AppColors.gold.withValues(alpha: 0.35),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: company.currentFuel >= company.fuelCapacity
+                      ? null
+                      : () => _showFuelSupplySheet(
+                            context,
+                            ref,
+                            company,
+                            playerCash,
+                          ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.cardBgLight,
+                    disabledBackgroundColor: AppColors.border,
+                    foregroundColor: AppColors.gold,
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      side: BorderSide(
+                        color: AppColors.gold.withValues(alpha: 0.35),
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.local_gas_station_outlined),
+                  label: Text(
+                    company.currentFuel >= company.fuelCapacity ? 'DOLU' : 'YAKIT',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.sp,
+                    ),
                   ),
                 ),
               ),
-              icon: const Icon(Icons.add_circle_outline),
-              label: Text(
-                company.currentFuel >= company.fuelCapacity
-                    ? 'YAKIT DEPOSU DOLU'
-                    : 'YAKIT AL',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12.sp,
+              SizedBox(width: 10.w),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.go('/logistics/finance'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.gold,
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    side: BorderSide(
+                      color: AppColors.gold.withValues(alpha: 0.35),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                  icon: const Icon(Icons.analytics_outlined),
+                  label: Text(
+                    'RAPOR',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.sp,
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -372,21 +404,28 @@ class LogisticsManagementScreen extends ConsumerWidget {
   }
 
   Widget _buildFleetOverview(
+    WidgetRef ref,
     List<LogisticsVehicleModel> vehicles,
     Map<String, LogisticsVehiclePerformanceModel> performanceByVehicle,
-    Map<String, CityModel> cityMap,
   ) {
     final assignedRoutes = vehicles.where((vehicle) => vehicle.hasAssignedRoute).length;
     final onRouteCount = vehicles.where((vehicle) => vehicle.status == 'on_route').length;
-    final rentalOpenCount = vehicles.where((vehicle) => vehicle.isAvailableForRent).length;
-    final totalRentalRevenue = performanceByVehicle.values.fold<double>(
-      0,
-      (sum, performance) => sum + performance.rentalRevenue,
-    );
     final totalTrips = performanceByVehicle.values.fold<int>(
       0,
       (sum, performance) => sum + performance.totalTrips,
     );
+    final financeEntriesAsync = ref.watch(logisticsFinanceEntriesProvider);
+    final now = DateTime.now();
+    final todayEntries = financeEntriesAsync.asData?.value
+            .where((entry) => _isSameDay(entry.createdAt.toLocal(), now))
+            .toList() ??
+        const [];
+    final dailyIncome = todayEntries
+        .where((entry) => entry.isIncome)
+        .fold<double>(0, (sum, entry) => sum + entry.amount);
+    final dailyExpense = todayEntries
+        .where((entry) => entry.isExpense)
+        .fold<double>(0, (sum, entry) => sum + entry.amount);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,10 +442,22 @@ class LogisticsManagementScreen extends ConsumerWidget {
           child: Column(
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildCompactStatItem('AKTIF SEVKIYAT', '$onRouteCount', Icons.route),
-                  _buildCompactStatItem('ATANMIS ROTA', '$assignedRoutes/${vehicles.length}', Icons.alt_route),
+                  Expanded(
+                    child: _buildCompactStatItem(
+                      'AKTIF SEVKIYAT',
+                      '$onRouteCount',
+                      Icons.route,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: _buildCompactStatItem(
+                      'ATANMIS ROTA',
+                      '$assignedRoutes/${vehicles.length}',
+                      Icons.alt_route,
+                    ),
+                  ),
                 ],
               ),
               Padding(
@@ -414,10 +465,22 @@ class LogisticsManagementScreen extends ConsumerWidget {
                 child: Divider(color: AppColors.borderGold.withValues(alpha: 0.2), height: 1),
               ),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildCompactStatItem('KIRA GELIRI', '${totalRentalRevenue.toStringAsFixed(0)} TL', Icons.payments_outlined),
-                  _buildCompactStatItem('KIRAYA ACIK', '$rentalOpenCount', Icons.vpn_key_outlined),
+                  Expanded(
+                    child: _buildCompactStatItem(
+                      'GUNLUK GELIR',
+                      '${dailyIncome.toStringAsFixed(0)} TL',
+                      Icons.payments_outlined,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: _buildCompactStatItem(
+                      'GUNLUK GIDER',
+                      '${dailyExpense.toStringAsFixed(0)} TL',
+                      Icons.receipt_long_outlined,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -432,12 +495,32 @@ class LogisticsManagementScreen extends ConsumerWidget {
       children: [
         Icon(icon, color: AppColors.gold, size: 20.sp),
         SizedBox(width: 8.w),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp, fontWeight: FontWeight.bold)),
-            Text(value, style: TextStyle(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.bold)),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -458,6 +541,9 @@ class LogisticsManagementScreen extends ConsumerWidget {
         : (vehicle.currentFuel / vehicle.fuelCapacity).clamp(0.0, 1.0);
     final conditionRatio = (vehicle.condition / 100).clamp(0.0, 1.0);
     final hasRoute = vehicle.hasAssignedRoute;
+    final vehicleShortId = vehicle.id.length > 8
+        ? vehicle.id.substring(0, 8).toUpperCase()
+        : vehicle.id.toUpperCase();
 
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
@@ -468,20 +554,24 @@ class LogisticsManagementScreen extends ConsumerWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20.r),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 6.w,
-                decoration: BoxDecoration(color: _getStatusColor(vehicle.status)),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: 6.w,
+              child: Container(
+                color: _getStatusColor(vehicle.status),
               ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.all(16.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: 6.w),
+              child: Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                       Row(
                         children: [
                           Container(
@@ -511,7 +601,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                   ),
                                 ),
                                 Text(
-                                  'ID: ${vehicle.id.substring(0, 8).toUpperCase()}',
+                                  'ID: $vehicleShortId',
                                   style: AppTextStyles.body.copyWith(
                                     fontSize: 10.sp,
                                   ),
@@ -581,14 +671,19 @@ class LogisticsManagementScreen extends ConsumerWidget {
                         ),
                       ],
                     ],
-                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  bool _isSameDay(DateTime first, DateTime second) {
+    return first.year == second.year &&
+        first.month == second.month &&
+        first.day == second.day;
   }
 
   Widget _buildVehicleActionMenu(
@@ -618,7 +713,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
             _handleRepairAction(context, ref, vehicle, type, playerCash);
             break;
           case 'route':
-            _showRouteSheet(context, ref, vehicle, cities, cityMap);
+            _openRouteSelectionPage(context, ref, vehicle, cities);
             break;
           case 'rent':
             _handleRentalAction(context, ref, vehicle);
@@ -685,6 +780,26 @@ class LogisticsManagementScreen extends ConsumerWidget {
           ),
       ],
     );
+  }
+
+  Future<void> _openRouteSelectionPage(
+    BuildContext context,
+    WidgetRef ref,
+    LogisticsVehicleModel vehicle,
+    List<CityModel> cities,
+  ) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => LogisticsRouteSelectionScreen(
+          vehicle: vehicle,
+          cities: cities,
+        ),
+      ),
+    );
+
+    if (saved == true) {
+      ref.invalidate(logisticsVehicleListProvider);
+    }
   }
 
 
@@ -843,46 +958,60 @@ class LogisticsManagementScreen extends ConsumerWidget {
     DateTime? finishAt,
     int constructionDurationMinutes,
   ) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Row(
+    final constructionId = construction['id'].toString();
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(20.r),
+            border: Border.all(
+              color: AppColors.borderGold.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
             children: [
-              Icon(Icons.construction, color: AppColors.gold, size: 30.sp),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Text(
-                  params?['name'] ?? 'Lojistik Firmasi',
-                  style: AppTextStyles.h2,
-                ),
+              Row(
+                children: [
+                  Icon(Icons.construction, color: AppColors.gold, size: 30.sp),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Text(
+                      params?['name'] ?? 'Lojistik Firmasi',
+                      style: AppTextStyles.h2,
+                    ),
+                  ),
+                ],
               ),
+              SizedBox(height: 16.h),
+              if (finishAt != null)
+                _ConstructionCountdown(
+                  constructionId: constructionId,
+                  finishAt: finishAt,
+                  totalDuration: Duration(
+                    minutes: constructionDurationMinutes > 0
+                        ? constructionDurationMinutes
+                        : 1,
+                  ),
+                  onFinish: () => _handleConstructionFinished(
+                    context,
+                    ref,
+                    constructionId,
+                  ),
+                ),
             ],
           ),
-          SizedBox(height: 16.h),
-          if (finishAt != null)
-            _ConstructionCountdown(
-              constructionId: construction['id'].toString(),
-              finishAt: finishAt,
-              totalDuration: Duration(
-                minutes: constructionDurationMinutes > 0
-                    ? constructionDurationMinutes
-                    : 1,
-              ),
-              onFinish: () => _handleConstructionFinished(
-                context,
-                ref,
-                construction['id'].toString(),
-              ),
-              onFinishWithGold: (id) => _handleFinishWithGold(context, ref, id),
-            ),
+        ),
+        if (finishAt != null) ...[
+          SizedBox(height: 10.h),
+          _ConstructionFinishButton(
+            constructionId: constructionId,
+            finishAt: finishAt,
+            onFinishWithGold: (id) => _handleFinishWithGold(context, ref, id),
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -955,31 +1084,40 @@ class LogisticsManagementScreen extends ConsumerWidget {
   }
 
   Widget _buildPremiumProgressBar(double ratio, Color color) {
-    return Stack(
-      children: [
-        Container(
-          height: 10.h,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.cardBgLight,
-            borderRadius: BorderRadius.circular(5.r),
-          ),
-        ),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          height: 10.h,
-          width: 320.w * ratio,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [color.withValues(alpha: 0.7), color],
+    final clampedRatio = ratio.clamp(0.0, 1.0);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          children: [
+            Container(
+              height: 10.h,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.cardBgLight,
+                borderRadius: BorderRadius.circular(5.r),
+              ),
             ),
-            borderRadius: BorderRadius.circular(5.r),
-            boxShadow: [
-              BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 4),
-            ],
-          ),
-        ),
-      ],
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 500),
+              height: 10.h,
+              width: constraints.maxWidth * clampedRatio,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color.withValues(alpha: 0.7), color],
+                ),
+                borderRadius: BorderRadius.circular(5.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1542,7 +1680,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
   }) async {
     final controller = TextEditingController(text: '1');
 
-    return showDialog<int>(
+    final result = await showDialog<int>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.cardBg,
@@ -1569,11 +1707,17 @@ class LogisticsManagementScreen extends ConsumerWidget {
               shortcuts: [
                 NumericKeyboardShortcut(
                   label: '1/4',
-                  value: (maxQuantity / 4).floor().toString(),
+                  value: (maxQuantity / 4)
+                      .ceil()
+                      .clamp(1, maxQuantity)
+                      .toString(),
                 ),
                 NumericKeyboardShortcut(
                   label: 'Yari',
-                  value: (maxQuantity / 2).floor().toString(),
+                  value: (maxQuantity / 2)
+                      .ceil()
+                      .clamp(1, maxQuantity)
+                      .toString(),
                 ),
                 NumericKeyboardShortcut(
                   label: 'Tamami',
@@ -1611,6 +1755,9 @@ class LogisticsManagementScreen extends ConsumerWidget {
         ],
       ),
     );
+
+    controller.dispose();
+    return result;
   }
 
   Future<void> _handleRepairAction(
@@ -1824,6 +1971,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
         ],
       ),
     );
+    controller.dispose();
 
     if (rentalPrice != null) {
       final result = await ref.read(logisticsActionProvider).setVehicleRental(
@@ -2010,228 +2158,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
     return '$cityAName <-> $cityBName';
   }
 
-  Future<void> _showRouteSheet(
-    BuildContext context,
-    WidgetRef ref,
-    LogisticsVehicleModel vehicle,
-    List<CityModel> cities,
-    Map<String, CityModel> cityMap,
-  ) async {
-    String? cityAId = cities.any((city) => city.id == vehicle.routeCityAId)
-        ? vehicle.routeCityAId
-        : null;
-    String? cityBId = cities.any((city) => city.id == vehicle.routeCityBId)
-        ? vehicle.routeCityBId
-        : null;
-    final hasLegacyRoute =
-        vehicle.hasAssignedRoute && (cityAId == null || cityBId == null);
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final preview = cityAId != null && cityBId != null
-              ? '${_cityName(cityAId, cityMap)} <-> ${_cityName(cityBId, cityMap)}'
-              : _buildRouteLabel(vehicle, cityMap);
-
-          return Container(
-            padding: EdgeInsets.fromLTRB(5.w, 18.h, 5.w, 24.h),
-            decoration: BoxDecoration(
-              color: AppColors.navBg,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
-              border: Border.all(
-                color: AppColors.borderGold.withValues(alpha: 0.2),
-              ),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 42.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(999.r),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 18.h),
-                  Text('Arac Rotasi', style: AppTextStyles.h2),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Ayni sehir transferlerinde arac kullanilmaz. Bu rota sadece sehirler arasi transfer secimini sinirlar.',
-                    style: AppTextStyles.body.copyWith(height: 1.5),
-                  ),
-                  if (hasLegacyRoute) ...[
-                    SizedBox(height: 10.h),
-                    Text(
-                      'Mevcut rotada aktif olmayan veya listede bulunmayan bir sehir var. Kaydetmeden once iki sehri yeniden secin.',
-                      style: AppTextStyles.body.copyWith(
-                        fontSize: 10.sp,
-                        color: AppColors.red,
-                      ),
-                    ),
-                  ],
-                  SizedBox(height: 18.h),
-                  _buildRouteDropdown(
-                    label: 'Birinci sehir',
-                    value: cityAId,
-                    cities: cities,
-                    onChanged: (value) =>
-                        setModalState(() => cityAId = value),
-                  ),
-                  SizedBox(height: 14.h),
-                  _buildRouteDropdown(
-                    label: 'Ikinci sehir',
-                    value: cityBId,
-                    cities: cities,
-                    onChanged: (value) =>
-                        setModalState(() => cityBId = value),
-                  ),
-                  SizedBox(height: 18.h),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(14.w),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardBgLight.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(14.r),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Text(
-                      preview,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 10.h),
-                  Text(
-                    'Rota cift yonludur. Ornek: Ankara <-> Van hem gidis hem donus icin gecerlidir.',
-                    style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-                  ),
-                  SizedBox(height: 18.h),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: cityAId == null ||
-                              cityBId == null ||
-                              cityAId == cityBId
-                          ? null
-                          : () async {
-                              final result = await ref
-                                  .read(logisticsActionProvider)
-                                  .setVehicleRoute(
-                                    vehicleId: vehicle.id,
-                                    cityAId: cityAId!,
-                                    cityBId: cityBId!,
-                                  );
-                              if (!context.mounted) return;
-                              if (result['success'] == true) {
-                                ref.invalidate(logisticsVehicleListProvider);
-                                Navigator.pop(sheetContext);
-                                AppSnackbar.show(
-                                  context,
-                                  title: 'Basarili',
-                                  message: result['message']?.toString() ??
-                                      'Arac rotasi guncellendi.',
-                                  type: SnackbarType.success,
-                                );
-                              } else {
-                                AppSnackbar.show(
-                                  context,
-                                  title: 'Hata',
-                                  message: result['message']?.toString() ??
-                                      'Rota guncellenemedi.',
-                                  type: SnackbarType.error,
-                                );
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.gold,
-                        disabledBackgroundColor: AppColors.border,
-                        foregroundColor: Colors.black,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14.r),
-                        ),
-                      ),
-                      child: Text(
-                        'ROTAYI KAYDET',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12.sp,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildRouteDropdown({
-    required String label,
-    required String? value,
-    required List<CityModel> cities,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.titleGold.copyWith(fontSize: 11.sp)),
-        SizedBox(height: 8.h),
-        DropdownButtonFormField<String>(
-          value: value,
-          onChanged: onChanged,
-          dropdownColor: AppColors.cardBg,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.cardBgLight.withValues(alpha: 0.4),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14.r),
-              borderSide: BorderSide(color: AppColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14.r),
-              borderSide: BorderSide(color: AppColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14.r),
-              borderSide: BorderSide(color: AppColors.gold),
-            ),
-          ),
-          items: cities
-              .map(
-                (city) => DropdownMenuItem<String>(
-                  value: city.id,
-                  child: Text(city.name),
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  String _cityName(String? cityId, Map<String, CityModel> cityMap) {
-    if (cityId == null || cityId.isEmpty) {
-      return 'Bilinmeyen sehir';
-    }
-    return cityMap[cityId]?.name ?? 'Bilinmeyen sehir';
-  }
 }
 
 class _ConstructionCountdown extends ConsumerStatefulWidget {
@@ -2239,14 +2165,12 @@ class _ConstructionCountdown extends ConsumerStatefulWidget {
   final DateTime finishAt;
   final Duration totalDuration;
   final VoidCallback? onFinish;
-  final Future<void> Function(String constructionId)? onFinishWithGold;
 
   const _ConstructionCountdown({
     required this.constructionId,
     required this.finishAt,
     required this.totalDuration,
     this.onFinish,
-    this.onFinishWithGold,
   });
 
   @override
@@ -2282,23 +2206,18 @@ class _ConstructionCountdownState
     return Column(
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              isDone
-                  ? 'Tamamlanmaya Hazir'
-                  : 'Kalan Sure: ${_formatDuration(remaining)}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Text(
+                isDone
+                    ? 'Tamamlanmaya Hazir'
+                    : 'Kalan Sure: ${_formatDuration(remaining)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            if (!isDone)
-              InkWell(
-                onTap: () =>
-                    widget.onFinishWithGold?.call(widget.constructionId),
-                child: Text('Yildiz ile Bitir', style: AppTextStyles.titleGold),
-              ),
           ],
         ),
         SizedBox(height: 12.h),
@@ -2323,6 +2242,33 @@ class _ConstructionCountdownState
     return '${duration.inHours.toString().padLeft(2, '0')}:'
         '${(duration.inMinutes % 60).toString().padLeft(2, '0')}:'
         '${(duration.inSeconds % 60).toString().padLeft(2, '0')}';
+  }
+}
+
+class _ConstructionFinishButton extends ConsumerWidget {
+  final String constructionId;
+  final DateTime finishAt;
+  final Future<void> Function(String constructionId)? onFinishWithGold;
+
+  const _ConstructionFinishButton({
+    required this.constructionId,
+    required this.finishAt,
+    this.onFinishWithGold,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final remainingSeconds = finishAt.difference(now).inSeconds;
+    if (remainingSeconds <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    final starCost = (remainingSeconds / 600.0).ceil().clamp(1, 999999);
+    return GoldFinishButton(
+      starCost: starCost,
+      onPressed: () => onFinishWithGold?.call(constructionId),
+    );
   }
 }
 

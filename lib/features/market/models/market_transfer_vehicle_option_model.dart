@@ -14,6 +14,8 @@ class MarketTransferVehicleOptionModel {
   final double fuelNeeded;
   final double conditionNeeded;
   final double rentalCost;
+  final double fuelCost;
+  final double transportCost;
   final int estimatedDurationSeconds;
   final bool canSelect;
   final String? disabledReason;
@@ -34,6 +36,8 @@ class MarketTransferVehicleOptionModel {
     required this.fuelNeeded,
     required this.conditionNeeded,
     required this.rentalCost,
+    required this.fuelCost,
+    required this.transportCost,
     required this.estimatedDurationSeconds,
     required this.canSelect,
     required this.disabledReason,
@@ -45,6 +49,10 @@ class MarketTransferVehicleOptionModel {
       if (value is num) return value.toDouble();
       return double.tryParse(value.toString()) ?? 0;
     }
+
+    final rentalCost = parseNum(json['rental_cost']);
+    final fuelCost = parseNum(json['fuel_cost']);
+    final transportCost = parseNum(json['total_price']);
 
     return MarketTransferVehicleOptionModel(
       vehicleId: (json['vehicle_id'] ?? '').toString(),
@@ -61,7 +69,10 @@ class MarketTransferVehicleOptionModel {
       distanceKm: parseNum(json['distance_km']),
       fuelNeeded: parseNum(json['fuel_needed']),
       conditionNeeded: parseNum(json['condition_needed']),
-      rentalCost: parseNum(json['rental_cost']),
+      rentalCost: rentalCost,
+      fuelCost: fuelCost,
+      transportCost:
+          transportCost > 0 ? transportCost : rentalCost + fuelCost,
       estimatedDurationSeconds:
           (json['estimated_duration_seconds'] as num?)?.toInt() ?? 0,
       canSelect: json['can_select'] as bool? ?? false,

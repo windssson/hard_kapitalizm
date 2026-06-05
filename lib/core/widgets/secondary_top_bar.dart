@@ -10,11 +10,7 @@ class SecondaryTopBar extends ConsumerWidget {
   final String? title;
   final bool showStats;
 
-  const SecondaryTopBar({
-    super.key,
-    this.title,
-    this.showStats = true,
-  });
+  const SecondaryTopBar({super.key, this.title, this.showStats = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -89,7 +85,7 @@ class SecondaryTopBar extends ConsumerWidget {
                           title!.toUpperCase(),
                           style: TextStyle(
                             color: AppColors.goldLight,
-                            fontSize: 14s.sp,
+                            fontSize: 14.sp,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.1,
                             shadows: [

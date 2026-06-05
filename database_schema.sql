@@ -901,6 +901,7 @@ declare
   v_available_capacity integer;
   v_unit_price numeric;
   v_total_price numeric;
+  v_new_fuel_cost numeric;
 begin
   if v_player_id is null then
     raise exception 'Oturum acilmamis.';
@@ -967,6 +968,14 @@ begin
 
   v_unit_price := coalesce(v_seller_slot.price, 0);
   v_total_price := v_unit_price * p_quantity;
+  v_new_fuel_cost := case
+    when coalesce(v_company.current_fuel, 0) + p_quantity > 0 then
+      (
+        coalesce(v_company.current_fuel, 0) * coalesce(v_company.fuel_cost, 0)
+        + p_quantity * v_unit_price
+      ) / (coalesce(v_company.current_fuel, 0) + p_quantity)
+    else 0
+  end;
 
   select cash
   into v_player_cash
@@ -996,8 +1005,37 @@ begin
   update public.logistics_companies
   set
     current_fuel = current_fuel + p_quantity,
+    fuel_cost = v_new_fuel_cost,
     updated_at = timezone('utc'::text, now())
   where id = p_logistics_company_id;
+
+  insert into public.logistics_finance_entries (
+    player_id,
+    logistics_company_id,
+    entry_type,
+    category,
+    amount,
+    quantity,
+    unit_cost,
+    related_warehouse_slot_id,
+    description,
+    metadata
+  )
+  values (
+    v_player_id,
+    p_logistics_company_id,
+    'expense',
+    'fuel_purchase',
+    v_total_price,
+    p_quantity,
+    v_unit_price,
+    p_seller_slot_id,
+    'Market yakit alimi',
+    jsonb_build_object(
+      'source', 'market',
+      'seller_player_id', v_seller_slot.seller_player_id
+    )
+  );
 
   return jsonb_build_object(
     'success', true,
@@ -1006,7 +1044,8 @@ begin
     'fuel_added', p_quantity,
     'unit_price', v_unit_price,
     'total_price', v_total_price,
-    'company_current_fuel', coalesce(v_company.current_fuel, 0) + p_quantity
+    'company_current_fuel', coalesce(v_company.current_fuel, 0) + p_quantity,
+    'company_fuel_cost', v_new_fuel_cost
   );
 end;
 $$;
@@ -2774,6 +2813,7 @@ CREATE TABLE IF NOT EXISTS "public"."logistics_vehicles" (
     "speed_kmh" integer DEFAULT 0 NOT NULL,
     "fuel_capacity" integer DEFAULT 0 NOT NULL,
     "current_fuel" integer DEFAULT 0 NOT NULL,
+    "fuel_cost" numeric DEFAULT 0 NOT NULL,
     "fuel_rate" numeric DEFAULT 0 NOT NULL,
     "condition" integer DEFAULT 100 NOT NULL,
     "status" "text" DEFAULT 'idle'::"text" NOT NULL,
@@ -2787,6 +2827,7 @@ CREATE TABLE IF NOT EXISTS "public"."logistics_vehicles" (
     CONSTRAINT "logistics_vehicles_condition_check" CHECK ((("condition" >= 0) AND ("condition" <= 100))),
     CONSTRAINT "logistics_vehicles_current_fuel_check" CHECK ((("current_fuel" >= 0) AND ("current_fuel" <= "fuel_capacity"))),
     CONSTRAINT "logistics_vehicles_fuel_capacity_check" CHECK (("fuel_capacity" >= 0)),
+    CONSTRAINT "logistics_vehicles_fuel_cost_check" CHECK (("fuel_cost" >= (0)::numeric)),
     CONSTRAINT "logistics_vehicles_fuel_rate_check" CHECK (("fuel_rate" >= (0)::numeric)),
     CONSTRAINT "logistics_vehicles_rental_price_check" CHECK (("rental_price" >= (0)::numeric)),
     CONSTRAINT "logistics_vehicles_route_city_pair_check" CHECK (((("route_city_a_id" IS NULL) AND ("route_city_b_id" IS NULL)) OR (("route_city_a_id" IS NOT NULL) AND ("route_city_b_id" IS NOT NULL) AND ("route_city_a_id" <> "route_city_b_id")))),
@@ -2796,6 +2837,31 @@ CREATE TABLE IF NOT EXISTS "public"."logistics_vehicles" (
 
 
 ALTER TABLE "public"."logistics_vehicles" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."logistics_finance_entries" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "player_id" "uuid" NOT NULL,
+    "logistics_company_id" "uuid",
+    "vehicle_id" "uuid",
+    "entry_type" "text" NOT NULL,
+    "category" "text" NOT NULL,
+    "amount" numeric DEFAULT 0 NOT NULL,
+    "quantity" numeric,
+    "unit_cost" numeric,
+    "related_transfer_id" "uuid",
+    "related_warehouse_slot_id" "uuid",
+    "related_market_listing_id" "uuid",
+    "description" "text",
+    "metadata" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT timezone('utc'::"text", now()) NOT NULL,
+    CONSTRAINT "logistics_finance_entries_amount_check" CHECK (("amount" >= (0)::numeric)),
+    CONSTRAINT "logistics_finance_entries_category_check" CHECK (("category" = ANY (ARRAY['vehicle_purchase'::"text", 'fuel_purchase'::"text", 'maintenance'::"text", 'rental_income'::"text"]))),
+    CONSTRAINT "logistics_finance_entries_entry_type_check" CHECK (("entry_type" = ANY (ARRAY['income'::"text", 'expense'::"text"])))
+);
+
+
+ALTER TABLE "public"."logistics_finance_entries" OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."ensure_npc_rental_vehicle"("p_from_city_id" "uuid", "p_to_city_id" "uuid") RETURNS "public"."logistics_vehicles"
@@ -3543,7 +3609,8 @@ CREATE OR REPLACE FUNCTION "public"."get_buyer_active_market_transfers"() RETURN
         'finish_at', lt.finish_at,
         'is_rental', lt.is_rental,
         'total_price', lt.total_price,
-        'rental_cost', lt.rental_cost
+        'rental_cost', lt.rental_cost,
+        'transport_cost', lt.transport_cost
       )
       order by lt.finish_at
     ),
@@ -3577,6 +3644,7 @@ CREATE OR REPLACE FUNCTION "public"."get_buyer_transfer_history_items"() RETURNS
           'is_rental', lt.is_rental,
           'total_price', lt.total_price,
           'rental_cost', lt.rental_cost,
+          'transport_cost', lt.transport_cost,
           'started_at', lt.started_at,
           'finish_at', lt.finish_at,
           'completed_at', lt.completed_at,
@@ -3737,7 +3805,7 @@ $$;
 ALTER FUNCTION "public"."get_buyer_transfer_history_items"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_buyer_transfer_map_items"() RETURNS TABLE("id" "uuid", "quantity" integer, "status" "text", "is_rental" boolean, "total_price" numeric, "rental_cost" numeric, "started_at" timestamp with time zone, "finish_at" timestamp with time zone, "product_id" "text", "product_name" "text", "product_icon" "text", "seller_entity_kind" "text", "buyer_entity_kind" "text", "seller_warehouse_id" "uuid", "seller_warehouse_name" "text", "seller_city_id" "uuid", "seller_city_name" "text", "seller_city_x" numeric, "seller_city_y" numeric, "buyer_warehouse_id" "uuid", "buyer_warehouse_name" "text", "buyer_city_id" "uuid", "buyer_city_name" "text", "buyer_city_x" numeric, "buyer_city_y" numeric)
+CREATE OR REPLACE FUNCTION "public"."get_buyer_transfer_map_items"() RETURNS TABLE("id" "uuid", "quantity" integer, "status" "text", "is_rental" boolean, "total_price" numeric, "rental_cost" numeric, "transport_cost" numeric, "started_at" timestamp with time zone, "finish_at" timestamp with time zone, "product_id" "text", "product_name" "text", "product_icon" "text", "seller_entity_kind" "text", "buyer_entity_kind" "text", "seller_warehouse_id" "uuid", "seller_warehouse_name" "text", "seller_city_id" "uuid", "seller_city_name" "text", "seller_city_x" numeric, "seller_city_y" numeric, "buyer_warehouse_id" "uuid", "buyer_warehouse_name" "text", "buyer_city_id" "uuid", "buyer_city_name" "text", "buyer_city_x" numeric, "buyer_city_y" numeric)
     LANGUAGE "sql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
@@ -3748,6 +3816,7 @@ CREATE OR REPLACE FUNCTION "public"."get_buyer_transfer_map_items"() RETURNS TAB
     lt.is_rental,
     lt.total_price,
     lt.rental_cost,
+    lt.transport_cost,
     lt.started_at,
     lt.finish_at,
     p.id as product_id,
@@ -4670,12 +4739,13 @@ begin
       lv.speed_kmh as v_speed_kmh,
       lv.current_fuel as v_current_fuel,
       lv.fuel_capacity as v_fuel_capacity,
+      coalesce(lv.fuel_cost, 0) as v_vehicle_fuel_cost,
       lv.fuel_rate as v_fuel_rate,
       lv.condition as v_condition,
       lv.rental_price as v_rental_price,
       v_distance_km as v_distance_km_val,
       ceil(v_distance_km * lv.fuel_rate) as v_fuel_needed,
-      ceil(v_distance_km * 0.02) as v_condition_needed,
+      ceil(v_distance_km * 0.005) as v_condition_needed,
       case
         when lv.player_id <> v_buyer_id then ceil(v_distance_km * lv.rental_price)
         else 0
@@ -4705,6 +4775,7 @@ begin
       60 as v_speed_kmh,
       999999 as v_current_fuel,
       999999 as v_fuel_capacity,
+      0::numeric as v_vehicle_fuel_cost,
       0::numeric as v_fuel_rate,
       100 as v_condition,
       5.0::numeric as v_rental_price,
@@ -4866,7 +4937,7 @@ begin
       lv.rental_price as v_rental_price,
       v_distance_km as v_distance_km_val,
       ceil(v_distance_km * lv.fuel_rate) as v_fuel_needed,
-      ceil(v_distance_km * 0.02) as v_condition_needed,
+      ceil(v_distance_km * 0.005) as v_condition_needed,
       case when lv.player_id <> v_buyer_id then ceil(v_distance_km * lv.rental_price) else 0 end as v_rental_cost,
       greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as v_estimated_duration_seconds,
       lv.status as v_status,
@@ -5133,7 +5204,7 @@ begin
     v_vehicle.rental_price,
     v_distance,
     ceil(v_distance * coalesce(v_vehicle.fuel_rate, 0))::numeric,
-    ceil(v_distance * 0.02)::numeric,
+    ceil(v_distance * 0.005)::numeric,
     ceil(v_distance * coalesce(v_vehicle.rental_price, 0))::numeric,
     greatest(1, ceil(((v_distance / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600))::integer,
     true,
@@ -5379,6 +5450,63 @@ $$;
 ALTER FUNCTION "public"."get_player_logistics_vehicle_performance"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer DEFAULT 100) RETURNS "jsonb"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  select coalesce(
+    jsonb_agg(to_jsonb(entries) order by entries.created_at desc),
+    '[]'::jsonb
+  )
+  from (
+    select
+      lfe.id,
+      lfe.player_id,
+      lfe.logistics_company_id,
+      lfe.vehicle_id,
+      lfe.entry_type,
+      lfe.category,
+      lfe.amount,
+      lfe.quantity,
+      lfe.unit_cost,
+      lfe.related_transfer_id,
+      lfe.related_warehouse_slot_id,
+      lfe.related_market_listing_id,
+      lfe.description,
+      lfe.metadata,
+      lfe.created_at
+    from public.logistics_finance_entries lfe
+    where lfe.player_id = auth.uid()
+    order by lfe.created_at desc
+    limit greatest(coalesce(p_limit, 100), 1)
+  ) entries;
+$$;
+
+
+ALTER FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_player_logistics_finance_summary"() RETURNS "jsonb"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  select jsonb_build_object(
+    'total_income', coalesce(sum(amount) filter (where entry_type = 'income'), 0),
+    'total_expense', coalesce(sum(amount) filter (where entry_type = 'expense'), 0),
+    'net_profit', coalesce(sum(case when entry_type = 'income' then amount else -amount end), 0),
+    'vehicle_purchase_expense', coalesce(sum(amount) filter (where category = 'vehicle_purchase'), 0),
+    'fuel_purchase_expense', coalesce(sum(amount) filter (where category = 'fuel_purchase'), 0),
+    'maintenance_expense', coalesce(sum(amount) filter (where category = 'maintenance'), 0),
+    'rental_income', coalesce(sum(amount) filter (where category = 'rental_income'), 0)
+  )
+  from public.logistics_finance_entries
+  where player_id = auth.uid();
+$$;
+
+
+ALTER FUNCTION "public"."get_player_logistics_finance_summary"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_player_logistics_vehicles"("p_player_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -5395,6 +5523,7 @@ begin
     'speed_kmh', speed_kmh,
     'fuel_capacity', fuel_capacity,
     'current_fuel', current_fuel,
+    'fuel_cost', fuel_cost,
     'fuel_rate', fuel_rate,
     'condition', condition,
     'status', status,
@@ -5835,7 +5964,7 @@ begin
       lv.rental_price,
       v_distance_km as distance_km,
       ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
-      ceil(v_distance_km * 0.02) as condition_needed,
+      ceil(v_distance_km * 0.005) as condition_needed,
       case when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price) else 0 end as rental_cost,
       greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
       lv.status,
@@ -5953,7 +6082,7 @@ begin
       lv.rental_price,
       v_distance_km as distance_km,
       ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
-      ceil(v_distance_km * 0.02) as condition_needed,
+      ceil(v_distance_km * 0.005) as condition_needed,
       case when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price) else 0 end as rental_cost,
       greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
       lv.status,
@@ -6404,7 +6533,7 @@ begin
       lv.rental_price,
       v_distance_km as distance_km,
       ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
-      ceil(v_distance_km * 0.02) as condition_needed,
+      ceil(v_distance_km * 0.005) as condition_needed,
       case when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price) else 0 end as rental_cost,
       greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
       lv.status,
@@ -6512,7 +6641,7 @@ begin
       lv.rental_price,
       v_distance_km as distance_km,
       ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
-      ceil(v_distance_km * 0.02) as condition_needed,
+      ceil(v_distance_km * 0.005) as condition_needed,
       case when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price) else 0 end as rental_cost,
       greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
       lv.status,
@@ -7199,7 +7328,7 @@ begin
       lv.rental_price as v_rental_price,
       v_distance_km as v_distance_km_val,
       ceil(v_distance_km * lv.fuel_rate) as v_fuel_needed,
-      ceil(v_distance_km * 0.02) as v_condition_needed,
+      ceil(v_distance_km * 0.005) as v_condition_needed,
       case
         when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price)
         else 0
@@ -7258,6 +7387,7 @@ begin
       c.v_speed_kmh,
       c.v_current_fuel,
       c.v_fuel_capacity,
+      c.v_vehicle_fuel_cost,
       c.v_fuel_rate,
       c.v_condition,
       c.v_rental_price,
@@ -7285,8 +7415,8 @@ begin
         when c.v_condition <= c.v_condition_needed then 'Kondisyon yetersiz.'
         else null
       end as v_disabled_reason,
-      0::numeric as v_fuel_cost,
-      c.v_rental_cost as v_total_price
+      c.v_fuel_needed * c.v_vehicle_fuel_cost as v_fuel_cost,
+      c.v_rental_cost + (c.v_fuel_needed * c.v_vehicle_fuel_cost) as v_total_price
     from candidates c
   ),
   selectable_exists as (
@@ -9261,6 +9391,30 @@ begin
       updated_at = timezone('utc'::text, now())
   where id = p_logistics_company_id;
 
+  insert into public.logistics_finance_entries (
+    player_id,
+    logistics_company_id,
+    vehicle_id,
+    entry_type,
+    category,
+    amount,
+    description,
+    metadata
+  )
+  values (
+    p_player_id,
+    p_logistics_company_id,
+    v_vehicle_id,
+    'expense',
+    'vehicle_purchase',
+    coalesce(v_type.purchase_price, 0),
+    'Arac alimi',
+    jsonb_build_object(
+      'logistics_vehicle_type_id', p_logistics_vehicle_type_id,
+      'vehicle_type_name', v_type.name
+    )
+  );
+
   return jsonb_build_object(
     'success', true,
     'vehicle_id', v_vehicle_id,
@@ -9285,6 +9439,7 @@ declare
   v_company record;
   v_missing_fuel integer;
   v_company_remaining_fuel numeric;
+  v_new_vehicle_fuel_cost numeric;
 begin
   select *
   into v_vehicle
@@ -9318,13 +9473,24 @@ begin
       coalesce(v_company.current_fuel, 0);
   end if;
 
+  v_new_vehicle_fuel_cost := case
+    when coalesce(v_vehicle.current_fuel, 0) + v_missing_fuel > 0 then
+      (
+        coalesce(v_vehicle.current_fuel, 0) * coalesce(v_vehicle.fuel_cost, 0)
+        + v_missing_fuel * coalesce(v_company.fuel_cost, 0)
+      ) / (coalesce(v_vehicle.current_fuel, 0) + v_missing_fuel)
+    else 0
+  end;
+
   update public.logistics_companies
   set current_fuel = v_company_remaining_fuel,
+      fuel_cost = case when v_company_remaining_fuel > 0 then fuel_cost else 0 end,
       updated_at = timezone('utc'::text, now())
   where id = v_company.id;
 
   update public.logistics_vehicles
   set current_fuel = fuel_capacity,
+      fuel_cost = v_new_vehicle_fuel_cost,
       updated_at = timezone('utc'::text, now())
   where id = p_vehicle_id;
 
@@ -9332,9 +9498,11 @@ begin
     'success', true,
     'vehicle_id', p_vehicle_id,
     'fuel_added', v_missing_fuel,
-    'total_cost', 0,
+    'total_cost', v_missing_fuel * coalesce(v_company.fuel_cost, 0),
     'current_fuel', v_vehicle.fuel_capacity,
-    'company_remaining_fuel', v_company_remaining_fuel
+    'vehicle_fuel_cost', v_new_vehicle_fuel_cost,
+    'company_remaining_fuel', v_company_remaining_fuel,
+    'company_fuel_cost', case when v_company_remaining_fuel > 0 then coalesce(v_company.fuel_cost, 0) else 0 end
   );
 end;
 $$;
@@ -9398,6 +9566,30 @@ begin
   set condition = 100,
       updated_at = timezone('utc'::text, now())
   where id = p_vehicle_id;
+
+  insert into public.logistics_finance_entries (
+    player_id,
+    logistics_company_id,
+    vehicle_id,
+    entry_type,
+    category,
+    amount,
+    description,
+    metadata
+  )
+  values (
+    p_player_id,
+    v_vehicle.logistics_company_id,
+    p_vehicle_id,
+    'expense',
+    'maintenance',
+    v_total_cost,
+    'Arac bakim gideri',
+    jsonb_build_object(
+      'missing_condition', v_missing_condition,
+      'vehicle_type_id', v_vehicle.logistics_vehicle_type_id
+    )
+  );
 
   return jsonb_build_object(
     'success', true,
@@ -12382,12 +12574,12 @@ begin
       raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
     end if;
     v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.02);
+    v_condition_loss := ceil(v_distance_km * 0.005);
     if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
     if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
     if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
     v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost;
+    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
     v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
     v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
   end if;
@@ -12438,6 +12630,21 @@ begin
     timezone('utc'::text, now()), v_finish_at, 'in_transit', timezone('utc'::text, now())
   )
   returning id into v_transfer_id;
+
+  if v_rental_cost > 0
+     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
+     and v_vehicle.player_id is not null then
+    insert into public.logistics_finance_entries (
+      player_id, logistics_company_id, vehicle_id, entry_type, category,
+      amount, related_transfer_id, description, metadata
+    )
+    values (
+      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
+      'income', 'rental_income', v_rental_cost, v_transfer_id,
+      'Arac kiralama geliri',
+      jsonb_build_object('transfer_type', 'market_to_store')
+    );
+  end if;
 
   return jsonb_build_object(
     'success', true, 'mode', 'transfer', 'transfer_id', v_transfer_id,
@@ -12652,12 +12859,12 @@ begin
       raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
     end if;
     v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.02);
+    v_condition_loss := ceil(v_distance_km * 0.005);
     if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
     if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
     if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
     v_rental_cost := case when v_vehicle.player_id <> v_buyer_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost;
+    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
     v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
     v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
   end if;
@@ -12708,6 +12915,21 @@ begin
     v_rental_cost, v_transport_cost, timezone('utc'::text, now()), v_finish_at, 'in_transit', timezone('utc'::text, now())
   )
   returning id into v_transfer_id;
+
+  if v_rental_cost > 0
+     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
+     and v_vehicle.player_id is not null then
+    insert into public.logistics_finance_entries (
+      player_id, logistics_company_id, vehicle_id, entry_type, category,
+      amount, related_transfer_id, description, metadata
+    )
+    values (
+      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
+      'income', 'rental_income', v_rental_cost, v_transfer_id,
+      'Arac kiralama geliri',
+      jsonb_build_object('transfer_type', 'market_to_warehouse')
+    );
+  end if;
 
   return jsonb_build_object(
     'success', true, 'transfer_id', v_transfer_id, 'vehicle_id', p_vehicle_id,
@@ -12833,12 +13055,12 @@ begin
       raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
     end if;
     v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.02);
+    v_condition_loss := ceil(v_distance_km * 0.005);
     if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
     if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
     if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
     v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost;
+    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
     v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
     v_finish_at := v_now + make_interval(secs => v_duration_seconds);
   end if;
@@ -12883,6 +13105,21 @@ begin
     v_now, v_finish_at, 'in_transit', v_now
   )
   returning id into v_transfer_id;
+
+  if v_rental_cost > 0
+     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
+     and v_vehicle.player_id is not null then
+    insert into public.logistics_finance_entries (
+      player_id, logistics_company_id, vehicle_id, entry_type, category,
+      amount, related_transfer_id, description, metadata
+    )
+    values (
+      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
+      'income', 'rental_income', v_rental_cost, v_transfer_id,
+      'Arac kiralama geliri',
+      jsonb_build_object('transfer_type', 'production_to_warehouse')
+    );
+  end if;
 
   return jsonb_build_object('success', true, 'message', 'Output lojistigi transferi baslatildi.', 'transfer_id', v_transfer_id, 'mode', 'transfer');
 end;
@@ -13056,12 +13293,12 @@ begin
       raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
     end if;
     v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.02);
+    v_condition_loss := ceil(v_distance_km * 0.005);
     if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
     if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
     if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
     v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost;
+    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
     v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
     v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
   end if;
@@ -13111,6 +13348,21 @@ begin
     timezone('utc'::text, now()), v_finish_at, 'in_transit', timezone('utc'::text, now())
   )
   returning id into v_transfer_id;
+
+  if v_rental_cost > 0
+     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
+     and v_vehicle.player_id is not null then
+    insert into public.logistics_finance_entries (
+      player_id, logistics_company_id, vehicle_id, entry_type, category,
+      amount, related_transfer_id, description, metadata
+    )
+    values (
+      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
+      'income', 'rental_income', v_rental_cost, v_transfer_id,
+      'Arac kiralama geliri',
+      jsonb_build_object('transfer_type', 'store_to_warehouse')
+    );
+  end if;
 
   return jsonb_build_object(
     'success', true, 'mode', 'transfer', 'transfer_id', v_transfer_id,
@@ -13236,12 +13488,12 @@ begin
       raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
     end if;
     v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.02);
+    v_condition_loss := ceil(v_distance_km * 0.005);
     if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
     if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
     if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
     v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost;
+    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
     v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
     v_finish_at := v_now + make_interval(secs => v_duration_seconds);
   end if;
@@ -13284,6 +13536,21 @@ begin
     v_now, v_finish_at, 'in_transit', v_now
   )
   returning id into v_transfer_id;
+
+  if v_rental_cost > 0
+     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
+     and v_vehicle.player_id is not null then
+    insert into public.logistics_finance_entries (
+      player_id, logistics_company_id, vehicle_id, entry_type, category,
+      amount, related_transfer_id, description, metadata
+    )
+    values (
+      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
+      'income', 'rental_income', v_rental_cost, v_transfer_id,
+      'Arac kiralama geliri',
+      jsonb_build_object('transfer_type', 'warehouse_to_production')
+    );
+  end if;
 
   return jsonb_build_object('success', true, 'message', 'Uretim lojistigi transferi baslatildi.', 'transfer_id', v_transfer_id, 'mode', 'transfer');
 end;
@@ -13429,12 +13696,12 @@ begin
       raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
     end if;
     v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.02);
+    v_condition_loss := ceil(v_distance_km * 0.005);
     if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
     if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
     if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
     v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost;
+    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
     v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
     v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
   end if;
@@ -13481,6 +13748,21 @@ begin
     timezone('utc'::text, now()), v_finish_at, 'in_transit', timezone('utc'::text, now())
   )
   returning id into v_transfer_id;
+
+  if v_rental_cost > 0
+     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
+     and v_vehicle.player_id is not null then
+    insert into public.logistics_finance_entries (
+      player_id, logistics_company_id, vehicle_id, entry_type, category,
+      amount, related_transfer_id, description, metadata
+    )
+    values (
+      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
+      'income', 'rental_income', v_rental_cost, v_transfer_id,
+      'Arac kiralama geliri',
+      jsonb_build_object('transfer_type', 'warehouse_to_store')
+    );
+  end if;
 
   return jsonb_build_object(
     'success', true, 'mode', 'transfer', 'transfer_id', v_transfer_id,
@@ -13742,7 +14024,7 @@ begin
     end if;
 
     v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.02);
+    v_condition_loss := ceil(v_distance_km * 0.005);
 
     if v_vehicle.capacity < v_required_capacity then
       raise exception 'Arac kapasitesi yetersiz.';
@@ -13760,7 +14042,7 @@ begin
       when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0))
       else 0
     end;
-    v_transport_cost := v_rental_cost;
+    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
     v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
     v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
   end if;
@@ -13858,6 +14140,21 @@ begin
     timezone('utc'::text, now())
   )
   returning id into v_transfer_id;
+
+  if v_rental_cost > 0
+     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
+     and v_vehicle.player_id is not null then
+    insert into public.logistics_finance_entries (
+      player_id, logistics_company_id, vehicle_id, entry_type, category,
+      amount, related_transfer_id, description, metadata
+    )
+    values (
+      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
+      'income', 'rental_income', v_rental_cost, v_transfer_id,
+      'Arac kiralama geliri',
+      jsonb_build_object('transfer_type', 'warehouse_to_warehouse')
+    );
+  end if;
 
   return jsonb_build_object(
     'success', true,
@@ -14466,6 +14763,8 @@ declare
   v_company record;
   v_slot record;
   v_available_capacity integer;
+  v_unit_cost numeric;
+  v_new_fuel_cost numeric;
 begin
   if v_player_id is null then
     raise exception 'Oturum acilmamis.';
@@ -14522,6 +14821,16 @@ begin
     raise exception 'Merkez yakit kapasitesi yetersiz. Bos kapasite: %', v_available_capacity;
   end if;
 
+  v_unit_cost := coalesce(v_slot.cost, 0);
+  v_new_fuel_cost := case
+    when coalesce(v_company.current_fuel, 0) + p_quantity > 0 then
+      (
+        coalesce(v_company.current_fuel, 0) * coalesce(v_company.fuel_cost, 0)
+        + p_quantity * v_unit_cost
+      ) / (coalesce(v_company.current_fuel, 0) + p_quantity)
+    else 0
+  end;
+
   update public.warehouse_slots
   set
     quantity = quantity - p_quantity,
@@ -14532,15 +14841,45 @@ begin
   update public.logistics_companies
   set
     current_fuel = current_fuel + p_quantity,
+    fuel_cost = v_new_fuel_cost,
     updated_at = timezone('utc'::text, now())
   where id = p_logistics_company_id;
+
+  insert into public.logistics_finance_entries (
+    player_id,
+    logistics_company_id,
+    entry_type,
+    category,
+    amount,
+    quantity,
+    unit_cost,
+    related_warehouse_slot_id,
+    description,
+    metadata
+  )
+  values (
+    v_player_id,
+    p_logistics_company_id,
+    'expense',
+    'fuel_purchase',
+    p_quantity * v_unit_cost,
+    p_quantity,
+    v_unit_cost,
+    p_warehouse_slot_id,
+    'Depodan lojistik yakit aktarimi',
+    jsonb_build_object(
+      'source', 'warehouse'
+    )
+  );
 
   return jsonb_build_object(
     'success', true,
     'company_id', p_logistics_company_id,
     'warehouse_slot_id', p_warehouse_slot_id,
     'fuel_added', p_quantity,
-    'company_current_fuel', coalesce(v_company.current_fuel, 0) + p_quantity
+    'unit_cost', v_unit_cost,
+    'company_current_fuel', coalesce(v_company.current_fuel, 0) + p_quantity,
+    'company_fuel_cost', v_new_fuel_cost
   );
 end;
 $$;
@@ -15806,6 +16145,10 @@ ALTER TABLE ONLY "public"."logistics_vehicles"
     ADD CONSTRAINT "logistics_vehicles_pkey" PRIMARY KEY ("id");
 
 
+ALTER TABLE ONLY "public"."logistics_finance_entries"
+    ADD CONSTRAINT "logistics_finance_entries_pkey" PRIMARY KEY ("id");
+
+
 
 ALTER TABLE ONLY "public"."mine_types"
     ADD CONSTRAINT "maden_types_pkey" PRIMARY KEY ("id");
@@ -16019,6 +16362,12 @@ CREATE INDEX "idx_logistics_companies_city_id" ON "public"."logistics_companies"
 
 
 CREATE INDEX "idx_logistics_companies_player_id" ON "public"."logistics_companies" USING "btree" ("player_id");
+
+
+CREATE INDEX "idx_logistics_finance_entries_player_created_at" ON "public"."logistics_finance_entries" USING "btree" ("player_id", "created_at" DESC);
+
+
+CREATE INDEX "idx_logistics_finance_entries_player_category" ON "public"."logistics_finance_entries" USING "btree" ("player_id", "category");
 
 
 
@@ -16364,6 +16713,26 @@ ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_vehicle_owner_player_id_fkey" FOREIGN KEY ("vehicle_owner_player_id") REFERENCES "public"."players"("id");
 
 
+ALTER TABLE ONLY "public"."logistics_finance_entries"
+    ADD CONSTRAINT "logistics_finance_entries_logistics_company_id_fkey" FOREIGN KEY ("logistics_company_id") REFERENCES "public"."logistics_companies"("id") ON DELETE SET NULL;
+
+
+ALTER TABLE ONLY "public"."logistics_finance_entries"
+    ADD CONSTRAINT "logistics_finance_entries_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
+
+
+ALTER TABLE ONLY "public"."logistics_finance_entries"
+    ADD CONSTRAINT "logistics_finance_entries_related_transfer_id_fkey" FOREIGN KEY ("related_transfer_id") REFERENCES "public"."logistics_transfers"("id") ON DELETE SET NULL;
+
+
+ALTER TABLE ONLY "public"."logistics_finance_entries"
+    ADD CONSTRAINT "logistics_finance_entries_related_warehouse_slot_id_fkey" FOREIGN KEY ("related_warehouse_slot_id") REFERENCES "public"."warehouse_slots"("id") ON DELETE SET NULL;
+
+
+ALTER TABLE ONLY "public"."logistics_finance_entries"
+    ADD CONSTRAINT "logistics_finance_entries_vehicle_id_fkey" FOREIGN KEY ("vehicle_id") REFERENCES "public"."logistics_vehicles"("id") ON DELETE SET NULL;
+
+
 
 ALTER TABLE ONLY "public"."logistics_vehicles"
     ADD CONSTRAINT "logistics_vehicles_logistics_company_id_fkey" FOREIGN KEY ("logistics_company_id") REFERENCES "public"."logistics_companies"("id") ON DELETE CASCADE;
@@ -16598,6 +16967,9 @@ CREATE POLICY "Players can view their own logistics companies" ON "public"."logi
 CREATE POLICY "Players can view their own logistics vehicles" ON "public"."logistics_vehicles" FOR SELECT TO "authenticated" USING (("player_id" = "auth"."uid"()));
 
 
+CREATE POLICY "Players can view their own logistics finance entries" ON "public"."logistics_finance_entries" FOR SELECT TO "authenticated" USING (("player_id" = "auth"."uid"()));
+
+
 
 CREATE POLICY "Players can view their own warehouse slots" ON "public"."warehouse_slots" FOR SELECT TO "authenticated" USING (("warehouse_id" IN ( SELECT "warehouses"."id"
    FROM "public"."warehouses"
@@ -16716,6 +17088,9 @@ ALTER TABLE "public"."logistics_companies" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."logistics_company_types" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."logistics_finance_entries" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."logistics_transfers" ENABLE ROW LEVEL SECURITY;
@@ -17461,6 +17836,16 @@ GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicle_performance"() TO "
 GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicle_performance"() TO "service_role";
 
 
+GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer) TO "service_role";
+
+
+GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_summary"() TO "anon";
+GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_summary"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_summary"() TO "service_role";
+
+
 
 GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicles"("p_player_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicles"("p_player_id" "uuid") TO "authenticated";
@@ -18034,6 +18419,11 @@ GRANT ALL ON TABLE "public"."logistics_companies" TO "service_role";
 GRANT ALL ON TABLE "public"."logistics_company_types" TO "anon";
 GRANT ALL ON TABLE "public"."logistics_company_types" TO "authenticated";
 GRANT ALL ON TABLE "public"."logistics_company_types" TO "service_role";
+
+
+GRANT ALL ON TABLE "public"."logistics_finance_entries" TO "anon";
+GRANT ALL ON TABLE "public"."logistics_finance_entries" TO "authenticated";
+GRANT ALL ON TABLE "public"."logistics_finance_entries" TO "service_role";
 
 
 
