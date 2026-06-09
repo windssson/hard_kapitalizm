@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -29,6 +31,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
+      ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).future);
+    });
   }
 
   @override
@@ -85,10 +92,23 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
   }
 
   Future<void> _refreshWarehouse(WidgetRef ref) async {
+    await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
     final warehouse = await ref
         .read(warehouseDetailProvider(widget.warehouseId).notifier)
         .refresh();
     ref.read(warehouseListProvider.notifier).replaceWarehouse(warehouse);
+    ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
+  }
+
+  Future<void> _refreshWarehouseEcosystem({bool refreshPlayer = true}) async {
+    await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
+    ref.invalidate(warehouseDetailProvider(widget.warehouseId));
+    ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
+    ref.invalidate(warehouseListProvider);
+    if (refreshPlayer) {
+      ref.invalidate(playerProvider);
+    }
+    await ref.read(warehouseDetailProvider(widget.warehouseId).future);
   }
 
   void _showProductSelection(
@@ -245,7 +265,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildHeaderCard(WarehouseModel warehouse) {
+  Widget _buildHeaderCard(
+    WarehouseModel warehouse,
+  ) {
     final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
     final listedSlots = filledSlots
         .where((slot) => slot.isAvailableForSale)
@@ -427,6 +449,50 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             stockRatio: stockRatio,
             reserveRatio: reserveRatio,
           ),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showWarehouseUpgradeSheet(
+                    context,
+                    ref,
+                    warehouse,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.green,
+                    side: BorderSide(
+                      color: AppColors.green.withValues(alpha: 0.35),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                  icon: const Icon(Icons.upgrade_rounded),
+                  label: const Text('Yukselt'),
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push('/warehouses/${warehouse.id}/history'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.gold,
+                    side: BorderSide(
+                      color: AppColors.gold.withValues(alpha: 0.35),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                  icon: const Icon(Icons.history_rounded),
+                  label: const Text('Kayitlar'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -534,6 +600,31 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCard(String message, {Widget? action}) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+          ),
+          if (action != null) ...[
+            SizedBox(height: 12.h),
+            action,
+          ],
         ],
       ),
     );
@@ -2240,5 +2331,354 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final minutes = duration.inMinutes % 60;
     if (hours > 0) return '${hours}s ${minutes}dk';
     return '${duration.inMinutes}dk';
+  }
+
+  int _calculateUpgradeStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
+  }
+
+  String _formatCountdown(Duration remaining) {
+    if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes % 60;
+    if (hours > 0) {
+      return '${hours}s ${minutes}dk';
+    }
+    return '${remaining.inMinutes}dk';
+  }
+
+  Future<void> _showWarehouseUpgradeSheet(
+    BuildContext context,
+    WidgetRef ref,
+    WarehouseModel warehouse,
+  ) async {
+    await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
+    ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
+    await Future<void>.delayed(Duration.zero);
+    final activeUpgrade =
+        await ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).future);
+    final warehouseTypes = await ref.read(warehouseTypesProvider.future);
+    final mergedTypeDetail = {
+      ..._findWarehouseTypeDetail(warehouse.warehouseTypeId, warehouseTypes),
+      ...?warehouse.warehouseType,
+    };
+    final inferredBaseCapacity = warehouse.level > 0
+        ? warehouse.capacity / warehouse.level
+        : warehouse.capacity;
+    final baseCapacity = _readMapDouble(mergedTypeDetail, 'base_capacity') > 0
+        ? _readMapDouble(mergedTypeDetail, 'base_capacity')
+        : inferredBaseCapacity;
+    final constructionMinutes = _readMapInt(
+      mergedTypeDetail,
+      'construction_time_minutes',
+    );
+    final baseCost = _readMapDouble(mergedTypeDetail, 'cost');
+    final targetLevel = warehouse.level + 1;
+    final upgradeCost = ((baseCost * 0.30) *
+            (warehouse.level <= 1 ? 1 : _pow1p1(warehouse.level - 1)))
+        .ceilToDouble();
+    final durationMinutes = constructionMinutes * targetLevel;
+
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.all(18.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Depo Yukseltmesi',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                'Her yukseltmede depo kapasitesi, tipin baslangic kapasitesi kadar artar.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                  height: 1.45,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Container(
+                padding: EdgeInsets.all(14.w),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(16.r),
+                  border: Border.all(
+                    color: AppColors.green.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Seviye ${warehouse.level} -> $targetLevel',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    Text(
+                      'Kapasite: ${_formatValue(warehouse.capacity)} -> ${_formatValue(warehouse.capacity + baseCapacity)}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      'Artis: +${_formatValue(baseCapacity)} m3',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      'Sure: ${durationMinutes} dk',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      'Maliyet: ${upgradeCost.toStringAsFixed(0)} TL',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                    SizedBox(height: 14.h),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.icon(
+                        onPressed: () async {
+                          Navigator.pop(sheetContext);
+                          final result = await ref
+                              .read(warehouseActionProvider)
+                              .startWarehouseUpgrade(
+                                warehouse.id,
+                                syncProviders: false,
+                              );
+
+                          if (!context.mounted) return;
+
+                          if (result['success'] == true) {
+                            await _refreshWarehouseEcosystem();
+                            AppSnackbar.show(
+                              context,
+                              title: 'Basarili',
+                              message: 'Depo yukseltmesi baslatildi.',
+                              type: SnackbarType.success,
+                            );
+                          } else {
+                            AppSnackbar.show(
+                              context,
+                              title: 'Hata',
+                              message:
+                                  result['message'] ??
+                                  'Depo yukseltmesi baslatilamadi.',
+                              type: SnackbarType.error,
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.upgrade_rounded),
+                        label: const Text('Yukseltmeyi Baslat'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _finishWarehouseUpgradeWithGold(
+    BuildingUpgradeModel upgrade,
+  ) async {
+    final result = await ref
+        .read(warehouseActionProvider)
+        .finishWarehouseUpgradeWithGold(upgrade.id, syncProviders: false);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      await _refreshWarehouseEcosystem();
+      AppSnackbar.show(
+        context,
+        title: 'Basarili',
+        message: 'Depo yukseltmesi tamamlandi.',
+        type: SnackbarType.success,
+      );
+      return;
+    }
+
+    AppSnackbar.show(
+      context,
+      title: 'Hata',
+      message: result['message'] ?? 'Yukseltme tamamlanamadi.',
+      type: SnackbarType.error,
+    );
+  }
+
+  double _pow1p1(int exponent) {
+    var result = 1.0;
+    for (var i = 0; i < exponent; i++) {
+      result *= 1.1;
+    }
+    return result;
+  }
+
+  double _readMapDouble(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  int _readMapInt(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+}
+
+class _ActiveWarehouseUpgradeCard extends ConsumerWidget {
+  const _ActiveWarehouseUpgradeCard({
+    required this.upgrade,
+    required this.onFinishWithGold,
+    required this.calculateStarCost,
+    required this.formatCountdown,
+  });
+
+  final BuildingUpgradeModel upgrade;
+  final Future<void> Function() onFinishWithGold;
+  final int Function(DateTime finishAt) calculateStarCost;
+  final String Function(Duration remaining) formatCountdown;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final totalSeconds = upgrade.finishAt.difference(upgrade.startedAt).inSeconds;
+    final elapsedSeconds = now.difference(upgrade.startedAt).inSeconds;
+    final progress = totalSeconds > 0
+        ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
+        : 1.0;
+    final remaining = upgrade.finishAt.difference(now);
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: AppColors.green.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: AppColors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Icon(
+                  Icons.upgrade_rounded,
+                  color: AppColors.green,
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Depo Yukseltmesi Devam Ediyor',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Seviye ${upgrade.currentLevel} -> ${upgrade.targetLevel} | Kapasite ${_formatCapacity(upgrade.previousCapacity)} -> ${_formatCapacity(upgrade.nextCapacity)}',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                formatCountdown(remaining),
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999.r),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8.h,
+              backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: AppColors.gold.withValues(alpha: 0.35),
+                ),
+                foregroundColor: AppColors.goldLight,
+              ),
+              onPressed: onFinishWithGold,
+              icon: const Icon(Icons.star_rounded),
+              label: Text(
+                '${calculateStarCost(upgrade.finishAt)} yildiz ile bitir',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatCapacity(double value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
+    return value.toStringAsFixed(0);
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -496,6 +497,17 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         type: SnackbarType.info,
                       );
                     },
+            ),
+          ),
+          SizedBox(
+            width: 100.w,
+            child: _buildActionButton(
+              'Rapor',
+              Icons.query_stats_rounded,
+              AppColors.blue,
+              () => context.push(
+                '/production-report/factory/${detail.factory.id}?name=${Uri.encodeComponent(detail.factory.name)}',
+              ),
             ),
           ),
         ],
@@ -1903,12 +1915,29 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       return;
     }
 
+    final remainingInputCapacity = _calculateRemainingFactoryInputCapacity(
+      detail.inputInventories,
+      detail.factory.inputCapacity,
+    );
+    if (remainingInputCapacity <= 0) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message:
+            'Hammadde kapasitesi dolu. Once mevcut stok veya yoldaki transferler azalmali.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
     final options = <WarehouseSelectionOption>[];
     for (final warehouse in warehouses) {
       final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
       for (final slotMap in slots) {
         final slot = Map<String, dynamic>.from(slotMap as Map);
         final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
+        final transferableQuantity = qty.clamp(0, remainingInputCapacity);
+        if (transferableQuantity <= 0) continue;
         final warehouseCityId = (warehouse['city_id'] ?? '').toString();
         final isSame = _isSameCity(warehouseCityId, detail.factory.cityId);
 
@@ -1918,13 +1947,14 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             title: (warehouse['name'] ?? 'Depo').toString(),
             subtitle: (warehouse['city']?['name'] ?? detail.cityName).toString(),
             badgeText: isSame ? 'Aynı Şehir' : 'Farklı Şehir',
-            infoText: 'Stok: $qty adet',
+            infoText:
+                'Stok: $qty adet | Bos kapasite: $remainingInputCapacity',
             isHighlightBadge: isSame,
             onTap: () {
               Navigator.pop(context);
               _showQuantityDialog(
                 context: context,
-                maxQuantity: qty,
+                maxQuantity: transferableQuantity,
                 title: 'Miktar Girin',
                 subtitle: '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi aktarilacak',
                 onConfirm: (quantity) async {
@@ -1966,7 +1996,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     detail: detail,
                     inventory: inventory,
                     warehouseSlotId: slot['id'].toString(),
-                    maxQuantity: qty,
+                    maxQuantity: transferableQuantity,
                     quantity: quantity,
                   );
                 },
@@ -2400,6 +2430,17 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     final minutes = duration.inMinutes % 60;
     if (hours > 0) return '${hours}s ${minutes}dk';
     return '${duration.inMinutes}dk';
+  }
+
+  int _calculateRemainingFactoryInputCapacity(
+    List<FactoryProductionInventoryModel> inventories,
+    int capacity,
+  ) {
+    final usedAndPending = inventories.fold<double>(
+      0,
+      (sum, inventory) => sum + inventory.quantity + inventory.pendingQuantity,
+    );
+    return (capacity - usedAndPending.ceil()).clamp(0, capacity);
   }
 
   Future<void> _showQuantityDialog({

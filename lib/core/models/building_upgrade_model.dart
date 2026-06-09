@@ -23,6 +23,9 @@ class BuildingUpgradeModel {
   final int nextInputCapacity;
   final int previousOutputCapacity;
   final int nextOutputCapacity;
+  final double capacityIncrease;
+  final double previousCapacity;
+  final double nextCapacity;
   final Map<String, dynamic> params;
 
   const BuildingUpgradeModel({
@@ -50,6 +53,9 @@ class BuildingUpgradeModel {
     required this.nextInputCapacity,
     required this.previousOutputCapacity,
     required this.nextOutputCapacity,
+    required this.capacityIncrease,
+    required this.previousCapacity,
+    required this.nextCapacity,
     required this.params,
   });
 
@@ -100,6 +106,11 @@ class BuildingUpgradeModel {
           (params['previous_output_capacity'] as num?)?.toInt() ?? 0,
       nextOutputCapacity:
           (params['next_output_capacity'] as num?)?.toInt() ?? 0,
+      capacityIncrease:
+          (params['capacity_increase'] as num?)?.toDouble() ?? 0,
+      previousCapacity:
+          (params['previous_capacity'] as num?)?.toDouble() ?? 0,
+      nextCapacity: (params['next_capacity'] as num?)?.toDouble() ?? 0,
       params: params,
     );
   }

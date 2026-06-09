@@ -53,19 +53,26 @@ class MarketTransferVehicleOptionModel {
     final rentalCost = parseNum(json['rental_cost']);
     final fuelCost = parseNum(json['fuel_cost']);
     final transportCost = parseNum(json['total_price']);
+    final vehicleOwnerPlayerId =
+        (json['vehicle_owner_player_id'] ?? '').toString();
+    final rentalPrice = parseNum(json['rental_price']);
 
     return MarketTransferVehicleOptionModel(
       vehicleId: (json['vehicle_id'] ?? '').toString(),
-      vehicleOwnerPlayerId: (json['vehicle_owner_player_id'] ?? '').toString(),
+      vehicleOwnerPlayerId: vehicleOwnerPlayerId,
       vehicleName: (json['vehicle_name'] ?? 'Arac').toString(),
-      isRental: json['is_rental'] as bool? ?? false,
+      isRental:
+          (json['is_rental'] as bool? ?? false) ||
+          vehicleOwnerPlayerId.isEmpty ||
+          rentalPrice > 0 ||
+          rentalCost > 0,
       capacity: (json['capacity'] as num?)?.toInt() ?? 0,
       speedKmh: (json['speed_kmh'] as num?)?.toInt() ?? 0,
       currentFuel: (json['current_fuel'] as num?)?.toInt() ?? 0,
       fuelCapacity: (json['fuel_capacity'] as num?)?.toInt() ?? 0,
       fuelRate: parseNum(json['fuel_rate']),
       condition: (json['condition'] as num?)?.toInt() ?? 0,
-      rentalPrice: parseNum(json['rental_price']),
+      rentalPrice: rentalPrice,
       distanceKm: parseNum(json['distance_km']),
       fuelNeeded: parseNum(json['fuel_needed']),
       conditionNeeded: parseNum(json['condition_needed']),

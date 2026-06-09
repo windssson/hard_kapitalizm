@@ -49,7 +49,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     _buildModuleGrid(),
                     SizedBox(height: 12.h),
                     _buildFinancialStats(),
-                    SizedBox(height: 12.h),
+                    _buildAlertsSection(),
                     _buildNewsSection(),
                     SizedBox(height: 24.h),
                   ],
@@ -83,180 +83,394 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Consumer(
       builder: (context, ref, child) {
         final player = ref.watch(playerProvider).value;
+        const mockDailyProfit = 18200;
+        const mockActiveBusinessCount = 18;
+        const mockCompanyValue = 12450000;
+        const mockHeadquarters = 'Erzurum';
 
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.borderGold),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF09111D),
+                AppColors.cardBg,
+                const Color(0xFF050B14),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(18.r),
+            border: Border.all(
+              color: AppColors.borderGoldLight.withValues(alpha: 0.55),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.32),
+                blurRadius: 14.r,
+                offset: Offset(0, 6.h),
+              ),
+            ],
           ),
           child: Padding(
-            padding: EdgeInsets.all(14.w),
-            child: Row(
+            padding: EdgeInsets.all(10.w),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 116.w,
-                  child: Column(
+                Row(
+                  children: [
+                    Container(
+                      width: 26.w,
+                      height: 26.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.28),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.apartment_rounded,
+                        color: AppColors.gold,
+                        size: 13.sp,
+                      ),
+                    ),
+                    SizedBox(width: 6.w),
+                    Text(
+                      'SIRKET OZETI',
+                      style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.25,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(
+                      color: AppColors.borderGold.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 96.w,
-                        height: 96.w,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.cardBgLight,
-                          border: Border.all(color: AppColors.gold, width: 3.w),
-                        ),
-                        child: ClipOval(
-                          child: CachedAssetImage(
-                            fileName: player?.avatarId ?? 'ae1.webp',
-                            fit: BoxFit.cover,
-                            placeholder: Icon(
-                              Icons.person,
-                              color: AppColors.gold,
-                              size: 42.sp,
+                      Expanded(
+                        flex: 30,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildSummaryStatLine(
+                              Icons.trending_up_rounded,
+                              'Bugunku Kar:',
+                              '₺${_formatCompactNumber(mockDailyProfit)} ▲',
+                              AppColors.green,
                             ),
-                            errorWidget: Icon(
-                              Icons.person,
-                              color: AppColors.gold,
-                              size: 42.sp,
+                            SizedBox(height: 6.h),
+                            _buildSummaryStatLine(
+                              Icons.account_balance_rounded,
+                              'Aktif Isletme:',
+                              '$mockActiveBusinessCount',
+                              AppColors.goldLight,
+                            ),
+                            SizedBox(height: 6.h),
+                            _buildSummaryStatLine(
+                              Icons.place_rounded,
+                              'Merkez Sehir:',
+                              mockHeadquarters,
+                              AppColors.goldLight,
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 6.w),
+                      Expanded(
+                        flex: 32,
+                        child: SizedBox(
+                          height: 88.h,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14.r),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  const Color(0xFF102743),
+                                  const Color(0xFF081629),
+                                  const Color(0xFF050C15),
+                                ],
+                              ),
+                              border: Border.all(
+                                color: AppColors.gold.withValues(alpha: 0.16),
+                              ),
+                            ),
+                            child: Stack(
+                              children: [
+                                Positioned(
+                                  left: 10.w,
+                                  right: 10.w,
+                                  bottom: 8.h,
+                                  child: Container(
+                                    height: 2.h,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.transparent,
+                                          AppColors.gold.withValues(alpha: 0.7),
+                                          Colors.transparent,
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Positioned.fill(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6.w,
+                                      vertical: 6.h,
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: List.generate(6, (index) {
+                                        final heights = [
+                                          22.h,
+                                          38.h,
+                                          30.h,
+                                          50.h,
+                                          44.h,
+                                          34.h,
+                                        ];
+                                        final widths = [
+                                          10.w,
+                                          12.w,
+                                          10.w,
+                                          13.w,
+                                          11.w,
+                                          10.w,
+                                        ];
+                                        final glow = index.isEven
+                                            ? AppColors.blue
+                                            : AppColors.gold;
+                                        return Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 1.5.w,
+                                          ),
+                                          child: Align(
+                                            alignment: Alignment.bottomCenter,
+                                            child: Container(
+                                              width: widths[index],
+                                              height: heights[index],
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(4.r),
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topCenter,
+                                                  end: Alignment.bottomCenter,
+                                                  colors: [
+                                                    glow.withValues(alpha: 0.9),
+                                                    const Color(0xFF13263E),
+                                                    const Color(0xFF07111D),
+                                                  ],
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: glow.withValues(
+                                                      alpha: 0.28,
+                                                    ),
+                                                    blurRadius: 5.r,
+                                                    spreadRadius: 0.2.r,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                      SizedBox(height: 10.h),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12.w,
-                          vertical: 4.h,
+                      SizedBox(width: 6.w),
+                      Expanded(
+                        flex: 26,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'SIRKET DEGERI',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                color: AppColors.textPrimary.withValues(
+                                  alpha: 0.92,
+                                ),
+                                fontSize: 8.sp,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            SizedBox(height: 3.h),
+                            Text(
+                              '₺${_formatCompactNumber(mockCompanyValue)}',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                color: AppColors.gold,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            SizedBox(height: 6.h),
+                            Align(
+                              alignment: Alignment.center,
+                              child: Container(
+                                width: 46.w,
+                                height: 46.w,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      AppColors.gold.withValues(alpha: 0.26),
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                ),
+                                child: Container(
+                                  margin: EdgeInsets.all(4.w),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF08111B),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.gold.withValues(
+                                        alpha: 0.7,
+                                      ),
+                                      width: 1.2.w,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.workspace_premium_rounded,
+                                        color: AppColors.goldLight,
+                                        size: 8.sp,
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        player
+                                                ?.companyName
+                                                .characters
+                                                .firstOrNull
+                                                ?.toUpperCase() ??
+                                            'A',
+                                        style: TextStyle(
+                                          color: AppColors.gold,
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 5.h),
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(vertical: 4.h),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF103417),
+                                    const Color(0xFF0A2310),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(999.r),
+                                border: Border.all(
+                                  color: AppColors.gold.withValues(alpha: 0.45),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.shield_rounded,
+                                    color: AppColors.green,
+                                    size: 10.sp,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    'ISTIKRARLI',
+                                    style: TextStyle(
+                                      color: AppColors.green,
+                                      fontSize: 8.sp,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        decoration: BoxDecoration(
-                          color: AppColors.navBg,
-                          borderRadius: BorderRadius.circular(999.r),
-                          border: Border.all(color: AppColors.gold),
-                        ),
-                        child: Text(
-                          'Lv. ${player?.level ?? 1}',
-                          style: TextStyle(
-                            color: AppColors.goldLight,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 10.h),
-                      Text(
-                        player?.playerName ?? 'CEO',
-                        style: TextStyle(
-                          color: AppColors.goldLight,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
                 ),
-                SizedBox(width: 14.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('SIRKET OZETI', style: AppTextStyles.titleGold),
-                      SizedBox(height: 10.h),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                SizedBox(height: 10.h),
+                Container(
+                  width: double.infinity,
+                  height: 26.h,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFF14396D), Color(0xFF09172F)],
+                    ),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: const Color(0xFF1E407C)),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.push('/profile'),
+                      borderRadius: BorderRadius.circular(12.r),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Sirket Degeri', style: AppTextStyles.body),
-                                SizedBox(height: 2.h),
-                                Text(
-                                  _formatMoney(player?.cash ?? 0),
-                                  style: AppTextStyles.statValue,
-                                ),
-                              ],
+                          Icon(
+                            Icons.analytics_rounded,
+                            color: AppColors.textPrimary,
+                            size: 13.sp,
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            'Sirket Raporu',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                          SizedBox(width: 6.w),
                           Icon(
-                            Icons.bar_chart,
-                            color: AppColors.gold,
-                            size: 34.sp,
+                            Icons.chevron_right,
+                            color: AppColors.textPrimary,
+                            size: 14.sp,
                           ),
                         ],
                       ),
-                      SizedBox(height: 8.h),
-                      Divider(color: AppColors.border, height: 1.h),
-                      SizedBox(height: 10.h),
-                      _buildSummaryRow(
-                        Icons.show_chart,
-                        'Gunluk Kar',
-                        '+1.28M',
-                        AppColors.green,
-                      ),
-                      SizedBox(height: 8.h),
-                      _buildSummaryRow(
-                        Icons.business,
-                        'Aktif Isletme',
-                        '18 isletme',
-                        AppColors.textPrimary,
-                      ),
-                      SizedBox(height: 8.h),
-                      _buildSummaryRow(
-                        Icons.location_on,
-                        'Merkez Sehir',
-                        'Erzurum',
-                        AppColors.textPrimary,
-                      ),
-                      SizedBox(height: 12.h),
-                      Container(
-                        width: double.infinity,
-                        height: 38.h,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF0F2B5B), Color(0xFF061430)],
-                          ),
-                          borderRadius: BorderRadius.circular(10.r),
-                          border: Border.all(color: const Color(0xFF1E407C)),
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => context.push('/profile'),
-                            borderRadius: BorderRadius.circular(10.r),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.analytics,
-                                  color: AppColors.textPrimary,
-                                  size: 16.sp,
-                                ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  'Sirket Raporu',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(width: 8.w),
-                                Icon(
-                                  Icons.chevron_right,
-                                  color: AppColors.textPrimary,
-                                  size: 18.sp,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],
@@ -267,28 +481,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildSummaryRow(
+  Widget _buildSummaryStatLine(
     IconData icon,
     String label,
     String value,
     Color valueColor,
   ) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.gold, size: 16.sp),
-        SizedBox(width: 6.w),
-        Text(label, style: AppTextStyles.body),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            color: valueColor,
-            fontSize: 12.sp,
-            fontWeight: FontWeight.bold,
+        Container(
+          width: 24.w,
+          height: 24.w,
+          decoration: BoxDecoration(
+            color: AppColors.gold.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10.r),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.22)),
+          ),
+          child: Icon(icon, color: AppColors.gold, size: 11.sp),
+        ),
+        SizedBox(width: 5.w),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 8.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 0.5.h),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: valueColor,
+                  fontSize: 10.5.sp,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
+  }
+
+  String _formatCompactNumber(num value) {
+    if (value >= 1000000000) {
+      return '${(value / 1000000000).toStringAsFixed(2)}B';
+    }
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(2)}M';
+    }
+    if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    }
+    return value.toStringAsFixed(0);
   }
 
   Widget _buildModuleGrid() {
@@ -310,15 +563,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         crossAxisCount: 4,
         crossAxisSpacing: 6.w,
         mainAxisSpacing: 6.h,
-        childAspectRatio: 0.85,
+        childAspectRatio: 0.8,
       ),
       itemCount: modules.length,
       itemBuilder: (context, index) {
         final module = modules[index];
 
         return Material(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(10.r),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(18.r),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: () async {
@@ -326,45 +579,98 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             },
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(
-                  color: AppColors.borderGold.withValues(alpha: 0.5),
+                color: const Color(0xFF06101C),
+                borderRadius: BorderRadius.circular(18.r),
+                image: const DecorationImage(
+                  image: AssetImage('assets/theme/module_icon_frame_01.webp'),
+                  fit: BoxFit.fill,
                 ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 64.w,
-                    height: 64.h,
-                    child: CachedAssetImage(
-                      fileName: module['image'] as String,
-                      fit: BoxFit.contain,
-                    ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.28),
+                    blurRadius: 12.r,
+                    offset: Offset(0, 6.h),
                   ),
-                  SizedBox(height: 4.h),
-                  Row(
+                ],
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18.r),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.0),
+                      Colors.black.withValues(alpha: 0.04),
+                    ],
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(9.w, 12.h, 9.w, 8.h),
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Flexible(
-                        child: Text(
-                          module['title'] as String,
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      SizedBox(
+                        width: 54.w,
+                        height: 54.h,
+                        child: module['image'] != null
+                            ? CachedAssetImage(
+                                fileName: module['image'] as String,
+                                fit: BoxFit.contain,
+                              )
+                            : Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBgLight.withValues(
+                                    alpha: 0.72,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.borderGold.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                  ),
+                                ),
+                                child: Icon(
+                                  module['icon'] as IconData,
+                                  color: AppColors.gold,
+                                  size: 25.sp,
+                                ),
+                              ),
                       ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: AppColors.gold,
-                        size: 14.sp,
+                      SizedBox(height: 6.h),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              module['title'] as String,
+                              maxLines: 1,
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 10.2.sp,
+                                fontWeight: FontWeight.w600,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withValues(alpha: 0.5),
+                                    blurRadius: 4.r,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right,
+                            color: AppColors.gold,
+                            size: 12.sp,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -504,26 +810,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final notificationsAsync = ref.watch(playerNotificationDashboardProvider);
 
     return notificationsAsync.when(
-      loading: () => _buildDefaultNewsSection(),
-      error: (_, _) => _buildDefaultNewsSection(),
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (dashboard) {
-        if (!dashboard.success || dashboard.notifications.isEmpty) {
-          return _buildDefaultNewsSection();
+        final items =
+            dashboard.notifications
+                .where((item) => item.isEvent && item.isUnread)
+                .toList()
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        if (!dashboard.success || items.isEmpty) {
+          return const SizedBox.shrink();
         }
-
-        final items = [...dashboard.notifications]
-          ..sort((a, b) {
-            final aPriority = _homeNotificationPriority(a);
-            final bPriority = _homeNotificationPriority(b);
-            if (aPriority != bPriority) {
-              return aPriority.compareTo(bPriority);
-            }
-            return b.createdAt.compareTo(a.createdAt);
-          });
-
-        final hasActionable =
-            items.any((item) => item.isActiveWarning) ||
-            items.any((item) => item.isActiveReminder);
 
         final cards = items
             .take(5)
@@ -531,59 +829,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             .toList();
 
         return _buildLegacyNewsSection(
-          title: hasActionable ? 'Aktif Sorunlar' : 'Bildirimler',
+          title: 'Bildirimler',
           onHeaderTap: () => context.push('/notifications'),
-          trailingText: hasActionable
-              ? '${dashboard.activeWarningCount} Sorun'
-              : dashboard.unreadCount > 0
-                  ? '${dashboard.unreadCount} Yeni'
-                  : 'Tumunu Gor',
-          trailingColor: hasActionable
-              ? Colors.orange
-              : dashboard.unreadCount > 0
-                  ? AppColors.gold
-                  : AppColors.blue,
+          trailingText: '${items.length} Yeni',
+          trailingColor: items.isNotEmpty ? AppColors.gold : AppColors.blue,
           cards: cards,
         );
       },
     );
   }
 
-  Widget _buildDefaultNewsSection() => _buildLegacyNewsSection(
-    title: 'Guncel Durum',
-    cards: [
-      _buildNewsCard(
-        'Biskuvi fabrikasinda hammadde azaluyor.',
-        '15 dk once',
-        Icons.cookie,
-        Colors.orange,
-        Icons.warning_amber_rounded,
-        Colors.red,
-      ),
-      _buildNewsCard(
-        '1 nakliye araci teslimata cikti.',
-        '35 dk once',
-        Icons.local_shipping,
-        AppColors.blue,
-        Icons.check_circle,
-        AppColors.green,
-      ),
-      _buildNewsCard(
-        'Vergi odeme tarihi yaklasiyor.',
-        '2 sa once',
-        Icons.receipt_long,
-        AppColors.gold,
-        Icons.warning_amber_rounded,
-        Colors.orange,
-      ),
-    ],
-  );
+  Widget _buildAlertsSection() {
+    final notificationsAsync = ref.watch(playerNotificationDashboardProvider);
+
+    return notificationsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (dashboard) {
+        final items =
+            dashboard.notifications
+                .where((item) => item.isActiveWarning || item.isActiveReminder)
+                .toList()
+              ..sort((a, b) {
+                final aPriority = _homeNotificationPriority(a);
+                final bPriority = _homeNotificationPriority(b);
+                if (aPriority != bPriority) {
+                  return aPriority.compareTo(bPriority);
+                }
+                return b.createdAt.compareTo(a.createdAt);
+              });
+
+        if (!dashboard.success || items.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final cards = items
+            .take(5)
+            .map((item) => _buildNotificationNewsCard(item))
+            .toList();
+
+        return _buildLegacyNewsSection(
+          title: 'Uyarilar',
+          onHeaderTap: () => context.push('/alerts'),
+          trailingText: '${items.length} Sorun',
+          trailingColor: Colors.orange,
+          headerIcon: Icons.warning_amber_rounded,
+          headerIconColor: Colors.orange,
+          cards: cards,
+        );
+      },
+    );
+  }
 
   Widget _buildLegacyNewsSection({
     required String title,
     required List<Widget> cards,
     String trailingText = 'Tumunu Gor',
     Color trailingColor = AppColors.blue,
+    IconData headerIcon = Icons.notifications,
+    Color headerIconColor = AppColors.gold,
     VoidCallback? onHeaderTap,
   }) {
     return Container(
@@ -600,7 +904,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
               child: Row(
                 children: [
-                  Icon(Icons.notifications, color: AppColors.gold, size: 20.sp),
+                  Icon(headerIcon, color: headerIconColor, size: 20.sp),
                   SizedBox(width: 8.w),
                   Text(
                     title,
@@ -615,7 +919,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     trailingText,
                     style: TextStyle(color: trailingColor, fontSize: 12.sp),
                   ),
-                  Icon(Icons.chevron_right, color: trailingColor, size: 16.sp),
+                  if (onHeaderTap != null)
+                    Icon(
+                      Icons.chevron_right,
+                      color: trailingColor,
+                      size: 16.sp,
+                    ),
                 ],
               ),
             ),
@@ -636,10 +945,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildNotificationNewsCard(PlayerNotificationModel notification) {
     final accent = _notificationColor(notification);
+    final targetRoute = notification.isEvent
+        ? '/notifications'
+        : _targetRoute(notification) ?? '/notifications';
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push('/notifications'),
+        onTap: () => context.push(targetRoute),
         borderRadius: BorderRadius.circular(8.r),
         child: _buildNewsCard(
           '${_notificationMiniLabel(notification)} • ${notification.title}',
@@ -649,8 +961,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           notification.isUnread
               ? Icons.fiber_manual_record
               : notification.isWarning
-                  ? Icons.warning_amber_rounded
-                  : Icons.check_circle,
+              ? Icons.warning_amber_rounded
+              : Icons.check_circle,
           notification.isUnread ? accent : accent.withValues(alpha: 0.8),
         ),
       ),
@@ -749,13 +1061,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  String _formatMoney(dynamic amount) {
-    final value = double.tryParse(amount.toString()) ?? 0;
-    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
-    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
-    return value.toStringAsFixed(0);
-  }
-
   int _homeNotificationPriority(PlayerNotificationModel item) {
     if (item.isActiveWarning) return 0;
     if (item.isActiveReminder) {
@@ -763,6 +1068,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
     if (item.isUnread) return 2;
     return 3;
+  }
+
+  String? _targetRoute(PlayerNotificationModel notification) {
+    if (notification.category == 'transfer_completed') {
+      return '/transfer-map';
+    }
+
+    if (notification.category == 'arge_completed') {
+      return '/arge';
+    }
+
+    if (notification.category == 'achievement_unlocked') {
+      return '/achievements';
+    }
+
+    if (notification.entityKind == 'logistics') {
+      return '/logistics';
+    }
+
+    final entityId = notification.entityId;
+    switch (notification.entityKind) {
+      case 'store':
+        return entityId?.isNotEmpty == true ? '/store/$entityId' : '/store';
+      case 'warehouse':
+        return entityId?.isNotEmpty == true
+            ? '/warehouses/$entityId'
+            : '/warehouses';
+      case 'factory':
+        return entityId?.isNotEmpty == true
+            ? '/factories/$entityId'
+            : '/factories';
+      case 'farm':
+        return entityId?.isNotEmpty == true ? '/farms/$entityId' : '/farms';
+      case 'field':
+        return entityId?.isNotEmpty == true ? '/fields/$entityId' : '/fields';
+      case 'mine':
+        return entityId?.isNotEmpty == true ? '/mines/$entityId' : '/mines';
+      default:
+        return null;
+    }
   }
 
   IconData _notificationIcon(PlayerNotificationModel item) {

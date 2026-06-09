@@ -109,6 +109,7 @@ class TransferHistoryItemModel {
   TransferHistoryEndpointModel get buyerWarehouse => buyerEndpoint;
 
   factory TransferHistoryItemModel.fromJson(Map<String, dynamic> json) {
+    final rentalCost = (json['rental_cost'] as num?)?.toDouble() ?? 0;
     final sellerKind = _resolveHistoryEndpointKind(
       explicitKind: json['seller_entity_kind']?.toString(),
       warehouse: json['seller_warehouse'] as Map<String, dynamic>?,
@@ -125,9 +126,9 @@ class TransferHistoryItemModel {
       id: (json['id'] ?? '').toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       status: (json['status'] ?? 'completed').toString(),
-      isRental: json['is_rental'] as bool? ?? false,
+      isRental: (json['is_rental'] as bool? ?? false) || rentalCost > 0,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
-      rentalCost: (json['rental_cost'] as num?)?.toDouble() ?? 0,
+      rentalCost: rentalCost,
       transportCost: (json['transport_cost'] as num?)?.toDouble() ?? 0,
       startedAt: DateTime.parse(json['started_at'].toString()),
       finishAt: DateTime.parse(json['finish_at'].toString()),

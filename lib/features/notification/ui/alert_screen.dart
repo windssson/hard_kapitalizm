@@ -8,14 +8,14 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/notification/models/player_notification_model.dart';
 
-class NotificationScreen extends ConsumerStatefulWidget {
-  const NotificationScreen({super.key});
+class AlertScreen extends ConsumerStatefulWidget {
+  const AlertScreen({super.key});
 
   @override
-  ConsumerState<NotificationScreen> createState() => _NotificationScreenState();
+  ConsumerState<AlertScreen> createState() => _AlertScreenState();
 }
 
-class _NotificationScreenState extends ConsumerState<NotificationScreen> {
+class _AlertScreenState extends ConsumerState<AlertScreen> {
   @override
   void initState() {
     super.initState();
@@ -29,20 +29,25 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     await ref.refresh(playerNotificationDashboardProvider.future);
   }
 
-  Future<void> _markAllRead() async {
-    final result = await ref.read(notificationActionProvider).markAllRead();
+  Future<void> _markRead(PlayerNotificationModel notification) async {
+    if (!notification.isUnread) return;
+
+    final result = await ref
+        .read(notificationActionProvider)
+        .markRead(notification.id);
     if (!mounted) return;
+
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Tum bildirimler okundu olarak isaretlendi.',
+        title: 'Guncellendi',
+        message: 'Uyari okundu olarak isaretlendi.',
         type: SnackbarType.success,
       );
     }
   }
 
-  Future<void> _openNotification(PlayerNotificationModel notification) async {
+  Future<void> _openAlert(PlayerNotificationModel notification) async {
     if (notification.isUnread) {
       await ref.read(notificationActionProvider).markRead(notification.id);
     }
@@ -64,7 +69,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Bildirimler'),
+            const SecondaryTopBar(title: 'Uyarilar'),
             Expanded(
               child: dashboardAsync.when(
                 loading: () => const Center(
@@ -81,9 +86,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   ),
                 ),
                 data: (dashboard) {
-                  final unreadNotifications = _sortNotifications(
+                  final activeAlerts = _sortAlerts(
                     dashboard.notifications
-                        .where((item) => item.isEvent && item.isUnread)
+                        .where((item) => item.isActiveWarning || item.isActiveReminder)
                         .toList(),
                   );
 
@@ -93,25 +98,13 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
                       children: [
-                        if (unreadNotifications.isNotEmpty)
-                          Padding(
-                            padding: EdgeInsets.only(bottom: 10.h),
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton.icon(
-                                onPressed: _markAllRead,
-                                icon: const Icon(Icons.done_all_rounded),
-                                label: const Text('Tumunu Okundu Yap'),
-                              ),
-                            ),
-                          ),
-                        if (unreadNotifications.isEmpty)
+                        if (activeAlerts.isEmpty)
                           _buildEmptyState()
                         else
-                          ...unreadNotifications.map(
+                          ...activeAlerts.map(
                             (notification) => Padding(
                               padding: EdgeInsets.only(bottom: 10.h),
-                              child: _buildNotificationCard(notification),
+                              child: _buildAlertCard(notification),
                             ),
                           ),
                       ],
@@ -126,14 +119,14 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     );
   }
 
-  Widget _buildNotificationCard(PlayerNotificationModel notification) {
+  Widget _buildAlertCard(PlayerNotificationModel notification) {
     final accent = _severityColor(notification);
     final route = _targetRoute(notification);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _openNotification(notification),
+        onTap: () => _openAlert(notification),
         borderRadius: BorderRadius.circular(14.r),
         child: Container(
           padding: EdgeInsets.all(14.w),
@@ -153,7 +146,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _notificationIcon(notification),
+                  _alertIcon(notification),
                   color: accent,
                   size: 20.sp,
                 ),
@@ -167,13 +160,19 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       spacing: 6.w,
                       runSpacing: 6.h,
                       children: [
-                        _buildBadge(_kindLabel(notification), accent),
+                        _buildBadge(_alertTypeLabel(notification), accent),
+                        if (_reasonLabel(notification) != null)
+                          _buildBadge(
+                            _reasonLabel(notification)!,
+                            AppColors.textMuted,
+                          ),
                         if (_entityLabel(notification) != null)
                           _buildBadge(
                             _entityLabel(notification)!,
                             AppColors.blue,
                           ),
-                        _buildBadge('Yeni', AppColors.gold),
+                        if (notification.isUnread)
+                          _buildBadge('Yeni', AppColors.gold),
                       ],
                     ),
                     SizedBox(height: 8.h),
@@ -198,14 +197,29 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                         color: AppColors.textMuted,
                       ),
                     ),
-                    if (route != null) ...[
-                      SizedBox(height: 10.h),
-                      FilledButton.tonalIcon(
-                        onPressed: () => _openNotification(notification),
-                        icon: const Icon(Icons.open_in_new_rounded),
-                        label: const Text('Module Git'),
-                      ),
-                    ],
+                    SizedBox(height: 10.h),
+                    Row(
+                      children: [
+                        if (notification.isUnread)
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _markRead(notification),
+                              icon: const Icon(Icons.done_rounded),
+                              label: const Text('Okundu Yap'),
+                            ),
+                          ),
+                        if (notification.isUnread && route != null)
+                          SizedBox(width: 8.w),
+                        if (route != null)
+                          Expanded(
+                            child: FilledButton.tonalIcon(
+                              onPressed: () => _openAlert(notification),
+                              icon: const Icon(Icons.open_in_new_rounded),
+                              label: const Text('Module Git'),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -245,13 +259,13 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         child: Column(
           children: [
             Icon(
-              Icons.notifications_off_rounded,
+              Icons.shield_outlined,
               color: AppColors.textMuted,
               size: 28.sp,
             ),
             SizedBox(height: 8.h),
             Text(
-              'Goruntulenecek okunmamis bildirim yok.',
+              'Goruntulenecek aktif uyari yok.',
               textAlign: TextAlign.center,
               style: AppTextStyles.body.copyWith(fontSize: 12.sp),
             ),
@@ -259,27 +273,25 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         ),
       );
 
-  List<PlayerNotificationModel> _sortNotifications(
-    List<PlayerNotificationModel> items,
-  ) {
+  List<PlayerNotificationModel> _sortAlerts(List<PlayerNotificationModel> items) {
     final sorted = [...items];
-    sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    sorted.sort((a, b) {
+      final aPriority = _priorityOf(a);
+      final bPriority = _priorityOf(b);
+      if (aPriority != bPriority) return aPriority.compareTo(bPriority);
+      return b.createdAt.compareTo(a.createdAt);
+    });
     return sorted;
   }
 
+  int _priorityOf(PlayerNotificationModel item) {
+    if (item.isActiveWarning) return 0;
+    if (item.isActiveReminder) return 1;
+    if (item.isUnread) return 2;
+    return 3;
+  }
+
   String? _targetRoute(PlayerNotificationModel notification) {
-    if (notification.category == 'transfer_completed') {
-      return '/transfer-map';
-    }
-
-    if (notification.category == 'arge_completed') {
-      return '/arge';
-    }
-
-    if (notification.category == 'achievement_unlocked') {
-      return '/achievements';
-    }
-
     if (notification.entityKind == 'logistics') {
       return '/logistics';
     }
@@ -307,38 +319,24 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     }
   }
 
-  IconData _notificationIcon(PlayerNotificationModel item) {
+  IconData _alertIcon(PlayerNotificationModel item) {
     switch (item.category) {
-      case 'construction_completed':
-        return Icons.construction_rounded;
-      case 'upgrade_completed':
-        return Icons.trending_up_rounded;
-      case 'transfer_completed':
-        return Icons.local_shipping_rounded;
-      case 'arge_completed':
-        return Icons.science_rounded;
-      case 'achievement_unlocked':
-        return Icons.workspace_premium_rounded;
+      case 'store_blocked':
+        return Icons.storefront_outlined;
+      case 'production_blocked':
+        return Icons.warning_amber_rounded;
+      case 'logistics_attention':
+        return Icons.local_shipping_outlined;
+      case 'inactive_reminder':
+        return Icons.pause_circle_outline_rounded;
       default:
-        return Icons.notifications_none_rounded;
+        return Icons.notifications_active_outlined;
     }
   }
 
-  String _kindLabel(PlayerNotificationModel item) {
-    switch (item.category) {
-      case 'construction_completed':
-        return 'Insaat Tamam';
-      case 'upgrade_completed':
-        return 'Yukseltme Tamam';
-      case 'transfer_completed':
-        return 'Transfer Tamam';
-      case 'arge_completed':
-        return 'AR-GE Tamam';
-      case 'achievement_unlocked':
-        return 'Rozet Acildi';
-      default:
-        return 'Bilgi';
-    }
+  String _alertTypeLabel(PlayerNotificationModel item) {
+    if (item.isActiveReminder) return 'Hatirlatma';
+    return 'Uyari';
   }
 
   String? _entityLabel(PlayerNotificationModel item) {
@@ -362,6 +360,30 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     }
   }
 
+  String? _reasonLabel(PlayerNotificationModel item) {
+    switch (item.category) {
+      case 'store_blocked':
+        if (item.title.contains('Bos Slot')) return 'Bos Slot';
+        if (item.title.contains('Stok Bitti')) return 'Stok Yok';
+        return 'Magaza';
+      case 'production_blocked':
+        if (item.title.contains('Hammadde Eksik')) return 'Hammadde';
+        if (item.title.contains('Secili Degil')) return 'Urun Secilmemis';
+        if (item.title.contains('Deposu Dolu')) return 'Kapasite';
+        if (item.title.contains('Bos Uretim Slotu')) return 'Bos Slot';
+        return 'Uretim';
+      case 'logistics_attention':
+        if (item.title.contains('Pasif')) return 'Pasif';
+        if (item.title.contains('Yakit')) return 'Yakit';
+        if (item.title.contains('Kondisyon')) return 'Bakim';
+        return 'Nakliye';
+      case 'inactive_reminder':
+        return 'Pasif';
+      default:
+        return null;
+    }
+  }
+
   Color _severityColor(PlayerNotificationModel item) {
     switch (item.severity) {
       case 'success':
@@ -369,7 +391,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       case 'warning':
         return Colors.orange;
       default:
-        return AppColors.blue;
+        return AppColors.gold;
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -447,6 +448,17 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               Icons.upgrade_rounded,
               AppColors.green,
               () => _showFarmUpgradeSheet(context, ref, detail, activeUpgrade),
+            ),
+          ),
+          SizedBox(
+            width: 100.w,
+            child: _buildActionButton(
+              'Rapor',
+              Icons.query_stats_rounded,
+              AppColors.blue,
+              () => context.push(
+                '/production-report/farm/${detail.farm.id}?name=${Uri.encodeComponent(detail.farm.name)}',
+              ),
             ),
           ),
         ],
@@ -1899,12 +1911,29 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       return;
     }
 
+    final remainingInputCapacity = _calculateRemainingInputCapacity(
+      detail.inputInventories,
+      detail.farm.inputCapacity,
+    );
+    if (remainingInputCapacity <= 0) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message:
+            'Hammadde kapasitesi dolu. Once mevcut stok veya yoldaki transferler azalmali.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
     final options = <WarehouseSelectionOption>[];
     for (final warehouse in warehouses) {
       final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
       for (final slotMap in slots) {
         final slot = Map<String, dynamic>.from(slotMap as Map);
         final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
+        final transferableQuantity = qty.clamp(0, remainingInputCapacity);
+        if (transferableQuantity <= 0) continue;
         final warehouseCityId = (warehouse['city_id'] ?? '').toString();
         final isSame = _isSameCity(warehouseCityId, detail.farm.cityId);
 
@@ -1914,13 +1943,14 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             title: (warehouse['name'] ?? 'Depo').toString(),
             subtitle: (warehouse['city']?['name'] ?? detail.cityName).toString(),
             badgeText: isSame ? 'Aynı Şehir' : 'Farklı Şehir',
-            infoText: 'Stok: $qty adet',
+            infoText:
+                'Stok: $qty adet | Bos kapasite: $remainingInputCapacity',
             isHighlightBadge: isSame,
             onTap: () {
               Navigator.pop(context);
               _showQuantityDialog(
                 context: context,
-                maxQuantity: qty,
+                maxQuantity: transferableQuantity,
                 title: 'Miktar Girin',
                 subtitle: '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi doldurulacak',
                 onConfirm: (quantity) async {
@@ -1963,7 +1993,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                     detail: detail,
                     inventory: inventory,
                     warehouseSlotId: slot['id'].toString(),
-                    maxQuantity: qty,
+                    maxQuantity: transferableQuantity,
                     quantity: quantity,
                   );
                 },
@@ -2513,6 +2543,17 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       total += inventory.quantity;
     }
     return total;
+  }
+
+  int _calculateRemainingInputCapacity(
+    List<FarmProductionInventoryModel> inventories,
+    int capacity,
+  ) {
+    final usedAndPending = inventories.fold<double>(
+      0,
+      (sum, inventory) => sum + inventory.quantity + inventory.pendingQuantity,
+    );
+    return (capacity - usedAndPending.ceil()).clamp(0, capacity);
   }
 
   double _inventoryRatio(int current, int capacity) {

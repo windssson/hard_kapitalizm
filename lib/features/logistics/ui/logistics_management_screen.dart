@@ -562,7 +562,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
               left: 0,
               width: 6.w,
               child: Container(
-                color: _getStatusColor(vehicle.status),
+                color: _getVehicleOperationColor(vehicle),
               ),
             ),
             Padding(
@@ -609,7 +609,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          _buildVehicleStatusBadge(vehicle.status),
+                          _buildVehicleStatusBadge(vehicle),
                           SizedBox(width: 4.w),
                           _buildVehicleActionMenu(
                             context,
@@ -1156,8 +1156,8 @@ class LogisticsManagementScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildVehicleStatusBadge(String status) {
-    final color = _getStatusColor(status);
+  Widget _buildVehicleStatusBadge(LogisticsVehicleModel vehicle) {
+    final color = _getVehicleOperationColor(vehicle);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
       decoration: BoxDecoration(
@@ -1166,7 +1166,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
         border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
-        _getStatusLabel(status),
+        _getVehicleOperationLabel(vehicle),
         style: TextStyle(
           color: color,
           fontSize: 10.sp,
@@ -1176,34 +1176,50 @@ class LogisticsManagementScreen extends ConsumerWidget {
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'active':
-        return AppColors.green;
-      case 'on_route':
-        return AppColors.blue;
-      case 'repairing':
-        return AppColors.gold;
-      case 'inactive':
-        return AppColors.textMuted;
-      default:
-        return AppColors.red;
+  Color _getVehicleOperationColor(LogisticsVehicleModel vehicle) {
+    final fuelRatio = vehicle.fuelCapacity == 0
+        ? 0.0
+        : (vehicle.currentFuel / vehicle.fuelCapacity).clamp(0.0, 1.0);
+
+    if (fuelRatio <= 0.15) {
+      return AppColors.red;
     }
+    if (vehicle.condition <= 30) {
+      return Colors.orange;
+    }
+    if (vehicle.status != 'on_route' && !vehicle.hasAssignedRoute) {
+      return AppColors.gold;
+    }
+    if (vehicle.status == 'inactive') {
+      return AppColors.textMuted;
+    }
+    if (vehicle.status == 'on_route') {
+      return AppColors.blue;
+    }
+    return AppColors.green;
   }
 
-  String _getStatusLabel(String status) {
-    switch (status) {
-      case 'active':
-        return 'HAZIR';
-      case 'on_route':
-        return 'YOLDA';
-      case 'repairing':
-        return 'BAKIMDA';
-      case 'inactive':
-        return 'PASIF';
-      default:
-        return status.toUpperCase();
+  String _getVehicleOperationLabel(LogisticsVehicleModel vehicle) {
+    final fuelRatio = vehicle.fuelCapacity == 0
+        ? 0.0
+        : (vehicle.currentFuel / vehicle.fuelCapacity).clamp(0.0, 1.0);
+
+    if (fuelRatio <= 0.15) {
+      return 'YAKIT KRITIK';
     }
+    if (vehicle.condition <= 30) {
+      return 'BAKIM GEREKLI';
+    }
+    if (vehicle.status != 'on_route' && !vehicle.hasAssignedRoute) {
+      return 'ROTA EKSIK';
+    }
+    if (vehicle.status == 'inactive') {
+      return 'PASIF ARAC';
+    }
+    if (vehicle.status == 'on_route') {
+      return 'SEVKIYATTA';
+    }
+    return 'OPERASYONA HAZIR';
   }
 
   Widget _buildVehicleDetailItem(IconData icon, String value, String label) {

@@ -124,5 +124,8 @@ class MineDetailModel {
                 e.qualityLevel == mine.qualityLevel,
           )
           .toList()
-        ..sort((a, b) => a.productId.compareTo(b.productId));
+        ..sort((a, b) => b.quantity.compareTo(a.quantity));
+
+  int get totalOutputQuantity =>
+      outputInventories.fold(0, (sum, item) => sum + item.quantity);
 }

@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
+import 'package:hard_kapitalizm/features/warehouse/models/warehouse_history_item_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 
 Future<List<WarehouseModel>> _fetchWarehouseList() async {
@@ -13,6 +16,10 @@ Future<List<WarehouseModel>> _fetchWarehouseList() async {
   if (user == null) return const [];
 
   try {
+    await supabase.rpc(
+      'complete_due_warehouse_upgrades',
+      params: {'p_limit': 100},
+    );
     final response = await supabase.rpc('get_warehouse_list_page_data');
     final data = response['warehouses'] as List<dynamic>? ?? const [];
     return data
@@ -28,6 +35,13 @@ Future<WarehouseModel> _fetchWarehouseDetail(String warehouseId) async {
   final user = supabase.auth.currentUser;
 
   if (user == null) throw Exception('Oturum acilmamis.');
+
+  try {
+    await supabase.rpc(
+      'complete_due_warehouse_upgrades',
+      params: {'p_limit': 100},
+    );
+  } catch (_) {}
 
   final response = await supabase.rpc(
     'get_player_warehouse_detail',
@@ -254,7 +268,59 @@ final warehouseTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   return catalogs.warehouseTypes;
 });
 
+final warehouseHistoryProvider =
+    FutureProvider.family<List<WarehouseHistoryItemModel>, String>((
+      ref,
+      warehouseId,
+    ) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        throw Exception('Kullanici girisi yapilmamis.');
+      }
+
+      final response = await supabase.rpc(
+        'get_warehouse_history_items',
+        params: {'p_warehouse_id': warehouseId},
+      );
+
+      return (response as List<dynamic>)
+          .map(
+            (row) => WarehouseHistoryItemModel.fromJson(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          )
+          .toList();
+    });
+
+final activeWarehouseUpgradeProvider =
+    FutureProvider.autoDispose.family<BuildingUpgradeModel?, String>((ref, warehouseId) async {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        return null;
+      }
+
+      final response = await supabase.rpc(
+        'get_player_active_warehouse_upgrade',
+        params: {'p_warehouse_id': warehouseId},
+      );
+
+      if (response == null) {
+        return null;
+      }
+
+      return BuildingUpgradeModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    });
+
 class WarehouseActionNotifier {
+  WarehouseActionNotifier(this._ref);
+
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   final TransferVehicleOptionsService _vehicleOptionsService =
       TransferVehicleOptionsService();
@@ -345,6 +411,83 @@ class WarehouseActionNotifier {
         },
       );
       return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> startWarehouseUpgrade(
+    String warehouseId, {
+    bool syncProviders = true,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_warehouse_upgrade',
+        params: {
+          'p_player_id': user.id,
+          'p_warehouse_id': warehouseId,
+        },
+      );
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders && responseMap['success'] == true) {
+        _ref.invalidate(activeWarehouseUpgradeProvider(warehouseId));
+        _ref.invalidate(warehouseDetailProvider(warehouseId));
+        _ref.invalidate(warehouseListProvider);
+        _ref.invalidate(playerProvider);
+      }
+      return responseMap;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> completeDueWarehouseUpgrades() async {
+    try {
+      final response = await _supabase.rpc(
+        'complete_due_warehouse_upgrades',
+        params: {'p_limit': 100},
+      );
+      _ref.invalidate(warehouseListProvider);
+      _ref.invalidate(playerProvider);
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> finishWarehouseUpgradeWithGold(
+    String upgradeId, {
+    bool syncProviders = true,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'finish_warehouse_upgrade_with_gold',
+        params: {
+          'p_player_id': user.id,
+          'p_upgrade_id': upgradeId,
+        },
+      );
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders && responseMap['success'] == true) {
+        final entityId = responseMap['entity_id']?.toString();
+        _ref.invalidate(warehouseListProvider);
+        if (entityId != null && entityId.isNotEmpty) {
+          _ref.invalidate(activeWarehouseUpgradeProvider(entityId));
+          _ref.invalidate(warehouseDetailProvider(entityId));
+        }
+        _ref.invalidate(playerProvider);
+      }
+      return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -480,4 +623,4 @@ class WarehouseActionNotifier {
   }
 }
 
-final warehouseActionProvider = Provider((ref) => WarehouseActionNotifier());
+final warehouseActionProvider = Provider((ref) => WarehouseActionNotifier(ref));

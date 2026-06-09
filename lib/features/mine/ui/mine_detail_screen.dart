@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -162,9 +163,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   }
 
   Widget _buildHero(MineDetailModel detail) {
-    final outputQty = detail.outputInventories.isNotEmpty
-        ? detail.outputInventories.first.quantity
-        : 0;
+    final outputQty = detail.totalOutputQuantity;
 
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -460,6 +459,17 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     },
             ),
           ),
+          SizedBox(
+            width: 100.w,
+            child: _buildActionButton(
+              'Rapor',
+              Icons.query_stats_rounded,
+              AppColors.blue,
+              () => context.push(
+                '/production-report/mine/${detail.mine.id}?name=${Uri.encodeComponent(detail.mine.name)}',
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -615,7 +625,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final outputInventory = detail.outputInventories.isNotEmpty
         ? detail.outputInventories.first
         : null;
-    final quantity = outputInventory?.quantity ?? 0;
+    final quantity = detail.totalOutputQuantity;
     final progress = _safeProgress(
       quantity.toDouble(),
       detail.mine.outputCapacity.toDouble(),
@@ -1253,7 +1263,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     if (!mounted) return;
 
     if (result['success'] == true) {
-      await _refreshMineEcosystem(includePlayer: false);
+      await _refreshMineEcosystem();
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1624,7 +1634,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           await _refreshMineEcosystem(
             warehouseId: warehouseId,
             includeTransfers: true,
-            includePlayer: false,
           );
           AppSnackbar.show(
             context,

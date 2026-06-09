@@ -75,6 +75,12 @@ class ProductionLogisticsService {
 
     return rawValue
         .toString()
+        .replaceAll('[', '')
+        .replaceAll(']', '')
+        .replaceAll('{', '')
+        .replaceAll('}', '')
+        .replaceAll('"', '')
+        .replaceAll("'", '')
         .split(',')
         .map((value) => value.trim())
         .where((value) => value.isNotEmpty)

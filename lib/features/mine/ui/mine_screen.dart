@@ -60,6 +60,11 @@ class _MineScreenState extends ConsumerState<MineScreen>
     ref.invalidate(mineListProvider);
     ref.invalidate(mineConstructionProvider);
     ref.invalidate(playerProvider);
+    await Future.wait([
+      ref.read(mineListProvider.future),
+      ref.read(mineConstructionProvider.future),
+      ref.read(playerProvider.future),
+    ]);
   }
 
   Future<void> _completeConstruction(String constructionId) async {

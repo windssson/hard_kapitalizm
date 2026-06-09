@@ -143,13 +143,14 @@ class TransferMapItemModel {
   String get buyerKindLabel => _kindLabel(buyerEndpoint.kind);
 
   factory TransferMapItemModel.fromJson(Map<String, dynamic> json) {
+    final rentalCost = (json['rental_cost'] as num?)?.toDouble() ?? 0;
     return TransferMapItemModel(
       id: (json['id'] ?? '').toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       status: (json['status'] ?? 'in_transit').toString(),
-      isRental: json['is_rental'] as bool? ?? false,
+      isRental: (json['is_rental'] as bool? ?? false) || rentalCost > 0,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
-      rentalCost: (json['rental_cost'] as num?)?.toDouble() ?? 0,
+      rentalCost: rentalCost,
       transportCost: (json['transport_cost'] as num?)?.toDouble() ?? 0,
       startedAt: DateTime.parse(json['started_at'].toString()),
       finishAt: DateTime.parse(json['finish_at'].toString()),
@@ -184,13 +185,14 @@ class TransferMapItemModel {
   }
 
   factory TransferMapItemModel.fromFlatJson(Map<String, dynamic> json) {
+    final rentalCost = (json['rental_cost'] as num?)?.toDouble() ?? 0;
     return TransferMapItemModel(
       id: (json['id'] ?? '').toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       status: (json['status'] ?? 'in_transit').toString(),
-      isRental: json['is_rental'] as bool? ?? false,
+      isRental: (json['is_rental'] as bool? ?? false) || rentalCost > 0,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
-      rentalCost: (json['rental_cost'] as num?)?.toDouble() ?? 0,
+      rentalCost: rentalCost,
       transportCost: (json['transport_cost'] as num?)?.toDouble() ?? 0,
       startedAt: DateTime.parse(json['started_at'].toString()),
       finishAt: DateTime.parse(json['finish_at'].toString()),

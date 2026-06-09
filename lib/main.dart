@@ -35,10 +35,13 @@ import 'package:hard_kapitalizm/features/transfer_map/ui/transfer_map_screen.dar
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_detail_screen.dart';
+import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_history_screen.dart';
 import 'package:hard_kapitalizm/features/arge/ui/arge_screen.dart';
 import 'package:hard_kapitalizm/features/mission/ui/mission_screen.dart';
 import 'package:hard_kapitalizm/features/notification/ui/notification_screen.dart';
+import 'package:hard_kapitalizm/features/notification/ui/alert_screen.dart';
 import 'package:hard_kapitalizm/features/achievement/ui/achievement_screen.dart';
+import 'package:hard_kapitalizm/features/production_report/ui/production_report_screen.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/navigation/app_route_observer.dart';
@@ -77,8 +80,20 @@ final _router = GoRouter(
       builder: (context, state) => const NotificationScreen(),
     ),
     GoRoute(
+      path: '/alerts',
+      builder: (context, state) => const AlertScreen(),
+    ),
+    GoRoute(
       path: '/achievements',
       builder: (context, state) => const AchievementScreen(),
+    ),
+    GoRoute(
+      path: '/production-report/:ownerKind/:id',
+      builder: (context, state) => ProductionReportScreen(
+        ownerKind: state.pathParameters['ownerKind']!,
+        ownerId: state.pathParameters['id']!,
+        ownerName: state.uri.queryParameters['name'] ?? 'Uretim Birimi',
+      ),
     ),
     GoRoute(
       path: '/transfer-map',
@@ -267,6 +282,14 @@ final _router = GoRouter(
             final id = state.pathParameters['id']!;
             return WarehouseDetailScreen(warehouseId: id);
           },
+          routes: [
+            GoRoute(
+              path: 'history',
+              builder: (context, state) => WarehouseHistoryScreen(
+                warehouseId: state.pathParameters['id']!,
+              ),
+            ),
+          ],
         ),
       ],
     ),

@@ -167,6 +167,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         return;
       }
       _lastShownSalesResultKey = resultKey;
+
+      // Automatic store sales change the player's cash balance, but the
+      // backend response does not always flag player changes explicitly.
+      ref.invalidate(playerProvider);
       
       // Clear the sale result from the provider so it doesn't pop up again when returning to this screen
       ref.read(storeDetailPageProvider(page.store.id).notifier).clearSaleResult();

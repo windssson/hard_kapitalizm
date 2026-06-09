@@ -1,8 +1,6 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -11,6 +9,9 @@ final authManagerProvider = Provider(
 );
 
 class AuthManager {
+  static const _deviceUuidKey = 'device_uuid';
+  static const _secureStorage = FlutterSecureStorage();
+
   final SupabaseClient _supabase;
 
   AuthManager(this._supabase);
@@ -59,34 +60,39 @@ class AuthManager {
 
   Future<String> _getOrCreateDeviceUUID() async {
     final prefs = await SharedPreferences.getInstance();
-    const key = 'device_uuid';
-    String? uuid = prefs.getString(key);
-    if (uuid != null) {
-      return uuid;
-    }
 
     try {
-      final deviceInfo = DeviceInfoPlugin();
-      if (!kIsWeb) {
-        if (Platform.isAndroid) {
-          uuid = const Uuid().v4();
-        } else if (Platform.isIOS) {
-          final iosInfo = await deviceInfo.iosInfo;
-          uuid = iosInfo.identifierForVendor ?? const Uuid().v4();
-        } else if (Platform.isWindows) {
-          final windowsInfo = await deviceInfo.windowsInfo;
-          uuid = windowsInfo.deviceId.replaceAll('{', '').replaceAll('}', '');
-        } else {
-          uuid = const Uuid().v4();
+      final secureUuid = await _secureStorage.read(key: _deviceUuidKey);
+      if (secureUuid != null && secureUuid.isNotEmpty) {
+        final cachedUuid = prefs.getString(_deviceUuidKey);
+        if (cachedUuid != secureUuid) {
+          await prefs.setString(_deviceUuidKey, secureUuid);
         }
-      } else {
-        uuid = const Uuid().v4();
+        return secureUuid;
       }
     } catch (_) {
-      uuid = const Uuid().v4();
+      // Secure storage kullanilamiyorsa eski/yerel yedek degere dus.
     }
 
-    await prefs.setString(key, uuid);
+    final legacyUuid = prefs.getString(_deviceUuidKey);
+    if (legacyUuid != null && legacyUuid.isNotEmpty) {
+      try {
+        await _secureStorage.write(key: _deviceUuidKey, value: legacyUuid);
+      } catch (_) {
+        // Guvenli depoya tasima basarisiz olsa da mevcut hesabi koru.
+      }
+      return legacyUuid;
+    }
+
+    final uuid = const Uuid().v4();
+
+    try {
+      await _secureStorage.write(key: _deviceUuidKey, value: uuid);
+    } catch (_) {
+      // Bazi platformlarda secure storage gecici olarak kullanilamayabilir.
+    }
+
+    await prefs.setString(_deviceUuidKey, uuid);
     return uuid;
   }
 
