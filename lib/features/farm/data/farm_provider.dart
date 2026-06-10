@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
+import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -293,6 +294,14 @@ class FarmActionNotifier {
     }
 
     try {
+      final activeUpgrade = await fetchAnyActiveBuildingUpgrade(_supabase);
+      if (activeUpgrade != null) {
+        return {
+          'success': false,
+          'message': 'Ayni anda sadece tek yukseltme baslatabilirsin.',
+        };
+      }
+
       final response = await _supabase.rpc(
         'start_building_upgrade',
         params: {

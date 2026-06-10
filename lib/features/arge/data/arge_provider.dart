@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
@@ -239,6 +240,14 @@ class ArgeActionNotifier {
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
+      final activeUpgrade = await fetchAnyActiveBuildingUpgrade(_supabase);
+      if (activeUpgrade != null) {
+        return {
+          'success': false,
+          'message': 'Ayni anda sadece tek yukseltme baslatabilirsin.',
+        };
+      }
+
       final response = await _supabase.rpc(
         'start_building_upgrade',
         params: {

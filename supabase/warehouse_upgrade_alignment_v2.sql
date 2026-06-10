@@ -18,6 +18,22 @@ as $$
   limit 1;
 $$;
 
+create or replace function public.get_player_any_active_warehouse_upgrade()
+returns public.building_upgrades
+language sql
+security definer
+set search_path = public
+as $$
+  select bu.*
+  from public.building_upgrades bu
+  where bu.player_id = auth.uid()
+    and bu.building_kind = 'warehouse'
+    and bu.status = 'in_progress'
+    and coalesce(bu.finish_at, timezone('utc', now())) > timezone('utc', now())
+  order by bu.started_at desc
+  limit 1;
+$$;
+
 create or replace function public.start_warehouse_upgrade(
   p_player_id uuid,
   p_warehouse_id uuid
@@ -78,14 +94,13 @@ begin
     select 1
     from public.building_upgrades bu
     where bu.building_kind = 'warehouse'
-      and bu.entity_id = p_warehouse_id
       and bu.player_id = p_player_id
       and bu.status = 'in_progress'
       and coalesce(bu.finish_at, v_now) > v_now
   ) then
     return jsonb_build_object(
       'success', false,
-      'message', 'Bu depo icin zaten aktif bir yukseltme var.'
+      'message', 'Once devam eden depo yukseltmesini tamamlamalisin.'
     );
   end if;
 

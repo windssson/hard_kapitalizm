@@ -43,6 +43,35 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final warehouseAsync = ref.watch(
       warehouseDetailProvider(widget.warehouseId),
     );
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final activeUpgradeAsync = ref.watch(
+      activeWarehouseUpgradeProvider(widget.warehouseId),
+    );
+    final anyActiveUpgradeAsync = ref.watch(anyActiveWarehouseUpgradeProvider);
+    final activeUpgrade =
+        activeUpgradeAsync.isLoading || activeUpgradeAsync.isRefreshing
+        ? null
+        : activeUpgradeAsync.maybeWhen(
+            data: (value) => value,
+            orElse: () => null,
+          );
+    final anyActiveUpgrade =
+        anyActiveUpgradeAsync.isLoading || anyActiveUpgradeAsync.isRefreshing
+        ? null
+        : anyActiveUpgradeAsync.maybeWhen(
+            data: (value) => value,
+            orElse: () => null,
+          );
+    final visibleActiveUpgrade =
+        activeUpgrade != null &&
+            activeUpgrade.isInProgress &&
+            activeUpgrade.finishAt.isAfter(now)
+        ? activeUpgrade
+        : null;
+    final hasAnotherActiveUpgrade =
+        anyActiveUpgrade != null &&
+        (anyActiveUpgrade.buildingKind != 'warehouse' ||
+            anyActiveUpgrade.entityId != widget.warehouseId);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -72,7 +101,23 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildHeaderCard(warehouse),
+                        _buildHeaderCard(
+                          warehouse,
+                          visibleActiveUpgrade,
+                          hasAnotherActiveUpgrade,
+                        ),
+                        if (visibleActiveUpgrade != null) ...[
+                          SizedBox(height: 12.h),
+                          _ActiveWarehouseUpgradeCard(
+                            upgrade: visibleActiveUpgrade,
+                            calculateStarCost: _calculateUpgradeStarCost,
+                            formatCountdown: _formatCountdown,
+                            onFinishWithGold: () =>
+                                _finishWarehouseUpgradeWithGold(
+                                  visibleActiveUpgrade,
+                                ),
+                          ),
+                        ],
                         SizedBox(height: 18.h),
                         _buildSlotList(context, ref, warehouse),
                       ],
@@ -98,17 +143,20 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         .refresh();
     ref.read(warehouseListProvider.notifier).replaceWarehouse(warehouse);
     ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
+    ref.invalidate(anyActiveWarehouseUpgradeProvider);
   }
 
   Future<void> _refreshWarehouseEcosystem({bool refreshPlayer = true}) async {
     await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
     ref.invalidate(warehouseDetailProvider(widget.warehouseId));
     ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
+    ref.invalidate(anyActiveWarehouseUpgradeProvider);
     ref.invalidate(warehouseListProvider);
     if (refreshPlayer) {
       ref.invalidate(playerProvider);
     }
     await ref.read(warehouseDetailProvider(widget.warehouseId).future);
+    await ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).future);
   }
 
   void _showProductSelection(
@@ -267,6 +315,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
   Widget _buildHeaderCard(
     WarehouseModel warehouse,
+    BuildingUpgradeModel? activeUpgrade,
+    bool hasAnotherActiveUpgrade,
   ) {
     final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
     final listedSlots = filledSlots
@@ -454,15 +504,22 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _showWarehouseUpgradeSheet(
-                    context,
-                    ref,
-                    warehouse,
-                  ),
+                  onPressed: activeUpgrade != null || hasAnotherActiveUpgrade
+                      ? null
+                      : () => _showWarehouseUpgradeSheet(
+                            context,
+                            ref,
+                            warehouse,
+                          ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.green,
+                    foregroundColor: activeUpgrade != null || hasAnotherActiveUpgrade
+                        ? AppColors.textMuted
+                        : AppColors.green,
                     side: BorderSide(
-                      color: AppColors.green.withValues(alpha: 0.35),
+                      color: ((activeUpgrade != null || hasAnotherActiveUpgrade)
+                              ? AppColors.textMuted
+                              : AppColors.green)
+                          .withValues(alpha: 0.35),
                     ),
                     padding: EdgeInsets.symmetric(vertical: 10.h),
                     shape: RoundedRectangleBorder(
@@ -470,7 +527,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     ),
                   ),
                   icon: const Icon(Icons.upgrade_rounded),
-                  label: const Text('Yukselt'),
+                  label: Text(
+                    activeUpgrade != null
+                        ? 'Devam Ediyor'
+                        : hasAnotherActiveUpgrade
+                        ? 'Baska Yukseltme Var'
+                        : 'Yukselt',
+                  ),
                 ),
               ),
               SizedBox(width: 10.w),

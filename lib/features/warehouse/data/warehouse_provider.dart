@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
+import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -317,6 +318,12 @@ final activeWarehouseUpgradeProvider =
       );
     });
 
+final anyActiveWarehouseUpgradeProvider =
+    FutureProvider.autoDispose<BuildingUpgradeModel?>((ref) async {
+      final supabase = Supabase.instance.client;
+      return fetchAnyActiveBuildingUpgrade(supabase);
+    });
+
 class WarehouseActionNotifier {
   WarehouseActionNotifier(this._ref);
 
@@ -426,6 +433,14 @@ class WarehouseActionNotifier {
     }
 
     try {
+      final activeUpgrade = await fetchAnyActiveBuildingUpgrade(_supabase);
+      if (activeUpgrade != null) {
+        return {
+          'success': false,
+          'message': 'Ayni anda sadece tek yukseltme baslatabilirsin.',
+        };
+      }
+
       final response = await _supabase.rpc(
         'start_warehouse_upgrade',
         params: {
