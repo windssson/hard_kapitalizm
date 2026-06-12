@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -42,89 +40,58 @@ class AppTopBar extends ConsumerWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18.r),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF07101B).withValues(alpha: 0.96),
-                  const Color(0xFF02060D).withValues(alpha: 0.94),
-                ],
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF02060D).withValues(alpha: 0.92),
+            image: const DecorationImage(
+              image: AssetImage('assets/theme/cartback.webp'),
+              fit: BoxFit.fill,
             ),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: 0.22,
-                    child: Image.asset(
-                      'assets/theme/top_header_panel_02.webp',
-                      fit: BoxFit.cover,
-                      alignment: Alignment.centerRight,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const SizedBox.shrink(),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: -18.w,
-                  top: -16.h,
-                  child: Container(
-                    width: 120.w,
-                    height: 120.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.gold.withValues(alpha: 0.18),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 380.w;
-                    return Padding(
-                      padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 8.h),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            flex: compact ? 55 : 57,
-                            child: _buildProfilePanel(
-                              context: context,
-                              player: player,
-                              progress: progress,
-                              compact: compact,
-                            ),
-                          ),
-                          SizedBox(width: compact ? 4.w : 6.w),
-                          Expanded(
-                            flex: compact ? 27 : 28,
-                            child: _buildResourceColumn(
-                              context,
-                              player,
-                              compact: compact,
-                            ),
-                          ),
-                          SizedBox(width: compact ? 4.w : 6.w),
-                          _buildNotificationAction(
-                            context: context,
-                            claimableMissionCount: claimableMissionCount,
-                            compact: compact,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF06101B).withValues(alpha: 0.38),
+                const Color(0xFF02060D).withValues(alpha: 0.54),
               ],
             ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 380.w;
+              return Padding(
+                padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 8.h),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      flex: compact ? 55 : 57,
+                      child: _buildProfilePanel(
+                        context: context,
+                        player: player,
+                        progress: progress,
+                        compact: compact,
+                      ),
+                    ),
+                    SizedBox(width: compact ? 4.w : 6.w),
+                    Expanded(
+                      flex: compact ? 27 : 28,
+                      child: _buildResourceColumn(
+                        context,
+                        player,
+                        compact: compact,
+                      ),
+                    ),
+                    SizedBox(width: compact ? 4.w : 6.w),
+                    _buildNotificationAction(
+                      context: context,
+                      claimableMissionCount: claimableMissionCount,
+                      compact: compact,
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),

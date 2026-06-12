@@ -445,6 +445,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         SizedBox(height: 24.h),
         Text('Finansal Durum', style: AppTextStyles.h2),
         SizedBox(height: 12.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sirket Degeri',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Text(
+                player.companyValue.toStringAsFixed(0),
+                style: AppTextStyles.h1.copyWith(
+                  fontSize: 24.sp,
+                  color: AppColors.gold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 12.h),
         Row(
           children: [
             _buildStatCard(

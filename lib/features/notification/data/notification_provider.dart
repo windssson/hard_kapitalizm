@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/notification/models/player_notification_dashboard_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -32,6 +33,7 @@ class NotificationActionNotifier {
     try {
       final response = await supabase.rpc('refresh_player_attention_notifications');
       _ref.invalidate(playerNotificationDashboardProvider);
+      _ref.invalidate(homeDashboardProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -46,6 +48,7 @@ class NotificationActionNotifier {
         params: {'p_notification_id': notificationId},
       );
       _ref.invalidate(playerNotificationDashboardProvider);
+      _ref.invalidate(homeDashboardProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -57,6 +60,7 @@ class NotificationActionNotifier {
     try {
       final response = await supabase.rpc('mark_all_notifications_read');
       _ref.invalidate(playerNotificationDashboardProvider);
+      _ref.invalidate(homeDashboardProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

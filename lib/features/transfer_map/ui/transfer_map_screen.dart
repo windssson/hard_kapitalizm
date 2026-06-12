@@ -189,16 +189,44 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
     _isCompletingDueTransfers = true;
     try {
-      final result = await ref
-          .read(marketActionProvider)
-          .completeDueMarketTransfers();
+      var completedCount = 0;
+      final affectedWarehouseIds = <String>{};
+      final affectedStoreIds = <String>{};
+      final affectedFactoryIds = <String>{};
+      final affectedFarmIds = <String>{};
+      final affectedFieldIds = <String>{};
+      final affectedMineIds = <String>{};
+
+      for (final transfer in dueTransfers) {
+        final result = await ref
+            .read(marketActionProvider)
+            .completeMarketTransfer(transfer.id);
+        if (result['success'] == true) {
+          completedCount += 1;
+          affectedWarehouseIds.addAll(_affectedIds(result, 'warehouse_ids'));
+          affectedStoreIds.addAll(_affectedIds(result, 'store_ids'));
+          affectedFactoryIds.addAll(_affectedIds(result, 'factory_ids'));
+          affectedFarmIds.addAll(_affectedIds(result, 'farm_ids'));
+          affectedFieldIds.addAll(_affectedIds(result, 'field_ids'));
+          affectedMineIds.addAll(_affectedIds(result, 'mine_ids'));
+        }
+      }
+
       ref.invalidate(buyerTransferMapProvider);
       ref.invalidate(buyerTransferHistoryProvider);
-      _invalidateAffectedTransferTargets(result);
+      _invalidateAffectedTransferTargets({
+        'affected': {
+          'warehouse_ids': affectedWarehouseIds.toList(),
+          'store_ids': affectedStoreIds.toList(),
+          'factory_ids': affectedFactoryIds.toList(),
+          'farm_ids': affectedFarmIds.toList(),
+          'field_ids': affectedFieldIds.toList(),
+          'mine_ids': affectedMineIds.toList(),
+        },
+      });
       if (!mounted) return;
 
-      final completedCount = (result['completed_count'] as num?)?.toInt() ?? 0;
-      if (result['success'] == true && completedCount > 0) {
+      if (completedCount > 0) {
         AppSnackbar.show(
           context,
           title: 'Teslimat Tamamlandi',
@@ -626,7 +654,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           children: [
             const SecondaryTopBar(title: 'Transfer Haritasi'),
             Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+              padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 6.h),
               child: _buildModeSelector(),
             ),
             Expanded(
@@ -663,9 +691,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                       physics: const AlwaysScrollableScrollPhysics(),
                                       padding: EdgeInsets.symmetric(horizontal: 16.w),
                                       children: [
-                                        SizedBox(height: 12.h),
+                                        SizedBox(height: 8.h),
                                         _buildActiveOverview(transfers),
-                                        SizedBox(height: 12.h),
+                                        SizedBox(height: 8.h),
                                         _buildActiveFilterBar(transfers),
                                         SizedBox(height: 120.h),
                                         _buildEmptyState(
@@ -677,7 +705,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                       controller: _activeScrollController,
                                       physics: const AlwaysScrollableScrollPhysics(),
                                       padding: EdgeInsets.only(
-                                        top: 12.h,
+                                        top: 8.h,
                                         bottom: 24.h,
                                       ),
                                       child: Column(
@@ -689,12 +717,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                             child: Column(
                                               children: [
                                                 _buildActiveOverview(transfers),
-                                                SizedBox(height: 12.h),
+                                                SizedBox(height: 8.h),
                                                 _buildActiveFilterBar(transfers),
                                               ],
                                             ),
                                           ),
-                                          SizedBox(height: 12.h),
+                                          SizedBox(height: 8.h),
                                           if (dueCount > 0) ...[
                                             Padding(
                                               padding: EdgeInsets.symmetric(
@@ -702,7 +730,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                               ),
                                               child: _buildDueTransfersBanner(dueCount),
                                             ),
-                                            SizedBox(height: 12.h),
+                                            SizedBox(height: 8.h),
                                           ],
                                           RepaintBoundary(
                                             child: _buildMapCard(
@@ -840,7 +868,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     };
 
     return SizedBox(
-      height: 36.h,
+      height: 32.h,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemBuilder: (context, index) {
@@ -852,7 +880,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             }),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.gold.withValues(alpha: 0.16)
@@ -870,13 +898,13 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     filter.label,
                     style: TextStyle(
                       color: isSelected ? AppColors.gold : Colors.white,
-                      fontSize: 11.sp,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(width: 6.w),
+                  SizedBox(width: 5.w),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
+                    padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(999.r),
@@ -887,7 +915,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         color: isSelected
                             ? AppColors.goldLight
                             : AppColors.textMuted,
-                        fontSize: 10.sp,
+                        fontSize: 9.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -905,43 +933,43 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
   Widget _buildOverviewStrip(List<_OverviewItem> items) {
     return SizedBox(
-      height: 86.h,
+      height: 72.h,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemBuilder: (context, index) {
           final item = items[index];
           return Container(
-            width: 132.w,
-            padding: EdgeInsets.all(12.w),
+            width: 118.w,
+            padding: EdgeInsets.fromLTRB(10.w, 9.h, 10.w, 8.h),
             decoration: BoxDecoration(
               color: AppColors.cardBg,
-              borderRadius: BorderRadius.circular(16.r),
+              borderRadius: BorderRadius.circular(14.r),
               border: Border.all(color: item.color.withValues(alpha: 0.22)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(item.icon, color: item.color, size: 18.sp),
-                SizedBox(height: 8.h),
+                Icon(item.icon, color: item.color, size: 15.sp),
+                SizedBox(height: 6.h),
                 Text(
                   item.value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16.sp,
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                SizedBox(height: 4.h),
+                SizedBox(height: 2.h),
                 Text(
                   item.label,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                    fontSize: 9.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -949,7 +977,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             ),
           );
         },
-        separatorBuilder: (_, __) => SizedBox(width: 10.w),
+        separatorBuilder: (_, __) => SizedBox(width: 8.w),
         itemCount: items.length,
       ),
     );
@@ -1158,22 +1186,22 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   Widget _buildDueTransfersBanner(int dueCount) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: AppColors.gold.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
       ),
       child: Row(
         children: [
-          Icon(Icons.notifications_active, color: AppColors.gold, size: 18.sp),
-          SizedBox(width: 8.w),
+          Icon(Icons.notifications_active, color: AppColors.gold, size: 16.sp),
+          SizedBox(width: 6.w),
           Expanded(
             child: Text(
               '$dueCount transfer teslimata hazir. Otomatik tamamlanacak.',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 11.sp,
+                fontSize: 10.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),

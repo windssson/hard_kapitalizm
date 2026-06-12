@@ -1989,7 +1989,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     );
     controller.dispose();
 
-    if (rentalPrice != null) {
+    if (rentalPrice != null && rentalPrice > 0) {
       final result = await ref.read(logisticsActionProvider).setVehicleRental(
             vehicleId: vehicle.id,
             isAvailableForRent: true,
@@ -2002,6 +2002,13 @@ class LogisticsManagementScreen extends ConsumerWidget {
         'Arac kiraya acildi.',
         includeCompany: false,
         includePlayer: false,
+      );
+    } else if (rentalPrice != null) {
+      AppSnackbar.show(
+        context,
+        title: 'Gecersiz Fiyat',
+        message: 'Kira fiyati sifirdan buyuk olmali.',
+        type: SnackbarType.warning,
       );
     }
   }

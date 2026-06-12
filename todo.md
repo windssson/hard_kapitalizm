@@ -26,10 +26,10 @@ Bu dosya aktif gelistirme durumunu ozetler. Yuzdeler "ozellik kapsami + entegras
   - Profil ekranina EXP ve rozet ozeti eklendi.
   - Kalan is: profil UX son parlatma ve avatar akisi testi.
 
-- [x] Home / AppBar - %90
-  - Ust bar sadeletildi, gorev ve bildirim ikon/badge akisi eklendi.
+- [x] Home / Dashboard - %100 KILITLI
+  - Ust bar, sirket ozeti, gorev, modul, finans ve bildirim/uyari kartlari tek tasarim diline cekildi.
   - Home kartlarinda bildirim/gorev alani daha kompakt hale getirildi.
-  - Kalan is: dar ekran tasma testi ve badge sayac senaryolari.
+  - Anasayfa cihaz testi tamamlandi; bu alan yeni bug disinda kilitli kabul ediliyor.
 
 - [x] Market - %94
   - Satin alma, hedef secimi, store/warehouse teslimat akisi calisiyor.
@@ -161,6 +161,7 @@ Bu dosya aktif gelistirme durumunu ozetler. Yuzdeler "ozellik kapsami + entegras
 ## UX / UI Fazinda Yapilanlar
 
 - AppBar alani sadeletildi, gorev/bildirim badge'leri eklendi.
+- Anasayfa dashboard kartlari ortak arka plan ve daha sade widget yapisiyla yenilendi.
 - Store, warehouse, market ve transfer ekranlarinda kart yogunlugu azaltildi.
 - Warehouse liste/detail kartlari son cihaz testine gore yeniden duzenlendi.
 - Kurulum/tip secim kartlarina urun onizlemeleri eklendi.
