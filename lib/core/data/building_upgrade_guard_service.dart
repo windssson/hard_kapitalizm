@@ -18,3 +18,21 @@ Future<BuildingUpgradeModel?> fetchAnyActiveBuildingUpgrade(
     Map<String, dynamic>.from(response as Map),
   );
 }
+
+Future<void> tryCompleteDueBuildingUpgrades(
+  SupabaseClient supabase,
+) async {
+  try {
+    await supabase.rpc(
+      'complete_due_building_upgrades',
+      params: {'p_limit': 100},
+    );
+  } on PostgrestException catch (e) {
+    final message = e.message.toLowerCase();
+    final permissionDenied =
+        e.code == '42501' ||
+        message.contains('permission denied') ||
+        message.contains('complete_due_building_upgrades');
+    if (!permissionDenied) rethrow;
+  }
+}

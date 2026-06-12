@@ -34,6 +34,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     try {
       final authManager = ref.read(authManagerProvider);
       await authManager.signInAnonymouslyIfNeeded();
+      try {
+        await authManager.syncGoogleProfileIfLinked();
+      } catch (_) {
+        // Google bagli olsa da profil senkronu basarisizsa girisi bloklama.
+      }
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {

@@ -54,6 +54,96 @@ begin
   end loop;
 
   for v_row in
+    select
+      w.id,
+      w.name,
+      w.capacity,
+      coalesce(w.reserved_capacity, 0) as reserved_capacity,
+      coalesce(sum(greatest(coalesce(ws.quantity, 0), 0)::numeric * coalesce(p.birim_hacim, 0)), 0) as used_capacity
+    from public.warehouses w
+    left join public.warehouse_slots ws on ws.warehouse_id = w.id
+    left join public.products p on p.id = ws.product_id
+    where w.player_id = v_player_id
+      and w.is_active = true
+      and coalesce(w.capacity, 0) > 0
+    group by w.id, w.name, w.capacity, w.reserved_capacity
+    having (
+      (
+        coalesce(sum(greatest(coalesce(ws.quantity, 0), 0)::numeric * coalesce(p.birim_hacim, 0)), 0)
+        + coalesce(w.reserved_capacity, 0)
+      ) / nullif(w.capacity, 0)
+    ) >= 1
+  loop
+    v_key := 'warehouse_capacity_full:' || v_row.id::text;
+    v_keys := array_append(v_keys, v_key);
+    perform public.create_player_notification(
+      v_player_id,
+      'warning',
+      'warehouse_capacity',
+      'Depo Kapasitesi Dolu',
+      v_row.name || ' icin depo kapasitesi tamamen doldu.',
+      'warehouse',
+      v_row.id,
+      'warning',
+      jsonb_build_object(
+        'used_capacity', v_row.used_capacity,
+        'reserved_capacity', v_row.reserved_capacity,
+        'total_capacity', v_row.capacity
+      ),
+      v_key
+    );
+    v_count := v_count + 1;
+  end loop;
+
+  for v_row in
+    select
+      w.id,
+      w.name,
+      w.capacity,
+      coalesce(w.reserved_capacity, 0) as reserved_capacity,
+      coalesce(sum(greatest(coalesce(ws.quantity, 0), 0)::numeric * coalesce(p.birim_hacim, 0)), 0) as used_capacity
+    from public.warehouses w
+    left join public.warehouse_slots ws on ws.warehouse_id = w.id
+    left join public.products p on p.id = ws.product_id
+    where w.player_id = v_player_id
+      and w.is_active = true
+      and coalesce(w.capacity, 0) > 0
+    group by w.id, w.name, w.capacity, w.reserved_capacity
+    having (
+      (
+        coalesce(sum(greatest(coalesce(ws.quantity, 0), 0)::numeric * coalesce(p.birim_hacim, 0)), 0)
+        + coalesce(w.reserved_capacity, 0)
+      ) / nullif(w.capacity, 0)
+    ) >= 0.90
+    and (
+      (
+        coalesce(sum(greatest(coalesce(ws.quantity, 0), 0)::numeric * coalesce(p.birim_hacim, 0)), 0)
+        + coalesce(w.reserved_capacity, 0)
+      ) / nullif(w.capacity, 0)
+    ) < 1
+  loop
+    v_key := 'warehouse_capacity_high:' || v_row.id::text;
+    v_keys := array_append(v_keys, v_key);
+    perform public.create_player_notification(
+      v_player_id,
+      'warning',
+      'warehouse_capacity',
+      'Depo Dolmak Uzere',
+      v_row.name || ' icin depo kapasitesi kritik seviyeye geldi.',
+      'warehouse',
+      v_row.id,
+      'warning',
+      jsonb_build_object(
+        'used_capacity', v_row.used_capacity,
+        'reserved_capacity', v_row.reserved_capacity,
+        'total_capacity', v_row.capacity
+      ),
+      v_key
+    );
+    v_count := v_count + 1;
+  end loop;
+
+  for v_row in
     select entity_kind, entity_id, entity_name
     from (
       select 'store'::text as entity_kind, s.id as entity_id, s.name as entity_name
@@ -176,6 +266,86 @@ begin
     v_key := v_row.owner_kind || '_empty_slots:' || v_row.owner_id::text;
     v_keys := array_append(v_keys, v_key);
     perform public.create_player_notification(v_player_id,'warning','production_blocked','Bos Uretim Slotu Var',v_row.owner_name || ' icinde ' || v_row.empty_slot_count::text || ' bos aktif uretim slotu bulunuyor.',v_row.owner_kind,v_row.owner_id,'warning',jsonb_build_object('empty_slot_count', v_row.empty_slot_count),v_key);
+    v_count := v_count + 1;
+  end loop;
+
+  for v_row in
+    with active_slots as (
+      select
+        ps.owner_kind,
+        ps.owner_id,
+        case
+          when ps.owner_kind = 'field' then f.name
+          when ps.owner_kind = 'farm' then fa.name
+        end as owner_name,
+        p.id as product_id,
+        nullif(p.hammadde_1_id, '') as h1_id,
+        coalesce(p.hammadde_1_miktar, 0) as h1_qty,
+        nullif(p.hammadde_2_id, '') as h2_id,
+        coalesce(p.hammadde_2_miktar, 0) as h2_qty,
+        nullif(p.hammadde_3_id, '') as h3_id,
+        coalesce(p.hammadde_3_miktar, 0) as h3_qty
+      from public.production_slots ps
+      join public.products p on p.id = ps.product_id
+      left join public.fields f on ps.owner_kind = 'field' and f.id = ps.owner_id
+      left join public.farms fa on ps.owner_kind = 'farm' and fa.id = ps.owner_id
+      where ps.owner_kind in ('field', 'farm')
+        and ps.is_active = true
+        and ps.product_id is not null
+        and (
+          (ps.owner_kind = 'field' and f.player_id = v_player_id and f.is_active = true)
+          or
+          (ps.owner_kind = 'farm' and fa.player_id = v_player_id and fa.is_active = true)
+        )
+    ),
+    required_inputs as (
+      select owner_kind, owner_id, owner_name, h1_id as required_product_id, sum(h1_qty)::integer as required_qty
+      from active_slots
+      where h1_id is not null and h1_qty > 0
+      group by owner_kind, owner_id, owner_name, h1_id
+      union all
+      select owner_kind, owner_id, owner_name, h2_id as required_product_id, sum(h2_qty)::integer as required_qty
+      from active_slots
+      where h2_id is not null and h2_qty > 0
+      group by owner_kind, owner_id, owner_name, h2_id
+      union all
+      select owner_kind, owner_id, owner_name, h3_id as required_product_id, sum(h3_qty)::integer as required_qty
+      from active_slots
+      where h3_id is not null and h3_qty > 0
+      group by owner_kind, owner_id, owner_name, h3_id
+    ),
+    aggregated_requirements as (
+      select owner_kind, owner_id, owner_name, required_product_id, sum(required_qty)::integer as required_qty
+      from required_inputs
+      group by owner_kind, owner_id, owner_name, required_product_id
+    )
+    select distinct ar.owner_kind, ar.owner_id, ar.owner_name
+    from aggregated_requirements ar
+    left join public.production_inventory pi
+      on pi.owner_kind = ar.owner_kind
+     and pi.owner_id = ar.owner_id
+     and pi.inventory_type = 'input'
+     and pi.product_id = ar.required_product_id
+     and pi.quality_level = 1
+    where coalesce(pi.quantity, 0) < ar.required_qty
+  loop
+    v_key := v_row.owner_kind || '_input_missing:' || v_row.owner_id::text;
+    v_keys := array_append(v_keys, v_key);
+    perform public.create_player_notification(
+      v_player_id,
+      'warning',
+      'production_blocked',
+      case
+        when v_row.owner_kind = 'field' then 'Tarlada Hammadde Eksik'
+        else 'Ciftlikte Hammadde Eksik'
+      end,
+      v_row.owner_name || ' icin gerekli hammadde yetersiz.',
+      v_row.owner_kind,
+      v_row.owner_id,
+      'warning',
+      '{}'::jsonb,
+      v_key
+    );
     v_count := v_count + 1;
   end loop;
 

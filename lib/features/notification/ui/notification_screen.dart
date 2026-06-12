@@ -137,11 +137,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         borderRadius: BorderRadius.circular(14.r),
         child: Container(
           padding: EdgeInsets.all(14.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(14.r),
-            border: Border.all(color: accent.withValues(alpha: 0.45)),
-          ),
+          decoration: AppDecorations.premiumCard(accent, 14.r),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -237,11 +233,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
   Widget _buildEmptyState() => Container(
         padding: EdgeInsets.all(24.w),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: AppColors.border),
-        ),
+        decoration: AppDecorations.premiumCard(AppColors.border, 16.r),
         child: Column(
           children: [
             Icon(

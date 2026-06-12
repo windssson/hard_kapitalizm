@@ -537,14 +537,6 @@ class StoreActionNotifier {
     }
 
     try {
-      final activeUpgrade = await fetchAnyActiveBuildingUpgrade(_supabase);
-      if (activeUpgrade != null) {
-        return {
-          'success': false,
-          'message': 'Ayni anda sadece tek yukseltme baslatabilirsin.',
-        };
-      }
-
       final response = await _supabase.rpc(
         'start_building_upgrade',
         params: {
@@ -566,13 +558,10 @@ class StoreActionNotifier {
     }
 
     try {
-      final response = await _supabase.rpc(
-        'complete_due_building_upgrades',
-        params: {
-          'p_limit': 100,
-        },
-      );
-      return Map<String, dynamic>.from(response as Map);
+      await tryCompleteDueBuildingUpgrades(_supabase);
+      return {'success': true};
+    } on PostgrestException catch (e) {
+      return {'success': false, 'message': e.message, 'code': e.code};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

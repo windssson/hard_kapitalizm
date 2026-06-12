@@ -61,7 +61,7 @@ begin
     raise exception 'Urun hacim bilgisi gecersiz.';
   end if;
 
-  v_unit_price := coalesce(v_product.baz_satis_fiyati, 0) * 1.25;
+  v_unit_price := coalesce(v_product.baz_satis_fiyati, 0) * 1.15;
   if v_unit_price <= 0 then
     raise exception 'Urun baz fiyati gecersiz.';
   end if;
@@ -210,7 +210,7 @@ begin
     raise exception 'Urun hacim bilgisi gecersiz.';
   end if;
 
-  v_unit_price := coalesce(v_product.baz_satis_fiyati, 0) * 1.25;
+  v_unit_price := coalesce(v_product.baz_satis_fiyati, 0) * 1.15;
   if v_unit_price <= 0 then
     raise exception 'Urun baz fiyati gecersiz.';
   end if;

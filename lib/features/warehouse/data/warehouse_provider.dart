@@ -10,6 +10,24 @@ import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_history_item_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 
+Future<void> _tryCompleteDueWarehouseUpgrades(
+  SupabaseClient supabase,
+) async {
+  try {
+    await supabase.rpc(
+      'complete_due_warehouse_upgrades',
+      params: {'p_limit': 100},
+    );
+  } on PostgrestException catch (e) {
+    final message = e.message.toLowerCase();
+    final permissionDenied =
+        e.code == '42501' ||
+        message.contains('permission denied') ||
+        message.contains('complete_due_warehouse_upgrades');
+    if (!permissionDenied) rethrow;
+  }
+}
+
 Future<List<WarehouseModel>> _fetchWarehouseList() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
@@ -17,10 +35,7 @@ Future<List<WarehouseModel>> _fetchWarehouseList() async {
   if (user == null) return const [];
 
   try {
-    await supabase.rpc(
-      'complete_due_warehouse_upgrades',
-      params: {'p_limit': 100},
-    );
+    await _tryCompleteDueWarehouseUpgrades(supabase);
     final response = await supabase.rpc('get_warehouse_list_page_data');
     final data = response['warehouses'] as List<dynamic>? ?? const [];
     return data
@@ -38,10 +53,7 @@ Future<WarehouseModel> _fetchWarehouseDetail(String warehouseId) async {
   if (user == null) throw Exception('Oturum acilmamis.');
 
   try {
-    await supabase.rpc(
-      'complete_due_warehouse_upgrades',
-      params: {'p_limit': 100},
-    );
+    await _tryCompleteDueWarehouseUpgrades(supabase);
   } catch (_) {}
 
   final response = await supabase.rpc(
@@ -433,14 +445,6 @@ class WarehouseActionNotifier {
     }
 
     try {
-      final activeUpgrade = await fetchAnyActiveBuildingUpgrade(_supabase);
-      if (activeUpgrade != null) {
-        return {
-          'success': false,
-          'message': 'Ayni anda sadece tek yukseltme baslatabilirsin.',
-        };
-      }
-
       final response = await _supabase.rpc(
         'start_warehouse_upgrade',
         params: {
@@ -463,13 +467,12 @@ class WarehouseActionNotifier {
 
   Future<Map<String, dynamic>> completeDueWarehouseUpgrades() async {
     try {
-      final response = await _supabase.rpc(
-        'complete_due_warehouse_upgrades',
-        params: {'p_limit': 100},
-      );
+      await _tryCompleteDueWarehouseUpgrades(_supabase);
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(playerProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return {'success': true};
+    } on PostgrestException catch (e) {
+      return {'success': false, 'message': e.message, 'code': e.code};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

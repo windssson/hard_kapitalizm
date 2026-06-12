@@ -18,6 +18,7 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/auth/models/experience_gain_model.dart';
@@ -2801,90 +2802,35 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 separatorBuilder: (_, __) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = vehicleResult.options[index];
-                  final color =
-                      option.canSelect ? AppColors.green : AppColors.red;
-                  return InkWell(
-                    onTap: option.canSelect
-                        ? () {
-                            Navigator.pop(sheetContext);
-                            _startWarehouseTransferV2(
-                              context,
-                              ref,
-                              store,
-                              slot,
-                              warehouseSlotId,
-                              quantity,
-                              selectedQualityLevel,
-                              option.vehicleId,
-                            );
-                          }
-                        : null,
-                    borderRadius: BorderRadius.circular(14.r),
-                    child: Container(
-                      padding: EdgeInsets.all(14.w),
-                      decoration: BoxDecoration(
-                        color: AppColors.textPrimary.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(color: color.withValues(alpha: 0.35)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.local_shipping, color: color),
-                              SizedBox(width: 10.w),
-                              Expanded(
-                                child: Text(
-                                  option.vehicleName,
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                option.isRental ? 'Kiralik' : 'Ozmal',
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Kapasite: ${option.capacity} | Mesafe: ${option.distanceKm.toStringAsFixed(0)} km | Sure: ${_formatTransferDurationV2(option.estimatedDurationSeconds)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Nakliye: ${option.transportCost.toStringAsFixed(0)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          if (!option.canSelect &&
-                              option.disabledReason != null) ...[
-                            SizedBox(height: 6.h),
-                            Text(
-                              option.disabledReason!,
-                              style: TextStyle(
-                                color: AppColors.red,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                  return TransferVehicleOptionCard(
+                    vehicleName: option.vehicleName,
+                    isRental: option.isRental,
+                    capacity: option.capacity,
+                    distanceKm: option.distanceKm,
+                    durationLabel: _formatTransferDurationV2(
+                      option.estimatedDurationSeconds,
                     ),
+                    transportCost: option.transportCost,
+                    rentalCost: option.rentalCost,
+                    fuelCost: option.fuelCost,
+                    fuelNeeded: option.fuelNeeded,
+                    conditionNeeded: option.conditionNeeded,
+                    canSelect: option.canSelect,
+                    isSelected: false,
+                    disabledReason: option.disabledReason,
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _startWarehouseTransferV2(
+                        context,
+                        ref,
+                        store,
+                        slot,
+                        warehouseSlotId,
+                        quantity,
+                        selectedQualityLevel,
+                        option.vehicleId,
+                      );
+                    },
                   );
                 },
               ),
@@ -3367,89 +3313,34 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 separatorBuilder: (_, __) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = vehicleResult.options[index];
-                  final color =
-                      option.canSelect ? AppColors.green : AppColors.red;
-                  return InkWell(
-                    onTap: option.canSelect
-                        ? () {
-                            Navigator.pop(sheetContext);
-                            _startStoreOutboundTransfer(
-                              context,
-                              ref,
-                              store,
-                              slot,
-                              warehouse['id'].toString(),
-                              quantity,
-                              option.vehicleId,
-                            );
-                          }
-                        : null,
-                    borderRadius: BorderRadius.circular(14.r),
-                    child: Container(
-                      padding: EdgeInsets.all(14.w),
-                      decoration: BoxDecoration(
-                        color: AppColors.textPrimary.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(color: color.withValues(alpha: 0.35)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.local_shipping, color: color),
-                              SizedBox(width: 10.w),
-                              Expanded(
-                                child: Text(
-                                  option.vehicleName,
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                option.isRental ? 'Kiralik' : 'Ozmal',
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Kapasite: ${option.capacity} | Mesafe: ${option.distanceKm.toStringAsFixed(0)} km | Sure: ${_formatTransferDurationV2(option.estimatedDurationSeconds)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Nakliye: ${option.transportCost.toStringAsFixed(0)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          if (!option.canSelect &&
-                              option.disabledReason != null) ...[
-                            SizedBox(height: 6.h),
-                            Text(
-                              option.disabledReason!,
-                              style: TextStyle(
-                                color: AppColors.red,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                  return TransferVehicleOptionCard(
+                    vehicleName: option.vehicleName,
+                    isRental: option.isRental,
+                    capacity: option.capacity,
+                    distanceKm: option.distanceKm,
+                    durationLabel: _formatTransferDurationV2(
+                      option.estimatedDurationSeconds,
                     ),
+                    transportCost: option.transportCost,
+                    rentalCost: option.rentalCost,
+                    fuelCost: option.fuelCost,
+                    fuelNeeded: option.fuelNeeded,
+                    conditionNeeded: option.conditionNeeded,
+                    canSelect: option.canSelect,
+                    isSelected: false,
+                    disabledReason: option.disabledReason,
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _startStoreOutboundTransfer(
+                        context,
+                        ref,
+                        store,
+                        slot,
+                        warehouse['id'].toString(),
+                        quantity,
+                        option.vehicleId,
+                      );
+                    },
                   );
                 },
               ),

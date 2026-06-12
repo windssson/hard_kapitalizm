@@ -9,11 +9,13 @@ import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_error_message.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
@@ -37,11 +39,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     12: 6,
     24: 12,
   };
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   void _refreshFieldDetail() {
     ref.invalidate(fieldDetailProvider(widget.fieldId));
@@ -1857,7 +1854,17 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           );
 
     if (!context.mounted) return;
-    if (result['success'] == true) {
+    final isSuccess = result['success'] == true;
+    final resultMessage = result['message']?.toString().trim();
+    final hasErrorLikeMessage =
+        resultMessage != null &&
+        resultMessage.isNotEmpty &&
+        (resultMessage.contains('Exception') ||
+            resultMessage.contains('Postgrest') ||
+            resultMessage.contains('error') ||
+            resultMessage.contains('hata'));
+
+    if (isSuccess && !hasErrorLikeMessage) {
       await _refreshFieldEcosystem();
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
@@ -1878,7 +1885,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Urun secilemedi.',
+      message: sanitizeUserFacingError(
+        result['message'] ?? 'Urun secilemedi.',
+      ),
       type: SnackbarType.error,
     );
   }
@@ -2344,44 +2353,28 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             ),
             SizedBox(height: 12.h),
             ...options.map(
-              (option) => Container(
-                margin: EdgeInsets.only(bottom: 10.h),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(
-                    color: option.canSelect
-                        ? AppColors.gold.withValues(alpha: 0.18)
-                        : Colors.white.withValues(alpha: 0.05),
+              (option) => Padding(
+                padding: EdgeInsets.only(bottom: 10.h),
+                child: TransferVehicleOptionCard(
+                  vehicleName: option.vehicleName,
+                  isRental: option.isRental,
+                  capacity: option.capacity,
+                  distanceKm: option.distanceKm,
+                  durationLabel: _formatTransferDuration(
+                    option.estimatedDurationSeconds,
                   ),
-                ),
-                child: ListTile(
-                  enabled: option.canSelect,
-                  onTap: option.canSelect
-                      ? () async {
-                          Navigator.pop(sheetContext);
-                          await onSelected(option.vehicleId);
-                        }
-                      : null,
-                  title: Text(
-                    option.vehicleName,
-                    style: TextStyle(
-                      color: option.canSelect ? Colors.white : AppColors.textMuted,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    option.isRental
-                        ? 'Kiralik | Kapasite ${option.capacity} | Maliyet ${option.totalPrice.toStringAsFixed(1)}'
-                        : 'Kendi aracin | Kapasite ${option.capacity} | Maliyet ${option.totalPrice.toStringAsFixed(1)}',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  trailing: option.canSelect
-                      ? Icon(Icons.chevron_right, color: AppColors.gold, size: 18.sp)
-                      : Icon(Icons.block, color: AppColors.textMuted, size: 18.sp),
+                  transportCost: option.totalPrice,
+                  rentalCost: option.rentalCost,
+                  fuelCost: option.fuelCost,
+                  fuelNeeded: option.fuelNeeded,
+                  conditionNeeded: option.conditionNeeded,
+                  canSelect: option.canSelect,
+                  isSelected: false,
+                  disabledReason: option.disabledReason,
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    await onSelected(option.vehicleId);
+                  },
                 ),
               ),
             ),
@@ -2477,6 +2470,14 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         ],
       ),
     );
+  }
+
+  String _formatTransferDuration(int seconds) {
+    final duration = Duration(seconds: seconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    if (hours > 0) return '${hours}s ${minutes}dk';
+    return '${duration.inMinutes}dk';
   }
 
   int _calculateUsedCapacity(List<ProductionInventoryModel> inventories) {

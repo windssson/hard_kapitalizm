@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:hard_kapitalizm/core/constants/supabase_constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -105,5 +107,113 @@ class AuthManager {
     } catch (e) {
       throw Exception('Oyuncu kaydi olusturulamadi veya okunamadi: $e');
     }
+  }
+
+  Future<void> linkGoogleIdentity() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      throw const AuthException('Oturum bulunamadi.');
+    }
+
+    final identities = await _supabase.auth.getUserIdentities();
+    final alreadyLinked = identities.any((identity) => identity.provider == 'google');
+    if (alreadyLinked) {
+      return;
+    }
+
+    debugPrint('[GOOGLE_LINK] launching supported Supabase linkIdentity flow');
+    await _supabase.auth.linkIdentity(
+      OAuthProvider.google,
+      redirectTo: kIsWeb ? null : SupabaseConstants.authCallbackUrl,
+    );
+  }
+
+  Future<void> syncLinkedGoogleProfileMetadata() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    final identities = await _supabase.auth.getUserIdentities();
+    UserIdentity? googleIdentity;
+    for (final identity in identities) {
+      if (identity.provider == 'google') {
+        googleIdentity = identity;
+        break;
+      }
+    }
+
+    final identityData = googleIdentity?.identityData;
+    if (identityData == null || identityData.isEmpty) {
+      return;
+    }
+
+    final currentMetadata = Map<String, dynamic>.from(user.userMetadata ?? const {});
+    final mergedMetadata = <String, dynamic>{
+      ...currentMetadata,
+      if (identityData['full_name'] != null)
+        'full_name': identityData['full_name'].toString(),
+      if (identityData['name'] != null)
+        'name': identityData['name'].toString(),
+      if (identityData['avatar_url'] != null)
+        'avatar_url': identityData['avatar_url'].toString(),
+      if (identityData['picture'] != null)
+        'picture': identityData['picture'].toString(),
+      if (identityData['email'] != null)
+        'linked_google_email': identityData['email'].toString(),
+    };
+
+    if (_mapsEqual(currentMetadata, mergedMetadata)) {
+      await _syncGoogleIdentityIntoPlayerRecord(identityData);
+      return;
+    }
+
+    await _supabase.auth.updateUser(UserAttributes(data: mergedMetadata));
+    await _syncGoogleIdentityIntoPlayerRecord(identityData);
+  }
+
+  Future<bool> syncGoogleProfileIfLinked() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return false;
+
+    final identities = await _supabase.auth.getUserIdentities();
+    final hasGoogleIdentity = identities.any(
+      (identity) => identity.provider == 'google',
+    );
+    if (!hasGoogleIdentity) {
+      return false;
+    }
+
+    await syncLinkedGoogleProfileMetadata();
+    return true;
+  }
+
+  bool _mapsEqual(Map<String, dynamic> left, Map<String, dynamic> right) {
+    if (left.length != right.length) return false;
+    for (final entry in left.entries) {
+      if (right[entry.key] != entry.value) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<void> _syncGoogleIdentityIntoPlayerRecord(
+    Map<String, dynamic> identityData,
+  ) async {
+    final playerName =
+        identityData['full_name']?.toString() ??
+        identityData['name']?.toString();
+    final googleEmail = identityData['email']?.toString();
+    final googleAvatarUrl =
+        identityData['avatar_url']?.toString() ??
+        identityData['picture']?.toString();
+
+    await _supabase.rpc(
+      'sync_player_google_profile',
+      params: {
+        'p_player_name': playerName,
+        'p_google_email': googleEmail,
+        'p_google_avatar_url': googleAvatarUrl,
+      },
+    );
   }
 }

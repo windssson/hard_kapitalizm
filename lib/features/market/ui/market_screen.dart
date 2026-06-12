@@ -10,6 +10,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_store_slot_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_warehouse_model.dart';
@@ -1760,82 +1761,27 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
 
   Widget _buildVehicleOptionCard(MarketTransferVehicleOptionModel option) {
     final isSelected = _selectedVehicleId == option.vehicleId;
-    final cardColor = option.canSelect
-        ? (isSelected
-            ? AppColors.gold.withValues(alpha: 0.12)
-            : AppColors.cardBg)
-        : AppColors.red.withValues(alpha: 0.08);
-    final borderColor = option.canSelect
-        ? (isSelected ? AppColors.gold : AppColors.border)
-        : AppColors.red;
-
-    return GestureDetector(
-      onTap: option.canSelect
-          ? () {
-              setState(() {
-                _selectedVehicleId = option.vehicleId;
-              });
-            }
-          : null,
-      child: Container(
-        width: double.infinity,
-        margin: EdgeInsets.only(bottom: 10.h),
-        padding: EdgeInsets.all(11.w),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: borderColor),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    option.vehicleName,
-                    style: AppTextStyles.h2.copyWith(fontSize: 13.sp),
-                  ),
-                ),
-                if (option.isRental)
-                  _buildTypeBadge('Kiralik', Colors.orange)
-                else
-                  _buildTypeBadge('Kendi Aracin', AppColors.green),
-              ],
-            ),
-            SizedBox(height: 8.h),
-            Wrap(
-              spacing: 8.w,
-              runSpacing: 6.h,
-              children: [
-                _buildInlineStat('Kapasite', '${option.capacity}'),
-                _buildInlineStat(
-                  'Mesafe',
-                  '${option.distanceKm.toStringAsFixed(0)} km',
-                ),
-                _buildInlineStat(
-                  'Sure',
-                  _formatDuration(option.estimatedDurationSeconds),
-                ),
-                _buildInlineStat(
-                  'Nakliye',
-                  option.transportCost.toStringAsFixed(1),
-                ),
-              ],
-            ),
-            if (option.disabledReason != null) ...[
-              SizedBox(height: 10.h),
-              Text(
-                option.disabledReason!,
-                style: TextStyle(
-                  color: AppColors.red,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ],
-        ),
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10.h),
+      child: TransferVehicleOptionCard(
+        vehicleName: option.vehicleName,
+        isRental: option.isRental,
+        capacity: option.capacity,
+        distanceKm: option.distanceKm,
+        durationLabel: _formatDuration(option.estimatedDurationSeconds),
+        transportCost: option.transportCost,
+        rentalCost: option.rentalCost,
+        fuelCost: option.fuelCost,
+        fuelNeeded: option.fuelNeeded,
+        conditionNeeded: option.conditionNeeded,
+        canSelect: option.canSelect,
+        isSelected: isSelected,
+        disabledReason: option.disabledReason,
+        onTap: () {
+          setState(() {
+            _selectedVehicleId = option.vehicleId;
+          });
+        },
       ),
     );
   }

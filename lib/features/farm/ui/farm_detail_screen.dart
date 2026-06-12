@@ -9,11 +9,13 @@ import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_error_message.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
@@ -33,11 +35,6 @@ class FarmDetailScreen extends ConsumerStatefulWidget {
 
 class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   static const Map<int, int> _farmBoostStarCosts = {6: 3, 12: 6, 24: 12};
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   void _refreshFarmDetail() {
     ref.invalidate(farmDetailProvider(widget.farmId));
@@ -1852,7 +1849,17 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           );
 
     if (!context.mounted) return;
-    if (result['success'] == true) {
+    final isSuccess = result['success'] == true;
+    final resultMessage = result['message']?.toString().trim();
+    final hasErrorLikeMessage =
+        resultMessage != null &&
+        resultMessage.isNotEmpty &&
+        (resultMessage.contains('Exception') ||
+            resultMessage.contains('Postgrest') ||
+            resultMessage.contains('error') ||
+            resultMessage.contains('hata'));
+
+    if (isSuccess && !hasErrorLikeMessage) {
       await _refreshFarmEcosystem();
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
@@ -1873,7 +1880,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Urun secilemedi.',
+      message: sanitizeUserFacingError(
+        result['message'] ?? 'Urun secilemedi.',
+      ),
       type: SnackbarType.error,
     );
   }
@@ -2345,84 +2354,26 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 separatorBuilder: (_, __) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = options[index];
-                  final color = option.canSelect
-                      ? AppColors.green
-                      : AppColors.red;
-                  return InkWell(
-                    onTap: option.canSelect
-                        ? () async {
-                            Navigator.pop(sheetContext);
-                            await onSelected(option.vehicleId);
-                          }
-                        : null,
-                    borderRadius: BorderRadius.circular(14.r),
-                    child: Container(
-                      padding: EdgeInsets.all(14.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(
-                          color: color.withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.local_shipping, color: color),
-                              SizedBox(width: 10.w),
-                              Expanded(
-                                child: Text(
-                                  option.vehicleName,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                option.isRental ? 'Kiralik' : 'Ozmal',
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Kapasite: ${option.capacity} | Mesafe: ${option.distanceKm.toStringAsFixed(0)} km | Sure: ${_formatTransferDuration(option.estimatedDurationSeconds)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Nakliye: ${option.totalPrice.toStringAsFixed(0)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          if (!option.canSelect &&
-                              option.disabledReason != null) ...[
-                            SizedBox(height: 6.h),
-                            Text(
-                              option.disabledReason!,
-                              style: TextStyle(
-                                color: AppColors.red,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                  return TransferVehicleOptionCard(
+                    vehicleName: option.vehicleName,
+                    isRental: option.isRental,
+                    capacity: option.capacity,
+                    distanceKm: option.distanceKm,
+                    durationLabel: _formatTransferDuration(
+                      option.estimatedDurationSeconds,
                     ),
+                    transportCost: option.totalPrice,
+                    rentalCost: option.rentalCost,
+                    fuelCost: option.fuelCost,
+                    fuelNeeded: option.fuelNeeded,
+                    conditionNeeded: option.conditionNeeded,
+                    canSelect: option.canSelect,
+                    isSelected: false,
+                    disabledReason: option.disabledReason,
+                    onTap: () async {
+                      Navigator.pop(sheetContext);
+                      await onSelected(option.vehicleId);
+                    },
                   );
                 },
               ),

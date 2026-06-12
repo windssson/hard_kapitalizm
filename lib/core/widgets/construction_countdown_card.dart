@@ -54,11 +54,7 @@ class _ConstructionCountdownCardState
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold),
-      ),
+      decoration: AppDecorations.premiumCard(AppColors.borderGold, 16.r),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

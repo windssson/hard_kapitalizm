@@ -1479,9 +1479,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
         return Container(
           decoration: BoxDecoration(
-            color: AppColors.cardBg,
+            image: const DecorationImage(
+              image: AssetImage('assets/theme/cartback.webp'),
+              fit: BoxFit.fill,
+            ),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF0C1624).withValues(alpha: 0.42),
+                const Color(0xFF07111C).withValues(alpha: 0.58),
+              ],
+            ),
             borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(
+              color: AppColors.borderGold.withValues(alpha: 0.34),
+            ),
           ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 12.h),
