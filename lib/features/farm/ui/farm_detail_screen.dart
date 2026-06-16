@@ -1317,7 +1317,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               ),
               icon: Icon(Icons.move_up_rounded, size: 14.sp),
               label: Text(
-                'Depoya Aktar',
+                'Urunu Depoya Gonder',
                 style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w700),
               ),
             ),
@@ -1640,7 +1640,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 SizedBox(
                   width: 132.w,
                   child: _buildMiniAction(
-                    'Stok Ekle',
+                    'Depodan Hammadde Ekle',
                     AppColors.gold,
                     () => _startWarehouseToInventoryFlow(
                       context,
@@ -1653,7 +1653,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 SizedBox(
                   width: 132.w,
                   child: _buildMiniAction(
-                    'Depoya Gonder',
+                    'Hammaddeyi Depoya Geri Gonder',
                     AppColors.blue,
                     () => _startInventoryToWarehouseFlow(
                       context,
@@ -1667,7 +1667,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             )
           else
             _buildMiniAction(
-              'Depoya Aktar',
+              'Urunu Depoya Gonder',
               AppColors.blue,
               () => _startInventoryToWarehouseFlow(
                 context,
@@ -2090,15 +2090,15 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                     includeTransfers: true,
                     includePlayer: false,
                   );
-                  AppSnackbar.show(
-                    context,
-                    title: 'Basarili',
-                    message: inventory.isInput
-                        ? 'Ayni sehir hammadde iadesi tamamlandi.'
-                        : 'Ayni sehir uretilen urun transferi tamamlandi.',
-                    type: SnackbarType.success,
-                  );
-                  return;
+                      AppSnackbar.show(
+                        context,
+                        title: 'Basarili',
+                        message: inventory.isInput
+                            ? 'Ayni sehir hammadde geri gonderimi tamamlandi.'
+                            : 'Ayni sehir uretilen urun transferi tamamlandi.',
+                        type: SnackbarType.success,
+                      );
+                      return;
                 }
                 AppSnackbar.show(
                   context,
@@ -2267,11 +2267,11 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     _showProductionVehicleOptionsSheet(
       context: context,
       title: inventory.isInput
-          ? 'Hammadde Iade Lojistigi'
+          ? 'Hammadde Geri Gonderim Lojistigi'
           : 'Uretilen Urun Lojistigi',
       subtitle: inventory.isInput
-          ? '$quantity adet hammadde iadesi icin uygun araci secin'
-          : '$quantity adet uretilen urun icin uygun araci secin',
+          ? '$quantity adet hammaddeyi depoya geri gondermek icin uygun araci secin'
+          : '$quantity adet uretilen urunu depoya gondermek icin uygun araci secin',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
@@ -2294,8 +2294,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             context,
             title: 'Transfer Baslatildi',
             message: inventory.isInput
-                ? 'Hammadde iadesi icin arac yola cikti.'
-                : 'Uretilen urun transferi icin arac yola cikti.',
+                ? 'Hammaddeyi depoya geri goturen arac yola cikti.'
+                : 'Uretilen urunu depoya goturen arac yola cikti.',
             type: SnackbarType.success,
           );
           return;

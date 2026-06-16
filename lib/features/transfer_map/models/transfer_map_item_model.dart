@@ -110,7 +110,10 @@ class TransferMapProductModel {
 class TransferMapItemModel {
   final String id;
   final int quantity;
+  final int itemCount;
+  final int totalQuantity;
   final String status;
+  final String transferType;
   final bool isRental;
   final double totalPrice;
   final double rentalCost;
@@ -124,7 +127,10 @@ class TransferMapItemModel {
   const TransferMapItemModel({
     required this.id,
     required this.quantity,
+    required this.itemCount,
+    required this.totalQuantity,
     required this.status,
+    required this.transferType,
     required this.isRental,
     required this.totalPrice,
     required this.rentalCost,
@@ -141,13 +147,23 @@ class TransferMapItemModel {
 
   String get sellerKindLabel => _kindLabel(sellerEndpoint.kind);
   String get buyerKindLabel => _kindLabel(buyerEndpoint.kind);
+  bool get isMultiItem => itemCount > 1;
+  int get displayQuantity => totalQuantity > 0 ? totalQuantity : quantity;
+  String get displayTitle =>
+      isMultiItem ? 'Coklu Transfer ($itemCount kalem)' : product.name;
 
   factory TransferMapItemModel.fromJson(Map<String, dynamic> json) {
     final rentalCost = (json['rental_cost'] as num?)?.toDouble() ?? 0;
     return TransferMapItemModel(
       id: (json['id'] ?? '').toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+      itemCount: (json['item_count'] as num?)?.toInt() ?? 1,
+      totalQuantity:
+          (json['total_quantity'] as num?)?.toInt() ??
+          (json['quantity'] as num?)?.toInt() ??
+          0,
       status: (json['status'] ?? 'in_transit').toString(),
+      transferType: (json['transfer_type'] ?? 'market_transfer').toString(),
       isRental: (json['is_rental'] as bool? ?? false) || rentalCost > 0,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
       rentalCost: rentalCost,
@@ -189,7 +205,13 @@ class TransferMapItemModel {
     return TransferMapItemModel(
       id: (json['id'] ?? '').toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+      itemCount: (json['item_count'] as num?)?.toInt() ?? 1,
+      totalQuantity:
+          (json['total_quantity'] as num?)?.toInt() ??
+          (json['quantity'] as num?)?.toInt() ??
+          0,
       status: (json['status'] ?? 'in_transit').toString(),
+      transferType: (json['transfer_type'] ?? 'market_transfer').toString(),
       isRental: (json['is_rental'] as bool? ?? false) || rentalCost > 0,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
       rentalCost: rentalCost,

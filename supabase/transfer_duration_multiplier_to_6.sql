@@ -19,7 +19,6 @@ begin
         'get_store_transfer_vehicle_options',
         'get_transfer_vehicle_options',
         'start_market_to_store_transfer',
-        'start_market_transfer',
         'start_production_to_warehouse_transfer',
         'start_store_to_warehouse_transfer',
         'start_warehouse_to_production_transfer',

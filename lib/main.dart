@@ -12,6 +12,7 @@ import 'package:hard_kapitalizm/features/store/ui/store_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_detail_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_history_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_performance_screen.dart';
+import 'package:hard_kapitalizm/features/store/ui/store_warehouse_detail_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/city_selection_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/auth/ui/profile_screen.dart';
@@ -129,6 +130,12 @@ final _router = GoRouter(
             GoRoute(
               path: 'report',
               builder: (context, state) => StorePerformanceScreen(
+                storeId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'warehouse',
+              builder: (context, state) => StoreWarehouseDetailScreen(
                 storeId: state.pathParameters['id']!,
               ),
             ),

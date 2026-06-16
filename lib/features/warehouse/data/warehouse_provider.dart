@@ -594,9 +594,9 @@ class WarehouseActionNotifier {
   }
 
   Future<Map<String, dynamic>> startWarehouseToWarehouseTransfer({
-    required String warehouseSlotId,
+    required String sourceWarehouseId,
     required String buyerWarehouseId,
-    required int quantity,
+    required List<Map<String, dynamic>> items,
     String? vehicleId,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -608,11 +608,30 @@ class WarehouseActionNotifier {
       final response = await _supabase.rpc(
         'start_warehouse_to_warehouse_transfer',
         params: {
-          'p_warehouse_slot_id': warehouseSlotId,
+          'p_source_warehouse_id': sourceWarehouseId,
           'p_buyer_warehouse_id': buyerWarehouseId,
-          'p_quantity': quantity,
+          'p_items': items,
           'p_vehicle_id': vehicleId,
         },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> completeLogisticsTransfer(
+    String transferId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'complete_logistics_transfer',
+        params: {'p_transfer_id': transferId},
       );
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {

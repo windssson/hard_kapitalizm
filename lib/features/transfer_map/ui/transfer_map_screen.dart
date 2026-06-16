@@ -11,12 +11,10 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
-import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
@@ -233,9 +231,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       final affectedMineIds = <String>{};
 
       for (final transfer in dueTransfers) {
-        final result = await ref
-            .read(marketActionProvider)
-            .completeMarketTransfer(transfer.id);
+        final result = await _completeTransfer(ref, transfer);
         if (result['success'] == true) {
           completedCount += 1;
           affectedWarehouseIds.addAll(_affectedIds(result, 'warehouse_ids'));
@@ -281,6 +277,22 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     }
   }
 
+  Future<Map<String, dynamic>> _completeTransfer(
+    WidgetRef ref,
+    TransferMapItemModel transfer,
+  ) {
+    if (_isLogisticsTransferType(transfer.transferType)) {
+      return ref
+          .read(warehouseActionProvider)
+          .completeLogisticsTransfer(transfer.id);
+    }
+    return Future.value({
+      'success': false,
+      'message':
+          'Eski market transfer akisi kapatildi. Bu kayit yeni sistem disinda kalmis.',
+    });
+  }
+
   Future<void> _showTransferInfo(TransferMapItemModel transfer) async {
     final accentColor = transfer.isRental ? Colors.orange : AppColors.gold;
     final routeDistanceKm = _estimateRouteDistanceKm(
@@ -288,7 +300,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       transfer.buyerWarehouse.city,
     );
     final totalCost = transfer.totalPrice + transfer.transportCost;
-    final unitCost = transfer.quantity > 0 ? totalCost / transfer.quantity : 0.0;
+    final unitCost = transfer.displayQuantity > 0
+        ? totalCost / transfer.displayQuantity
+        : 0.0;
     await showDialog<void>(
       context: context,
       builder: (context) => Dialog(
@@ -309,9 +323,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               builder: (context, ref, _) {
                 final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
                 final remaining = transfer.finishAt.difference(now);
-                final remainingSeconds = remaining.inSeconds;
-                final showButton = transfer.status == 'in_transit' && remainingSeconds > 0;
-                final starCost = remainingSeconds > 0 ? (remainingSeconds / 600.0).ceil() : 0;
 
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -337,7 +348,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                transfer.product.name,
+                                transfer.displayTitle,
                                 style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
                               ),
                               SizedBox(height: 4.h),
@@ -398,7 +409,15 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                               ),
                             ),
                             SizedBox(height: 14.h),
-                            _buildDialogDetailRow('Miktar', '${transfer.quantity} adet'),
+                            _buildDialogDetailRow(
+                              'Miktar',
+                              '${transfer.displayQuantity} adet',
+                            ),
+                            if (transfer.isMultiItem)
+                              _buildDialogDetailRow(
+                                'Kalem Sayisi',
+                                '${transfer.itemCount} farkli urun',
+                              ),
                             _buildDialogDetailRow(
                               'Nakliye Tipi',
                               transfer.isRental ? 'Kiralik Arac' : 'Ozmal Arac',
@@ -471,18 +490,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         ),
                       ),
                     ),
-                    if (showButton) ...[
-                      SizedBox(height: 12.h),
-                      GoldFinishButton(
-                        starCost: starCost,
-                        onPressed: () => _confirmFinishWithStars(
-                          context,
-                          ref,
-                          transfer,
-                          starCost,
-                        ),
-                      ),
-                    ],
                   ],
                 );
               },
@@ -493,6 +500,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     );
   }
 
+  /*
   Future<void> _confirmFinishWithStars(
     BuildContext context,
     WidgetRef ref,
@@ -620,6 +628,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     }
   }
 
+  */
   Widget _buildDialogInfoRow(IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1441,6 +1450,20 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     return transfer.sellerWarehouse.city.id == transfer.buyerWarehouse.city.id;
   }
 
+  bool _isLogisticsTransferType(String transferType) {
+    return transferType == 'warehouse_to_warehouse' ||
+        transferType == 'market_to_warehouse' ||
+        transferType == 'warehouse_to_store' ||
+        transferType == 'store_to_warehouse' ||
+        transferType == 'warehouse_to_production' ||
+        transferType == 'production_to_warehouse' ||
+        transferType == 'market_to_warehouse_multi' ||
+        transferType == 'warehouse_to_warehouse_multi' ||
+        transferType == 'warehouse_to_store_multi' ||
+        transferType == 'store_to_warehouse_multi' ||
+        transferType == 'internal_transfer';
+  }
+
   String _buildDeliveryCompletionMessage(
     List<TransferMapItemModel> dueTransfers,
     int completedCount,
@@ -1888,8 +1911,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       transfer.buyerWarehouse.city,
     );
     final totalCost = transfer.totalPrice + transfer.transportCost;
-    final unitLogisticsCost = transfer.quantity > 0
-        ? transfer.transportCost / transfer.quantity
+    final unitLogisticsCost = transfer.displayQuantity > 0
+        ? transfer.transportCost / transfer.displayQuantity
         : 0.0;
     final logisticsLabel = transfer.isRental
         ? 'Nakliye ${_formatCurrency(unitLogisticsCost)} / adet'
@@ -1950,7 +1973,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     Row(
                       children: [
                         Text(
-                          transfer.product.name,
+                          transfer.displayTitle,
                           style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -2026,7 +2049,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           SizedBox(height: 12.h),
           _buildCompactMetaRow(
             leftIcon: Icons.inventory_2_outlined,
-            leftText: '${transfer.quantity} adet',
+            leftText: '${transfer.displayQuantity} adet',
             rightIcon: Icons.straighten,
             rightText: '${routeDistanceKm.toStringAsFixed(0)} km',
           ),
@@ -2285,8 +2308,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         ? '-'
         : _formatDateTime(item.completedAt!);
     final totalMinutes = item.finishAt.difference(item.startedAt).inMinutes;
-    final unitLogisticsCost = item.quantity > 0
-        ? item.transportCost / item.quantity
+    final unitLogisticsCost = item.displayQuantity > 0
+        ? item.transportCost / item.displayQuantity
         : 0.0;
     final totalCost = item.totalPrice + item.transportCost;
 
@@ -2325,7 +2348,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.product.name,
+                      item.displayTitle,
                       style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
                     ),
                     Text(
@@ -2352,7 +2375,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           SizedBox(height: 12.h),
           _buildCompactMetaRow(
             leftIcon: Icons.inventory_2_outlined,
-            leftText: '${item.quantity} adet',
+            leftText: '${item.displayQuantity} adet',
             rightIcon: Icons.timelapse_outlined,
             rightText: '${totalMinutes} dk',
           ),

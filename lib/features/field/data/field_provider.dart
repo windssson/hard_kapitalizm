@@ -629,25 +629,22 @@ class FieldActionNotifier {
     required int quantity,
     bool syncProviders = true,
   }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
     try {
-      final response = await _supabase.rpc(
-        'transfer_warehouse_slot_to_production_inventory',
-        params: {
-          'p_player_id': user.id,
-          'p_warehouse_slot_id': warehouseSlotId,
-          'p_production_inventory_id': productionInventoryId,
-          'p_quantity': quantity,
-        },
-      );
+      final result = await _productionLogisticsService
+          .startWarehouseToProductionTransfer(
+            warehouseSlotId: warehouseSlotId,
+            productionInventoryId: productionInventoryId,
+            quantity: quantity,
+            vehicleId: null,
+          );
       if (syncProviders) {
         _ref.invalidate(fieldDetailProvider);
       }
-      return response as Map<String, dynamic>;
+      return {
+        'success': result.success,
+        'message': result.message,
+        'transfer_id': result.transferId,
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -659,25 +656,22 @@ class FieldActionNotifier {
     required int quantity,
     bool syncProviders = true,
   }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
     try {
-      final response = await _supabase.rpc(
-        'transfer_production_inventory_to_warehouse',
-        params: {
-          'p_player_id': user.id,
-          'p_production_inventory_id': productionInventoryId,
-          'p_warehouse_id': warehouseId,
-          'p_quantity': quantity,
-        },
-      );
+      final result = await _productionLogisticsService
+          .startProductionToWarehouseTransfer(
+            productionInventoryId: productionInventoryId,
+            buyerWarehouseId: warehouseId,
+            quantity: quantity,
+            vehicleId: null,
+          );
       if (syncProviders) {
         _ref.invalidate(fieldDetailProvider);
       }
-      return response as Map<String, dynamic>;
+      return {
+        'success': result.success,
+        'message': result.message,
+        'transfer_id': result.transferId,
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

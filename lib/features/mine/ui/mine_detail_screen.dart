@@ -841,7 +841,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       ),
                       icon: Icon(Icons.move_up_rounded, size: 14.sp),
                       label: Text(
-                        'Depoya Aktar',
+                        'Urunu Depoya Gonder',
                         style: TextStyle(
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w700,

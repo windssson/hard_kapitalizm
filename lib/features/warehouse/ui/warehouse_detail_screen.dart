@@ -1,18 +1,25 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
-import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
+import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
+import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
+import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
+    show warehouseCapacityStatusProvider;
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
+import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
@@ -1688,18 +1695,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     BuildContext context,
     WidgetRef ref,
     WarehouseModel warehouse,
-    WarehouseSlotModel slot,
+    WarehouseSlotModel initialSlot,
   ) async {
-    if (slot.quantity <= 0) {
-      AppSnackbar.show(
-        context,
-        title: 'Stok Yok',
-        message: 'Gonderilecek stok bulunmuyor.',
-        type: SnackbarType.warning,
-      );
-      return;
-    }
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1729,12 +1726,20 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     if (context.mounted) Navigator.of(context).pop();
 
+    final initialProductId = initialSlot.productId?.trim().toUpperCase();
+    if (initialProductId == null || initialProductId.isEmpty) {
+      AppSnackbar.show(
+        context,
+        title: 'Urun Yok',
+        message: 'Secili slotta gecerli urun bilgisi yok.',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
     final candidates = warehouses
         .where((item) {
           if (item['id']?.toString() == warehouse.id) return false;
-
-          final productId = slot.productId?.trim().toUpperCase();
-          if (productId == null || productId.isEmpty) return false;
 
           final typeDetail = _findWarehouseTypeDetail(
             item['warehouse_type_id']?.toString() ?? '',
@@ -1744,7 +1749,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             typeDetail['accepted_product_ids'],
           );
           if (acceptedIds.isEmpty) return true;
-          return acceptedIds.contains(productId);
+          return acceptedIds.contains(initialProductId);
         })
         .toList();
 
@@ -1752,43 +1757,57 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Hedef Depo Yok',
-        message: 'Bu urunu kabul eden baska aktif deponuz bulunmuyor.',
+        message:
+            'Secilen urunu kabul eden baska aktif deponuz bulunmuyor.',
         type: SnackbarType.info,
       );
       return;
     }
 
     if (!context.mounted) return;
-    _showWarehouseTargetPicker(context, ref, warehouse, slot, candidates);
+    _showWarehouseTargetPicker(
+      context,
+      ref,
+      warehouse,
+      initialSlot,
+      candidates,
+    );
   }
 
   void _showWarehouseTargetPicker(
     BuildContext context,
     WidgetRef ref,
     WarehouseModel sourceWarehouse,
-    WarehouseSlotModel slot,
+    WarehouseSlotModel initialSlot,
     List<Map<String, dynamic>> warehouses,
   ) {
     final options = warehouses.map((target) {
       final cityName = ((target['city'] as Map?)?['name'] ?? '-').toString();
-      final sameCity = target['city_id']?.toString() == sourceWarehouse.cityId;
+      final sameCity = (target['city_id']?.toString() ?? '') == sourceWarehouse.cityId;
+      final totalCapacity =
+          (target['capacity'] as num?)?.toDouble() ?? 0;
+      final reservedCapacity =
+          (target['reserved_capacity'] as num?)?.toDouble() ?? 0;
+      final roughAvailable = (totalCapacity - reservedCapacity).clamp(
+        0.0,
+        totalCapacity,
+      );
 
       return WarehouseSelectionOption(
         id: target['id'].toString(),
         title: (target['name'] ?? 'Depo').toString(),
         subtitle: '$cityName | Seviye: ${target['level'] ?? 1}',
         badgeText: sameCity ? 'Ayni Sehir' : 'Sehirler Arasi',
-        infoText: sameCity ? 'Anlik' : 'Lojistik',
+        infoText: '~${_formatValue(roughAvailable)} m3 bos',
         isHighlightBadge: sameCity,
         onTap: () {
           Navigator.pop(context);
-          _showWarehouseOutboundQuantityDialog(
+          _openTargetAwareWarehouseTransferPicker(
             context,
             ref,
             sourceWarehouse,
-            slot,
+            initialSlot,
             target,
-            cityName,
           );
         },
       );
@@ -1801,183 +1820,502 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Future<void> _showWarehouseOutboundQuantityDialog(
+  Future<void> _openTargetAwareWarehouseTransferPicker(
     BuildContext context,
     WidgetRef ref,
     WarehouseModel sourceWarehouse,
-    WarehouseSlotModel slot,
+    WarehouseSlotModel initialSlot,
     Map<String, dynamic> targetWarehouse,
-    String targetCityName,
   ) async {
-    final controller = TextEditingController(text: '1');
-    final limit = slot.quantity;
-    final isSameCity =
-        (targetWarehouse['city_id']?.toString() ?? '') ==
-        sourceWarehouse.cityId;
-
-    void applyQuantity(int value, void Function(void Function()) setState) {
-      final clamped = value.clamp(1, limit);
-      setState(() {
-        controller.text = clamped.toString();
-        controller.selection = TextSelection.fromPosition(
-          TextPosition(offset: controller.text.length),
-        );
-      });
+    final targetWarehouseId = targetWarehouse['id']?.toString() ?? '';
+    if (targetWarehouseId.isEmpty) {
+      AppSnackbar.show(
+        context,
+        title: 'Hedef Gecersiz',
+        message: 'Hedef depo bilgisi okunamadi.',
+        type: SnackbarType.error,
+      );
+      return;
     }
 
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setState) => AlertDialog(
-          backgroundColor: AppColors.background,
-          insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
+    WarehouseCapacityStatusModel? capacityStatus;
+    try {
+      capacityStatus = await ref.read(
+        warehouseCapacityStatusProvider(targetWarehouseId).future,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Kapasite Alinamadi',
+        message: e.toString(),
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    final targetTypeDetail = _findWarehouseTypeDetail(
+      targetWarehouse['warehouse_type_id']?.toString() ?? '',
+      await ref.read(warehouseTypesProvider.future),
+    );
+    final acceptedIds = _parseAcceptedProductIds(
+      targetTypeDetail['accepted_product_ids'],
+    ).toSet();
+
+    final transferableSlots = sourceWarehouse.slots
+        .where(
+          (slot) =>
+              slot.quantity > 0 &&
+              slot.productId != null &&
+              slot.productId!.trim().isNotEmpty &&
+              (acceptedIds.isEmpty ||
+                  acceptedIds.contains(slot.productId!.trim().toUpperCase())),
+        )
+        .toList();
+
+    if (transferableSlots.isEmpty) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Uygun Urun Yok',
+        message: 'Bu hedef depo kaynak depodaki uygun urunleri kabul etmiyor.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
+    final normalizedInitialSlot = transferableSlots.any(
+          (slot) => slot.id == initialSlot.id,
+        )
+        ? initialSlot
+        : transferableSlots.first;
+
+    if (!context.mounted) return;
+    await _showWarehouseTransferItemPicker(
+      context,
+      ref,
+      sourceWarehouse,
+      transferableSlots,
+      normalizedInitialSlot,
+      targetWarehouse,
+      capacityStatus,
+    );
+  }
+
+  Future<void> _showWarehouseTransferItemPicker(
+    BuildContext context,
+    WidgetRef ref,
+    WarehouseModel sourceWarehouse,
+    List<WarehouseSlotModel> slots,
+    WarehouseSlotModel initialSlot,
+    Map<String, dynamic> targetWarehouse,
+    WarehouseCapacityStatusModel? capacityStatus,
+  ) async {
+    final availableCapacity = capacityStatus?.availableCapacity ?? 0.0;
+    final initialFits =
+        initialSlot.unitVolume <= 0 || initialSlot.unitVolume <= availableCapacity;
+    final selectedQuantities = <String, int>{
+      if (initialFits) initialSlot.id: 1,
+    };
+
+    double selectedVolumeExcluding(String slotId) {
+      var total = 0.0;
+      for (final slot in slots) {
+        if (slot.id == slotId) continue;
+        final quantity = selectedQuantities[slot.id] ?? 0;
+        total += quantity * slot.unitVolume;
+      }
+      return total;
+    }
+
+    int maxSelectableForSlot(WarehouseSlotModel slot) {
+      final unitVolume = slot.unitVolume;
+      if (unitVolume <= 0) return slot.quantity;
+      final remainingCapacity =
+          availableCapacity - selectedVolumeExcluding(slot.id);
+      final maxByCapacity = remainingCapacity <= 0
+          ? 0
+          : (remainingCapacity / unitVolume).floor();
+      return maxByCapacity.clamp(0, slot.quantity);
+    }
+
+    final anySelectable = slots.any((slot) => maxSelectableForSlot(slot) > 0);
+    if (!anySelectable) {
+      AppSnackbar.show(
+        context,
+        title: 'Bos Kapasite Yok',
+        message: 'Hedef depoda secilebilir urunler icin yeterli bos kapasite yok.',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    Future<void> openQuantityEditor(
+      BuildContext sheetContext,
+      StateSetter modalSetState,
+      WarehouseSlotModel slot,
+    ) async {
+      final currentQuantity = selectedQuantities[slot.id] ?? 0;
+      final limit = maxSelectableForSlot(slot);
+      if (limit <= 0 && currentQuantity <= 0) {
+        AppSnackbar.show(
+          sheetContext,
+          title: 'Bos Kapasite Yok',
+          message: 'Hedef depoda bu urun icin yeterli bos kapasite kalmadi.',
+          type: SnackbarType.warning,
+        );
+        return;
+      }
+
+      final effectiveLimit = currentQuantity > limit ? currentQuantity : limit;
+      final controller = TextEditingController(
+        text: currentQuantity > 0
+            ? currentQuantity.toString()
+            : (effectiveLimit > 0 ? '1' : '0'),
+      );
+
+      final result = await showDialog<int>(
+        context: sheetContext,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: AppColors.cardBg,
           title: Text(
-            'Miktar Girin',
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 18.sp),
+            slot.productName ?? 'Urun',
+            style: TextStyle(color: Colors.white, fontSize: 16.sp),
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12.w),
-                  decoration: BoxDecoration(
-                    color: AppColors.textPrimary.withValues(alpha: 0.04),
-                    borderRadius: BorderRadius.circular(14.r),
-                    border: Border.all(
-                      color: AppColors.border.withValues(alpha: 0.24),
-                    ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kalite ${slot.qualityLevel} | Stok: ${slot.quantity}',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                ),
+              ),
+              SizedBox(height: 4.h),
+              Text(
+                'Bu hedef icin maksimum: $effectiveLimit',
+                style: TextStyle(
+                  color: AppColors.goldLight,
+                  fontSize: 12.sp,
+                ),
+              ),
+              SizedBox(height: 14.h),
+              TextField(
+                controller: controller,
+                readOnly: true,
+                showCursor: true,
+                enableInteractiveSelection: false,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Miktar',
+                  labelStyle: TextStyle(color: AppColors.gold),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.textMuted),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        slot.productName ?? 'Urun',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        '${sourceWarehouse.name} -> ${(targetWarehouse['name'] ?? 'Depo').toString()}',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12.sp,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Wrap(
-                        spacing: 8.w,
-                        runSpacing: 8.h,
-                        children: [
-                          _buildStatusPill(
-                            isSameCity ? 'Ayni sehir' : 'Sehirler arasi',
-                            isSameCity ? AppColors.green : AppColors.blue,
-                          ),
-                          _buildStatusPill(
-                            'Hedef: $targetCityName',
-                            AppColors.gold,
-                          ),
-                          _buildStatusPill(
-                            'Maksimum $limit',
-                            AppColors.goldLight,
-                          ),
-                        ],
-                      ),
-                    ],
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.gold),
                   ),
                 ),
-                SizedBox(height: 16.h),
-                TextField(
-                  controller: controller,
-                  readOnly: true,
-                  showCursor: true,
-                  enableInteractiveSelection: false,
-                  style: const TextStyle(color: AppColors.textPrimary),
-                  decoration: const InputDecoration(
-                    labelText: 'Miktar',
-                    helperText: 'Diger depoya gonderilecek urun adedi',
-                    labelStyle: TextStyle(color: AppColors.gold),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.textMuted),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.gold),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                NumericKeyboard(
-                  controller: controller,
-                  shortcuts: [
+              ),
+              SizedBox(height: 12.h),
+              NumericKeyboard(
+                controller: controller,
+                shortcuts: [
+                  if (effectiveLimit > 0)
                     NumericKeyboardShortcut(
                       label: '1/4',
-                      value: ((limit / 4).ceil().clamp(1, limit)).toString(),
+                      value:
+                          ((effectiveLimit / 4).ceil().clamp(1, effectiveLimit))
+                              .toString(),
                     ),
+                  if (effectiveLimit > 0)
                     NumericKeyboardShortcut(
                       label: 'Yari',
-                      value: ((limit / 2).ceil().clamp(1, limit)).toString(),
+                      value:
+                          ((effectiveLimit / 2).ceil().clamp(1, effectiveLimit))
+                              .toString(),
                     ),
+                  if (effectiveLimit > 0)
                     NumericKeyboardShortcut(
                       label: 'Tamami',
-                      value: limit.toString(),
+                      value: effectiveLimit.toString(),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Iptal'),
             ),
+            if (currentQuantity > 0)
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, 0),
+                child: const Text('Kaldir'),
+              ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
               onPressed: () {
-                final qty = int.tryParse(controller.text) ?? 0;
-                if (qty <= 0 || qty > limit) {
+                final quantity = int.tryParse(controller.text) ?? 0;
+                if (quantity <= 0 || quantity > effectiveLimit) {
                   AppSnackbar.show(
-                    context,
+                    dialogContext,
                     title: 'Gecersiz Miktar',
-                    message: '1 ile $limit arasinda bir miktar girin.',
+                    message:
+                        '1 ile $effectiveLimit arasinda bir miktar girin.',
                     type: SnackbarType.warning,
                   );
                   return;
                 }
-                Navigator.pop(dialogContext);
-                _maybeStartWarehouseOutboundTransfer(
-                  context,
-                  ref,
-                  sourceWarehouse,
-                  slot,
-                  targetWarehouse,
-                  qty,
-                );
+                Navigator.pop(dialogContext, quantity);
               },
               child: const Text(
-                'Devam Et',
+                'Kaydet',
                 style: TextStyle(color: Colors.black),
               ),
             ),
           ],
         ),
+      );
+
+      controller.dispose();
+
+      if (result == null) return;
+
+      modalSetState(() {
+        if (result <= 0) {
+          selectedQuantities.remove(slot.id);
+        } else {
+          selectedQuantities[slot.id] = result;
+        }
+      });
+    }
+
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, modalSetState) {
+          final selectedItems = slots
+              .where((slot) => (selectedQuantities[slot.id] ?? 0) > 0)
+              .map(
+                (slot) => _SelectedWarehouseTransferItem(
+                  slot: slot,
+                  quantity: selectedQuantities[slot.id] ?? 0,
+                ),
+              )
+              .toList();
+          final selectedQuantityTotal = selectedItems.fold<int>(
+            0,
+            (sum, item) => sum + item.quantity,
+          );
+          final selectedVolume = selectedItems.fold<double>(
+            0,
+            (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+          );
+          final remainingCapacity = (availableCapacity - selectedVolume).clamp(
+            0.0,
+            availableCapacity,
+          );
+
+          return SafeArea(
+            top: false,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Gonderilecek Urunleri Secin',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    '${(targetWarehouse['name'] ?? 'Depo').toString()} | Bos: ${_formatValue(remainingCapacity)} / ${_formatValue(availableCapacity)} m3',
+                    style: TextStyle(
+                      color: AppColors.goldLight,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '${selectedItems.length} urun cesidi | $selectedQuantityTotal adet | ${_formatValue(selectedVolume)} m3 secildi',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: slots.length,
+                      separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                      itemBuilder: (_, index) {
+                        final slot = slots[index];
+                        final selectedQuantity =
+                            selectedQuantities[slot.id] ?? 0;
+                        final isSelected = selectedQuantity > 0;
+                        final maxForSlot = maxSelectableForSlot(slot);
+                        final isDisabled = maxForSlot <= 0 && !isSelected;
+                        return Container(
+                          padding: EdgeInsets.all(12.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(14.r),
+                            border: Border.all(
+                              color: (isSelected
+                                      ? AppColors.green
+                                      : AppColors.borderGoldLight)
+                                  .withValues(alpha: isSelected ? 0.35 : 0.15),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 48.w,
+                                height: 48.w,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.28),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                child: slot.productIcon == null ||
+                                        slot.productIcon!.isEmpty
+                                    ? Icon(
+                                        Icons.inventory_2_outlined,
+                                        color: AppColors.gold,
+                                        size: 22.sp,
+                                      )
+                                    : CachedAssetImage(
+                                        fileName: slot.productIcon!,
+                                        fit: BoxFit.contain,
+                                      ),
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      slot.productName ?? 'Urun',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Text(
+                                      'Kalite ${slot.qualityLevel} | Stok ${slot.quantity} | Birim ${_formatValue(slot.unitVolume)} m3',
+                                      style: TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11.sp,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2.h),
+                                    Text(
+                                      isDisabled
+                                          ? 'Kapasite dolu'
+                                          : 'Bu hedef icin max: $maxForSlot',
+                                      style: TextStyle(
+                                        color: isDisabled
+                                            ? AppColors.red
+                                            : AppColors.goldLight,
+                                        fontSize: 10.sp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              OutlinedButton(
+                                onPressed: isDisabled
+                                    ? null
+                                    : () => openQuantityEditor(
+                                          sheetContext,
+                                          modalSetState,
+                                          slot,
+                                        ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: isSelected
+                                      ? AppColors.green
+                                      : AppColors.goldLight,
+                                  side: BorderSide(
+                                    color: (isSelected
+                                            ? AppColors.green
+                                            : AppColors.gold)
+                                        .withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                child: Text(
+                                  isSelected
+                                      ? 'Adet: $selectedQuantity'
+                                      : 'Ekle',
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: Colors.black,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                      ),
+                      onPressed: selectedItems.isEmpty
+                          ? null
+                          : () {
+                              Navigator.pop(sheetContext);
+                              _submitWarehouseOutboundTransfer(
+                                context,
+                                ref,
+                                sourceWarehouse,
+                                selectedItems,
+                                targetWarehouse,
+                              );
+                            },
+                      icon: const Icon(Icons.local_shipping_outlined),
+                      label: const Text('Transferi Baslat'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
-    controller.dispose();
   }
 
-  Future<void> _maybeStartWarehouseOutboundTransfer(
+  Future<void> _submitWarehouseOutboundTransfer(
     BuildContext context,
     WidgetRef ref,
     WarehouseModel sourceWarehouse,
-    WarehouseSlotModel slot,
+    List<_SelectedWarehouseTransferItem> items,
     Map<String, dynamic> targetWarehouse,
-    int quantity,
+    {
+    String? vehicleId,
+  }
   ) async {
     final targetWarehouseId = targetWarehouse['id']?.toString() ?? '';
     final sameCity =
@@ -1994,18 +2332,55 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       return;
     }
 
-    if (sameCity) {
-      await _startWarehouseOutboundTransfer(
-        context,
-        ref,
-        slot,
-        targetWarehouseId,
-        quantity,
-        null,
-      );
+    if (!sameCity) {
+      if (vehicleId == null || vehicleId.isEmpty) {
+        await _showIntercityWarehouseTransferVehiclePicker(
+          context,
+          ref,
+          sourceWarehouse,
+          items,
+          targetWarehouse,
+        );
+      } else {
+        await _startWarehouseTransfer(
+          context,
+          ref,
+          sourceWarehouse,
+          items,
+          targetWarehouse,
+          vehicleId: vehicleId,
+        );
+      }
       return;
     }
 
+    await _startWarehouseTransfer(
+      context,
+      ref,
+      sourceWarehouse,
+      items,
+      targetWarehouse,
+    );
+  }
+
+  Future<void> _startWarehouseTransfer(
+    BuildContext context,
+    WidgetRef ref,
+    WarehouseModel sourceWarehouse,
+    List<_SelectedWarehouseTransferItem> items,
+    Map<String, dynamic> targetWarehouse, {
+    String? vehicleId,
+  }) async {
+    final targetWarehouseId = targetWarehouse['id']?.toString() ?? '';
+    final payload = items
+        .map(
+          (item) => <String, dynamic>{
+            'source_warehouse_slot_id': item.slot.id,
+            'quantity': item.quantity,
+          },
+        )
+        .toList();
+    final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -2013,173 +2388,50 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           const Center(child: CircularProgressIndicator(color: AppColors.gold)),
     );
 
-    TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>
-    vehicleResult = const TransferVehicleOptionsResult(
-      options: [],
-      unavailableReason: null,
-    );
-    try {
-      vehicleResult = await ref
-          .read(warehouseActionProvider)
-          .getWarehouseToWarehouseVehicleOptions(
-            warehouseSlotId: slot.id,
-            buyerWarehouseId: targetWarehouseId,
-            quantity: quantity,
-          );
-    } catch (e) {
-      if (context.mounted) Navigator.pop(context);
-      if (context.mounted) {
-        AppSnackbar.show(
-          context,
-          title: 'Araclar Alinamadi',
-          message: e.toString(),
-          type: SnackbarType.error,
-        );
-      }
-      return;
-    }
-
-    if (context.mounted) Navigator.pop(context);
-
-    if (vehicleResult.options.isEmpty) {
-      AppSnackbar.show(
-        context,
-        title: 'Arac Yok',
-        message:
-            vehicleResult.unavailableReason ??
-            'Bu transfer icin uygun arac bulunamadi.',
-        type: SnackbarType.warning,
-      );
-      return;
-    }
-
-    if (!context.mounted) return;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Arac Secin',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              '$quantity adet urun icin uygun araci secin',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
-            ),
-            SizedBox(height: 16.h),
-            Expanded(
-              child: ListView.separated(
-                itemCount: vehicleResult.options.length,
-                separatorBuilder: (_, __) => SizedBox(height: 10.h),
-                itemBuilder: (_, index) {
-                  final option = vehicleResult.options[index];
-                  return TransferVehicleOptionCard(
-                    vehicleName: option.vehicleName,
-                    isRental: option.isRental,
-                    capacity: option.capacity,
-                    distanceKm: option.distanceKm,
-                    durationLabel: _formatTransferDuration(
-                      option.estimatedDurationSeconds,
-                    ),
-                    transportCost: option.transportCost,
-                    rentalCost: option.rentalCost,
-                    fuelCost: option.fuelCost,
-                    fuelNeeded: option.fuelNeeded,
-                    conditionNeeded: option.conditionNeeded,
-                    canSelect: option.canSelect,
-                    isSelected: false,
-                    disabledReason: option.disabledReason,
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      _startWarehouseOutboundTransfer(
-                        context,
-                        ref,
-                        slot,
-                        targetWarehouseId,
-                        quantity,
-                        option.vehicleId,
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _startWarehouseOutboundTransfer(
-    BuildContext context,
-    WidgetRef ref,
-    WarehouseSlotModel slot,
-    String targetWarehouseId,
-    int quantity,
-    String? vehicleId,
-  ) async {
     final result = await ref
         .read(warehouseActionProvider)
         .startWarehouseToWarehouseTransfer(
-          warehouseSlotId: slot.id,
+          sourceWarehouseId: sourceWarehouse.id,
           buyerWarehouseId: targetWarehouseId,
-          quantity: quantity,
+          items: payload,
           vehicleId: vehicleId,
         );
 
     if (!context.mounted) return;
+    Navigator.pop(context);
 
     if (result['success'] == true) {
-      final remainingQuantity =
-          (result['source_quantity_after'] as num?)?.toInt() ??
-          (slot.quantity - quantity).clamp(0, slot.quantity);
-      if (remainingQuantity <= 0) {
-        ref
-            .read(warehouseDetailProvider(widget.warehouseId).notifier)
-            .patchSlotQuantity(slotId: slot.id, quantity: 0);
-        ref
-            .read(warehouseListProvider.notifier)
-            .patchSlotQuantity(
-              warehouseId: widget.warehouseId,
-              slotId: slot.id,
-              quantity: 0,
-            );
-      } else {
-        ref
-            .read(warehouseDetailProvider(widget.warehouseId).notifier)
-            .patchSlotQuantity(slotId: slot.id, quantity: remainingQuantity);
-        ref
-            .read(warehouseListProvider.notifier)
-            .patchSlotQuantity(
-              warehouseId: widget.warehouseId,
-              slotId: slot.id,
-              quantity: remainingQuantity,
-            );
-      }
-      ref.invalidate(warehouseDetailProvider(targetWarehouseId));
-      ref.invalidate(playerProvider);
+      final transferId = result['transfer_id']?.toString();
       final isInstant = result['mode']?.toString() == 'instant';
+
+      if (isInstant && transferId != null && transferId.isNotEmpty) {
+        final completionResult = await ref
+            .read(warehouseActionProvider)
+            .completeLogisticsTransfer(transferId);
+
+        if (completionResult['success'] != true) {
+          await _refreshWarehouseEcosystem();
+          ref.invalidate(warehouseDetailProvider(targetWarehouseId));
+          AppSnackbar.show(
+            context,
+            title: 'Transfer Baslatildi',
+            message:
+                'Transfer kaydi olustu ama otomatik tamamlama sirasinda hata alindi: ${completionResult['message'] ?? 'Bilinmeyen hata'}',
+            type: SnackbarType.warning,
+          );
+          return;
+        }
+      }
+
+      await _refreshWarehouseEcosystem();
+      ref.invalidate(warehouseDetailProvider(targetWarehouseId));
+      await ref.read(warehouseDetailProvider(targetWarehouseId).future);
+
       AppSnackbar.show(
         context,
         title: 'Transfer Basarili',
         message: isInstant
-            ? '${slot.productName ?? 'Urun'} hedef depoya aninda ulasti.'
+            ? '${items.length} urun cesidi, toplam $totalQuantity adet hedef depoya aktarildi.'
             : 'Depolar arasi transfer baslatildi. Arac yola cikti.',
         type: SnackbarType.success,
       );
@@ -2296,10 +2548,54 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
+  CityModel? _findCityById(List<CityModel> cities, String cityId) {
+    for (final city in cities) {
+      if (city.id == cityId) return city;
+    }
+    return null;
+  }
+
+  double _calculateCityDistanceKm(
+    double sourceX,
+    double sourceY,
+    double targetX,
+    double targetY,
+  ) {
+    return _round2(
+      sqrt(
+        pow(sourceX - targetX, 2) + pow(sourceY - targetY, 2),
+      ).toDouble(),
+    );
+  }
+
+  int _calculateDurationSeconds({
+    required double distanceKm,
+    required int speedKmh,
+  }) {
+    if (speedKmh <= 0) return 0;
+    return max(60, ((max(distanceKm, 1) / speedKmh) * 3600).ceil());
+  }
+
+  int _calculateConditionLoss(double distanceKm) {
+    return max(1, (distanceKm / 25.0).ceil());
+  }
+
+  double _round2(double value) {
+    return double.parse(value.toStringAsFixed(2));
+  }
+
   String _formatValue(double value) {
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
     return value.toStringAsFixed(0);
+  }
+
+  String _formatTransferDuration(int seconds) {
+    final duration = Duration(seconds: seconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    if (hours > 0) return '${hours}s ${minutes}dk';
+    return '${duration.inMinutes}dk';
   }
 
   Widget _buildStatusPill(String label, Color accentColor) {
@@ -2319,14 +2615,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         ),
       ),
     );
-  }
-
-  String _formatTransferDuration(int seconds) {
-    final duration = Duration(seconds: seconds);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours}s ${minutes}dk';
-    return '${duration.inMinutes}dk';
   }
 
   int _calculateUpgradeStarCost(DateTime finishAt) {
@@ -2539,6 +2827,202 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
+  Future<void> _showIntercityWarehouseTransferVehiclePicker(
+    BuildContext context,
+    WidgetRef ref,
+    WarehouseModel sourceWarehouse,
+    List<_SelectedWarehouseTransferItem> items,
+    Map<String, dynamic> targetWarehouse,
+  ) async {
+    final targetWarehouseId = targetWarehouse['id']?.toString() ?? '';
+    final targetCityId = targetWarehouse['city_id']?.toString() ?? '';
+    if (targetWarehouseId.isEmpty || targetCityId.isEmpty) {
+      AppSnackbar.show(
+        context,
+        title: 'Hedef Gecersiz',
+        message: 'Hedef depo veya sehir bilgisi okunamadi.',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    List<LogisticsVehicleModel> vehicles = const [];
+    try {
+      vehicles = await ref.read(logisticsVehicleListProvider.future);
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Araclar Alinamadi',
+        message: e.toString(),
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    final cities = await ref.read(activeCitiesProvider.future);
+    final sourceCity = _findCityById(cities, sourceWarehouse.cityId);
+    final targetCity = _findCityById(cities, targetCityId);
+
+    if (sourceCity == null || targetCity == null) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Sehir Verisi Eksik',
+        message: 'Mesafe hesabi icin sehir verileri okunamadi.',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    final totalVolume = items.fold<double>(
+      0,
+      (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+    );
+    final distanceKm = _calculateCityDistanceKm(
+      sourceCity.mapPositionX,
+      sourceCity.mapPositionY,
+      targetCity.mapPositionX,
+      targetCity.mapPositionY,
+    );
+
+    final options = vehicles
+        .where((vehicle) => vehicle.status == 'idle')
+        .map((vehicle) {
+          final fuelNeeded = _round2(distanceKm * vehicle.fuelRate);
+          final conditionNeeded = _calculateConditionLoss(distanceKm);
+          final transportCost = _round2(fuelNeeded * vehicle.fuelCost);
+          final durationSeconds = _calculateDurationSeconds(
+            distanceKm: distanceKm,
+            speedKmh: vehicle.speedKmh,
+          );
+          final canSelect =
+              vehicle.capacity >= totalVolume.ceil() &&
+              vehicle.speedKmh > 0 &&
+              vehicle.currentFuel >= fuelNeeded.ceil() &&
+              vehicle.condition > 0;
+
+          String? disabledReason;
+          if (vehicle.capacity < totalVolume.ceil()) {
+            disabledReason = 'Kapasite yetersiz';
+          } else if (vehicle.speedKmh <= 0) {
+            disabledReason = 'Arac hizi gecersiz';
+          } else if (vehicle.currentFuel < fuelNeeded.ceil()) {
+            disabledReason = 'Yeterli yakit yok';
+          } else if (vehicle.condition <= 0) {
+            disabledReason = 'Bakim gerekli';
+          }
+
+          return MarketTransferVehicleOptionModel(
+            vehicleId: vehicle.id,
+            vehicleOwnerPlayerId: vehicle.playerId,
+            vehicleName:
+                'Arac ${vehicle.logisticsVehicleTypeId.length <= 4 ? vehicle.logisticsVehicleTypeId : vehicle.logisticsVehicleTypeId.substring(0, 4)}',
+            isRental: false,
+            capacity: vehicle.capacity,
+            speedKmh: vehicle.speedKmh,
+            currentFuel: vehicle.currentFuel,
+            fuelCapacity: vehicle.fuelCapacity,
+            fuelRate: vehicle.fuelRate,
+            condition: vehicle.condition,
+            rentalPrice: 0,
+            distanceKm: distanceKm,
+            fuelNeeded: fuelNeeded,
+            conditionNeeded: conditionNeeded.toDouble(),
+            rentalCost: 0,
+            fuelCost: transportCost,
+            transportCost: transportCost,
+            estimatedDurationSeconds: durationSeconds,
+            canSelect: canSelect,
+            disabledReason: disabledReason,
+          );
+        })
+        .toList();
+
+    if (options.isEmpty) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Arac Yok',
+        message: 'Sehirler arasi transfer icin idle arac bulunamadi.',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => Container(
+        padding: EdgeInsets.all(16.w),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(sheetContext).size.height * 0.8,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Arac Secin',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              '${sourceWarehouse.cityName ?? '-'} -> ${(targetWarehouse['city'] as Map?)?['name']?.toString() ?? '-'} | ${_formatValue(totalVolume)} m3',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            ),
+            SizedBox(height: 16.h),
+            Expanded(
+              child: ListView.separated(
+                itemCount: options.length,
+                separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                itemBuilder: (_, index) {
+                  final option = options[index];
+                  return TransferVehicleOptionCard(
+                    vehicleName: option.vehicleName,
+                    isRental: option.isRental,
+                    capacity: option.capacity,
+                    distanceKm: option.distanceKm,
+                    durationLabel: _formatTransferDuration(
+                      option.estimatedDurationSeconds,
+                    ),
+                    transportCost: option.transportCost,
+                    rentalCost: option.rentalCost,
+                    fuelCost: option.fuelCost,
+                    fuelNeeded: option.fuelNeeded,
+                    conditionNeeded: option.conditionNeeded,
+                    canSelect: option.canSelect,
+                    isSelected: false,
+                    disabledReason: option.disabledReason,
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _submitWarehouseOutboundTransfer(
+                        context,
+                        ref,
+                        sourceWarehouse,
+                        items,
+                        targetWarehouse,
+                        vehicleId: option.vehicleId,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   double _pow1p1(int exponent) {
     var result = 1.0;
     for (var i = 0; i < exponent; i++) {
@@ -2558,6 +3042,16 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
+}
+
+class _SelectedWarehouseTransferItem {
+  const _SelectedWarehouseTransferItem({
+    required this.slot,
+    required this.quantity,
+  });
+
+  final WarehouseSlotModel slot;
+  final int quantity;
 }
 
 class _ActiveWarehouseUpgradeCard extends ConsumerWidget {

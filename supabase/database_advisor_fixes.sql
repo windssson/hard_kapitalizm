@@ -78,7 +78,6 @@ REVOKE EXECUTE ON FUNCTION public.complete_due_warehouse_upgrades(integer) FROM 
 REVOKE EXECUTE ON FUNCTION public.complete_due_building_boosts(integer) FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.complete_due_building_constructions(integer) FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.complete_due_building_upgrades(integer) FROM authenticated;
-REVOKE EXECUTE ON FUNCTION public.complete_due_market_transfers(uuid, integer) FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.complete_due_arge_researches() FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.refresh_all_leaderboard_stats() FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.refresh_player_leaderboard_stats(uuid) FROM authenticated;

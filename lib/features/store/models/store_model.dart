@@ -150,6 +150,7 @@ class StoreSlotModel {
   final String id;
   final String storeId;
   final int slotIndex;
+  final String brandId;
   final String? productId;
   final String? productName;
   final String? productIcon;
@@ -171,6 +172,7 @@ class StoreSlotModel {
     required this.id,
     required this.storeId,
     required this.slotIndex,
+    this.brandId = '00000000-0000-0000-0000-000000000000',
     this.productId,
     this.productName,
     this.productIcon,
@@ -199,6 +201,8 @@ class StoreSlotModel {
       id: (json['id'] ?? json['slot_id'] ?? '').toString(),
       storeId: (json['store_id'] ?? '').toString(),
       slotIndex: (json['slot_index'] as num?)?.toInt() ?? 0,
+      brandId: (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+          .toString(),
       productId: json['product_id'] as String?,
       productName: json['product_name'] as String? ?? productJson?['urun_adi'] as String?,
       productIcon: json['product_icon'] as String? ?? productJson?['urun_iconu'] as String?,
@@ -221,6 +225,7 @@ class StoreSlotModel {
     String? id,
     String? storeId,
     int? slotIndex,
+    String? brandId,
     String? productId,
     String? productName,
     String? productIcon,
@@ -241,6 +246,7 @@ class StoreSlotModel {
       id: id ?? this.id,
       storeId: storeId ?? this.storeId,
       slotIndex: slotIndex ?? this.slotIndex,
+      brandId: brandId ?? this.brandId,
       productId: productId ?? this.productId,
       productName: productName ?? this.productName,
       productIcon: productIcon ?? this.productIcon,

@@ -527,12 +527,166 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     return '${minutes}dk';
   }
 
+  Widget _buildStoreWarehouseCard(
+    BuildContext context,
+    StoreModel store,
+    StoreWarehouseSummaryModel warehouse,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18.r),
+        onTap: () => context.push('/store/${store.id}/warehouse'),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBgLight.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(18.r),
+            border: Border.all(color: AppColors.blue.withValues(alpha: 0.25)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.blue.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    child: Icon(
+                      Icons.inventory_2_outlined,
+                      color: AppColors.blue,
+                      size: 18.sp,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Magaza Deposu',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          warehouse.name,
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                    size: 20.sp,
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInfoMetricCard(
+                      'Kapasite',
+                      '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)}',
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: _buildInfoMetricCard(
+                      'Urun Cesidi',
+                      warehouse.slots.length.toString(),
+                    ),
+                  ),
+                ],
+              ),
+              if (warehouse.slots.isNotEmpty) ...[
+                SizedBox(height: 12.h),
+                SizedBox(
+                  height: 42.w,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: warehouse.slots.length,
+                    separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                    itemBuilder: (context, index) {
+                      final slot = warehouse.slots[index];
+                      return Container(
+                        width: 42.w,
+                        height: 42.w,
+                        padding: EdgeInsets.all(6.w),
+                        decoration: BoxDecoration(
+                          color: AppColors.textPrimary.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(
+                            color: AppColors.blue.withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: CachedAssetImage(
+                          fileName: slot.productIcon ?? 'default.webp',
+                          fit: BoxFit.contain,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoMetricCard(String label, String value) {
+    return Container(
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(
+        color: AppColors.textPrimary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 10.sp,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMainContent(
     BuildContext context,
     WidgetRef ref,
     StoreDetailPageModel page,
   ) {
     final store = page.store;
+    final storeWarehouse = page.storeWarehouse;
     final activeBoost = page.activeBoost;
     final activeUpgrade = page.activeUpgrade;
 
@@ -585,6 +739,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 ],
                 SizedBox(height: 16.h),
                 _buildMetricsGrid(store),
+                if (storeWarehouse != null) ...[
+                  SizedBox(height: 16.h),
+                  _buildStoreWarehouseCard(context, store, storeWarehouse),
+                ],
                 SizedBox(height: 24.h),
                 Text('Magaza Raflari', style: TextStyle(color: AppColors.textPrimary, fontSize: 16.sp, fontWeight: FontWeight.bold)),
                 SizedBox(height: 12.h),
@@ -1435,7 +1593,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                             onSelected: (val) {
                               if (val == 'send' && canSendStock) {
-                                _startStoreOutboundFlow(context, ref, store, slot);
+                                _startStoreWarehouseOutboundFlow(context, ref, store, slot);
                               } else if (val == 'toggle') {
                                 _toggleStoreSlotActive(context, ref, store, slot);
                               } else if (val == 'clear' && canEditProduct) {
@@ -1450,7 +1608,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                               PopupMenuItem(
                                 value: 'send',
                                 enabled: canSendStock,
-                                child: Row(children: [Icon(Icons.local_shipping, color: AppColors.blue, size: 18.sp), SizedBox(width: 8.w), Text('Depoya Gonder', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
+                                child: Row(children: [Icon(Icons.local_shipping, color: AppColors.blue, size: 18.sp), SizedBox(width: 8.w), Text('Magaza Deposuna Gonder', style: TextStyle(color: AppColors.textPrimary, fontSize: 12.sp))]),
                               ),
                               PopupMenuItem(
                                 value: 'toggle',
@@ -2084,20 +2242,50 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       return;
     }
 
-    final List<dynamic> products = result['products'] ?? [];
+    const defaultBrandId = '00000000-0000-0000-0000-000000000000';
+    final existingSignatures = store.slots
+        .where((storeSlot) => storeSlot.id != slot.id)
+        .where(
+          (storeSlot) =>
+              (storeSlot.productId ?? '').isNotEmpty &&
+              storeSlot.qualityLevel > 0,
+        )
+        .map(
+          (storeSlot) =>
+              '${storeSlot.productId}|${storeSlot.qualityLevel}|${storeSlot.brandId.isEmpty ? defaultBrandId : storeSlot.brandId}',
+        )
+        .toSet();
+
+    final List<dynamic> products = (result['products'] ?? []).where((product) {
+      final productId = product['product_id']?.toString() ?? '';
+      final qualityLevel = (product['quality_level'] as num?)?.toInt() ?? 1;
+      final brandId =
+          product['brand_id']?.toString().isNotEmpty == true
+              ? product['brand_id'].toString()
+              : defaultBrandId;
+      final signature = '$productId|$qualityLevel|$brandId';
+      return !existingSignatures.contains(signature);
+    }).toList();
+
     if (products.isEmpty) {
       if (context.mounted) {
-        _showInfo(context, 'Bu magaza icin uygun veya eklenmemis urun bulunamadi.');
+        _showInfo(
+          context,
+          'Magaza deposunda secilebilir yeni urun-kalite-brand kombinasyonu bulunamadi.',
+        );
       }
       return;
     }
 
     final options = products.map((product) {
+      final qualityLevel = (product['quality_level'] as num?)?.toInt() ?? 1;
+      final quantity = (product['quantity'] as num?)?.toInt() ?? 0;
       return ProductSelectionOption(
-        id: product['id']?.toString() ?? '',
+        id: product['warehouse_slot_id']?.toString() ?? '',
         title: (product['name'] ?? 'Bilinmeyen Urun').toString(),
-        subtitle: 'Piyasa Fiyati: ${product['base_price']} TL',
+        subtitle: 'Kalite $qualityLevel | Stok: $quantity',
         iconPath: (product['icon'] ?? 'default').toString(),
+        badgeText: 'Magaza Deposu',
         onTap: () async {
           Navigator.pop(context);
           await _handleProductSelection(
@@ -2128,16 +2316,21 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   ) async {
     final result = await ref.read(storeActionProvider).setStoreSlotProduct(
           slotId: slot.id,
-          productId: product['id'],
+          sourceWarehouseSlotId: product['warehouse_slot_id']?.toString(),
         );
 
     if (parentContext.mounted) {
       if (result['success'] == true) {
-        final productId = product['id']?.toString() ?? '';
+        final productId = product['product_id']?.toString() ?? '';
+        final qualityLevel = (product['quality_level'] as num?)?.toInt() ?? 1;
+        final brandId =
+            product['brand_id']?.toString() ??
+            '00000000-0000-0000-0000-000000000000';
         ref.read(storeDetailPageProvider(store.id).notifier).patchSlotProduct(
           slotId: slot.id,
           productId: productId,
-          qualityLevel: 1,
+          qualityLevel: qualityLevel,
+          brandId: brandId,
           productName: _productNameFromMap(product),
           productIcon: _productIconFromMap(product),
         );
@@ -2145,7 +2338,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           storeId: store.id,
           slotId: slot.id,
           productId: productId,
-          qualityLevel: 1,
+          qualityLevel: qualityLevel,
+          brandId: brandId,
           productName: _productNameFromMap(product),
           productIcon: _productIconFromMap(product),
         );
@@ -2201,66 +2395,301 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     StoreModel store,
     StoreSlotModel slot,
   ) {
+    final page = ref.read(storeDetailPageProvider(store.id)).value;
+    final storeWarehouse = page?.storeWarehouse;
     final productId = slot.productId;
     if (productId == null || productId.isEmpty) {
       _showError(context, 'Once gecerli bir urun secin.');
       return;
     }
 
+    if (storeWarehouse == null) {
+      _showError(context, 'Bu magazaya bagli depo bulunamadi.');
+      return;
+    }
+
+    final shouldLockQuality = _shouldLockStoreSlotQualityV2(slot);
+    final slotBrandId =
+        slot.brandId.isEmpty
+            ? '00000000-0000-0000-0000-000000000000'
+            : slot.brandId;
+    final matchingSlots = storeWarehouse.slots.where((warehouseSlot) {
+      if (warehouseSlot.productId != productId) return false;
+      if (warehouseSlot.quantity <= 0) return false;
+      if (shouldLockQuality && warehouseSlot.qualityLevel != slot.qualityLevel) {
+        return false;
+      }
+      final warehouseBrandId =
+          warehouseSlot.brandId.isEmpty
+              ? '00000000-0000-0000-0000-000000000000'
+              : warehouseSlot.brandId;
+      if (warehouseBrandId != slotBrandId) {
+        return false;
+      }
+      return true;
+    }).toList();
+
+    if (matchingSlots.isEmpty) {
+      _showInfo(
+        context,
+        shouldLockQuality
+            ? 'Magaza deposunda bu urunun secili urun-kalite-brand standardina uygun stogu yok.'
+            : 'Magaza deposunda bu urune ait uygun stok bulunamadi.',
+      );
+      return;
+    }
+
+    final options = matchingSlots.map((warehouseSlot) {
+      return WarehouseSelectionOption(
+        id: warehouseSlot.id,
+        title: storeWarehouse.name,
+        subtitle:
+            '${warehouseSlot.productName} | Kalite ${warehouseSlot.qualityLevel}',
+        badgeText: 'Magaza Deposu',
+        infoText: '${warehouseSlot.quantity} Adet',
+        isHighlightBadge: true,
+        onTap: () {
+          Navigator.pop(context);
+          _showStoreWarehouseTransferQuantityDialog(
+            context,
+            ref,
+            store,
+            slot,
+            warehouseSlot,
+          );
+        },
+      );
+    }).toList();
+
+    WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Magaza Deposu Stogu',
+      options: options,
+    );
+  }
+
+  void _showStoreWarehouseTransferQuantityDialog(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+    StoreWarehouseSlotSummaryModel warehouseSlot,
+  ) {
+    final controller = TextEditingController(text: '1');
+    final maxCanTake = slot.capacity - slot.quantity - slot.pendingQuantity;
+    final limit = warehouseSlot.quantity < maxCanTake
+        ? warehouseSlot.quantity
+        : maxCanTake.toInt();
+
+    if (limit <= 0) {
+      _showWarning(context, 'Slot kapasitesi dolu veya depoda stok yok.');
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kaynak Secin',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (dialogContext, setState) {
+          void updateQuantity(String value) {
+            final parsed = int.tryParse(value) ?? 1;
+            final safe = limit <= 0 ? 0 : parsed.clamp(1, limit);
+            final safeText = safe.toString();
+
+            if (controller.text != safeText) {
+              controller.value = TextEditingValue(
+                text: safeText,
+                selection: TextSelection.collapsed(offset: safeText.length),
+              );
+            }
+          }
+
+          return Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(
+                16.w,
+                16.h,
+                16.w,
+                MediaQuery.of(context).viewInsets.bottom + 16.h,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(24.r),
+                border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Magaza Deposundan Cek',
+                            style: AppTextStyles.h1.copyWith(fontSize: 20.sp),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: Icon(
+                            Icons.close,
+                            color: AppColors.textMuted,
+                            size: 20.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      '${warehouseSlot.productName} | Kalite ${warehouseSlot.qualityLevel}',
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+                    ),
+                    SizedBox(height: 16.h),
+                    TextField(
+                      controller: controller,
+                      readOnly: true,
+                      showCursor: true,
+                      enableInteractiveSelection: false,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Miktar',
+                        labelStyle: const TextStyle(color: AppColors.textMuted),
+                        helperText:
+                            '1 - $limit adet arasi (Depo: ${warehouseSlot.quantity}, Slot: $maxCanTake)',
+                        helperStyle: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11.sp,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.cardBg,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: const BorderSide(color: AppColors.gold),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    NumericKeyboard(
+                      controller: controller,
+                      onChanged: updateQuantity,
+                      shortcuts: [
+                        NumericKeyboardShortcut(
+                          label: '1/4',
+                          value: limit <= 0 ? '0' : (limit ~/ 4).clamp(1, limit).toString(),
+                        ),
+                        NumericKeyboardShortcut(
+                          label: 'Yarisi',
+                          value: limit <= 0 ? '0' : (limit ~/ 2).clamp(1, limit).toString(),
+                        ),
+                        NumericKeyboardShortcut(
+                          label: 'Tamami',
+                          value: limit.toString(),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16.h),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48.h,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.gold,
+                          foregroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                        onPressed: () {
+                          final qty = int.tryParse(controller.text) ?? 0;
+                          if (qty <= 0 || qty > limit) {
+                            _showWarning(context, 'Gecersiz miktar!');
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          _startStoreWarehouseTransfer(
+                            context,
+                            ref,
+                            store,
+                            slot,
+                            warehouseSlot,
+                            qty,
+                          );
+                        },
+                        child: Text(
+                          'TRANSFER ET',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.sp,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: 6.h),
-              Text(
-                '${slot.productName ?? 'Urun'} icin tedarik kaynagini secin',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
-              ),
-              SizedBox(height: 16.h),
-              _buildSourceChoiceTileV2(
-                icon: Icons.warehouse_outlined,
-                title: 'Depolarimdan',
-                subtitle: 'Kendi depolarinizdan lojistik transfer baslatin',
-                color: AppColors.gold,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _openWarehouseSourceFlowV2(context, ref, store, slot);
-                },
-              ),
-              SizedBox(height: 10.h),
-              _buildSourceChoiceTileV2(
-                icon: Icons.public,
-                title: 'Pazardan',
-                subtitle: 'Bu urunu global pazardan satin alin',
-                color: AppColors.blue,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _openMarketSourceFlowV2(context, store, slot);
-                },
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  Future<void> _startStoreWarehouseTransfer(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+    StoreWarehouseSlotSummaryModel warehouseSlot,
+    int quantity,
+  ) async {
+    final productId = slot.productId;
+    final needsSlotSetup =
+        !_shouldLockStoreSlotQualityV2(slot) &&
+        productId != null &&
+        productId.isNotEmpty &&
+        (slot.productId == null || slot.qualityLevel != warehouseSlot.qualityLevel);
+
+    if (needsSlotSetup) {
+      final setupResult = await ref.read(storeActionProvider).setStoreSlotProduct(
+            slotId: slot.id,
+            sourceWarehouseSlotId: warehouseSlot.id,
+          );
+
+      if (setupResult['success'] != true) {
+        if (!context.mounted) return;
+        _showError(context, 'Hata: ${setupResult['message']}');
+        return;
+      }
+    }
+
+    final result = await ref.read(storeActionProvider).transferStoreWarehouseStockToSlot(
+          storeSlotId: slot.id,
+          warehouseSlotId: warehouseSlot.id,
+          quantity: quantity,
+        );
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      await _refreshStorePageAndSync(
+        store.id,
+        refreshPlayer: true,
+        historyDirty: true,
+        performanceDirty: true,
+      );
+      if (!context.mounted) return;
+      _showSuccess(context, 'Stok magazaya tasindi.');
+      return;
+    }
+
+    _showError(context, result['message'] ?? 'Transfer basarisiz.');
   }
 
   Widget _buildMiniProgressStacked(
@@ -2869,8 +3298,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (needsSlotSetup) {
       final setupResult = await ref.read(storeActionProvider).setStoreSlotProduct(
             slotId: slot.id,
-            productId: productId,
-            qualityLevel: selectedQualityLevel,
+            sourceWarehouseSlotId: warehouseSlotId,
           );
 
       if (setupResult['success'] != true) {
@@ -3388,6 +3816,231 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     }
 
     if (!context.mounted) return;
+    _showError(context, 'Hata: ${result['message']}');
+  }
+
+  Future<void> _startStoreWarehouseOutboundFlow(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+  ) async {
+    final page = ref.read(storeDetailPageProvider(store.id)).value;
+    final storeWarehouse = page?.storeWarehouse;
+
+    if (slot.quantity <= 0) {
+      _showError(context, 'Gonderilecek stok bulunmuyor.');
+      return;
+    }
+
+    if (storeWarehouse == null) {
+      _showError(context, 'Bu magazaya bagli depo bulunamadi.');
+      return;
+    }
+
+    _showStoreWarehouseReturnQuantityDialog(
+      context,
+      ref,
+      store,
+      slot,
+      storeWarehouse,
+    );
+  }
+
+  void _showStoreWarehouseReturnQuantityDialog(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+    StoreWarehouseSummaryModel storeWarehouse,
+  ) {
+    final controller = TextEditingController(text: '1');
+    final limit = slot.quantity;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          backgroundColor: AppColors.background,
+          insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
+          title: Text(
+            'Magaza Deposuna Gonder',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 18.sp),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.textPrimary.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(
+                      color: AppColors.border.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        slot.productName ?? 'Urun',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        '${store.name} -> ${storeWarehouse.name}',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Wrap(
+                        spacing: 8.w,
+                        runSpacing: 8.h,
+                        children: [
+                          _buildStatusPill('Anlik Ic Transfer', AppColors.green),
+                          _buildStatusPill('Maksimum $limit', AppColors.gold),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'Miktar',
+                    helperText: 'Depoya gonderilecek urun adedi',
+                    labelStyle: const TextStyle(color: AppColors.gold),
+                    enabledBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.textMuted),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.gold),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Wrap(
+                  spacing: 8.w,
+                  runSpacing: 8.h,
+                  children: [
+                    _buildQuickQuantityButton(
+                      '1/4',
+                      () => _applyStoreWarehouseReturnQuantity(
+                        controller,
+                        (limit / 4).ceil(),
+                        limit,
+                        setState,
+                      ),
+                    ),
+                    _buildQuickQuantityButton(
+                      'Yari',
+                      () => _applyStoreWarehouseReturnQuantity(
+                        controller,
+                        (limit / 2).ceil(),
+                        limit,
+                        setState,
+                      ),
+                    ),
+                    _buildQuickQuantityButton(
+                      'Tamami',
+                      () => _applyStoreWarehouseReturnQuantity(
+                        controller,
+                        limit,
+                        limit,
+                        setState,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Iptal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+              onPressed: () {
+                final qty = int.tryParse(controller.text) ?? 0;
+                if (qty <= 0 || qty > limit) {
+                  _showWarning(context, 'Gecersiz miktar!');
+                  return;
+                }
+                Navigator.pop(dialogContext);
+                _startStoreWarehouseReturnTransfer(
+                  context,
+                  ref,
+                  store,
+                  slot,
+                  qty,
+                );
+              },
+              child: const Text(
+                'Transfer Et',
+                style: TextStyle(color: Colors.black),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _applyStoreWarehouseReturnQuantity(
+    TextEditingController controller,
+    int value,
+    int limit,
+    void Function(void Function()) setState,
+  ) {
+    final clamped = value.clamp(1, limit);
+    setState(() {
+      controller.text = clamped.toString();
+      controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: controller.text.length),
+      );
+    });
+  }
+
+  Future<void> _startStoreWarehouseReturnTransfer(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    StoreSlotModel slot,
+    int quantity,
+  ) async {
+    final result = await ref.read(storeActionProvider).returnStoreSlotStockToStoreWarehouse(
+          storeSlotId: slot.id,
+          quantity: quantity,
+        );
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      await _refreshStorePageAndSync(
+        store.id,
+        refreshPlayer: true,
+        historyDirty: true,
+        performanceDirty: true,
+      );
+      if (!context.mounted) return;
+      _showSuccess(context, 'Stok magaza deposuna gonderildi.');
+      return;
+    }
+
     _showError(context, 'Hata: ${result['message']}');
   }
 }

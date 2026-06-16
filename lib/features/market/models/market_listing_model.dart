@@ -1,6 +1,11 @@
 class MarketListingModel {
   final String listingId;
   final String slotId;
+  final String productId;
+  final String productName;
+  final String productIcon;
+  final String brandId;
+  final double unitVolume;
   final String warehouseId;
   final String warehouseName;
   final String? warehouseIcon;
@@ -21,6 +26,11 @@ class MarketListingModel {
   const MarketListingModel({
     required this.listingId,
     required this.slotId,
+    required this.productId,
+    required this.productName,
+    required this.productIcon,
+    required this.brandId,
+    required this.unitVolume,
     required this.warehouseId,
     required this.warehouseName,
     required this.warehouseIcon,
@@ -50,6 +60,11 @@ class MarketListingModel {
     return MarketListingModel(
       listingId: 'npc:$productId',
       slotId: 'npc:$productId',
+      productId: productId,
+      productName: 'NPC Urunu',
+      productIcon: 'default.webp',
+      brandId: '00000000-0000-0000-0000-000000000000',
+      unitVolume: 0,
       warehouseId: 'npc',
       warehouseName: 'Toptan Depo',
       warehouseIcon: 'market.webp',
@@ -74,6 +89,7 @@ class MarketListingModel {
     final cityJson = warehouseJson['city'] as Map<String, dynamic>? ?? {};
     final warehouseTypeJson =
         warehouseJson['warehouse_type'] as Map<String, dynamic>? ?? {};
+    final productJson = json['product'] as Map<String, dynamic>? ?? {};
 
     double parseNum(dynamic value) {
       if (value == null) return 0;
@@ -85,6 +101,19 @@ class MarketListingModel {
       listingId: (json['listing_id'] ?? json['id'] ?? json['slot_id'] ?? '')
           .toString(),
       slotId: (json['slot_id'] ?? json['id'] ?? '').toString(),
+      productId: (json['product_id'] ?? productJson['id'] ?? '').toString(),
+      productName:
+          (json['product_name'] ?? productJson['urun_adi'] ?? 'Urun')
+              .toString(),
+      productIcon:
+          (json['product_icon'] ?? productJson['urun_iconu'] ?? 'default.webp')
+              .toString(),
+      brandId:
+          (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+              .toString(),
+      unitVolume: parseNum(
+        json['unit_volume'] ?? productJson['birim_hacim'],
+      ),
       warehouseId: (json['warehouse_id'] ?? '').toString(),
       warehouseName:
           (json['warehouse_name'] ?? warehouseJson['name'] ?? 'Depo')
