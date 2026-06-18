@@ -4,6 +4,10 @@ class BrandCompanyModel {
   final String brandName;
   final bool isActive;
   final DateTime? createdAt;
+  final int brandLevel;
+  final int brandXp;
+  final String logoId;
+  final String themeColor;
 
   const BrandCompanyModel({
     required this.id,
@@ -11,6 +15,10 @@ class BrandCompanyModel {
     required this.brandName,
     required this.isActive,
     required this.createdAt,
+    required this.brandLevel,
+    required this.brandXp,
+    required this.logoId,
+    required this.themeColor,
   });
 
   factory BrandCompanyModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +30,12 @@ class BrandCompanyModel {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
+      brandLevel: json['brand_level'] as int? ?? 1,
+      brandXp: (json['brand_xp'] ?? 0) is int
+          ? json['brand_xp'] as int
+          : int.tryParse(json['brand_xp'].toString()) ?? 0,
+      logoId: json['logo_id'] as String? ?? 'logo_1.png',
+      themeColor: json['theme_color'] as String? ?? '#E5C05C',
     );
   }
 }

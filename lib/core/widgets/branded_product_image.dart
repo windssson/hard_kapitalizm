@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 
-class BrandedProductImage extends StatelessWidget {
+class BrandedProductImage extends ConsumerWidget {
   final String fileName;
   final String? brandName;
   final double? width;
@@ -31,9 +33,36 @@ class BrandedProductImage extends StatelessWidget {
 
   bool get _isBranded => brandName != null && brandName!.trim().isNotEmpty;
 
+  Color _parseHexColor(String hex, {Color fallback = AppColors.gold}) {
+    try {
+      var hexColor = hex.replaceAll('#', '');
+      if (hexColor.length == 6) {
+        hexColor = 'FF$hexColor';
+      }
+      if (hexColor.length == 8) {
+        return Color(int.parse(hexColor, radix: 16));
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final radius = borderRadius ?? BorderRadius.circular(12.r);
+    
+    // Check if the current user's brand matches
+    final companyAsync = ref.watch(playerBrandCompanyProvider);
+    final company = companyAsync.value;
+    
+    final bool isUserBrand = _isBranded && 
+        company != null && 
+        brandName!.trim().toLowerCase() == company.brandName.trim().toLowerCase();
+
+    final themeColor = isUserBrand 
+        ? _parseHexColor(company.themeColor) 
+        : AppColors.gold;
+
+    final logoId = isUserBrand ? company.logoId : null;
 
     return Container(
       width: width,
@@ -41,12 +70,12 @@ class BrandedProductImage extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: radius,
         border: showFrame && _isBranded
-            ? Border.all(color: AppColors.gold.withValues(alpha: 0.45), width: 1.1)
+            ? Border.all(color: themeColor.withValues(alpha: 0.55), width: 1.2)
             : null,
         boxShadow: _isBranded
             ? [
                 BoxShadow(
-                  color: AppColors.gold.withValues(alpha: 0.14),
+                  color: themeColor.withValues(alpha: 0.18),
                   blurRadius: 10,
                   spreadRadius: 0.5,
                 ),
@@ -79,8 +108,8 @@ class BrandedProductImage extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.black.withValues(alpha: 0.0),
-                        Colors.black.withValues(alpha: 0.42),
-                        Colors.black.withValues(alpha: 0.78),
+                        Colors.black.withValues(alpha: 0.52),
+                        Colors.black.withValues(alpha: 0.88),
                       ],
                     ),
                   ),
@@ -90,7 +119,7 @@ class BrandedProductImage extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.goldLight,
+                      color: isUserBrand ? themeColor : AppColors.goldLight,
                       fontSize: 9.sp,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.2,
@@ -102,6 +131,27 @@ class BrandedProductImage extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
+                ),
+              ),
+            if (isUserBrand && logoId != null)
+              Positioned(
+                top: 4.w,
+                left: 4.w,
+                child: Container(
+                  width: 16.w,
+                  height: 16.w,
+                  padding: EdgeInsets.all(2.w),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: themeColor.withValues(alpha: 0.4), width: 0.8),
+                  ),
+                  child: CachedAssetImage(
+                    fileName: logoId,
+                    fit: BoxFit.contain,
+                    placeholder: const SizedBox.shrink(),
+                    errorWidget: const SizedBox.shrink(),
                   ),
                 ),
               ),

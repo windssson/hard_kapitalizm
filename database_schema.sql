@@ -5929,6 +5929,11 @@ declare
   v_items jsonb := '[]'::jsonb;
   v_now timestamptz := now();
   v_slot record;
+  v_brand_level integer := 1;
+  v_mkt_speed_mult numeric := 1.0;
+  v_mkt_price_mult numeric := 1.0;
+  v_mkt_speed_contrib numeric := 0.0;
+  v_mkt_price_contrib numeric := 0.0;
   v_elapsed_minutes numeric;
   v_boost_bonus_minutes numeric;
   v_base_demand numeric;
@@ -6024,13 +6029,78 @@ begin
         continue;
       end if;
 
+      -- Fetch marketing campaign overlap contributions
+      select
+        coalesce(
+          sum(
+            greatest(
+              extract(
+                epoch from least(c.active_until, v_now)
+                - greatest(c.created_at, v_slot.last_sale_processed_at)
+              ) / 60.0,
+              0
+            ) * case c.campaign_type
+              when 'local' then 0.15
+              when 'regional' then 0.30
+              when 'global' then 0.50
+              else 0.0
+            end
+          ),
+          0
+        ),
+        coalesce(
+          sum(
+            greatest(
+              extract(
+                epoch from least(c.active_until, v_now)
+                - greatest(c.created_at, v_slot.last_sale_processed_at)
+              ) / 60.0,
+              0
+            ) * case c.campaign_type
+              when 'local' then 0.05
+              when 'regional' then 0.10
+              when 'global' then 0.20
+              else 0.0
+            end
+          ),
+          0
+        )
+      into v_mkt_speed_contrib, v_mkt_price_contrib
+      from public.brand_marketing_campaigns c
+      where c.player_id = v_player_id
+        and c.created_at < v_now
+        and c.active_until > v_slot.last_sale_processed_at;
+
+      if v_elapsed_minutes > 0 then
+        v_mkt_speed_mult := 1.0 + (v_mkt_speed_contrib / v_elapsed_minutes);
+        v_mkt_price_mult := 1.0 + (v_mkt_price_contrib / v_elapsed_minutes);
+      else
+        v_mkt_speed_mult := 1.0;
+        v_mkt_price_mult := 1.0;
+      end if;
+
       v_processed := true;
       v_elapsed_minutes_max := greatest(v_elapsed_minutes_max, floor(v_elapsed_minutes)::int);
       v_quality_multiplier := 1 + (greatest(v_slot.quality_level, 1) - 1) * 0.10;
+      
+      v_brand_level := 1;
+      if v_slot.brand_id is not null and v_slot.brand_id <> '00000000-0000-0000-0000-000000000000'::uuid then
+        select coalesce(brand_level, 1)
+        into v_brand_level
+        from public.brand_companies
+        where id = v_slot.brand_id;
+      end if;
+
       v_brand_multiplier := case
         when coalesce(v_slot.brand_id, '00000000-0000-0000-0000-000000000000'::uuid)
           = '00000000-0000-0000-0000-000000000000'::uuid then 1.0
-        else 1.1
+        else case v_brand_level
+          when 1 then 1.10
+          when 2 then 1.15
+          when 3 then 1.20
+          when 4 then 1.25
+          else 1.35
+        end
       end;
 
       if coalesce(v_slot.price, 0) <= 0 then
@@ -6047,7 +6117,7 @@ begin
       if coalesce(v_slot.baz_satis_fiyati, 0) <= 0 then
         v_price_multiplier := 1.0;
       else
-        v_price_ratio := v_slot.price / (v_slot.baz_satis_fiyati * public.store_quality_price_multiplier(v_slot.quality_level));
+        v_price_ratio := v_slot.price / (v_slot.baz_satis_fiyati * public.store_quality_price_multiplier(v_slot.quality_level) * v_mkt_price_mult);
 
         if v_price_ratio <= 1 then
           v_price_multiplier := least(1.75, 1 + ((1 - v_price_ratio) * 0.75));
@@ -6086,7 +6156,8 @@ begin
           )
         * v_quality_multiplier
         * v_brand_multiplier
-        * v_price_multiplier;
+        * v_price_multiplier
+        * v_mkt_speed_mult;
 
       if coalesce(v_slot.quantity, 0) <= 0 then
         update public.store_slots
@@ -6117,6 +6188,15 @@ begin
         v_total_revenue := v_total_revenue + v_revenue;
         v_total_profit := v_total_profit + v_profit;
         v_total_sold_quantity := v_total_sold_quantity + v_sold_qty;
+
+        -- Update Brand XP & Brand Level
+        if v_slot.brand_id is not null and v_slot.brand_id <> '00000000-0000-0000-0000-000000000000'::uuid then
+          update public.brand_companies
+          set brand_xp = brand_xp + v_sold_qty,
+              brand_level = public.calculate_brand_level(brand_xp + v_sold_qty),
+              updated_at = v_now
+          where id = v_slot.brand_id;
+        end if;
 
         insert into public.store_daily_performance (
           performance_date,
