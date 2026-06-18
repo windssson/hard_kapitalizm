@@ -51,16 +51,31 @@ class NumericKeyboard extends StatelessWidget {
     ];
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 6.h),
+      padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 12.h),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.cardBg,
+            AppColors.background,
+          ],
+        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
         border: Border(
           top: BorderSide(
-            color: AppColors.gold.withValues(alpha: 0.3),
-            width: 1.5,
+            color: AppColors.gold,
+            width: 2.0,
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.65),
+            blurRadius: 20,
+            spreadRadius: 2,
+            offset: const Offset(0, -6),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -77,7 +92,7 @@ class NumericKeyboard extends StatelessWidget {
                 ],
               ),
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 10.h),
           ],
           for (var rowIndex = 0; rowIndex < rows.length; rowIndex++) ...[
             Row(
@@ -92,11 +107,11 @@ class NumericKeyboard extends StatelessWidget {
                       height: resolvedButtonHeight,
                     ),
                   ),
-                  if (i < rows[rowIndex].length - 1) SizedBox(width: 3.w),
+                  if (i < rows[rowIndex].length - 1) SizedBox(width: 4.w),
                 ],
               ],
             ),
-            if (rowIndex < rows.length - 1) SizedBox(height: 3.h),
+            if (rowIndex < rows.length - 1) SizedBox(height: 4.h),
           ],
         ],
       ),
@@ -115,19 +130,42 @@ class NumericKeyboard extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: 0.18),
+              color.withValues(alpha: 0.08),
+            ],
+          ),
           borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
+          border: Border.all(
+            color: color.withValues(alpha: 0.45),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: isIcon ? 12.sp : 14.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          child: isIcon
+              ? Icon(
+                  Icons.backspace_outlined,
+                  size: 18.sp,
+                  color: color,
+                )
+              : Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
         ),
       ),
     );
@@ -137,20 +175,37 @@ class NumericKeyboard extends StatelessWidget {
     return GestureDetector(
       onTap: () => _applyShortcut(shortcut.value),
       child: Container(
-        constraints: BoxConstraints(minHeight: 34.h),
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        constraints: BoxConstraints(minHeight: 32.h),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
         decoration: BoxDecoration(
-          color: AppColors.gold.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(999.r),
-          border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.gold.withValues(alpha: 0.15),
+              AppColors.gold.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: AppColors.gold.withValues(alpha: 0.4),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 3,
+              offset: const Offset(0, 1.5),
+            ),
+          ],
         ),
         child: Center(
           child: Text(
             shortcut.label,
             style: TextStyle(
               color: AppColors.gold,
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w700,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),

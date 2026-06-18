@@ -247,22 +247,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return match?.listing.cityName ?? '-';
   }
 
-  void _decrementCartItem(_MarketCartItem item) {
-    setState(() {
-      final index = _cartItems.indexWhere((entry) => entry.key == item.key);
-      if (index < 0) return;
-      final current = _cartItems[index];
-      if (current.quantity <= 1) {
-        _cartItems.removeAt(index);
-      } else {
-        _cartItems[index] = current.copyWith(quantity: current.quantity - 1);
-      }
-      if (_cartItems.isEmpty) {
-        _lockedSourceCityId = null;
-        _cityCatalogEnabled = false;
-      }
-    });
-  }
 
   void _removeCartItem(_MarketCartItem item) {
     setState(() {
@@ -831,7 +815,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     setState(() {
       _selectedProductId = '';
       _productSearchQuery = '';
-      _resetCartState();
     });
   }
 
@@ -1093,7 +1076,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       onTap: () {
                         setState(() {
                           _selectedProductId = product.id;
-                          _resetCartState();
                         });
                       },
                     );
@@ -2446,43 +2428,21 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               ],
             ),
           ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              GestureDetector(
-                onTap: () => _decrementCartItem(item),
-                child: Container(
-                  width: 22.w,
-                  height: 22.w,
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6.r),
-                  ),
-                  child: Icon(
-                    Icons.remove,
-                    size: 14.sp,
-                    color: AppColors.gold,
-                  ),
-                ),
+          GestureDetector(
+            onTap: () => _removeCartItem(item),
+            child: Container(
+              width: 22.w,
+              height: 22.w,
+              decoration: BoxDecoration(
+                color: AppColors.red.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6.r),
               ),
-              SizedBox(height: 4.h),
-              GestureDetector(
-                onTap: () => _removeCartItem(item),
-                child: Container(
-                  width: 22.w,
-                  height: 22.w,
-                  decoration: BoxDecoration(
-                    color: AppColors.red.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6.r),
-                  ),
-                  child: Icon(
-                    Icons.close,
-                    size: 13.sp,
-                    color: AppColors.red,
-                  ),
-                ),
+              child: Icon(
+                Icons.close,
+                size: 13.sp,
+                color: AppColors.red,
               ),
-            ],
+            ),
           ),
         ],
       ),

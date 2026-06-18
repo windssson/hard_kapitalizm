@@ -836,6 +836,15 @@ begin
     raise exception 'Transfer bulunamadi.';
   end if;
 
+  if v_transfer.status = 'completed' then
+    return jsonb_build_object(
+      'success', true,
+      'transfer_id', p_transfer_id,
+      'completed_item_count', 0,
+      'completed_at', coalesce(v_transfer.completed_at, v_now)
+    );
+  end if;
+
   if v_transfer.status <> 'in_transit' then
     raise exception 'Transfer tamamlanabilir durumda degil.';
   end if;
