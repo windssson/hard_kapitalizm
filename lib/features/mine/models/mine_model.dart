@@ -6,6 +6,7 @@ class MineModel {
   final String name;
   final int level;
   final String? productId;
+  final String brandId;
   final int qualityLevel;
   final int outputCapacity;
   final double boostMultiplier;
@@ -21,6 +22,7 @@ class MineModel {
     required this.name,
     required this.level,
     this.productId,
+    this.brandId = '00000000-0000-0000-0000-000000000000',
     required this.qualityLevel,
     required this.outputCapacity,
     required this.boostMultiplier,
@@ -38,6 +40,9 @@ class MineModel {
       name: json['name'] as String,
       level: json['level'] as int? ?? 1,
       productId: json['product_id'] as String?,
+      brandId:
+          (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+              .toString(),
       qualityLevel: json['quality_level'] as int? ?? 0,
       outputCapacity: json['output_capacity'] as int? ?? 0,
       boostMultiplier: (json['boost_multiplier'] as num?)?.toDouble() ?? 1.0,
@@ -56,6 +61,7 @@ class MineModel {
       'name': name,
       'level': level,
       'product_id': productId,
+      'brand_id': brandId,
       'quality_level': qualityLevel,
       'output_capacity': outputCapacity,
       'boost_multiplier': boostMultiplier,

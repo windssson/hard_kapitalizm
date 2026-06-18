@@ -33,12 +33,16 @@ class SecondaryTopBar extends ConsumerWidget {
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
             decoration: BoxDecoration(
+              image: const DecorationImage(
+                image: AssetImage('assets/theme/cartback.webp'),
+                fit: BoxFit.fill,
+              ),
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  AppColors.cardBg.withValues(alpha: 0.85),
-                  AppColors.navBg.withValues(alpha: 0.9),
+                  AppColors.cardBg.withValues(alpha: 0.42),
+                  AppColors.navBg.withValues(alpha: 0.58),
                 ],
               ),
               border: Border(

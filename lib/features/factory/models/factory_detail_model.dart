@@ -61,6 +61,7 @@ class FactoryProductionInventoryModel {
   final String ownerId;
   final String inventoryType;
   final String productId;
+  final String brandId;
   final int qualityLevel;
   final int quantity;
   final double pendingQuantity;
@@ -73,6 +74,7 @@ class FactoryProductionInventoryModel {
     required this.ownerId,
     required this.inventoryType,
     required this.productId,
+    required this.brandId,
     required this.qualityLevel,
     required this.quantity,
     required this.pendingQuantity,
@@ -90,6 +92,9 @@ class FactoryProductionInventoryModel {
       ownerId: (json['owner_id'] ?? '').toString(),
       inventoryType: (json['inventory_type'] ?? '').toString(),
       productId: (json['product_id'] ?? '').toString(),
+      brandId:
+          (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+              .toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       pendingQuantity: (json['pending_quantity'] as num?)?.toDouble() ?? 0,
@@ -122,11 +127,7 @@ class FactoryDetailModel {
     final currentProduct = product;
     if (currentProduct == null) return const <String>{};
 
-    return {
-      if ((currentProduct.hammadde1Id ?? '').isNotEmpty) currentProduct.hammadde1Id!,
-      if ((currentProduct.hammadde2Id ?? '').isNotEmpty) currentProduct.hammadde2Id!,
-      if ((currentProduct.hammadde3Id ?? '').isNotEmpty) currentProduct.hammadde3Id!,
-    };
+    return currentProduct.inputProductIds;
   }
 
   List<FactoryProductionInventoryModel> get inputInventories =>
@@ -144,7 +145,8 @@ class FactoryDetailModel {
                 e.isOutput &&
                 product != null &&
                 e.productId == product!.id &&
-                e.qualityLevel == factory.qualityLevel,
+                e.qualityLevel == factory.qualityLevel &&
+                e.brandId == factory.brandId,
           )
           .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));

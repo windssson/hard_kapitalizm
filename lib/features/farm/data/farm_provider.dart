@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
+import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -319,16 +320,13 @@ class FarmActionNotifier {
     }
 
     try {
-      final response = await _supabase.rpc(
-        'complete_due_building_upgrades',
-        params: {
-          'p_limit': 100,
-        },
-      );
+      await tryCompleteDueBuildingUpgrades(_supabase);
       _ref.invalidate(farmListProvider);
       _ref.invalidate(farmDetailProvider);
       _ref.invalidate(playerProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return {'success': true};
+    } on PostgrestException catch (e) {
+      return {'success': false, 'message': e.message, 'code': e.code};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -640,25 +638,22 @@ class FarmActionNotifier {
     required int quantity,
     bool syncProviders = true,
   }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
     try {
-      final response = await _supabase.rpc(
-        'transfer_warehouse_slot_to_production_inventory',
-        params: {
-          'p_player_id': user.id,
-          'p_warehouse_slot_id': warehouseSlotId,
-          'p_production_inventory_id': productionInventoryId,
-          'p_quantity': quantity,
-        },
-      );
+      final result = await _productionLogisticsService
+          .startWarehouseToProductionTransfer(
+            warehouseSlotId: warehouseSlotId,
+            productionInventoryId: productionInventoryId,
+            quantity: quantity,
+            vehicleId: null,
+          );
       if (syncProviders) {
         _ref.invalidate(farmDetailProvider);
       }
-      return response as Map<String, dynamic>;
+      return {
+        'success': result.success,
+        'message': result.message,
+        'transfer_id': result.transferId,
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -670,25 +665,22 @@ class FarmActionNotifier {
     required int quantity,
     bool syncProviders = true,
   }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
     try {
-      final response = await _supabase.rpc(
-        'transfer_production_inventory_to_warehouse',
-        params: {
-          'p_player_id': user.id,
-          'p_production_inventory_id': productionInventoryId,
-          'p_warehouse_id': warehouseId,
-          'p_quantity': quantity,
-        },
-      );
+      final result = await _productionLogisticsService
+          .startProductionToWarehouseTransfer(
+            productionInventoryId: productionInventoryId,
+            buyerWarehouseId: warehouseId,
+            quantity: quantity,
+            vehicleId: null,
+          );
       if (syncProviders) {
         _ref.invalidate(farmDetailProvider);
       }
-      return response as Map<String, dynamic>;
+      return {
+        'success': result.success,
+        'message': result.message,
+        'transfer_id': result.transferId,
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

@@ -48,8 +48,13 @@ class FieldListItemModel {
     required this.slots,
   });
 
+  int get totalOutputCapacity {
+    final slotCount = field.currentSlotCount > 0 ? field.currentSlotCount : 1;
+    return field.outputCapacity * slotCount;
+  }
+
   double get outputStockRatio {
-    if (field.outputCapacity <= 0) return 0.0;
-    return (outputStockQuantity / field.outputCapacity).clamp(0.0, 1.0);
+    if (totalOutputCapacity <= 0) return 0.0;
+    return (outputStockQuantity / totalOutputCapacity).clamp(0.0, 1.0);
   }
 }

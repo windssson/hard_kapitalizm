@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
@@ -138,6 +139,7 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
         id: slot.id,
         storeId: slot.storeId,
         slotIndex: slot.slotIndex,
+        brandId: '00000000-0000-0000-0000-000000000000',
         productId: null,
         productName: null,
         productIcon: null,
@@ -162,6 +164,7 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
     required String slotId,
     required String productId,
     required int qualityLevel,
+    String? brandId,
     String? productName,
     String? productIcon,
   }) {
@@ -172,6 +175,7 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
         productId: productId,
         productName: productName ?? slot.productName,
         productIcon: productIcon ?? slot.productIcon,
+        brandId: brandId ?? slot.brandId,
         qualityLevel: qualityLevel,
         isEmpty: false,
       ),
@@ -238,6 +242,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
       StoreDetailPageModel(
         success: current.success,
         store: current.store,
+        storeWarehouse: current.storeWarehouse,
         activeBoost: current.activeBoost,
         activeUpgrade: current.activeUpgrade,
         saleResult: null,
@@ -275,6 +280,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         id: slot.id,
         storeId: slot.storeId,
         slotIndex: slot.slotIndex,
+        brandId: '00000000-0000-0000-0000-000000000000',
         productId: null,
         productName: null,
         productIcon: null,
@@ -298,6 +304,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     required String slotId,
     required String productId,
     required int qualityLevel,
+    String? brandId,
     String? productName,
     String? productIcon,
   }) {
@@ -307,6 +314,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         productId: productId,
         productName: productName ?? slot.productName,
         productIcon: productIcon ?? slot.productIcon,
+        brandId: brandId ?? slot.brandId,
         qualityLevel: qualityLevel,
         isEmpty: false,
       ),
@@ -557,13 +565,10 @@ class StoreActionNotifier {
     }
 
     try {
-      final response = await _supabase.rpc(
-        'complete_due_building_upgrades',
-        params: {
-          'p_limit': 100,
-        },
-      );
-      return Map<String, dynamic>.from(response as Map);
+      await tryCompleteDueBuildingUpgrades(_supabase);
+      return {'success': true};
+    } on PostgrestException catch (e) {
+      return {'success': false, 'message': e.message, 'code': e.code};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -634,8 +639,9 @@ class StoreActionNotifier {
 
   Future<Map<String, dynamic>> setStoreSlotProduct({
     required String slotId,
-    required String productId,
+    String? productId,
     int qualityLevel = 1,
+    String? sourceWarehouseSlotId,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -643,13 +649,20 @@ class StoreActionNotifier {
     }
 
     try {
+      if (sourceWarehouseSlotId == null || sourceWarehouseSlotId.isEmpty) {
+        return {
+          'success': false,
+          'message':
+              'Magaza slotu urunu sadece magazaya bagli depo slotundan secilebilir.',
+        };
+      }
+
       final response = await _supabase.rpc(
-        'set_store_slot_product',
+        'set_store_slot_product_from_warehouse_slot',
         params: {
           'p_player_id': user.id,
           'p_store_slot_id': slotId,
-          'p_product_id': productId,
-          'p_quality_level': qualityLevel,
+          'p_warehouse_slot_id': sourceWarehouseSlotId,
         },
       );
       return response as Map<String, dynamic>;
@@ -843,6 +856,32 @@ class StoreActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> transferStoreWarehouseStockToSlot({
+    required String warehouseSlotId,
+    required String storeSlotId,
+    required int quantity,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'transfer_store_warehouse_slot_to_store_slot',
+        params: {
+          'p_player_id': user.id,
+          'p_warehouse_slot_id': warehouseSlotId,
+          'p_store_slot_id': storeSlotId,
+          'p_quantity': quantity,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
       getStoreTransferVehicleOptions({
     required String storeSlotId,
@@ -948,6 +987,30 @@ class StoreActionNotifier {
           'p_buyer_warehouse_id': warehouseId,
           'p_quantity': quantity,
           'p_vehicle_id': vehicleId,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> returnStoreSlotStockToStoreWarehouse({
+    required String storeSlotId,
+    required int quantity,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'transfer_store_slot_to_store_warehouse',
+        params: {
+          'p_player_id': user.id,
+          'p_store_slot_id': storeSlotId,
+          'p_quantity': quantity,
         },
       );
       return Map<String, dynamic>.from(response as Map);

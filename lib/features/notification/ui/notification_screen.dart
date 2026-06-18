@@ -8,16 +8,6 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/notification/models/player_notification_model.dart';
 
-enum _NotificationFilter {
-  all('Tum'),
-  active('Aktif Sorunlar'),
-  events('Tamamlananlar'),
-  warnings('Uyarilar');
-
-  const _NotificationFilter(this.label);
-  final String label;
-}
-
 class NotificationScreen extends ConsumerStatefulWidget {
   const NotificationScreen({super.key});
 
@@ -26,8 +16,6 @@ class NotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
-  _NotificationFilter _selectedFilter = _NotificationFilter.all;
-
   @override
   void initState() {
     super.initState();
@@ -38,7 +26,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
   Future<void> _refresh() async {
     await ref.read(notificationActionProvider).refreshAttention();
-    await ref.read(playerNotificationDashboardProvider.future);
+    await ref.refresh(playerNotificationDashboardProvider.future);
   }
 
   Future<void> _markAllRead() async {
@@ -93,30 +81,34 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   ),
                 ),
                 data: (dashboard) {
-                  final filtered = _sortNotifications(
-                    _applyFilter(dashboard.notifications),
+                  final unreadNotifications = _sortNotifications(
+                    dashboard.notifications
+                        .where((item) => item.isEvent && item.isUnread)
+                        .toList(),
                   );
+
                   return RefreshIndicator(
                     onRefresh: _refresh,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
                       children: [
-                        _buildOverviewCard(dashboard.unreadCount, dashboard.activeWarningCount),
-                        SizedBox(height: 12.h),
-                        _buildFilterBar(),
-                        SizedBox(height: 12.h),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _markAllRead,
-                            child: const Text('Tumunu Okundu Yap'),
+                        if (unreadNotifications.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(bottom: 10.h),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: _markAllRead,
+                                icon: const Icon(Icons.done_all_rounded),
+                                label: const Text('Tumunu Okundu Yap'),
+                              ),
+                            ),
                           ),
-                        ),
-                        if (filtered.isEmpty)
+                        if (unreadNotifications.isEmpty)
                           _buildEmptyState()
                         else
-                          ...filtered.map(
+                          ...unreadNotifications.map(
                             (notification) => Padding(
                               padding: EdgeInsets.only(bottom: 10.h),
                               child: _buildNotificationCard(notification),
@@ -134,92 +126,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     );
   }
 
-  Widget _buildOverviewCard(int unreadCount, int warningCount) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.45)),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: _buildMiniStat('Okunmamis', '$unreadCount', AppColors.gold)),
-          SizedBox(width: 8.w),
-          Expanded(child: _buildMiniStat('Aktif Uyari', '$warningCount', Colors.orange)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniStat(String label, String value, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 2.h),
-          Text(label, style: AppTextStyles.body.copyWith(fontSize: 10.sp)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterBar() {
-    return SizedBox(
-      height: 44.h,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemBuilder: (_, index) {
-          final filter = _NotificationFilter.values[index];
-          final isSelected = filter == _selectedFilter;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedFilter = filter),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.gold.withValues(alpha: 0.14)
-                    : AppColors.cardBg,
-                borderRadius: BorderRadius.circular(14.r),
-                border: Border.all(
-                  color: isSelected ? AppColors.gold : AppColors.border,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  filter.label,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.gold : Colors.white,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-        separatorBuilder: (_, __) => SizedBox(width: 8.w),
-        itemCount: _NotificationFilter.values.length,
-      ),
-    );
-  }
-
   Widget _buildNotificationCard(PlayerNotificationModel notification) {
     final accent = _severityColor(notification);
+    final route = _targetRoute(notification);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -227,15 +137,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         borderRadius: BorderRadius.circular(14.r),
         child: Container(
           padding: EdgeInsets.all(14.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(14.r),
-            border: Border.all(
-              color: notification.isUnread
-                  ? accent.withValues(alpha: 0.45)
-                  : AppColors.border,
-            ),
-          ),
+          decoration: AppDecorations.premiumCard(accent, 14.r),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -246,62 +148,38 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   color: accent.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(_notificationIcon(notification), color: accent, size: 20.sp),
+                child: Icon(
+                  _notificationIcon(notification),
+                  color: accent,
+                  size: 20.sp,
+                ),
               ),
               SizedBox(width: 10.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Wrap(
+                      spacing: 6.w,
+                      runSpacing: 6.h,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Wrap(
-                                spacing: 6.w,
-                                runSpacing: 6.h,
-                                children: [
-                                  _buildBadge(
-                                    _kindLabel(notification),
-                                    accent,
-                                  ),
-                                  if (_reasonLabel(notification) != null)
-                                    _buildBadge(
-                                      _reasonLabel(notification)!,
-                                      AppColors.textMuted,
-                                    ),
-                                  if (notification.isUnread)
-                                    _buildBadge('Yeni', AppColors.gold),
-                                ],
-                              ),
-                              SizedBox(height: 8.h),
-                              Text(
-                                notification.title,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                        _buildBadge(_kindLabel(notification), accent),
+                        if (_entityLabel(notification) != null)
+                          _buildBadge(
+                            _entityLabel(notification)!,
+                            AppColors.blue,
                           ),
-                        ),
-                        if (notification.isUnread)
-                          Padding(
-                            padding: EdgeInsets.only(top: 2.h),
-                            child: Container(
-                              width: 8.w,
-                              height: 8.h,
-                              decoration: BoxDecoration(
-                                color: accent,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
+                        _buildBadge('Yeni', AppColors.gold),
                       ],
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      notification.title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
@@ -316,6 +194,14 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                         color: AppColors.textMuted,
                       ),
                     ),
+                    if (route != null) ...[
+                      SizedBox(height: 10.h),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _openNotification(notification),
+                        icon: const Icon(Icons.open_in_new_rounded),
+                        label: const Text('Module Git'),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -346,51 +232,31 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   }
 
   Widget _buildEmptyState() => Container(
-    padding: EdgeInsets.all(24.w),
-    decoration: BoxDecoration(
-      color: AppColors.cardBg,
-      borderRadius: BorderRadius.circular(16.r),
-      border: Border.all(color: AppColors.border),
-    ),
-    child: Text(
-      'Bu filtre icin bildirim bulunamadi.',
-      textAlign: TextAlign.center,
-      style: AppTextStyles.body.copyWith(fontSize: 12.sp),
-    ),
-  );
-
-  List<PlayerNotificationModel> _applyFilter(List<PlayerNotificationModel> items) {
-    switch (_selectedFilter) {
-      case _NotificationFilter.all:
-        return items;
-      case _NotificationFilter.active:
-        return items
-            .where((item) => item.isActiveWarning || item.isActiveReminder)
-            .toList();
-      case _NotificationFilter.events:
-        return items.where((item) => item.kind == 'event').toList();
-      case _NotificationFilter.warnings:
-        return items.where((item) => item.kind == 'warning').toList();
-    }
-  }
+        padding: EdgeInsets.all(24.w),
+        decoration: AppDecorations.premiumCard(AppColors.border, 16.r),
+        child: Column(
+          children: [
+            Icon(
+              Icons.notifications_off_rounded,
+              color: AppColors.textMuted,
+              size: 28.sp,
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Goruntulenecek okunmamis bildirim yok.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body.copyWith(fontSize: 12.sp),
+            ),
+          ],
+        ),
+      );
 
   List<PlayerNotificationModel> _sortNotifications(
     List<PlayerNotificationModel> items,
   ) {
     final sorted = [...items];
-    sorted.sort((a, b) {
-      final priorityCompare = _priorityOf(a).compareTo(_priorityOf(b));
-      if (priorityCompare != 0) return priorityCompare;
-      return b.createdAt.compareTo(a.createdAt);
-    });
+    sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return sorted;
-  }
-
-  int _priorityOf(PlayerNotificationModel item) {
-    if (item.kind == 'warning' && item.status != 'resolved') return 0;
-    if (item.isActiveReminder) return 1;
-    if (item.isUnread) return 2;
-    return 3;
   }
 
   String? _targetRoute(PlayerNotificationModel notification) {
@@ -415,9 +281,13 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       case 'store':
         return entityId?.isNotEmpty == true ? '/store/$entityId' : '/store';
       case 'warehouse':
-        return entityId?.isNotEmpty == true ? '/warehouses/$entityId' : '/warehouses';
+        return entityId?.isNotEmpty == true
+            ? '/warehouses/$entityId'
+            : '/warehouses';
       case 'factory':
-        return entityId?.isNotEmpty == true ? '/factories/$entityId' : '/factories';
+        return entityId?.isNotEmpty == true
+            ? '/factories/$entityId'
+            : '/factories';
       case 'farm':
         return entityId?.isNotEmpty == true ? '/farms/$entityId' : '/farms';
       case 'field':
@@ -441,24 +311,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return Icons.science_rounded;
       case 'achievement_unlocked':
         return Icons.workspace_premium_rounded;
-      case 'store_blocked':
-        return Icons.storefront_outlined;
-      case 'production_blocked':
-        return Icons.warning_amber_rounded;
-      case 'logistics_attention':
-        return Icons.local_shipping_outlined;
-      case 'inactive_reminder':
-        return Icons.pause_circle_outline_rounded;
       default:
         return Icons.notifications_none_rounded;
     }
   }
 
   String _kindLabel(PlayerNotificationModel item) {
-    if (item.kind == 'warning') {
-      return 'Uyari';
-    }
-
     switch (item.category) {
       case 'construction_completed':
         return 'Insaat Tamam';
@@ -470,36 +328,27 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return 'AR-GE Tamam';
       case 'achievement_unlocked':
         return 'Rozet Acildi';
-      case 'logistics_attention':
-        return 'Nakliye Uyarisi';
-      case 'inactive_reminder':
-        return 'Hatirlatma';
       default:
         return 'Bilgi';
     }
   }
 
-  String? _reasonLabel(PlayerNotificationModel item) {
-    switch (item.category) {
-      case 'store_blocked':
-        if (item.title.contains('Bos Slot')) return 'Bos Slot';
-        if (item.title.contains('Stok Bitti')) return 'Stok Yok';
+  String? _entityLabel(PlayerNotificationModel item) {
+    switch (item.entityKind) {
+      case 'store':
         return 'Magaza';
-      case 'production_blocked':
-        if (item.title.contains('Hammadde Eksik')) return 'Hammadde';
-        if (item.title.contains('Secili Degil')) return 'Urun Secilmemis';
-        if (item.title.contains('Deposu Dolu')) return 'Kapasite';
-        if (item.title.contains('Bos Uretim Slotu')) return 'Bos Slot';
-        return 'Uretim';
-      case 'logistics_attention':
-        if (item.title.contains('Pasif')) return 'Pasif';
-        if (item.title.contains('Yakit')) return 'Yakit';
-        if (item.title.contains('Kondisyon')) return 'Bakim';
+      case 'warehouse':
+        return 'Depo';
+      case 'factory':
+        return 'Fabrika';
+      case 'farm':
+        return 'Ciftlik';
+      case 'field':
+        return 'Tarla';
+      case 'mine':
+        return 'Maden';
+      case 'logistics':
         return 'Nakliye';
-      case 'inactive_reminder':
-        return 'Pasif';
-      case 'achievement_unlocked':
-        return 'Rozet';
       default:
         return null;
     }

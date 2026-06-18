@@ -65,23 +65,27 @@ class AppDecorations {
   static BoxDecoration premiumCard([Color? accentColor, double? radius]) {
     final baseAccent = accentColor ?? AppColors.borderGoldLight;
     return BoxDecoration(
+      image: const DecorationImage(
+        image: AssetImage('assets/theme/cartback.webp'),
+        fit: BoxFit.fill,
+      ),
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          AppColors.cardBg.withValues(alpha: 0.9),
-          AppColors.cardBgLight.withValues(alpha: 0.5),
+          AppColors.cardBg.withValues(alpha: 0.42),
+          AppColors.cardBgLight.withValues(alpha: 0.58),
         ],
       ),
       borderRadius: BorderRadius.circular(radius ?? 16.r),
       border: Border.all(
-        color: baseAccent.withValues(alpha: 0.25),
+        color: baseAccent.withValues(alpha: 0.34),
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.5),
-          blurRadius: 15,
-          offset: const Offset(0, 8),
+          color: Colors.black.withValues(alpha: 0.32),
+          blurRadius: 14,
+          offset: const Offset(0, 6),
         ),
       ],
     );
@@ -91,16 +95,27 @@ class AppDecorations {
   static BoxDecoration glowingAction([Color? accentColor, double? radius]) {
     final baseAccent = accentColor ?? AppColors.gold;
     return BoxDecoration(
-      color: AppColors.cardBgLight.withValues(alpha: 0.8),
+      image: const DecorationImage(
+        image: AssetImage('assets/theme/cartback.webp'),
+        fit: BoxFit.fill,
+      ),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppColors.cardBg.withValues(alpha: 0.38),
+          AppColors.cardBgLight.withValues(alpha: 0.54),
+        ],
+      ),
       borderRadius: BorderRadius.circular(radius ?? 16.r),
       border: Border.all(
         color: baseAccent.withValues(alpha: 0.4),
       ),
       boxShadow: [
         BoxShadow(
-          color: baseAccent.withValues(alpha: 0.2),
+          color: baseAccent.withValues(alpha: 0.16),
           blurRadius: 12,
-          spreadRadius: 2,
+          spreadRadius: 1,
         ),
       ],
     );
@@ -109,21 +124,25 @@ class AppDecorations {
   // Alt paneller (City Selection, Type Selection altı) veya Header arka planları
   static BoxDecoration panelGlass([double? radius]) {
     return BoxDecoration(
+      image: const DecorationImage(
+        image: AssetImage('assets/theme/cartback.webp'),
+        fit: BoxFit.fill,
+      ),
       gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          AppColors.cardBg,
-          AppColors.cardBgLight.withValues(alpha: 0.6),
+          AppColors.cardBg.withValues(alpha: 0.42),
+          AppColors.cardBgLight.withValues(alpha: 0.58),
         ],
       ),
       borderRadius: BorderRadius.vertical(top: Radius.circular(radius ?? 30.r)),
-      border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+      border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.28)),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.5),
-          blurRadius: 20,
-          offset: const Offset(0, -5),
+          color: Colors.black.withValues(alpha: 0.32),
+          blurRadius: 16,
+          offset: const Offset(0, -4),
         ),
       ],
     );

@@ -74,20 +74,29 @@ class ProductionLogisticsVehicleOption {
   });
 
   factory ProductionLogisticsVehicleOption.fromJson(Map<String, dynamic> json) {
+    final vehicleOwnerPlayerId =
+        (json['vehicle_owner_player_id'] ?? '').toString();
+    final rentalPrice = (json['rental_price'] as num?)?.toDouble() ?? 0;
+    final rentalCost = (json['rental_cost'] as num?)?.toDouble() ?? 0;
+
     return ProductionLogisticsVehicleOption(
       vehicleId: (json['vehicle_id'] ?? '').toString(),
-      vehicleOwnerPlayerId: (json['vehicle_owner_player_id'] ?? '').toString(),
+      vehicleOwnerPlayerId: vehicleOwnerPlayerId,
       vehicleName: (json['vehicle_name'] ?? 'Arac').toString(),
-      isRental: json['is_rental'] as bool? ?? false,
+      isRental:
+          (json['is_rental'] as bool? ?? false) ||
+          vehicleOwnerPlayerId.isEmpty ||
+          rentalPrice > 0 ||
+          rentalCost > 0,
       capacity: (json['capacity'] as num?)?.toInt() ?? 0,
       speedKmh: (json['speed_kmh'] as num?)?.toInt() ?? 0,
       currentFuel: (json['current_fuel'] as num?)?.toInt() ?? 0,
       fuelCapacity: (json['fuel_capacity'] as num?)?.toInt() ?? 0,
       fuelRate: (json['fuel_rate'] as num?)?.toDouble() ?? 0,
       condition: (json['condition'] as num?)?.toInt() ?? 0,
-      rentalPrice: (json['rental_price'] as num?)?.toDouble() ?? 0,
+      rentalPrice: rentalPrice,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
-      rentalCost: (json['rental_cost'] as num?)?.toDouble() ?? 0,
+      rentalCost: rentalCost,
       fuelCost: (json['fuel_cost'] as num?)?.toDouble() ?? 0,
       distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0,
       fuelNeeded: (json['fuel_needed'] as num?)?.toDouble() ?? 0,

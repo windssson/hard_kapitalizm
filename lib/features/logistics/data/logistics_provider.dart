@@ -365,6 +365,13 @@ class LogisticsActionNotifier {
       return {'success': false, 'message': 'Oturum acilmamis.'};
     }
 
+    if (isAvailableForRent && rentalPrice <= 0) {
+      return {
+        'success': false,
+        'message': 'Kira fiyati sifirdan buyuk olmali.',
+      };
+    }
+
     try {
       final response = await _supabase.rpc(
         'set_logistics_vehicle_rental',

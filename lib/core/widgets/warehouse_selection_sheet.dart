@@ -58,25 +58,29 @@ class WarehouseSelectionSheet extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
           decoration: BoxDecoration(
+            image: const DecorationImage(
+              image: AssetImage('assets/theme/cartback.webp'),
+              fit: BoxFit.fill,
+            ),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppColors.cardBg.withValues(alpha: 0.92),
-                AppColors.cardBgLight.withValues(alpha: 0.75),
+                AppColors.cardBg.withValues(alpha: 0.42),
+                AppColors.cardBgLight.withValues(alpha: 0.58),
               ],
             ),
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
+              color: AppColors.borderGold.withValues(alpha: 0.26),
               width: 1.w,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.6),
-                blurRadius: 24,
-                spreadRadius: 4,
-                offset: const Offset(0, -6),
+                color: Colors.black.withValues(alpha: 0.32),
+                blurRadius: 18,
+                spreadRadius: 2,
+                offset: const Offset(0, -4),
               ),
             ],
           ),

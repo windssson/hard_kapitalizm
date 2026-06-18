@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -8,11 +9,13 @@ import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_error_message.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
@@ -36,11 +39,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     12: 6,
     24: 12,
   };
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   void _refreshFieldDetail() {
     ref.invalidate(fieldDetailProvider(widget.fieldId));
@@ -463,6 +461,17 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
               Icons.upgrade_rounded,
               AppColors.green,
               () => _showFieldUpgradeSheet(context, ref, detail, activeUpgrade),
+            ),
+          ),
+          SizedBox(
+            width: 100.w,
+            child: _buildActionButton(
+              'Rapor',
+              Icons.query_stats_rounded,
+              AppColors.blue,
+              () => context.push(
+                '/production-report/field/${detail.field.id}?name=${Uri.encodeComponent(detail.field.name)}',
+              ),
             ),
           ),
         ],
@@ -1435,14 +1444,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     final product = slot.product;
     if (slot.isEmpty || product == null) return const [];
 
-    final productIds = <String>{
-      if ((product.hammadde1Id ?? '').isNotEmpty) product.hammadde1Id!,
-      if ((product.hammadde2Id ?? '').isNotEmpty) product.hammadde2Id!,
-      if ((product.hammadde3Id ?? '').isNotEmpty) product.hammadde3Id!,
-    };
-
     final inventories = detail.inputInventories
-        .where((inventory) => productIds.contains(inventory.productId))
+        .where((inventory) => product.inputProductIds.contains(inventory.productId))
         .toList();
 
     inventories.sort((a, b) => a.productId.compareTo(b.productId));
@@ -1457,7 +1460,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     for (final inventory in detail.outputInventories) {
       if (inventory.productId == slot.productId &&
-          inventory.qualityLevel == slot.qualityLevel) {
+          inventory.qualityLevel == slot.qualityLevel &&
+          inventory.brandId == slot.brandId) {
         return inventory;
       }
     }
@@ -1557,7 +1561,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 SizedBox(
                   width: 132.w,
                   child: _buildMiniAction(
-                    'Stok Ekle',
+                    'Depodan Hammadde Ekle',
                     AppColors.gold,
                     () => _startWarehouseToInventoryFlow(
                       context,
@@ -1570,7 +1574,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 SizedBox(
                   width: 132.w,
                   child: _buildMiniAction(
-                    'Depoya Gonder',
+                    'Hammaddeyi Depoya Geri Gonder',
                     AppColors.blue,
                     () => _startInventoryToWarehouseFlow(
                       context,
@@ -1584,7 +1588,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             )
           else
             _buildMiniAction(
-              'Depoya Aktar',
+              'Urunu Depoya Gonder',
               AppColors.blue,
               () => _startInventoryToWarehouseFlow(
                 context,
@@ -1649,7 +1653,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
               ),
               icon: Icon(Icons.move_up_rounded, size: 14.sp),
               label: Text(
-                'Depoya Aktar',
+                'Urunu Depoya Gonder',
                 style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w700),
               ),
             ),
@@ -1845,7 +1849,17 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           );
 
     if (!context.mounted) return;
-    if (result['success'] == true) {
+    final isSuccess = result['success'] == true;
+    final resultMessage = result['message']?.toString().trim();
+    final hasErrorLikeMessage =
+        resultMessage != null &&
+        resultMessage.isNotEmpty &&
+        (resultMessage.contains('Exception') ||
+            resultMessage.contains('Postgrest') ||
+            resultMessage.contains('error') ||
+            resultMessage.contains('hata'));
+
+    if (isSuccess && !hasErrorLikeMessage) {
       await _refreshFieldEcosystem();
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
@@ -1866,7 +1880,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Urun secilemedi.',
+      message: sanitizeUserFacingError(
+        result['message'] ?? 'Urun secilemedi.',
+      ),
       type: SnackbarType.error,
     );
   }
@@ -1904,12 +1920,29 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       return;
     }
 
+    final remainingInputCapacity = _calculateRemainingInputCapacity(
+      detail.inputInventories,
+      detail.field.inputCapacity,
+    );
+    if (remainingInputCapacity <= 0) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message:
+            'Hammadde kapasitesi dolu. Once mevcut stok veya yoldaki transferler azalmali.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
     final options = <WarehouseSelectionOption>[];
     for (final warehouse in warehouses) {
       final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
       for (final slotMap in slots) {
         final slot = Map<String, dynamic>.from(slotMap as Map);
         final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
+        final transferableQuantity = qty.clamp(0, remainingInputCapacity);
+        if (transferableQuantity <= 0) continue;
         final warehouseCityId = (warehouse['city_id'] ?? '').toString();
         final isSame = _isSameCity(warehouseCityId, detail.field.cityId);
 
@@ -1919,13 +1952,14 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             title: (warehouse['name'] ?? 'Depo').toString(),
             subtitle: (warehouse['city']?['name'] ?? detail.cityName).toString(),
             badgeText: isSame ? 'Aynı Şehir' : 'Farklı Şehir',
-            infoText: 'Stok: $qty adet',
+            infoText:
+                'Stok: $qty adet | Bos kapasite: $remainingInputCapacity',
             isHighlightBadge: isSame,
             onTap: () {
               Navigator.pop(context);
               _showQuantityDialog(
                 context: context,
-                maxQuantity: qty,
+                maxQuantity: transferableQuantity,
                 title: 'Miktar Girin',
                 subtitle: '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi doldurulacak',
                 onConfirm: (quantity) async {
@@ -1968,7 +2002,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                     detail: detail,
                     inventory: inventory,
                     warehouseSlotId: slot['id'].toString(),
-                    maxQuantity: qty,
+                    maxQuantity: transferableQuantity,
                     quantity: quantity,
                   );
                 },
@@ -1980,6 +2014,12 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     }
 
     if (!context.mounted) return;
+    options.sort((a, b) {
+      if (a.isHighlightBadge != b.isHighlightBadge) {
+        return a.isHighlightBadge ? -1 : 1;
+      }
+      return a.title.compareTo(b.title);
+    });
     await WarehouseSelectionSheet.show(
       context: context,
       title: 'Kaynak Depo Seç',
@@ -2031,6 +2071,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         title: warehouse.name,
         subtitle: warehouse.cityName,
         badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
+        infoText:
+            'Gonderilecek: ${inventory.quantity} adet | ${inventory.isInput ? 'Hammadde' : 'Urun'}',
         isHighlightBadge: sameCity,
         onTap: () {
           Navigator.pop(context);
@@ -2056,15 +2098,15 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                     includeTransfers: true,
                     includePlayer: false,
                   );
-                  AppSnackbar.show(
-                    context,
-                    title: 'Basarili',
-                    message: inventory.isInput
-                        ? 'Ayni sehir hammadde iadesi tamamlandi.'
-                        : 'Ayni sehir uretilen urun transferi tamamlandi.',
-                    type: SnackbarType.success,
-                  );
-                  return;
+                      AppSnackbar.show(
+                        context,
+                        title: 'Basarili',
+                        message: inventory.isInput
+                            ? 'Ayni sehir hammadde geri gonderimi tamamlandi.'
+                            : 'Ayni sehir uretilen urun transferi tamamlandi.',
+                        type: SnackbarType.success,
+                      );
+                      return;
                 }
                 AppSnackbar.show(
                   context,
@@ -2233,11 +2275,11 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     _showProductionVehicleOptionsSheet(
       context: context,
       title: inventory.isInput
-          ? 'Hammadde Iade Lojistigi'
+          ? 'Hammadde Geri Gonderim Lojistigi'
           : 'Uretilen Urun Lojistigi',
       subtitle: inventory.isInput
-          ? '$quantity adet hammadde iadesi icin uygun araci secin'
-          : '$quantity adet uretilen urun icin uygun araci secin',
+          ? '$quantity adet hammaddeyi depoya geri gondermek icin uygun araci secin'
+          : '$quantity adet uretilen urunu depoya gondermek icin uygun araci secin',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
@@ -2260,8 +2302,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             context,
             title: 'Transfer Baslatildi',
             message: inventory.isInput
-                ? 'Hammadde iadesi icin arac yola cikti.'
-                : 'Uretilen urun transferi icin arac yola cikti.',
+                ? 'Hammaddeyi depoya geri goturen arac yola cikti.'
+                : 'Uretilen urunu depoya goturen arac yola cikti.',
             type: SnackbarType.success,
           );
           return;
@@ -2314,44 +2356,28 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             ),
             SizedBox(height: 12.h),
             ...options.map(
-              (option) => Container(
-                margin: EdgeInsets.only(bottom: 10.h),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(
-                    color: option.canSelect
-                        ? AppColors.gold.withValues(alpha: 0.18)
-                        : Colors.white.withValues(alpha: 0.05),
+              (option) => Padding(
+                padding: EdgeInsets.only(bottom: 10.h),
+                child: TransferVehicleOptionCard(
+                  vehicleName: option.vehicleName,
+                  isRental: option.isRental,
+                  capacity: option.capacity,
+                  distanceKm: option.distanceKm,
+                  durationLabel: _formatTransferDuration(
+                    option.estimatedDurationSeconds,
                   ),
-                ),
-                child: ListTile(
-                  enabled: option.canSelect,
-                  onTap: option.canSelect
-                      ? () async {
-                          Navigator.pop(sheetContext);
-                          await onSelected(option.vehicleId);
-                        }
-                      : null,
-                  title: Text(
-                    option.vehicleName,
-                    style: TextStyle(
-                      color: option.canSelect ? Colors.white : AppColors.textMuted,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    option.isRental
-                        ? 'Kiralik | Kapasite ${option.capacity} | Maliyet ${option.totalPrice.toStringAsFixed(1)}'
-                        : 'Kendi aracin | Kapasite ${option.capacity} | Maliyet ${option.totalPrice.toStringAsFixed(1)}',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                  trailing: option.canSelect
-                      ? Icon(Icons.chevron_right, color: AppColors.gold, size: 18.sp)
-                      : Icon(Icons.block, color: AppColors.textMuted, size: 18.sp),
+                  transportCost: option.totalPrice,
+                  rentalCost: option.rentalCost,
+                  fuelCost: option.fuelCost,
+                  fuelNeeded: option.fuelNeeded,
+                  conditionNeeded: option.conditionNeeded,
+                  canSelect: option.canSelect,
+                  isSelected: false,
+                  disabledReason: option.disabledReason,
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    await onSelected(option.vehicleId);
+                  },
                 ),
               ),
             ),
@@ -2449,12 +2475,31 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
   }
 
+  String _formatTransferDuration(int seconds) {
+    final duration = Duration(seconds: seconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    if (hours > 0) return '${hours}s ${minutes}dk';
+    return '${duration.inMinutes}dk';
+  }
+
   int _calculateUsedCapacity(List<ProductionInventoryModel> inventories) {
     var total = 0;
     for (final inventory in inventories) {
       total += inventory.quantity;
     }
     return total;
+  }
+
+  int _calculateRemainingInputCapacity(
+    List<ProductionInventoryModel> inventories,
+    int capacity,
+  ) {
+    final usedAndPending = inventories.fold<double>(
+      0,
+      (sum, inventory) => sum + inventory.quantity + inventory.pendingQuantity,
+    );
+    return (capacity - usedAndPending.ceil()).clamp(0, capacity);
   }
 
   double _inventoryRatio(int current, int capacity) {

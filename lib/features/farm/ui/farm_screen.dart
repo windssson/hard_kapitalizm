@@ -50,6 +50,9 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
       case 2:
         context.go('/transfer-map');
         break;
+      case 3:
+        context.go('/market');
+        break;
       case 4:
         context.go('/profile');
         break;
@@ -351,7 +354,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                   child: _buildStatItem(
                     Icons.inventory_2,
                     AppColors.gold,
-                    'Toplam Output',
+                    'Toplam Urun',
                     _formatCompact(totalOutputStock),
                     Colors.white,
                   ),
@@ -725,7 +728,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                   ),
                   SizedBox(width: 5.w),
                   Text(
-                    'Output',
+                    'Urun Deposu',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 10.sp,
@@ -735,7 +738,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                 ],
               ),
               Text(
-                '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.farm.outputCapacity)}',
+                '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.totalOutputCapacity)}',
                 style: TextStyle(
                   color: ratio >= 0.9 ? AppColors.red : Colors.white,
                     fontSize: 10.sp,

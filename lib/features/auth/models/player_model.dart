@@ -18,6 +18,7 @@ class PlayerModel {
   final List<AchievementBadgeModel> featuredBadges;
   final double cash;
   final double gold;
+  final double companyValue;
   final DateTime createdAt;
 
   PlayerModel({
@@ -38,6 +39,7 @@ class PlayerModel {
     required this.featuredBadges,
     required this.cash,
     required this.gold,
+    required this.companyValue,
     required this.createdAt,
   });
 
@@ -79,6 +81,7 @@ class PlayerModel {
           .toList(),
       cash: (json['cash'] as num?)?.toDouble() ?? 100000.0,
       gold: (json['gold'] as num?)?.toDouble() ?? 100.0,
+      companyValue: (json['company_value'] as num?)?.toDouble() ?? 0,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
@@ -125,6 +128,7 @@ class PlayerModel {
           .toList(),
       'cash': cash,
       'gold': gold,
+      'company_value': companyValue,
       'created_at': createdAt.toIso8601String(),
     };
   }

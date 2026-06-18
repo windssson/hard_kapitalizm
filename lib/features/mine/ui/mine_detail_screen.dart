@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -12,7 +13,9 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
+import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
@@ -35,11 +38,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     12: 6,
     24: 12,
   };
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   void _refreshMineDetail() {
     ref.invalidate(mineDetailProvider(widget.mineId));
@@ -162,9 +160,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   }
 
   Widget _buildHero(MineDetailModel detail) {
-    final outputQty = detail.outputInventories.isNotEmpty
-        ? detail.outputInventories.first.quantity
-        : 0;
+    final outputQty = detail.totalOutputQuantity;
 
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -460,6 +456,17 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     },
             ),
           ),
+          SizedBox(
+            width: 100.w,
+            child: _buildActionButton(
+              'Rapor',
+              Icons.query_stats_rounded,
+              AppColors.blue,
+              () => context.push(
+                '/production-report/mine/${detail.mine.id}?name=${Uri.encodeComponent(detail.mine.name)}',
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -615,7 +622,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final outputInventory = detail.outputInventories.isNotEmpty
         ? detail.outputInventories.first
         : null;
-    final quantity = outputInventory?.quantity ?? 0;
+    final quantity = detail.totalOutputQuantity;
     final progress = _safeProgress(
       quantity.toDouble(),
       detail.mine.outputCapacity.toDouble(),
@@ -835,7 +842,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       ),
                       icon: Icon(Icons.move_up_rounded, size: 14.sp),
                       label: Text(
-                        'Depoya Aktar',
+                        'Urunu Depoya Gonder',
                         style: TextStyle(
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w700,
@@ -1253,7 +1260,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     if (!mounted) return;
 
     if (result['success'] == true) {
-      await _refreshMineEcosystem(includePlayer: false);
+      await _refreshMineEcosystem();
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1294,93 +1301,30 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     }
 
     if (!context.mounted) return;
+    final options = products.map((selectableProduct) {
+      final product = selectableProduct.product;
+      return ProductSelectionOption(
+        id: product.id,
+        title: product.urunAdi,
+        subtitle: 'Saatlik uretim: ${product.uretimAdedi}',
+        badgeText: 'Maks Kalite: ${selectableProduct.maxQualityLevel}',
+        iconPath: product.urunIconu,
+        onTap: () async {
+          Navigator.pop(context);
+          await _selectMineProduct(
+            context,
+            ref,
+            detail,
+            selectableProduct,
+          );
+        },
+      );
+    }).toList();
 
-    showModalBottomSheet(
+    await ProductSelectionSheet.show(
       context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Kaynak Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Expanded(
-              child: products.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Bu maden turu icin uygun kaynak bulunamadi.',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12.sp,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: products.length,
-                      separatorBuilder: (_, __) => SizedBox(height: 8.h),
-                      itemBuilder: (_, index) {
-                        final selectableProduct = products[index];
-                        final product = selectableProduct.product;
-                        return ListTile(
-                          tileColor: Colors.white.withValues(alpha: 0.04),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          leading: SizedBox(
-                            width: 40.w,
-                            height: 40.w,
-                            child: CachedAssetImage(
-                              fileName: product.urunIconu,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                          title: Text(
-                            product.urunAdi,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          subtitle: Text(
-                            'Kalite: ${selectableProduct.maxQualityLevel} | Saatlik uretim: ${product.uretimAdedi}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            color: AppColors.gold,
-                          ),
-                          onTap: () async {
-                            Navigator.pop(sheetContext);
-                            await _selectMineProduct(
-                              context,
-                              ref,
-                              detail,
-                              selectableProduct,
-                            );
-                          },
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
+      title: 'Kaynak Sec',
+      options: options,
     );
   }
 
@@ -1494,6 +1438,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         title: warehouse.name,
         subtitle: warehouse.cityName,
         badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
+        infoText: 'Gonderilecek: ${inventory.quantity} adet | Urun',
         isHighlightBadge: sameCity,
         onTap: () {
           Navigator.pop(context);
@@ -1552,6 +1497,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     }).toList();
 
     if (!context.mounted) return;
+    options.sort((a, b) {
+      if (a.isHighlightBadge != b.isHighlightBadge) {
+        return a.isHighlightBadge ? -1 : 1;
+      }
+      return a.title.compareTo(b.title);
+    });
     await WarehouseSelectionSheet.show(
       context: context,
       title: 'Hedef Depo Seç',
@@ -1624,7 +1575,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           await _refreshMineEcosystem(
             warehouseId: warehouseId,
             includeTransfers: true,
-            includePlayer: false,
           );
           AppSnackbar.show(
             context,
@@ -1688,81 +1638,26 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 separatorBuilder: (_, __) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = options[index];
-                  final color =
-                      option.canSelect ? AppColors.green : AppColors.red;
-                  return InkWell(
-                    onTap: option.canSelect
-                        ? () async {
-                            Navigator.pop(sheetContext);
-                            await onSelected(option.vehicleId);
-                          }
-                        : null,
-                    borderRadius: BorderRadius.circular(14.r),
-                    child: Container(
-                      padding: EdgeInsets.all(14.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(color: color.withValues(alpha: 0.35)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.local_shipping, color: color),
-                              SizedBox(width: 10.w),
-                              Expanded(
-                                child: Text(
-                                  option.vehicleName,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                option.isRental ? 'Kiralik' : 'Ozmal',
-                                style: TextStyle(
-                                  color: color,
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Kapasite: ${option.capacity} | Mesafe: ${option.distanceKm.toStringAsFixed(0)} km | Sure: ${_formatTransferDuration(option.estimatedDurationSeconds)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            'Yakit: ${option.fuelNeeded.toStringAsFixed(0)} | Kondisyon: ${option.conditionNeeded.toStringAsFixed(0)} | Nakliye: ${option.totalPrice.toStringAsFixed(0)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          if (!option.canSelect &&
-                              option.disabledReason != null) ...[
-                            SizedBox(height: 6.h),
-                            Text(
-                              option.disabledReason!,
-                              style: TextStyle(
-                                color: AppColors.red,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                  return TransferVehicleOptionCard(
+                    vehicleName: option.vehicleName,
+                    isRental: option.isRental,
+                    capacity: option.capacity,
+                    distanceKm: option.distanceKm,
+                    durationLabel: _formatTransferDuration(
+                      option.estimatedDurationSeconds,
                     ),
+                    transportCost: option.totalPrice,
+                    rentalCost: option.rentalCost,
+                    fuelCost: option.fuelCost,
+                    fuelNeeded: option.fuelNeeded,
+                    conditionNeeded: option.conditionNeeded,
+                    canSelect: option.canSelect,
+                    isSelected: false,
+                    disabledReason: option.disabledReason,
+                    onTap: () async {
+                      Navigator.pop(sheetContext);
+                      await onSelected(option.vehicleId);
+                    },
                   );
                 },
               ),

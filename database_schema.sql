@@ -1,6 +1,5 @@
 
 
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -12,45 +11,17 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-
 CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
-
-
-
-
-
 
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
-
-
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
-
-
-
-
-
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
 
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
 
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
-
-
-
-
-
 
 CREATE OR REPLACE FUNCTION "public"."add_product_to_warehouse"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quality_level" integer, "p_quantity" integer, "p_cost" numeric, "p_transport_cost" numeric DEFAULT 0, "p_release_reserved_capacity" boolean DEFAULT false) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -258,9 +229,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."add_product_to_warehouse"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quality_level" integer, "p_quantity" integer, "p_cost" numeric, "p_transport_cost" numeric, "p_release_reserved_capacity" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."add_production_slot"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -387,9 +356,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."add_production_slot"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."add_store_slot"("p_player_id" "uuid", "p_store_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -480,9 +447,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."add_store_slot"("p_player_id" "uuid", "p_store_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."assign_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -722,9 +687,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."assign_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."bootstrap_game_session"() RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -735,7 +698,6 @@ declare
   v_player jsonb;
   v_logistics_state jsonb;
   v_production_result jsonb;
-  v_transfers_result jsonb;
 begin
   if v_player_id is null then
     raise exception 'Oturum acilmamis.';
@@ -744,7 +706,6 @@ begin
   perform public.ensure_player_record_exists(v_player_id);
 
   v_production_result := public.process_player_production_entry(v_player_id);
-  v_transfers_result := public.complete_due_market_transfers(v_player_id, 100);
   v_player := public.get_player_profile(v_player_id);
   v_logistics_state := public.get_logistics_entry_state();
 
@@ -754,15 +715,12 @@ begin
     'logistics_entry_state', v_logistics_state,
     'completed_due_building_boosts', v_production_result -> 'completed_due_building_boosts',
     'completed_due_building_upgrades', v_production_result -> 'completed_due_building_upgrades',
-    'processed_production', v_production_result,
-    'completed_due_market_transfers', v_transfers_result
+    'processed_production', v_production_result
   );
 end;
 $$;
 
-
 ALTER FUNCTION "public"."bootstrap_game_session"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."build_experience_progress_payload"("p_total_experience" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql" IMMUTABLE
@@ -806,9 +764,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."build_experience_progress_payload"("p_total_experience" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."build_level_progress_payload"("p_level" integer, "p_current_experience" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql" IMMUTABLE
@@ -843,9 +799,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."build_level_progress_payload"("p_level" integer, "p_current_experience" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."build_player_mission_payload"("p_player_id" "uuid", "p_mission_id" "text") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -885,9 +839,7 @@ CREATE OR REPLACE FUNCTION "public"."build_player_mission_payload"("p_player_id"
   where md.id = p_mission_id;
 $$;
 
-
 ALTER FUNCTION "public"."build_player_mission_payload"("p_player_id" "uuid", "p_mission_id" "text") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."buy_market_fuel_for_logistics_company"("p_logistics_company_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -1050,9 +1002,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."buy_market_fuel_for_logistics_company"("p_logistics_company_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."calculate_experience_reward"("p_reason" "text", "p_meta" "jsonb" DEFAULT '{}'::"jsonb") RETURNS integer
     LANGUAGE "plpgsql" IMMUTABLE
@@ -1101,9 +1051,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."calculate_experience_reward"("p_reason" "text", "p_meta" "jsonb") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."cancel_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -1168,9 +1116,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."cancel_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."change_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -1514,9 +1460,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."change_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."claim_player_mission_reward"("p_mission_id" "text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -1611,9 +1555,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."claim_player_mission_reward"("p_mission_id" "text") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."clear_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -1647,6 +1589,7 @@ begin
   update public.store_slots
   set
     product_id = null,
+    brand_id = '00000000-0000-0000-0000-000000000000'::uuid,
     quality_level = 0,
     price = 0,
     cost = 0,
@@ -1659,6 +1602,7 @@ begin
     'store_slot_id', p_store_slot_id,
     'store_id', v_slot.store_id,
     'product_id', null,
+    'brand_id', '00000000-0000-0000-0000-000000000000'::uuid,
     'quality_level', 0,
     'quantity', 0,
     'price', 0,
@@ -1668,9 +1612,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."clear_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."complete_arge_research"("p_research_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -1734,9 +1676,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."complete_arge_research"("p_research_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."complete_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -1746,6 +1686,8 @@ declare
   v_construction record;
   v_now timestamptz := timezone('utc'::text, now());
   v_created_id uuid;
+  v_store record;
+  v_store_warehouse_type record;
   v_exp_result jsonb;
 begin
   select *
@@ -1791,6 +1733,44 @@ begin
       true
     )
     returning id into v_created_id;
+
+    select *
+    into v_store
+    from public.stores
+    where id = v_created_id;
+
+    select wt.*
+    into v_store_warehouse_type
+    from public.warehouse_types wt
+    where lower(trim(coalesce(wt.name, ''))) = lower('Mağaza Deposu')
+    limit 1;
+
+    if not found then
+      raise exception 'Magaza deposu tipi bulunamadi. Warehouse type adi: Magaza Deposu';
+    end if;
+
+    insert into public.warehouses (
+      player_id,
+      warehouse_type_id,
+      city_id,
+      store_id,
+      warehouse_kind,
+      name,
+      level,
+      capacity,
+      is_active
+    )
+    values (
+      v_store.player_id,
+      v_store_warehouse_type.id,
+      v_store.city_id,
+      v_store.id,
+      'store',
+      v_store.name || ' Deposu',
+      1,
+      greatest(coalesce(v_store.slot_capacity, 0), 0) * 10,
+      true
+    );
   elsif v_construction.building_kind = 'warehouse' then
     insert into public.warehouses (
       player_id,
@@ -1997,9 +1977,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."complete_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."complete_building_upgrade"("p_player_id" "uuid", "p_upgrade_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2157,9 +2135,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."complete_building_upgrade"("p_player_id" "uuid", "p_upgrade_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."complete_due_arge_researches"() RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2189,9 +2165,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."complete_due_arge_researches"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."complete_due_building_boosts"("p_limit" integer DEFAULT 100) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2229,9 +2203,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."complete_due_building_boosts"("p_limit" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."complete_due_building_constructions"("p_limit" integer DEFAULT 100) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2276,9 +2248,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."complete_due_building_constructions"("p_limit" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."complete_due_building_upgrades"("p_limit" integer DEFAULT 100) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2316,445 +2286,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."complete_due_building_upgrades"("p_limit" integer) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."complete_due_market_transfers"("p_buyer_player_id" "uuid" DEFAULT "auth"."uid"(), "p_limit" integer DEFAULT 100) RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_completed_count integer := 0;
-  v_transfer record;
-  v_result jsonb;
-  v_ids uuid[] := '{}';
-  v_uuid uuid;
-  v_warehouse_ids uuid[] := '{}';
-  v_store_ids uuid[] := '{}';
-  v_factory_ids uuid[] := '{}';
-  v_farm_ids uuid[] := '{}';
-  v_field_ids uuid[] := '{}';
-  v_mine_ids uuid[] := '{}';
-begin
-  for v_transfer in
-    select lt.id, lt.transfer_type
-    from public.logistics_transfers lt
-    where lt.status = 'in_transit'
-      and lt.finish_at <= timezone('utc'::text, now())
-      and (p_buyer_player_id is null or lt.buyer_player_id = p_buyer_player_id)
-    order by lt.finish_at asc
-    limit greatest(coalesce(p_limit, 100), 1)
-    for update skip locked
-  loop
-    if coalesce(v_transfer.transfer_type, '') in ('warehouse_to_production', 'production_to_warehouse') then
-      v_result := public.complete_production_logistics_transfer(v_transfer.id);
-    else
-      v_result := public.complete_market_transfer_system(v_transfer.id);
-    end if;
-
-    if coalesce((v_result ->> 'success')::boolean, false) then
-      v_completed_count := v_completed_count + 1;
-      v_ids := array_append(v_ids, v_transfer.id);
-
-      for v_uuid in
-        select value::uuid
-        from jsonb_array_elements_text(coalesce(v_result -> 'affected' -> 'warehouse_ids', '[]'::jsonb))
-      loop
-        if not (v_uuid = any(v_warehouse_ids)) then
-          v_warehouse_ids := array_append(v_warehouse_ids, v_uuid);
-        end if;
-      end loop;
-
-      for v_uuid in
-        select value::uuid
-        from jsonb_array_elements_text(coalesce(v_result -> 'affected' -> 'store_ids', '[]'::jsonb))
-      loop
-        if not (v_uuid = any(v_store_ids)) then
-          v_store_ids := array_append(v_store_ids, v_uuid);
-        end if;
-      end loop;
-
-      for v_uuid in
-        select value::uuid
-        from jsonb_array_elements_text(coalesce(v_result -> 'affected' -> 'factory_ids', '[]'::jsonb))
-      loop
-        if not (v_uuid = any(v_factory_ids)) then
-          v_factory_ids := array_append(v_factory_ids, v_uuid);
-        end if;
-      end loop;
-
-      for v_uuid in
-        select value::uuid
-        from jsonb_array_elements_text(coalesce(v_result -> 'affected' -> 'farm_ids', '[]'::jsonb))
-      loop
-        if not (v_uuid = any(v_farm_ids)) then
-          v_farm_ids := array_append(v_farm_ids, v_uuid);
-        end if;
-      end loop;
-
-      for v_uuid in
-        select value::uuid
-        from jsonb_array_elements_text(coalesce(v_result -> 'affected' -> 'field_ids', '[]'::jsonb))
-      loop
-        if not (v_uuid = any(v_field_ids)) then
-          v_field_ids := array_append(v_field_ids, v_uuid);
-        end if;
-      end loop;
-
-      for v_uuid in
-        select value::uuid
-        from jsonb_array_elements_text(coalesce(v_result -> 'affected' -> 'mine_ids', '[]'::jsonb))
-      loop
-        if not (v_uuid = any(v_mine_ids)) then
-          v_mine_ids := array_append(v_mine_ids, v_uuid);
-        end if;
-      end loop;
-    end if;
-  end loop;
-
-  return jsonb_build_object(
-    'success', true,
-    'completed_count', v_completed_count,
-    'transfer_ids', v_ids,
-    'affected', jsonb_build_object(
-      'warehouse_ids', to_jsonb(v_warehouse_ids),
-      'store_ids', to_jsonb(v_store_ids),
-      'factory_ids', to_jsonb(v_factory_ids),
-      'farm_ids', to_jsonb(v_farm_ids),
-      'field_ids', to_jsonb(v_field_ids),
-      'mine_ids', to_jsonb(v_mine_ids)
-    )
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."complete_due_market_transfers"("p_buyer_player_id" "uuid", "p_limit" integer) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."complete_market_transfer"("p_transfer_id" "uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_transfer record;
-begin
-  if v_player_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  select *
-  into v_transfer
-  from public.logistics_transfers
-  where id = p_transfer_id
-    and buyer_player_id = v_player_id
-  for update;
-
-  if not found then
-    raise exception 'Transfer bulunamadi veya size ait degil.';
-  end if;
-
-  if v_transfer.finish_at > timezone('utc'::text, now()) then
-    raise exception 'Transfer suresi heniz dolmadi.';
-  end if;
-
-  return public.complete_market_transfer_system(p_transfer_id);
-end;
-$$;
-
-
-ALTER FUNCTION "public"."complete_market_transfer"("p_transfer_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."complete_market_transfer_system"("p_transfer_id" "uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_transfer record;
-  v_add_result jsonb;
-  v_store_slot record;
-  v_incoming_unit_cost numeric := 0;
-  v_new_cost numeric := 0;
-  v_affected jsonb;
-  v_exp_result jsonb;
-begin
-  select *
-  into v_transfer
-  from public.logistics_transfers
-  where id = p_transfer_id
-  for update;
-
-  if not found then
-    raise exception 'Transfer bulunamadi.';
-  end if;
-
-  v_affected := public.get_transfer_affected_targets(p_transfer_id);
-
-  if v_transfer.status <> 'in_transit' then
-    return jsonb_build_object(
-      'success', true,
-      'transfer_id', p_transfer_id,
-      'status', v_transfer.status,
-      'skipped', true,
-      'affected', v_affected
-    );
-  end if;
-
-  if coalesce(v_transfer.transfer_type, 'market_to_warehouse') in ('market_to_store', 'warehouse_to_store') then
-    select *
-    into v_store_slot
-    from public.store_slots
-    where id = v_transfer.buyer_store_slot_id
-    for update;
-
-    if not found then
-      raise exception 'Hedef magaza slotu bulunamadi.';
-    end if;
-
-    if v_store_slot.product_id is null or v_store_slot.quality_level = 0 then
-      raise exception 'Hedef magaza slotunda urun veya kalite bilgisi yok.';
-    end if;
-
-    if v_store_slot.product_id <> v_transfer.product_id or v_store_slot.quality_level <> v_transfer.quality_level then
-      raise exception 'Hedef magaza slotu urun/kalite uyumsuz.';
-    end if;
-
-    v_incoming_unit_cost := coalesce(v_transfer.unit_price, 0)
-      + case when v_transfer.quantity > 0 then coalesce(v_transfer.transport_cost, 0) / v_transfer.quantity else 0 end;
-
-    if coalesce(v_store_slot.quantity, 0) + v_transfer.quantity > v_store_slot.capacity then
-      raise exception 'Hedef magaza slot kapasitesi asildi.';
-    end if;
-
-    v_new_cost := case
-      when coalesce(v_store_slot.quantity, 0) + v_transfer.quantity > 0 then
-        (
-          coalesce(v_store_slot.quantity, 0) * coalesce(v_store_slot.cost, 0)
-          + v_transfer.quantity * v_incoming_unit_cost
-        ) / (coalesce(v_store_slot.quantity, 0) + v_transfer.quantity)
-      else coalesce(v_store_slot.cost, 0)
-    end;
-
-    update public.store_slots
-    set
-      quantity = quantity + v_transfer.quantity,
-      pending_quantity = greatest(coalesce(pending_quantity, 0) - v_transfer.quantity, 0),
-      cost = v_new_cost,
-      updated_at = timezone('utc'::text, now())
-    where id = v_transfer.buyer_store_slot_id;
-
-    v_add_result := jsonb_build_object(
-      'success', true,
-      'target', 'store_slot',
-      'store_slot_id', v_transfer.buyer_store_slot_id,
-      'quantity_added', v_transfer.quantity,
-      'new_cost', v_new_cost
-    );
-  else
-    v_add_result := public.add_product_to_warehouse(
-      v_transfer.buyer_player_id,
-      v_transfer.buyer_warehouse_id,
-      v_transfer.product_id,
-      v_transfer.quality_level,
-      v_transfer.quantity,
-      v_transfer.unit_price,
-      v_transfer.transport_cost,
-      true
-    );
-  end if;
-
-  update public.logistics_vehicles
-  set
-    status = 'idle',
-    updated_at = timezone('utc'::text, now())
-  where id = v_transfer.logistics_vehicle_id;
-
-  update public.logistics_transfers
-  set
-    status = 'completed',
-    completed_at = timezone('utc'::text, now()),
-    updated_at = timezone('utc'::text, now())
-  where id = p_transfer_id;
-
-  v_exp_result := public.grant_player_experience(
-    v_transfer.buyer_player_id,
-    public.calculate_experience_reward(
-      'market_transfer_completed',
-      jsonb_build_object(
-        'transfer_type', v_transfer.transfer_type,
-        'quantity', v_transfer.quantity
-      )
-    ),
-    'market_transfer_completed',
-    jsonb_build_object(
-      'transfer_id', p_transfer_id,
-      'transfer_type', v_transfer.transfer_type,
-      'quantity', v_transfer.quantity,
-      'product_id', v_transfer.product_id,
-      'quality_level', v_transfer.quality_level
-    )
-  );
-
-  return jsonb_build_object(
-    'success', true,
-    'transfer_id', p_transfer_id,
-    'status', 'completed',
-    'warehouse_result', v_add_result,
-    'affected', v_affected,
-    'experience', v_exp_result
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."complete_market_transfer_system"("p_transfer_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."complete_production_logistics_transfer"("p_transfer_id" "uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_transfer record;
-  v_inventory record;
-  v_incoming_unit_cost numeric := 0;
-  v_new_cost numeric := 0;
-  v_add_result jsonb;
-  v_affected jsonb;
-  v_exp_result jsonb;
-begin
-  select *
-  into v_transfer
-  from public.logistics_transfers
-  where id = p_transfer_id
-  for update;
-
-  if not found then
-    raise exception 'Transfer bulunamadi.';
-  end if;
-
-  v_affected := public.get_transfer_affected_targets(p_transfer_id);
-
-  if v_transfer.status <> 'in_transit' then
-    return jsonb_build_object(
-      'success', true,
-      'transfer_id', p_transfer_id,
-      'status', v_transfer.status,
-      'skipped', true,
-      'affected', v_affected
-    );
-  end if;
-
-  if v_transfer.transfer_type = 'warehouse_to_production' then
-    select *
-    into v_inventory
-    from public.production_inventory
-    where id = v_transfer.buyer_production_inventory_id
-    for update;
-
-    if not found then
-      raise exception 'Hedef production inventory bulunamadi.';
-    end if;
-
-    if v_inventory.inventory_type <> 'input' then
-      raise exception 'Hedef production inventory input tipinde degil.';
-    end if;
-
-    if v_inventory.product_id <> v_transfer.product_id
-       or v_inventory.quality_level <> v_transfer.quality_level then
-      raise exception 'Hedef production inventory urun/kalite uyumsuz.';
-    end if;
-
-    v_incoming_unit_cost := coalesce(v_transfer.unit_price, 0)
-      + case when v_transfer.quantity > 0 then coalesce(v_transfer.transport_cost, 0) / v_transfer.quantity else 0 end;
-
-    v_new_cost := case
-      when coalesce(v_inventory.quantity, 0) + v_transfer.quantity > 0 then
-        (
-          coalesce(v_inventory.quantity, 0) * coalesce(v_inventory.cost, 0)
-          + v_transfer.quantity * v_incoming_unit_cost
-        ) / (coalesce(v_inventory.quantity, 0) + v_transfer.quantity)
-      else coalesce(v_inventory.cost, 0)
-    end;
-
-    update public.production_inventory
-    set
-      quantity = coalesce(quantity, 0) + v_transfer.quantity,
-      pending_quantity = greatest(coalesce(pending_quantity, 0) - v_transfer.quantity, 0),
-      cost = v_new_cost
-    where id = v_transfer.buyer_production_inventory_id;
-
-    v_add_result := jsonb_build_object(
-      'success', true,
-      'target', 'production_inventory',
-      'production_inventory_id', v_transfer.buyer_production_inventory_id,
-      'quantity_added', v_transfer.quantity,
-      'new_cost', v_new_cost
-    );
-  elsif v_transfer.transfer_type = 'production_to_warehouse' then
-    v_add_result := public.add_product_to_warehouse(
-      v_transfer.buyer_player_id,
-      v_transfer.buyer_warehouse_id,
-      v_transfer.product_id,
-      v_transfer.quality_level,
-      v_transfer.quantity,
-      v_transfer.unit_price,
-      v_transfer.transport_cost,
-      true
-    );
-  else
-    raise exception 'Desteklenmeyen production transfer type: %', v_transfer.transfer_type;
-  end if;
-
-  update public.logistics_vehicles
-  set
-    status = 'idle',
-    updated_at = timezone('utc'::text, now())
-  where id = v_transfer.logistics_vehicle_id;
-
-  update public.logistics_transfers
-  set
-    status = 'completed',
-    completed_at = timezone('utc'::text, now()),
-    updated_at = timezone('utc'::text, now())
-  where id = p_transfer_id;
-
-  v_exp_result := public.grant_player_experience(
-    v_transfer.buyer_player_id,
-    public.calculate_experience_reward(
-      'production_transfer_completed',
-      jsonb_build_object(
-        'transfer_type', v_transfer.transfer_type,
-        'quantity', v_transfer.quantity
-      )
-    ),
-    'production_transfer_completed',
-    jsonb_build_object(
-      'transfer_id', p_transfer_id,
-      'transfer_type', v_transfer.transfer_type,
-      'quantity', v_transfer.quantity,
-      'product_id', v_transfer.product_id,
-      'quality_level', v_transfer.quality_level
-    )
-  );
-
-  return jsonb_build_object(
-    'success', true,
-    'transfer_id', p_transfer_id,
-    'status', 'completed',
-    'warehouse_result', v_add_result,
-    'affected', v_affected,
-    'experience', v_exp_result
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."complete_production_logistics_transfer"("p_transfer_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."delete_warehouse_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2796,13 +2328,11 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."delete_warehouse_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid") OWNER TO "postgres";
 
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
-
 
 CREATE TABLE IF NOT EXISTS "public"."logistics_vehicles" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -2835,9 +2365,7 @@ CREATE TABLE IF NOT EXISTS "public"."logistics_vehicles" (
     CONSTRAINT "logistics_vehicles_status_check" CHECK (("status" = ANY (ARRAY['idle'::"text", 'on_route'::"text", 'inactive'::"text"])))
 );
 
-
 ALTER TABLE "public"."logistics_vehicles" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."logistics_finance_entries" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -2860,9 +2388,7 @@ CREATE TABLE IF NOT EXISTS "public"."logistics_finance_entries" (
     CONSTRAINT "logistics_finance_entries_entry_type_check" CHECK (("entry_type" = ANY (ARRAY['income'::"text", 'expense'::"text"])))
 );
 
-
 ALTER TABLE "public"."logistics_finance_entries" OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."ensure_npc_rental_vehicle"("p_from_city_id" "uuid", "p_to_city_id" "uuid") RETURNS "public"."logistics_vehicles"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -2951,9 +2477,11 @@ begin
     coalesce(lvt.name, 'Kiralik Arac') as vehicle_type_name
   into v_vehicle_type
   from public.logistics_vehicle_types lvt
-  order by coalesce(lvt.capacity, 999999) asc,
-           coalesce(lvt.speed_kmh, 999999) asc,
-           lvt.created_at asc
+  order by
+    case when lvt.name = 'Anadolu Aslanı' then 0 else 1 end,
+    coalesce(lvt.capacity, 999999) asc,
+    coalesce(lvt.speed_kmh, 999999) asc,
+    lvt.created_at asc
   limit 1;
 
   if v_vehicle_type.id is null then
@@ -3045,9 +2573,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."ensure_npc_rental_vehicle"("p_from_city_id" "uuid", "p_to_city_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."ensure_player_mission_rows"("p_player_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -3066,9 +2592,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."ensure_player_mission_rows"("p_player_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."ensure_player_record_exists"("p_user_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -3121,9 +2645,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."ensure_player_record_exists"("p_user_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."finish_arge_with_gold"("p_player_id" "uuid", "p_research_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -3176,9 +2698,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."finish_arge_with_gold"("p_player_id" "uuid", "p_research_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."finish_building_boost"("p_player_id" "uuid", "p_boost_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -3246,9 +2766,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."finish_building_boost"("p_player_id" "uuid", "p_boost_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."finish_building_upgrade_with_gold"("p_player_id" "uuid", "p_upgrade_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -3320,9 +2838,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."finish_building_upgrade_with_gold"("p_player_id" "uuid", "p_upgrade_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."finish_construction_with_gold"("p_player_id" "uuid", "p_construction_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -3376,85 +2892,7 @@ BEGIN
 END;
 $$;
 
-
 ALTER FUNCTION "public"."finish_construction_with_gold"("p_player_id" "uuid", "p_construction_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."finish_market_transfer_with_stars"("p_transfer_id" "uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_transfer record;
-  v_player_gold numeric;
-  v_gold_cost integer;
-  v_remaining_minutes numeric;
-  v_result jsonb;
-begin
-  if v_player_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  select *
-  into v_transfer
-  from public.logistics_transfers
-  where id = p_transfer_id
-    and buyer_player_id = v_player_id
-  for update;
-
-  if not found then
-    return jsonb_build_object('success', false, 'message', 'Transfer bulunamadi veya size ait degil.');
-  end if;
-
-  if v_transfer.status <> 'in_transit' then
-    return jsonb_build_object(
-      'success', false,
-      'message', 'Bu transfer yolda degil veya zaten tamamlanmis.'
-    );
-  end if;
-
-  v_remaining_minutes := extract(epoch from (v_transfer.finish_at - timezone('utc'::text, now()))) / 60.0;
-
-  if v_remaining_minutes <= 0 then
-    v_result := public.complete_market_transfer_system(p_transfer_id);
-    return v_result || jsonb_build_object('gold_spent', 0);
-  end if;
-
-  v_gold_cost := ceil(v_remaining_minutes / 10.0);
-
-  select gold
-  into v_player_gold
-  from public.players
-  where id = v_player_id
-  for update;
-
-  if coalesce(v_player_gold, 0) < v_gold_cost then
-    return jsonb_build_object(
-      'success', false,
-      'message', format('Yetersiz yildiz. Gerekli: %s, Mevcut: %s.', v_gold_cost, coalesce(v_player_gold, 0)::integer)
-    );
-  end if;
-
-  update public.players
-  set gold = gold - v_gold_cost
-  where id = v_player_id;
-
-  update public.logistics_transfers
-  set
-    finish_at = timezone('utc'::text, now()),
-    updated_at = timezone('utc'::text, now())
-  where id = p_transfer_id;
-
-  v_result := public.complete_market_transfer_system(p_transfer_id);
-
-  return v_result || jsonb_build_object('gold_spent', v_gold_cost);
-end;
-$$;
-
-
-ALTER FUNCTION "public"."finish_market_transfer_with_stars"("p_transfer_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_active_arge_researches"("p_player_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -3482,9 +2920,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_active_arge_researches"("p_player_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_active_cities"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -3493,9 +2929,7 @@ CREATE OR REPLACE FUNCTION "public"."get_active_cities"() RETURNS "jsonb"
   select public.get_cities_catalog(true);
 $$;
 
-
 ALTER FUNCTION "public"."get_active_cities"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_all_products_catalog"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -3508,9 +2942,7 @@ CREATE OR REPLACE FUNCTION "public"."get_all_products_catalog"() RETURNS "jsonb"
   from public.products p;
 $$;
 
-
 ALTER FUNCTION "public"."get_all_products_catalog"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_arge_products_with_quality"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -3536,44 +2968,49 @@ CREATE OR REPLACE FUNCTION "public"."get_arge_products_with_quality"() RETURNS "
    and ppql.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_arge_products_with_quality"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_available_products_for_store"("p_store_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
 DECLARE
-    v_store_type_id UUID;
-    v_accepted_ids TEXT;
-    v_current_product_ids TEXT[];
-    v_products JSONB;
+    v_store_warehouse_id uuid;
+    v_products jsonb;
 BEGIN
-    -- 1. Mağazanın tipini bul
-    SELECT store_type_id INTO v_store_type_id
-    FROM stores
-    WHERE id = p_store_id;
+    select w.id
+    into v_store_warehouse_id
+    from public.warehouses w
+    where w.store_id = p_store_id
+      and w.warehouse_kind = 'store'
+      and w.is_active = true
+    limit 1;
 
-    -- 2. Mağaza tipine göre kabul edilen ürünleri al
-    SELECT accepted_product_ids INTO v_accepted_ids
-    FROM store_types
-    WHERE id = v_store_type_id;
+    if v_store_warehouse_id is null then
+      return jsonb_build_object(
+        'success', false,
+        'message', 'Bu magazaya bagli aktif magaza deposu bulunamadi.'
+      );
+    end if;
 
-    -- 3. Mevcut slotlardaki ürünleri bul
-    SELECT array_agg(product_id) INTO v_current_product_ids
-    FROM store_slots
-    WHERE store_id = p_store_id AND product_id IS NOT NULL;
-
-    -- 4. Ürünleri getir
-    SELECT jsonb_agg(jsonb_build_object(
-        'id', p.id,
+    select jsonb_agg(
+      jsonb_build_object(
+        'warehouse_slot_id', ws.id,
+        'product_id', p.id,
         'name', p.urun_adi,
         'icon', p.urun_iconu,
-        'base_price', p.baz_satis_fiyati
-    )) INTO v_products
-    FROM products p
-    WHERE p.id = ANY(string_to_array(v_accepted_ids, ','))
-    AND (v_current_product_ids IS NULL OR NOT (p.id = ANY(v_current_product_ids)));
+        'base_price', p.baz_satis_fiyati,
+        'brand_id', ws.brand_id,
+        'quality_level', ws.quality_level,
+        'quantity', ws.quantity,
+        'cost', ws.cost
+      )
+      order by p.urun_adi, ws.quality_level, ws.quantity desc, ws.id
+    ) INTO v_products
+    FROM public.warehouse_slots ws
+    JOIN public.products p on p.id = ws.product_id
+    WHERE ws.warehouse_id = v_store_warehouse_id
+      and ws.product_id is not null
+      and coalesce(ws.quantity, 0) > 0;
 
     RETURN jsonb_build_object(
         'success', true,
@@ -3587,319 +3024,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
-
 ALTER FUNCTION "public"."get_available_products_for_store"("p_store_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_buyer_active_market_transfers"() RETURNS "jsonb"
-    LANGUAGE "sql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-  select coalesce(
-    jsonb_agg(
-      jsonb_build_object(
-        'id', lt.id,
-        'product_id', lt.product_id,
-        'buyer_warehouse_id', lt.buyer_warehouse_id,
-        'buyer_store_slot_id', lt.buyer_store_slot_id,
-        'transfer_type', lt.transfer_type,
-        'quantity', lt.quantity,
-        'status', lt.status,
-        'started_at', lt.started_at,
-        'finish_at', lt.finish_at,
-        'is_rental', lt.is_rental,
-        'total_price', lt.total_price,
-        'rental_cost', lt.rental_cost,
-        'transport_cost', lt.transport_cost
-      )
-      order by lt.finish_at
-    ),
-    '[]'::jsonb
-  )
-  from public.logistics_transfers lt
-  where lt.buyer_player_id = auth.uid()
-    and lt.status = 'in_transit';
-$$;
-
-
-ALTER FUNCTION "public"."get_buyer_active_market_transfers"() OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_buyer_transfer_history_items"() RETURNS "jsonb"
-    LANGUAGE "sql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-  select coalesce(
-    jsonb_agg(item order by completed_at desc nulls last),
-    '[]'::jsonb
-  )
-  from (
-    select
-      lt.completed_at,
-      (
-        jsonb_build_object(
-          'id', lt.id,
-          'quantity', lt.quantity,
-          'status', lt.status,
-          'is_rental', lt.is_rental,
-          'total_price', lt.total_price,
-          'rental_cost', lt.rental_cost,
-          'transport_cost', lt.transport_cost,
-          'started_at', lt.started_at,
-          'finish_at', lt.finish_at,
-          'completed_at', lt.completed_at,
-          'seller_entity_kind', lt.seller_entity_kind,
-          'buyer_entity_kind', lt.buyer_entity_kind,
-          'product',
-          (
-            select jsonb_build_object(
-              'id', p.id,
-              'urun_adi', p.urun_adi,
-              'urun_iconu', p.urun_iconu
-            )
-            from public.products p
-            where p.id = lt.product_id
-          ),
-          'seller_warehouse',
-          case
-            when lt.seller_warehouse_id is null then null
-            else (
-              select
-                to_jsonb(w) ||
-                jsonb_build_object(
-                  'city',
-                  (
-                    select jsonb_build_object('id', c.id, 'name', c.name)
-                    from public.cities c
-                    where c.id = w.city_id
-                  )
-                )
-              from public.warehouses w
-              where w.id = lt.seller_warehouse_id
-            )
-          end,
-          'seller_store',
-          case
-            when lt.seller_store_id is null then null
-            else (
-              select
-                to_jsonb(s) ||
-                jsonb_build_object(
-                  'city',
-                  (
-                    select jsonb_build_object('id', c.id, 'name', c.name)
-                    from public.cities c
-                    where c.id = s.city_id
-                  )
-                )
-              from public.stores s
-              where s.id = lt.seller_store_id
-            )
-          end,
-          'seller_production_inventory',
-          case
-            when lt.seller_production_inventory_id is null then null
-            else (
-              select jsonb_build_object(
-                'id', pi.id,
-                'inventory_type', pi.inventory_type,
-                'city',
-                (
-                  select jsonb_build_object('id', c.id, 'name', c.name)
-                  from public.cities c
-                  where c.id = coalesce(sf.city_id, sfi.city_id, sfa.city_id, sm.city_id)
-                )
-              )
-              from public.production_inventory pi
-              left join public.farms sf
-                on pi.owner_kind = 'farm'
-               and sf.id = pi.owner_id
-              left join public.fields sfi
-                on pi.owner_kind = 'field'
-               and sfi.id = pi.owner_id
-              left join public.factories sfa
-                on pi.owner_kind = 'factory'
-               and sfa.id = pi.owner_id
-              left join public.mines sm
-                on pi.owner_kind = 'mine'
-               and sm.id = pi.owner_id
-              where pi.id = lt.seller_production_inventory_id
-            )
-          end,
-          'buyer_warehouse',
-          case
-            when lt.buyer_warehouse_id is null then null
-            else (
-              select
-                to_jsonb(w) ||
-                jsonb_build_object(
-                  'city',
-                  (
-                    select jsonb_build_object('id', c.id, 'name', c.name)
-                    from public.cities c
-                    where c.id = w.city_id
-                  )
-                )
-              from public.warehouses w
-              where w.id = lt.buyer_warehouse_id
-            )
-          end,
-          'buyer_store',
-          case
-            when lt.buyer_store_id is null then null
-            else (
-              select
-                to_jsonb(s) ||
-                jsonb_build_object(
-                  'city',
-                  (
-                    select jsonb_build_object('id', c.id, 'name', c.name)
-                    from public.cities c
-                    where c.id = s.city_id
-                  )
-                )
-              from public.stores s
-              where s.id = lt.buyer_store_id
-            )
-          end,
-          'buyer_production_inventory',
-          case
-            when lt.buyer_production_inventory_id is null then null
-            else (
-              select jsonb_build_object(
-                'id', pi.id,
-                'inventory_type', pi.inventory_type,
-                'city',
-                (
-                  select jsonb_build_object('id', c.id, 'name', c.name)
-                  from public.cities c
-                  where c.id = coalesce(bf.city_id, bfi.city_id, bfa.city_id, bm.city_id)
-                )
-              )
-              from public.production_inventory pi
-              left join public.farms bf
-                on pi.owner_kind = 'farm'
-               and bf.id = pi.owner_id
-              left join public.fields bfi
-                on pi.owner_kind = 'field'
-               and bfi.id = pi.owner_id
-              left join public.factories bfa
-                on pi.owner_kind = 'factory'
-               and bfa.id = pi.owner_id
-              left join public.mines bm
-                on pi.owner_kind = 'mine'
-               and bm.id = pi.owner_id
-              where pi.id = lt.buyer_production_inventory_id
-            )
-          end
-        )
-      ) as item
-    from public.logistics_transfers lt
-    where lt.buyer_player_id = auth.uid()
-      and lt.status <> 'in_transit'
-    order by lt.completed_at desc nulls last
-  ) history_rows;
-$$;
-
-
-ALTER FUNCTION "public"."get_buyer_transfer_history_items"() OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_buyer_transfer_map_items"() RETURNS TABLE("id" "uuid", "quantity" integer, "status" "text", "is_rental" boolean, "total_price" numeric, "rental_cost" numeric, "transport_cost" numeric, "started_at" timestamp with time zone, "finish_at" timestamp with time zone, "product_id" "text", "product_name" "text", "product_icon" "text", "seller_entity_kind" "text", "buyer_entity_kind" "text", "seller_warehouse_id" "uuid", "seller_warehouse_name" "text", "seller_city_id" "uuid", "seller_city_name" "text", "seller_city_x" numeric, "seller_city_y" numeric, "buyer_warehouse_id" "uuid", "buyer_warehouse_name" "text", "buyer_city_id" "uuid", "buyer_city_name" "text", "buyer_city_x" numeric, "buyer_city_y" numeric)
-    LANGUAGE "sql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-  select
-    lt.id,
-    lt.quantity,
-    lt.status,
-    lt.is_rental,
-    lt.total_price,
-    lt.rental_cost,
-    lt.transport_cost,
-    lt.started_at,
-    lt.finish_at,
-    p.id as product_id,
-    p.urun_adi as product_name,
-    p.urun_iconu as product_icon,
-    coalesce(
-      lt.seller_entity_kind,
-      case
-        when lt.seller_production_inventory_id is not null then 'production_inventory'
-        when lt.seller_store_id is not null or lt.seller_store_slot_id is not null then 'store_slot'
-        else 'warehouse'
-      end
-    ) as seller_entity_kind,
-    coalesce(
-      lt.buyer_entity_kind,
-      case
-        when lt.buyer_production_inventory_id is not null then 'production_inventory'
-        when lt.buyer_store_id is not null or lt.buyer_store_slot_id is not null then 'store_slot'
-        else 'warehouse'
-      end
-    ) as buyer_entity_kind,
-    coalesce(sw.id, ss.id, spi.id) as seller_warehouse_id,
-    coalesce(
-      sw.name,
-      ss.name,
-      case
-        when spi.id is not null then
-          coalesce(sf.name, sfi.name, sfa.name, sm.name, 'Uretim')
-          || ' '
-          || case when spi.inventory_type = 'input' then 'Input' else 'Output' end
-        else null
-      end
-    ) as seller_warehouse_name,
-    coalesce(sc_w.id, sc_s.id, sc_p.id) as seller_city_id,
-    coalesce(sc_w.name, sc_s.name, sc_p.name) as seller_city_name,
-    coalesce(sc_w.map_position_x, sc_s.map_position_x, sc_p.map_position_x) as seller_city_x,
-    coalesce(sc_w.map_position_y, sc_s.map_position_y, sc_p.map_position_y) as seller_city_y,
-    coalesce(bw.id, bs.id, bpi.id) as buyer_warehouse_id,
-    coalesce(
-      bw.name,
-      bs.name,
-      case
-        when bpi.id is not null then
-          coalesce(bf.name, bfi.name, bfa.name, bm.name, 'Uretim')
-          || ' '
-          || case when bpi.inventory_type = 'input' then 'Input' else 'Output' end
-        else null
-      end
-    ) as buyer_warehouse_name,
-    coalesce(bc_w.id, bc_s.id, bc_p.id) as buyer_city_id,
-    coalesce(bc_w.name, bc_s.name, bc_p.name) as buyer_city_name,
-    coalesce(bc_w.map_position_x, bc_s.map_position_x, bc_p.map_position_x) as buyer_city_x,
-    coalesce(bc_w.map_position_y, bc_s.map_position_y, bc_p.map_position_y) as buyer_city_y
-  from public.logistics_transfers lt
-  join public.products p on p.id = lt.product_id
-  left join public.warehouses sw on sw.id = lt.seller_warehouse_id
-  left join public.cities sc_w on sc_w.id = sw.city_id
-  left join public.stores ss on ss.id = lt.seller_store_id
-  left join public.cities sc_s on sc_s.id = ss.city_id
-  left join public.production_inventory spi on spi.id = lt.seller_production_inventory_id
-  left join public.factories sf on sf.id = spi.owner_id and spi.owner_kind = 'factory'
-  left join public.fields sfi on sfi.id = spi.owner_id and spi.owner_kind = 'field'
-  left join public.farms sfa on sfa.id = spi.owner_id and spi.owner_kind = 'farm'
-  left join public.mines sm on sm.id = spi.owner_id and spi.owner_kind = 'mine'
-  left join public.cities sc_p on sc_p.id = coalesce(sf.city_id, sfi.city_id, sfa.city_id, sm.city_id)
-  left join public.warehouses bw on bw.id = lt.buyer_warehouse_id
-  left join public.cities bc_w on bc_w.id = bw.city_id
-  left join public.stores bs on bs.id = lt.buyer_store_id
-  left join public.cities bc_s on bc_s.id = bs.city_id
-  left join public.production_inventory bpi on bpi.id = lt.buyer_production_inventory_id
-  left join public.factories bf on bf.id = bpi.owner_id and bpi.owner_kind = 'factory'
-  left join public.fields bfi on bfi.id = bpi.owner_id and bpi.owner_kind = 'field'
-  left join public.farms bfa on bfa.id = bpi.owner_id and bpi.owner_kind = 'farm'
-  left join public.mines bm on bm.id = bpi.owner_id and bpi.owner_kind = 'mine'
-  left join public.cities bc_p on bc_p.id = coalesce(bf.city_id, bfi.city_id, bfa.city_id, bm.city_id)
-  where lt.buyer_player_id = auth.uid()
-    and lt.status = 'in_transit'
-  order by lt.finish_at asc;
-$$;
-
-
-ALTER FUNCTION "public"."get_buyer_transfer_map_items"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_cities_catalog"("p_only_active" boolean DEFAULT false) RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -3913,9 +3038,7 @@ CREATE OR REPLACE FUNCTION "public"."get_cities_catalog"("p_only_active" boolean
   where (not p_only_active) or c.is_active = true;
 $$;
 
-
 ALTER FUNCTION "public"."get_cities_catalog"("p_only_active" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_city_map_detail"("p_city_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -3931,9 +3054,7 @@ CREATE OR REPLACE FUNCTION "public"."get_city_map_detail"("p_city_id" "uuid") RE
   where c.id = p_city_id;
 $$;
 
-
 ALTER FUNCTION "public"."get_city_map_detail"("p_city_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_experience_required_for_level"("p_level" integer) RETURNS integer
     LANGUAGE "plpgsql" IMMUTABLE
@@ -3943,9 +3064,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_experience_required_for_level"("p_level" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_factory_detail_data"("p_factory_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -3993,9 +3112,7 @@ CREATE OR REPLACE FUNCTION "public"."get_factory_detail_data"("p_factory_id" "uu
     and f.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_factory_detail_data"("p_factory_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_factory_list_items"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4052,9 +3169,7 @@ CREATE OR REPLACE FUNCTION "public"."get_factory_list_items"() RETURNS "jsonb"
   where f.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_factory_list_items"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_factory_types_catalog"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4067,9 +3182,7 @@ CREATE OR REPLACE FUNCTION "public"."get_factory_types_catalog"() RETURNS "jsonb
   from public.factory_types ft;
 $$;
 
-
 ALTER FUNCTION "public"."get_factory_types_catalog"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_farm_detail"("p_player_id" "uuid", "p_farm_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -4231,9 +3344,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_farm_detail"("p_player_id" "uuid", "p_farm_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_farm_list_items"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4291,9 +3402,7 @@ CREATE OR REPLACE FUNCTION "public"."get_farm_list_items"() RETURNS "jsonb"
   where f.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_farm_list_items"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_farm_types_catalog"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4306,9 +3415,7 @@ CREATE OR REPLACE FUNCTION "public"."get_farm_types_catalog"() RETURNS "jsonb"
   from public.farm_types ft;
 $$;
 
-
 ALTER FUNCTION "public"."get_farm_types_catalog"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_field_detail_data"("p_field_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4366,9 +3473,7 @@ CREATE OR REPLACE FUNCTION "public"."get_field_detail_data"("p_field_id" "uuid")
     and f.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_field_detail_data"("p_field_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_field_list_items"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4426,9 +3531,7 @@ CREATE OR REPLACE FUNCTION "public"."get_field_list_items"() RETURNS "jsonb"
   where f.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_field_list_items"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_field_types_catalog"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4441,9 +3544,7 @@ CREATE OR REPLACE FUNCTION "public"."get_field_types_catalog"() RETURNS "jsonb"
   from public.field_types ft;
 $$;
 
-
 ALTER FUNCTION "public"."get_field_types_catalog"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_logistics_company_types_catalog"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4456,9 +3557,7 @@ CREATE OR REPLACE FUNCTION "public"."get_logistics_company_types_catalog"() RETU
   from public.logistics_company_types lct;
 $$;
 
-
 ALTER FUNCTION "public"."get_logistics_company_types_catalog"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_logistics_entry_state"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4503,9 +3602,7 @@ CREATE OR REPLACE FUNCTION "public"."get_logistics_entry_state"() RETURNS "jsonb
   );
 $$;
 
-
 ALTER FUNCTION "public"."get_logistics_entry_state"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_logistics_vehicle_types_catalog"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4518,48 +3615,7 @@ CREATE OR REPLACE FUNCTION "public"."get_logistics_vehicle_types_catalog"() RETU
   from public.logistics_vehicle_types lvt;
 $$;
 
-
 ALTER FUNCTION "public"."get_logistics_vehicle_types_catalog"() OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_market_buyer_store_slot_detail"("p_store_slot_id" "uuid") RETURNS "jsonb"
-    LANGUAGE "sql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-  select (
-    to_jsonb(ss) ||
-    jsonb_build_object(
-      'store',
-      (
-        select
-          to_jsonb(s) ||
-          jsonb_build_object(
-            'city',
-            (
-              select jsonb_build_object(
-                'id', c.id,
-                'name', c.name,
-                'map_position_x', c.map_position_x,
-                'map_position_y', c.map_position_y
-              )
-              from public.cities c
-              where c.id = s.city_id
-            )
-          )
-        from public.stores s
-        where s.id = ss.store_id
-      )
-    )
-  )
-  from public.store_slots ss
-  join public.stores owner_store on owner_store.id = ss.store_id
-  where ss.id = p_store_slot_id
-    and owner_store.player_id = auth.uid();
-$$;
-
-
-ALTER FUNCTION "public"."get_market_buyer_store_slot_detail"("p_store_slot_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_market_buyer_warehouse_detail"("p_warehouse_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4591,16 +3647,19 @@ CREATE OR REPLACE FUNCTION "public"."get_market_buyer_warehouse_detail"("p_wareh
     and w.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_market_buyer_warehouse_detail"("p_warehouse_id" "uuid") OWNER TO "postgres";
 
-
-CREATE OR REPLACE FUNCTION "public"."get_market_listings_for_product"("p_product_id" "text") RETURNS TABLE("slot_id" "uuid", "warehouse_id" "uuid", "warehouse_name" "text", "warehouse_icon" "text", "city_id" "uuid", "city_name" "text", "city_x" numeric, "city_y" numeric, "seller_player_id" "uuid", "seller_player_name" "text", "seller_avatar_id" "text", "quantity" integer, "quality_level" integer, "price" numeric, "cost" numeric, "is_available_for_sale" boolean)
+CREATE OR REPLACE FUNCTION "public"."get_market_listings_for_product"("p_product_id" "text") RETURNS TABLE("slot_id" "uuid", "product_id" "text", "product_name" "text", "product_icon" "text", "brand_id" "uuid", "unit_volume" numeric, "warehouse_id" "uuid", "warehouse_name" "text", "warehouse_icon" "text", "city_id" "uuid", "city_name" "text", "city_x" numeric, "city_y" numeric, "seller_player_id" "uuid", "seller_player_name" "text", "seller_avatar_id" "text", "quantity" integer, "quality_level" integer, "price" numeric, "cost" numeric, "is_available_for_sale" boolean)
     LANGUAGE "sql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
   select
     ws.id as slot_id,
+    ws.product_id,
+    coalesce(pr.urun_adi, 'Urun') as product_name,
+    coalesce(pr.urun_iconu, 'default.webp') as product_icon,
+    coalesce(ws.brand_id, '00000000-0000-0000-0000-000000000000'::uuid) as brand_id,
+    coalesce(pr.birim_hacim, 0) as unit_volume,
     w.id as warehouse_id,
     w.name as warehouse_name,
     wt.icon as warehouse_icon,
@@ -4617,6 +3676,7 @@ CREATE OR REPLACE FUNCTION "public"."get_market_listings_for_product"("p_product
     ws.cost,
     ws.is_available_for_sale
   from public.warehouse_slots ws
+  join public.products pr on pr.id = ws.product_id
   join public.warehouses w on w.id = ws.warehouse_id
   join public.players p on p.id = w.player_id
   left join public.warehouse_types wt on wt.id = w.warehouse_type_id
@@ -4630,9 +3690,50 @@ CREATE OR REPLACE FUNCTION "public"."get_market_listings_for_product"("p_product
   order by ws.price asc, ws.quality_level desc, ws.quantity desc, ws.updated_at desc;
 $$;
 
-
 ALTER FUNCTION "public"."get_market_listings_for_product"("p_product_id" "text") OWNER TO "postgres";
 
+CREATE OR REPLACE FUNCTION "public"."get_market_listings_for_city"("p_city_id" "uuid") RETURNS TABLE("slot_id" "uuid", "product_id" "text", "product_name" "text", "product_icon" "text", "brand_id" "uuid", "unit_volume" numeric, "warehouse_id" "uuid", "warehouse_name" "text", "warehouse_icon" "text", "city_id" "uuid", "city_name" "text", "city_x" numeric, "city_y" numeric, "seller_player_id" "uuid", "seller_player_name" "text", "seller_avatar_id" "text", "quantity" integer, "quality_level" integer, "price" numeric, "cost" numeric, "is_available_for_sale" boolean)
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  select
+    ws.id as slot_id,
+    ws.product_id,
+    coalesce(pr.urun_adi, 'Urun') as product_name,
+    coalesce(pr.urun_iconu, 'default.webp') as product_icon,
+    coalesce(ws.brand_id, '00000000-0000-0000-0000-000000000000'::uuid) as brand_id,
+    coalesce(pr.birim_hacim, 0) as unit_volume,
+    w.id as warehouse_id,
+    w.name as warehouse_name,
+    wt.icon as warehouse_icon,
+    c.id as city_id,
+    c.name as city_name,
+    c.map_position_x as city_x,
+    c.map_position_y as city_y,
+    w.player_id as seller_player_id,
+    coalesce(pl.player_name, 'Oyuncu') as seller_player_name,
+    coalesce(pl.avatar_id, 'ae1.webp') as seller_avatar_id,
+    ws.quantity,
+    ws.quality_level,
+    ws.price,
+    ws.cost,
+    ws.is_available_for_sale
+  from public.warehouse_slots ws
+  join public.products pr on pr.id = ws.product_id
+  join public.warehouses w on w.id = ws.warehouse_id
+  join public.players pl on pl.id = w.player_id
+  join public.cities c on c.id = w.city_id
+  left join public.warehouse_types wt on wt.id = w.warehouse_type_id
+  where w.city_id = p_city_id
+    and ws.is_available_for_sale = true
+    and ws.quantity > 0
+    and coalesce(ws.price, 0) > 0
+    and w.is_active = true
+    and w.player_id <> auth.uid()
+  order by ws.price asc, pr.urun_adi asc, ws.quality_level desc, ws.quantity desc, ws.updated_at desc;
+$$;
+
+ALTER FUNCTION "public"."get_market_listings_for_city"("p_city_id" "uuid") OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."get_market_product_detail"("p_product_id" "text") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -4643,385 +3744,7 @@ CREATE OR REPLACE FUNCTION "public"."get_market_product_detail"("p_product_id" "
   where p.id = p_product_id;
 $$;
 
-
 ALTER FUNCTION "public"."get_market_product_detail"("p_product_id" "text") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_market_transfer_vehicle_options"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) RETURNS TABLE("vehicle_id" "uuid", "vehicle_owner_player_id" "uuid", "vehicle_name" "text", "is_rental" boolean, "capacity" integer, "speed_kmh" integer, "current_fuel" integer, "fuel_capacity" integer, "fuel_rate" numeric, "condition" integer, "rental_price" numeric, "distance_km" numeric, "fuel_needed" numeric, "condition_needed" numeric, "rental_cost" numeric, "estimated_duration_seconds" integer, "can_select" boolean, "disabled_reason" "text")
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_buyer_id uuid := auth.uid();
-  v_buyer_warehouse record;
-  v_seller_slot record;
-  v_product record;
-  v_distance_km numeric := 0;
-  v_required_capacity numeric := 0;
-  v_available_capacity numeric := 0;
-begin
-  if v_buyer_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Miktar 0''dan buyuk olmalidir.';
-  end if;
-
-  select w.*, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_buyer_warehouse
-  from public.warehouses w
-  join public.cities c on c.id = w.city_id
-  where w.id = p_buyer_warehouse_id
-    and w.player_id = v_buyer_id;
-
-  if not found then
-    raise exception 'Alici deposu bulunamadi veya size ait degil.';
-  end if;
-
-  select ws.*, w.player_id as seller_player_id, w.city_id as seller_city_id, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_seller_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  join public.cities c on c.id = w.city_id
-  where ws.id = p_seller_slot_id
-    and ws.is_available_for_sale = true;
-
-  if not found then
-    raise exception 'Satici slotu bulunamadi.';
-  end if;
-
-  if v_seller_slot.seller_player_id = v_buyer_id then
-    raise exception 'Kendi ilaninizi satin alamazsiniz.';
-  end if;
-
-  if p_quantity > v_seller_slot.quantity then
-    raise exception 'Istenen miktar mevcut stoktan fazla.';
-  end if;
-
-  select * into v_product
-  from public.products
-  where id = v_seller_slot.product_id;
-
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then
-    raise exception 'Urun hacim bilgisi gecersiz.';
-  end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  select greatest(
-    coalesce(v_buyer_warehouse.capacity, 0)::numeric
-    - coalesce(sum(ws.quantity::numeric * coalesce(p.birim_hacim, 0)), 0)
-    - coalesce(v_buyer_warehouse.reserved_capacity, 0)::numeric,
-    0
-  )
-  into v_available_capacity
-  from public.warehouse_slots ws
-  left join public.products p on p.id = ws.product_id
-  where ws.warehouse_id = p_buyer_warehouse_id;
-
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_seller_slot.city_x - v_buyer_warehouse.city_x) / 2)), 2) +
-      cos(radians(v_buyer_warehouse.city_x)) *
-      cos(radians(v_seller_slot.city_x)) *
-      power(sin(radians((v_seller_slot.city_y - v_buyer_warehouse.city_y) / 2)), 2)
-    )
-  );
-
-  return query
-  with candidates as (
-    select
-      lv.id as v_id,
-      lv.player_id as v_owner_player_id,
-      lvt.name as v_name,
-      (lv.player_id <> v_buyer_id) as v_is_rental,
-      lv.capacity as v_capacity,
-      lv.speed_kmh as v_speed_kmh,
-      lv.current_fuel as v_current_fuel,
-      lv.fuel_capacity as v_fuel_capacity,
-      coalesce(lv.fuel_cost, 0) as v_vehicle_fuel_cost,
-      lv.fuel_rate as v_fuel_rate,
-      lv.condition as v_condition,
-      lv.rental_price as v_rental_price,
-      v_distance_km as v_distance_km_val,
-      ceil(v_distance_km * lv.fuel_rate) as v_fuel_needed,
-      ceil(v_distance_km * 0.005) as v_condition_needed,
-      case
-        when lv.player_id <> v_buyer_id then ceil(v_distance_km * lv.rental_price)
-        else 0
-      end as v_rental_cost,
-      greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as v_estimated_duration_seconds,
-      lv.status as v_status,
-      lv.is_available_for_rent as v_is_available_for_rent,
-      lc.is_active as v_company_is_active,
-      public.logistics_vehicle_matches_route(lv.route_city_a_id, lv.route_city_b_id, v_seller_slot.seller_city_id, v_buyer_warehouse.city_id) as v_route_matches
-    from public.logistics_vehicles lv
-    join public.logistics_vehicle_types lvt on lvt.id = lv.logistics_vehicle_type_id
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.player_id <> v_seller_slot.seller_player_id
-      and (
-        lv.player_id = v_buyer_id
-        or (lv.player_id <> v_buyer_id and lv.is_available_for_rent = true)
-      )
-
-    union all
-
-    select
-      '00000000-0000-0000-0000-000000000000'::uuid as v_id,
-      '00000000-0000-0000-0000-000000000000'::uuid as v_owner_player_id,
-      'Sistem Nakliye Araci' as v_name,
-      true as v_is_rental,
-      999999 as v_capacity,
-      60 as v_speed_kmh,
-      999999 as v_current_fuel,
-      999999 as v_fuel_capacity,
-      0::numeric as v_vehicle_fuel_cost,
-      0::numeric as v_fuel_rate,
-      100 as v_condition,
-      5.0::numeric as v_rental_price,
-      v_distance_km as v_distance_km_val,
-      0::numeric as v_fuel_needed,
-      0::numeric as v_condition_needed,
-      ceil(v_distance_km * 5.0) as v_rental_cost,
-      greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer as v_estimated_duration_seconds,
-      'idle' as v_status,
-      true as v_is_available_for_rent,
-      true as v_company_is_active,
-      true as v_route_matches
-  ),
-  final_res as (
-      select
-        c.v_id as out_vehicle_id,
-        c.v_owner_player_id as out_vehicle_owner_player_id,
-        c.v_name as out_vehicle_name,
-        c.v_is_rental as out_is_rental,
-        c.v_capacity as out_capacity,
-        c.v_speed_kmh as out_speed_kmh,
-        c.v_current_fuel as out_current_fuel,
-        c.v_fuel_capacity as out_fuel_capacity,
-        c.v_fuel_rate as out_fuel_rate,
-        c.v_condition as out_condition,
-        c.v_rental_price as out_rental_price,
-        c.v_distance_km_val as out_distance_km,
-        c.v_fuel_needed as out_fuel_needed,
-        c.v_condition_needed as out_condition_needed,
-        c.v_rental_cost as out_rental_cost,
-        c.v_estimated_duration_seconds as out_estimated_duration_seconds,
-        (
-          c.v_route_matches = true
-          and c.v_status = 'idle'
-          and c.v_company_is_active = true
-          and v_available_capacity >= v_required_capacity
-          and c.v_capacity >= v_required_capacity
-          and c.v_current_fuel >= c.v_fuel_needed
-          and c.v_condition > c.v_condition_needed
-        ) as out_can_select,
-        case
-          when c.v_route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
-          when c.v_status <> 'idle' then 'Arac su anda uygun degil.'
-          when c.v_company_is_active = false then 'Nakliye firmasi aktif degil.'
-          when v_available_capacity < v_required_capacity then 'Hedef depoda bos kapasite yetersiz.'
-          when c.v_capacity < v_required_capacity then 'Kapasite yetersiz.'
-          when c.v_current_fuel < c.v_fuel_needed then 'Yakit yetersiz.'
-          when c.v_condition <= c.v_condition_needed then 'Kondisyon yetersiz.'
-          else null
-        end as out_disabled_reason
-      from candidates c
-  )
-  select * from final_res fr
-  order by fr.out_is_rental asc, fr.out_can_select desc, fr.out_capacity asc, fr.out_rental_price asc, fr.out_vehicle_name asc nulls last;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."get_market_transfer_vehicle_options"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_market_transfer_vehicle_options_for_store"("p_store_slot_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) RETURNS TABLE("vehicle_id" "uuid", "vehicle_owner_player_id" "uuid", "vehicle_name" "text", "is_rental" boolean, "capacity" integer, "speed_kmh" integer, "current_fuel" integer, "fuel_capacity" integer, "fuel_rate" numeric, "condition" integer, "rental_price" numeric, "distance_km" numeric, "fuel_needed" numeric, "condition_needed" numeric, "rental_cost" numeric, "estimated_duration_seconds" integer, "can_select" boolean, "disabled_reason" "text")
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_buyer_id uuid := auth.uid();
-  v_store_slot record;
-  v_seller_slot record;
-  v_product record;
-  v_distance_km numeric := 0;
-  v_required_capacity numeric := 0;
-begin
-  if v_buyer_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Miktar 0''dan buyuk olmalidir.';
-  end if;
-
-  select ss.*, s.player_id, s.is_active as store_is_active, s.city_id as store_city_id, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_store_slot
-  from public.store_slots ss
-  join public.stores s on s.id = ss.store_id
-  join public.cities c on c.id = s.city_id
-  where ss.id = p_store_slot_id;
-
-  if not found or v_store_slot.player_id <> v_buyer_id then
-    raise exception 'Magaza slotu bulunamadi veya size ait degil.';
-  end if;
-
-  if v_store_slot.store_is_active is not true then
-    raise exception 'Magaza aktif degil.';
-  end if;
-
-  select ws.*, w.player_id as seller_player_id, w.city_id as seller_city_id, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_seller_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  join public.cities c on c.id = w.city_id
-  where ws.id = p_seller_slot_id
-    and ws.is_available_for_sale = true;
-
-  if not found then
-    raise exception 'Satici slotu bulunamadi.';
-  end if;
-
-  if v_seller_slot.seller_player_id = v_buyer_id then
-    raise exception 'Kendi ilaninizi satin alamazsiniz.';
-  end if;
-
-  if p_quantity > v_seller_slot.quantity then
-    raise exception 'Istenen miktar mevcut stoktan fazla.';
-  end if;
-
-  if v_store_slot.product_id is not null and v_store_slot.quality_level > 0 and (
-    v_store_slot.product_id <> v_seller_slot.product_id
-    or v_store_slot.quality_level <> v_seller_slot.quality_level
-  ) and (v_store_slot.quantity > 0 or coalesce(v_store_slot.pending_quantity, 0) > 0) then
-    raise exception 'Slotta farkli urun veya kalite icin aktif stok/rezerve var.';
-  end if;
-
-  if (coalesce(v_store_slot.quantity, 0) + coalesce(v_store_slot.pending_quantity, 0) + p_quantity) > v_store_slot.capacity then
-    raise exception 'Magaza slot kapasitesi yetersiz.';
-  end if;
-
-  select * into v_product
-  from public.products
-  where id = v_seller_slot.product_id;
-
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then
-    raise exception 'Urun hacim bilgisi gecersiz.';
-  end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_seller_slot.city_x - v_store_slot.city_x) / 2)), 2) +
-      cos(radians(v_store_slot.city_x)) *
-      cos(radians(v_seller_slot.city_x)) *
-      power(sin(radians((v_seller_slot.city_y - v_store_slot.city_y) / 2)), 2)
-    )
-  );
-
-  return query
-  with candidates as (
-    select
-      lv.id as v_id,
-      lv.player_id as v_owner_player_id,
-      lvt.name as v_name,
-      (lv.player_id <> v_buyer_id) as v_is_rental,
-      lv.capacity as v_capacity,
-      lv.speed_kmh as v_speed_kmh,
-      lv.current_fuel as v_current_fuel,
-      lv.fuel_capacity as v_fuel_capacity,
-      lv.fuel_rate as v_fuel_rate,
-      lv.condition as v_condition,
-      lv.rental_price as v_rental_price,
-      v_distance_km as v_distance_km_val,
-      ceil(v_distance_km * lv.fuel_rate) as v_fuel_needed,
-      ceil(v_distance_km * 0.005) as v_condition_needed,
-      case when lv.player_id <> v_buyer_id then ceil(v_distance_km * lv.rental_price) else 0 end as v_rental_cost,
-      greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as v_estimated_duration_seconds,
-      lv.status as v_status,
-      lv.is_available_for_rent as v_is_available_for_rent,
-      lc.is_active as v_company_is_active,
-      public.logistics_vehicle_matches_route(lv.route_city_a_id, lv.route_city_b_id, v_seller_slot.seller_city_id, v_store_slot.store_city_id) as v_route_matches
-    from public.logistics_vehicles lv
-    join public.logistics_vehicle_types lvt on lvt.id = lv.logistics_vehicle_type_id
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.player_id <> v_seller_slot.seller_player_id
-      and (
-        lv.player_id = v_buyer_id
-        or (lv.player_id <> v_buyer_id and lv.is_available_for_rent = true)
-      )
-
-    union all
-
-    select
-      '00000000-0000-0000-0000-000000000000'::uuid as v_id,
-      '00000000-0000-0000-0000-000000000000'::uuid as v_owner_player_id,
-      'Sistem Nakliye Araci' as v_name,
-      true as v_is_rental,
-      999999 as v_capacity,
-      60 as v_speed_kmh,
-      999999 as v_current_fuel,
-      999999 as v_fuel_capacity,
-      0::numeric as v_fuel_rate,
-      100 as v_condition,
-      5.0::numeric as v_rental_price,
-      v_distance_km as v_distance_km_val,
-      0::numeric as v_fuel_needed,
-      0::numeric as v_condition_needed,
-      ceil(v_distance_km * 5.0) as v_rental_cost,
-      greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer as v_estimated_duration_seconds,
-      'idle' as v_status,
-      true as v_is_available_for_rent,
-      true as v_company_is_active,
-      true as v_route_matches
-  ),
-  final_res as (
-      select
-        c.v_id as out_vehicle_id,
-        c.v_owner_player_id as out_vehicle_owner_player_id,
-        c.v_name as out_vehicle_name,
-        c.v_is_rental as out_is_rental,
-        c.v_capacity as out_capacity,
-        c.v_speed_kmh as out_speed_kmh,
-        c.v_current_fuel as out_current_fuel,
-        c.v_fuel_capacity as out_fuel_capacity,
-        c.v_fuel_rate as out_fuel_rate,
-        c.v_condition as out_condition,
-        c.v_rental_price as out_rental_price,
-        c.v_distance_km_val as out_distance_km,
-        c.v_fuel_needed as out_fuel_needed,
-        c.v_condition_needed as out_condition_needed,
-        c.v_rental_cost as out_rental_cost,
-        c.v_estimated_duration_seconds as out_estimated_duration_seconds,
-        (
-          c.v_route_matches = true
-          and c.v_status = 'idle'
-          and c.v_company_is_active = true
-          and c.v_capacity >= v_required_capacity
-          and c.v_current_fuel >= c.v_fuel_needed
-          and c.v_condition > c.v_condition_needed
-        ) as out_can_select,
-        case
-          when c.v_route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
-          when c.v_status <> 'idle' then 'Arac su anda uygun degil.'
-          when c.v_company_is_active = false then 'Nakliye firmasi aktif degil.'
-          when c.v_capacity < v_required_capacity then 'Kapasite yetersiz.'
-          when c.v_current_fuel < c.v_fuel_needed then 'Yakit yetersiz.'
-          when c.v_condition <= c.v_condition_needed then 'Kondisyon yetersiz.'
-          else null
-        end as out_disabled_reason
-      from candidates c
-  )
-  select * from final_res fr
-  order by fr.out_is_rental asc, fr.out_can_select desc, fr.out_capacity asc, fr.out_rental_price asc, fr.out_vehicle_name asc nulls last;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."get_market_transfer_vehicle_options_for_store"("p_store_slot_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_mine_detail_data"("p_mine_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5069,9 +3792,7 @@ CREATE OR REPLACE FUNCTION "public"."get_mine_detail_data"("p_mine_id" "uuid") R
     and m.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_mine_detail_data"("p_mine_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_mine_list_items"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5120,9 +3841,7 @@ CREATE OR REPLACE FUNCTION "public"."get_mine_list_items"() RETURNS "jsonb"
   where m.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_mine_list_items"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_mine_types_catalog"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5135,9 +3854,7 @@ CREATE OR REPLACE FUNCTION "public"."get_mine_types_catalog"() RETURNS "jsonb"
   from public.mine_types mt;
 $$;
 
-
 ALTER FUNCTION "public"."get_mine_types_catalog"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_npc_logistics_player_id"() RETURNS "uuid"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -5165,9 +3882,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_npc_logistics_player_id"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_npc_rental_vehicle_option"("p_from_city_id" "uuid", "p_to_city_id" "uuid", "p_distance_km" numeric) RETURNS TABLE("vehicle_id" "uuid", "vehicle_owner_player_id" "uuid", "vehicle_name" "text", "is_rental" boolean, "capacity" integer, "speed_kmh" integer, "current_fuel" integer, "fuel_capacity" integer, "fuel_rate" numeric, "condition" integer, "rental_price" numeric, "distance_km" numeric, "fuel_needed" numeric, "condition_needed" numeric, "rental_cost" numeric, "estimated_duration_seconds" integer, "can_select" boolean, "disabled_reason" "text")
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -5212,9 +3927,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_npc_rental_vehicle_option"("p_from_city_id" "uuid", "p_to_city_id" "uuid", "p_distance_km" numeric) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_active_building_boost"("p_building_kind" "text", "p_entity_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5231,9 +3944,7 @@ CREATE OR REPLACE FUNCTION "public"."get_player_active_building_boost"("p_buildi
   limit 1;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_active_building_boost"("p_building_kind" "text", "p_entity_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_active_building_upgrade"("p_building_kind" "text", "p_entity_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5250,9 +3961,7 @@ CREATE OR REPLACE FUNCTION "public"."get_player_active_building_upgrade"("p_buil
   limit 1;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_active_building_upgrade"("p_building_kind" "text", "p_entity_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_active_warehouses_basic"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5277,12 +3986,11 @@ CREATE OR REPLACE FUNCTION "public"."get_player_active_warehouses_basic"() RETUR
   )
   from public.warehouses w
   where w.player_id = auth.uid()
-    and w.is_active = true;
+    and w.is_active = true
+    and coalesce(w.warehouse_kind, 'normal') = 'normal';
 $$;
 
-
 ALTER FUNCTION "public"."get_player_active_warehouses_basic"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_active_warehouses_with_slots"("p_city_id" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5322,12 +4030,11 @@ CREATE OR REPLACE FUNCTION "public"."get_player_active_warehouses_with_slots"("p
   from public.warehouses w
   where w.player_id = auth.uid()
     and w.is_active = true
+    and coalesce(w.warehouse_kind, 'normal') = 'normal'
     and (p_city_id is null or w.city_id = p_city_id);
 $$;
 
-
 ALTER FUNCTION "public"."get_player_active_warehouses_with_slots"("p_city_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_arge_center"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5340,9 +4047,7 @@ CREATE OR REPLACE FUNCTION "public"."get_player_arge_center"() RETURNS "jsonb"
   limit 1;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_arge_center"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_building_constructions"("p_building_kind" "text", "p_status" "text" DEFAULT NULL::"text") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5358,9 +4063,7 @@ CREATE OR REPLACE FUNCTION "public"."get_player_building_constructions"("p_build
     and (p_status is null or bc.status = p_status);
 $$;
 
-
 ALTER FUNCTION "public"."get_player_building_constructions"("p_building_kind" "text", "p_status" "text") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_level_from_experience"("p_experience" integer) RETURNS integer
     LANGUAGE "plpgsql" IMMUTABLE
@@ -5378,9 +4081,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_level_from_experience"("p_experience" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_level_progress"("p_player_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -5403,9 +4104,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_level_progress"("p_player_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_logistics_company"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5418,9 +4117,7 @@ CREATE OR REPLACE FUNCTION "public"."get_player_logistics_company"() RETURNS "js
   limit 1;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_logistics_company"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_logistics_vehicle_performance"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5446,9 +4143,7 @@ CREATE OR REPLACE FUNCTION "public"."get_player_logistics_vehicle_performance"()
   ) stats;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_logistics_vehicle_performance"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer DEFAULT 100) RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5482,9 +4177,391 @@ CREATE OR REPLACE FUNCTION "public"."get_player_logistics_finance_entries"("p_li
   ) entries;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer) OWNER TO "postgres";
 
+CREATE OR REPLACE FUNCTION "public"."get_buyer_transfer_map_items"() RETURNS "jsonb"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  with base as (
+    select
+      lt.id,
+      coalesce(lt.quantity, 0) as quantity,
+      greatest(coalesce(lt.item_count, 1), 1) as item_count,
+      coalesce(nullif(lt.total_quantity, 0), lt.quantity, 0) as total_quantity,
+      coalesce(lt.status, 'in_transit') as status,
+      coalesce(nullif(lt.transfer_type, ''), 'market_transfer') as transfer_type,
+      coalesce(lt.is_rental, false) as is_rental,
+      coalesce(lt.total_price, 0)::double precision as total_price,
+      coalesce(lt.rental_cost, 0)::double precision as rental_cost,
+      coalesce(lt.transport_cost, 0)::double precision as transport_cost,
+      lt.started_at,
+      lt.finish_at,
+      lt.completed_at,
+      coalesce(
+        nullif(lt.seller_entity_kind, ''),
+        case
+          when lt.seller_warehouse_id is not null then 'warehouse'
+          when lt.seller_store_id is not null then 'store'
+          when lt.seller_production_inventory_id is not null then 'production_inventory'
+          else 'warehouse'
+        end
+      ) as seller_entity_kind,
+      coalesce(
+        nullif(lt.buyer_entity_kind, ''),
+        case
+          when lt.buyer_warehouse_id is not null then 'warehouse'
+          when lt.buyer_store_id is not null then 'store'
+          when lt.buyer_production_inventory_id is not null then 'production_inventory'
+          else 'warehouse'
+        end
+      ) as buyer_entity_kind,
+      jsonb_build_object(
+        'id', coalesce(p.id, ''),
+        'urun_adi', coalesce(p.urun_adi, 'Urun'),
+        'urun_iconu', coalesce(p.urun_iconu, 'default.webp')
+      ) as product,
+      case
+        when sw.id is null then null
+        else jsonb_build_object(
+          'id', sw.id,
+          'name', coalesce(sw.name, 'Depo'),
+          'kind', 'warehouse',
+          'city', jsonb_build_object(
+            'id', swc.id,
+            'name', coalesce(swc.name, 'Sehir'),
+            'map_position_x', coalesce(swc.map_position_x, 0),
+            'map_position_y', coalesce(swc.map_position_y, 0)
+          )
+        )
+      end as seller_warehouse,
+      case
+        when bw.id is null then null
+        else jsonb_build_object(
+          'id', bw.id,
+          'name', coalesce(bw.name, 'Depo'),
+          'kind', 'warehouse',
+          'city', jsonb_build_object(
+            'id', bwc.id,
+            'name', coalesce(bwc.name, 'Sehir'),
+            'map_position_x', coalesce(bwc.map_position_x, 0),
+            'map_position_y', coalesce(bwc.map_position_y, 0)
+          )
+        )
+      end as buyer_warehouse,
+      case
+        when ss.id is null then null
+        else jsonb_build_object(
+          'id', ss.id,
+          'name', coalesce(ss.name, 'Magaza'),
+          'kind', 'store',
+          'city', jsonb_build_object(
+            'id', ssc.id,
+            'name', coalesce(ssc.name, 'Sehir'),
+            'map_position_x', coalesce(ssc.map_position_x, 0),
+            'map_position_y', coalesce(ssc.map_position_y, 0)
+          )
+        )
+      end as seller_store,
+      case
+        when bs.id is null then null
+        else jsonb_build_object(
+          'id', bs.id,
+          'name', coalesce(bs.name, 'Magaza'),
+          'kind', 'store',
+          'city', jsonb_build_object(
+            'id', bsc.id,
+            'name', coalesce(bsc.name, 'Sehir'),
+            'map_position_x', coalesce(bsc.map_position_x, 0),
+            'map_position_y', coalesce(bsc.map_position_y, 0)
+          )
+        )
+      end as buyer_store,
+      case
+        when spi.id is null then null
+        else jsonb_build_object(
+          'id', spi.id,
+          'name', coalesce(sf.name, sfa.name, sfi.name, sm.name, 'Uretim'),
+          'kind', 'production_inventory',
+          'city', jsonb_build_object(
+            'id', coalesce(sfc.id, sfac.id, sfic.id, smc.id),
+            'name', coalesce(sfc.name, sfac.name, sfic.name, smc.name, 'Sehir'),
+            'map_position_x', coalesce(sfc.map_position_x, sfac.map_position_x, sfic.map_position_x, smc.map_position_x, 0),
+            'map_position_y', coalesce(sfc.map_position_y, sfac.map_position_y, sfic.map_position_y, smc.map_position_y, 0)
+          )
+        )
+      end as seller_production_inventory,
+      case
+        when bpi.id is null then null
+        else jsonb_build_object(
+          'id', bpi.id,
+          'name', coalesce(bf.name, bfa.name, bfi.name, bm.name, 'Uretim'),
+          'kind', 'production_inventory',
+          'city', jsonb_build_object(
+            'id', coalesce(bfc.id, bfac.id, bfic.id, bmc.id),
+            'name', coalesce(bfc.name, bfac.name, bfic.name, bmc.name, 'Sehir'),
+            'map_position_x', coalesce(bfc.map_position_x, bfac.map_position_x, bfic.map_position_x, bmc.map_position_x, 0),
+            'map_position_y', coalesce(bfc.map_position_y, bfac.map_position_y, bfic.map_position_y, bmc.map_position_y, 0)
+          )
+        )
+      end as buyer_production_inventory
+    from public.logistics_transfers lt
+    left join public.products p on p.id = lt.product_id
+    left join public.warehouses sw on sw.id = lt.seller_warehouse_id
+    left join public.cities swc on swc.id = sw.city_id
+    left join public.warehouses bw on bw.id = lt.buyer_warehouse_id
+    left join public.cities bwc on bwc.id = bw.city_id
+    left join public.stores ss on ss.id = lt.seller_store_id
+    left join public.cities ssc on ssc.id = ss.city_id
+    left join public.stores bs on bs.id = lt.buyer_store_id
+    left join public.cities bsc on bsc.id = bs.city_id
+    left join public.production_inventory spi on spi.id = lt.seller_production_inventory_id
+    left join public.factories sf on spi.owner_kind = 'factory' and sf.id = spi.owner_id
+    left join public.cities sfc on sfc.id = sf.city_id
+    left join public.farms sfa on spi.owner_kind = 'farm' and sfa.id = spi.owner_id
+    left join public.cities sfac on sfac.id = sfa.city_id
+    left join public.fields sfi on spi.owner_kind = 'field' and sfi.id = spi.owner_id
+    left join public.cities sfic on sfic.id = sfi.city_id
+    left join public.mines sm on spi.owner_kind = 'mine' and sm.id = spi.owner_id
+    left join public.cities smc on smc.id = sm.city_id
+    left join public.production_inventory bpi on bpi.id = lt.buyer_production_inventory_id
+    left join public.factories bf on bpi.owner_kind = 'factory' and bf.id = bpi.owner_id
+    left join public.cities bfc on bfc.id = bf.city_id
+    left join public.farms bfa on bpi.owner_kind = 'farm' and bfa.id = bpi.owner_id
+    left join public.cities bfac on bfac.id = bfa.city_id
+    left join public.fields bfi on bpi.owner_kind = 'field' and bfi.id = bpi.owner_id
+    left join public.cities bfic on bfic.id = bfi.city_id
+    left join public.mines bm on bpi.owner_kind = 'mine' and bm.id = bpi.owner_id
+    left join public.cities bmc on bmc.id = bm.city_id
+    where lt.buyer_player_id = auth.uid()
+      and lt.status = 'in_transit'
+  )
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', id,
+        'quantity', quantity,
+        'item_count', item_count,
+        'total_quantity', total_quantity,
+        'status', status,
+        'transfer_type', transfer_type,
+        'is_rental', is_rental,
+        'total_price', total_price,
+        'rental_cost', rental_cost,
+        'transport_cost', transport_cost,
+        'started_at', started_at,
+        'finish_at', finish_at,
+        'completed_at', completed_at,
+        'seller_entity_kind', seller_entity_kind,
+        'buyer_entity_kind', buyer_entity_kind,
+        'product', product,
+        'seller_warehouse', seller_warehouse,
+        'buyer_warehouse', buyer_warehouse,
+        'seller_store', seller_store,
+        'buyer_store', buyer_store,
+        'seller_production_inventory', seller_production_inventory,
+        'buyer_production_inventory', buyer_production_inventory
+      )
+      order by finish_at asc, started_at asc, id asc
+    ),
+    '[]'::jsonb
+  )
+  from base;
+$$;
+
+ALTER FUNCTION "public"."get_buyer_transfer_map_items"() OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."get_buyer_transfer_history_items"() RETURNS "jsonb"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  with base as (
+    select
+      lt.id,
+      coalesce(lt.quantity, 0) as quantity,
+      greatest(coalesce(lt.item_count, 1), 1) as item_count,
+      coalesce(nullif(lt.total_quantity, 0), lt.quantity, 0) as total_quantity,
+      coalesce(lt.status, 'completed') as status,
+      coalesce(nullif(lt.transfer_type, ''), 'market_transfer') as transfer_type,
+      coalesce(lt.is_rental, false) as is_rental,
+      coalesce(lt.total_price, 0)::double precision as total_price,
+      coalesce(lt.rental_cost, 0)::double precision as rental_cost,
+      coalesce(lt.transport_cost, 0)::double precision as transport_cost,
+      lt.started_at,
+      lt.finish_at,
+      lt.completed_at,
+      coalesce(
+        nullif(lt.seller_entity_kind, ''),
+        case
+          when lt.seller_warehouse_id is not null then 'warehouse'
+          when lt.seller_store_id is not null then 'store'
+          when lt.seller_production_inventory_id is not null then 'production_inventory'
+          else 'warehouse'
+        end
+      ) as seller_entity_kind,
+      coalesce(
+        nullif(lt.buyer_entity_kind, ''),
+        case
+          when lt.buyer_warehouse_id is not null then 'warehouse'
+          when lt.buyer_store_id is not null then 'store'
+          when lt.buyer_production_inventory_id is not null then 'production_inventory'
+          else 'warehouse'
+        end
+      ) as buyer_entity_kind,
+      jsonb_build_object(
+        'id', coalesce(p.id, ''),
+        'urun_adi', coalesce(p.urun_adi, 'Urun'),
+        'urun_iconu', coalesce(p.urun_iconu, 'default.webp')
+      ) as product,
+      case
+        when sw.id is null then null
+        else jsonb_build_object(
+          'id', sw.id,
+          'name', coalesce(sw.name, 'Depo'),
+          'kind', 'warehouse',
+          'city', jsonb_build_object(
+            'id', swc.id,
+            'name', coalesce(swc.name, 'Sehir'),
+            'map_position_x', coalesce(swc.map_position_x, 0),
+            'map_position_y', coalesce(swc.map_position_y, 0)
+          )
+        )
+      end as seller_warehouse,
+      case
+        when bw.id is null then null
+        else jsonb_build_object(
+          'id', bw.id,
+          'name', coalesce(bw.name, 'Depo'),
+          'kind', 'warehouse',
+          'city', jsonb_build_object(
+            'id', bwc.id,
+            'name', coalesce(bwc.name, 'Sehir'),
+            'map_position_x', coalesce(bwc.map_position_x, 0),
+            'map_position_y', coalesce(bwc.map_position_y, 0)
+          )
+        )
+      end as buyer_warehouse,
+      case
+        when ss.id is null then null
+        else jsonb_build_object(
+          'id', ss.id,
+          'name', coalesce(ss.name, 'Magaza'),
+          'kind', 'store',
+          'city', jsonb_build_object(
+            'id', ssc.id,
+            'name', coalesce(ssc.name, 'Sehir'),
+            'map_position_x', coalesce(ssc.map_position_x, 0),
+            'map_position_y', coalesce(ssc.map_position_y, 0)
+          )
+        )
+      end as seller_store,
+      case
+        when bs.id is null then null
+        else jsonb_build_object(
+          'id', bs.id,
+          'name', coalesce(bs.name, 'Magaza'),
+          'kind', 'store',
+          'city', jsonb_build_object(
+            'id', bsc.id,
+            'name', coalesce(bsc.name, 'Sehir'),
+            'map_position_x', coalesce(bsc.map_position_x, 0),
+            'map_position_y', coalesce(bsc.map_position_y, 0)
+          )
+        )
+      end as buyer_store,
+      case
+        when spi.id is null then null
+        else jsonb_build_object(
+          'id', spi.id,
+          'name', coalesce(sf.name, sfa.name, sfi.name, sm.name, 'Uretim'),
+          'kind', 'production_inventory',
+          'city', jsonb_build_object(
+            'id', coalesce(sfc.id, sfac.id, sfic.id, smc.id),
+            'name', coalesce(sfc.name, sfac.name, sfic.name, smc.name, 'Sehir'),
+            'map_position_x', coalesce(sfc.map_position_x, sfac.map_position_x, sfic.map_position_x, smc.map_position_x, 0),
+            'map_position_y', coalesce(sfc.map_position_y, sfac.map_position_y, sfic.map_position_y, smc.map_position_y, 0)
+          )
+        )
+      end as seller_production_inventory,
+      case
+        when bpi.id is null then null
+        else jsonb_build_object(
+          'id', bpi.id,
+          'name', coalesce(bf.name, bfa.name, bfi.name, bm.name, 'Uretim'),
+          'kind', 'production_inventory',
+          'city', jsonb_build_object(
+            'id', coalesce(bfc.id, bfac.id, bfic.id, bmc.id),
+            'name', coalesce(bfc.name, bfac.name, bfic.name, bmc.name, 'Sehir'),
+            'map_position_x', coalesce(bfc.map_position_x, bfac.map_position_x, bfic.map_position_x, bmc.map_position_x, 0),
+            'map_position_y', coalesce(bfc.map_position_y, bfac.map_position_y, bfic.map_position_y, bmc.map_position_y, 0)
+          )
+        )
+      end as buyer_production_inventory
+    from public.logistics_transfers lt
+    left join public.products p on p.id = lt.product_id
+    left join public.warehouses sw on sw.id = lt.seller_warehouse_id
+    left join public.cities swc on swc.id = sw.city_id
+    left join public.warehouses bw on bw.id = lt.buyer_warehouse_id
+    left join public.cities bwc on bwc.id = bw.city_id
+    left join public.stores ss on ss.id = lt.seller_store_id
+    left join public.cities ssc on ssc.id = ss.city_id
+    left join public.stores bs on bs.id = lt.buyer_store_id
+    left join public.cities bsc on bsc.id = bs.city_id
+    left join public.production_inventory spi on spi.id = lt.seller_production_inventory_id
+    left join public.factories sf on spi.owner_kind = 'factory' and sf.id = spi.owner_id
+    left join public.cities sfc on sfc.id = sf.city_id
+    left join public.farms sfa on spi.owner_kind = 'farm' and sfa.id = spi.owner_id
+    left join public.cities sfac on sfac.id = sfa.city_id
+    left join public.fields sfi on spi.owner_kind = 'field' and sfi.id = spi.owner_id
+    left join public.cities sfic on sfic.id = sfi.city_id
+    left join public.mines sm on spi.owner_kind = 'mine' and sm.id = spi.owner_id
+    left join public.cities smc on smc.id = sm.city_id
+    left join public.production_inventory bpi on bpi.id = lt.buyer_production_inventory_id
+    left join public.factories bf on bpi.owner_kind = 'factory' and bf.id = bpi.owner_id
+    left join public.cities bfc on bfc.id = bf.city_id
+    left join public.farms bfa on bpi.owner_kind = 'farm' and bfa.id = bpi.owner_id
+    left join public.cities bfac on bfac.id = bfa.city_id
+    left join public.fields bfi on bpi.owner_kind = 'field' and bfi.id = bpi.owner_id
+    left join public.cities bfic on bfic.id = bfi.city_id
+    left join public.mines bm on bpi.owner_kind = 'mine' and bm.id = bpi.owner_id
+    left join public.cities bmc on bmc.id = bm.city_id
+    where lt.buyer_player_id = auth.uid()
+      and lt.status = 'completed'
+  )
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', id,
+        'quantity', quantity,
+        'item_count', item_count,
+        'total_quantity', total_quantity,
+        'status', status,
+        'transfer_type', transfer_type,
+        'is_rental', is_rental,
+        'total_price', total_price,
+        'rental_cost', rental_cost,
+        'transport_cost', transport_cost,
+        'started_at', started_at,
+        'finish_at', finish_at,
+        'completed_at', completed_at,
+        'seller_entity_kind', seller_entity_kind,
+        'buyer_entity_kind', buyer_entity_kind,
+        'product', product,
+        'seller_warehouse', seller_warehouse,
+        'buyer_warehouse', buyer_warehouse,
+        'seller_store', seller_store,
+        'buyer_store', buyer_store,
+        'seller_production_inventory', seller_production_inventory,
+        'buyer_production_inventory', buyer_production_inventory
+      )
+      order by completed_at desc nulls last, finish_at desc, started_at desc, id desc
+    ),
+    '[]'::jsonb
+  )
+  from base;
+$$;
+
+ALTER FUNCTION "public"."get_buyer_transfer_history_items"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."get_player_logistics_finance_summary"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5503,9 +4580,7 @@ CREATE OR REPLACE FUNCTION "public"."get_player_logistics_finance_summary"() RET
   where player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_player_logistics_finance_summary"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_logistics_vehicles"("p_player_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -5541,9 +4616,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_logistics_vehicles"("p_player_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_mission_dashboard"() RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -5621,9 +4694,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_mission_dashboard"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_profile"("p_player_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -5663,9 +4734,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_player_profile"("p_player_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_warehouse_detail"("p_warehouse_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5707,9 +4776,7 @@ CREATE OR REPLACE FUNCTION "public"."get_player_warehouse_detail"("p_warehouse_i
     and w.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_player_warehouse_detail"("p_warehouse_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_player_warehouses_raw"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -5756,9 +4823,7 @@ CREATE OR REPLACE FUNCTION "public"."get_player_warehouses_raw"() RETURNS "jsonb
   where w.player_id = auth.uid();
 $$;
 
-
 ALTER FUNCTION "public"."get_player_warehouses_raw"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_producible_products_for_owner_type"("p_player_id" "uuid", "p_owner_kind" "text", "p_type_id" "uuid") RETURNS TABLE("id" "text", "urun_adi" "text", "urun_iconu" "text", "birim_hacim" numeric, "birim_agirlik" numeric, "hammadde_1_id" "text", "hammadde_1_miktar" numeric, "hammadde_2_id" "text", "hammadde_2_miktar" numeric, "hammadde_3_id" "text", "hammadde_3_miktar" numeric, "uretim_birimi" "text", "baz_satis_fiyati" numeric, "uretim_adedi" integer, "satis_adedi" integer, "en_dusuk_fiyat" numeric, "en_yuksek_fiyat" numeric, "ortalama_fiyat" numeric, "satici_sayisi" integer, "piyasadaki_stok" integer, "created_at" timestamp with time zone, "max_quality_level" integer)
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -5869,260 +4934,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_producible_products_for_owner_type"("p_player_id" "uuid", "p_owner_kind" "text", "p_type_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_production_input_transfer_vehicle_options"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) RETURNS TABLE("vehicle_id" "uuid", "vehicle_owner_player_id" "uuid", "vehicle_name" "text", "is_rental" boolean, "capacity" integer, "speed_kmh" integer, "current_fuel" integer, "fuel_capacity" integer, "fuel_rate" numeric, "condition" integer, "rental_price" numeric, "distance_km" numeric, "fuel_needed" numeric, "condition_needed" numeric, "rental_cost" numeric, "estimated_duration_seconds" integer, "can_select" boolean, "disabled_reason" "text")
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_warehouse_slot record;
-  v_inventory record;
-  v_owner_city_id uuid;
-  v_owner_player_id uuid;
-  v_target_city record;
-  v_product record;
-  v_required_capacity numeric := 0;
-  v_distance_km numeric := 0;
-begin
-  if v_player_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Miktar 0''dan buyuk olmalidir.';
-  end if;
-
-  select ws.*, w.player_id, w.id as warehouse_id, w.city_id, w.is_active as warehouse_is_active, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_warehouse_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  join public.cities c on c.id = w.city_id
-  where ws.id = p_warehouse_slot_id;
-
-  if not found or v_warehouse_slot.player_id <> v_player_id then
-    raise exception 'Depo slotu bulunamadi veya size ait degil.';
-  end if;
-
-  if v_warehouse_slot.warehouse_is_active is not true then
-    raise exception 'Kaynak depo aktif degil.';
-  end if;
-
-  if p_quantity > coalesce(v_warehouse_slot.quantity, 0) then
-    raise exception 'Istenen miktar mevcut stoktan fazla.';
-  end if;
-
-  select * into v_inventory from public.production_inventory where id = p_production_inventory_id;
-  if not found then raise exception 'Production inventory bulunamadi.'; end if;
-  if v_inventory.inventory_type <> 'input' then raise exception 'Sadece input inventory icin hammadde lojistigi desteklenir.'; end if;
-  if v_inventory.owner_kind not in ('factory', 'field', 'farm') then raise exception 'Bu owner_kind icin input lojistigi desteklenmiyor: %', v_inventory.owner_kind; end if;
-
-  if v_inventory.owner_kind = 'factory' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.factories where id = v_inventory.owner_id;
-  elsif v_inventory.owner_kind = 'field' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.fields where id = v_inventory.owner_id;
-  else
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.farms where id = v_inventory.owner_id;
-  end if;
-
-  if v_owner_player_id is null then raise exception 'Hedef uretim birimi bulunamadi.'; end if;
-  if v_owner_player_id <> v_player_id then raise exception 'Hedef uretim birimi size ait degil.'; end if;
-  if v_inventory.product_id <> v_warehouse_slot.product_id then raise exception 'Depo slotundaki urun ile input inventory urunu ayni olmalidir.'; end if;
-  if v_inventory.quality_level <> v_warehouse_slot.quality_level then raise exception 'Depo slotundaki kalite ile input inventory kalitesi ayni olmalidir.'; end if;
-
-  select * into v_product from public.products where id = v_warehouse_slot.product_id;
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then raise exception 'Urun hacim bilgisi gecersiz.'; end if;
-
-  select * into v_target_city from public.cities where id = v_owner_city_id;
-  if not found then raise exception 'Hedef sehir bulunamadi.'; end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_warehouse_slot.city_x - v_target_city.map_position_x) / 2)), 2)
-      + cos(radians(v_target_city.map_position_x)) * cos(radians(v_warehouse_slot.city_x))
-      * power(sin(radians((v_warehouse_slot.city_y - v_target_city.map_position_y) / 2)), 2)
-    )
-  );
-
-  return query
-  with candidates as (
-    select
-      lv.id as vehicle_id,
-      lv.player_id as vehicle_owner_player_id,
-      lvt.name as vehicle_name,
-      (lv.player_id <> v_player_id) as is_rental,
-      lv.capacity,
-      lv.speed_kmh,
-      lv.current_fuel,
-      lv.fuel_capacity,
-      lv.fuel_rate,
-      lv.condition,
-      lv.rental_price,
-      v_distance_km as distance_km,
-      ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
-      ceil(v_distance_km * 0.005) as condition_needed,
-      case when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price) else 0 end as rental_cost,
-      greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
-      lv.status,
-      lc.is_active as company_is_active,
-      public.logistics_vehicle_matches_route(lv.route_city_a_id, lv.route_city_b_id, v_warehouse_slot.city_id, v_owner_city_id) as route_matches
-    from public.logistics_vehicles lv
-    join public.logistics_vehicle_types lvt on lvt.id = lv.logistics_vehicle_type_id
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.player_id = v_player_id or (lv.player_id <> v_player_id and lv.is_available_for_rent = true)
-  ), real_options as (
-    select
-      c.vehicle_id, c.vehicle_owner_player_id, c.vehicle_name, c.is_rental, c.capacity, c.speed_kmh,
-      c.current_fuel, c.fuel_capacity, c.fuel_rate, c.condition, c.rental_price, c.distance_km,
-      c.fuel_needed, c.condition_needed, c.rental_cost, c.estimated_duration_seconds,
-      (
-        c.route_matches = true and c.status = 'idle' and c.company_is_active = true and c.capacity >= v_required_capacity
-        and c.current_fuel >= c.fuel_needed and c.condition > c.condition_needed
-      ) as can_select,
-      case
-        when c.route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
-        when c.status <> 'idle' then 'Arac su anda uygun degil.'
-        when c.company_is_active = false then 'Nakliye firmasi aktif degil.'
-        when c.capacity < v_required_capacity then 'Kapasite yetersiz.'
-        when c.current_fuel < c.fuel_needed then 'Yakit yetersiz.'
-        when c.condition <= c.condition_needed then 'Kondisyon yetersiz.'
-        else null
-      end as disabled_reason
-    from candidates c
-  )
-  select * from real_options
-  union all
-  select * from public.get_npc_rental_vehicle_option(v_warehouse_slot.city_id, v_owner_city_id, v_distance_km)
-  where not exists (select 1 from real_options ro where ro.can_select)
-  order by 4 asc, 17 desc, 5 asc, 11 asc, 3 asc;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."get_production_input_transfer_vehicle_options"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_production_output_transfer_vehicle_options"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) RETURNS TABLE("vehicle_id" "uuid", "vehicle_owner_player_id" "uuid", "vehicle_name" "text", "is_rental" boolean, "capacity" integer, "speed_kmh" integer, "current_fuel" integer, "fuel_capacity" integer, "fuel_rate" numeric, "condition" integer, "rental_price" numeric, "distance_km" numeric, "fuel_needed" numeric, "condition_needed" numeric, "rental_cost" numeric, "estimated_duration_seconds" integer, "can_select" boolean, "disabled_reason" "text")
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_inventory record;
-  v_owner_city_id uuid;
-  v_owner_player_id uuid;
-  v_source_city record;
-  v_buyer_warehouse record;
-  v_product record;
-  v_required_capacity numeric := 0;
-  v_distance_km numeric := 0;
-begin
-  if v_player_id is null then raise exception 'Oturum acilmamis.'; end if;
-  if p_quantity is null or p_quantity <= 0 then raise exception 'Miktar 0''dan buyuk olmalidir.'; end if;
-
-  select * into v_inventory from public.production_inventory where id = p_production_inventory_id;
-  if not found then raise exception 'Production inventory bulunamadi.'; end if;
-  if v_inventory.inventory_type <> 'output' then raise exception 'Sadece output inventory icin output lojistigi desteklenir.'; end if;
-  if v_inventory.owner_kind not in ('factory', 'field', 'farm', 'mine') then raise exception 'Bu owner_kind icin output lojistigi desteklenmiyor: %', v_inventory.owner_kind; end if;
-  if coalesce(v_inventory.quantity, 0) < p_quantity then raise exception 'Istenen miktar mevcut output stoktan fazla.'; end if;
-
-  if v_inventory.owner_kind = 'factory' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.factories where id = v_inventory.owner_id;
-  elsif v_inventory.owner_kind = 'field' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.fields where id = v_inventory.owner_id;
-  elsif v_inventory.owner_kind = 'farm' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.farms where id = v_inventory.owner_id;
-  else
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.mines where id = v_inventory.owner_id;
-  end if;
-
-  if v_owner_player_id is null then raise exception 'Kaynak uretim birimi bulunamadi.'; end if;
-  if v_owner_player_id <> v_player_id then raise exception 'Kaynak uretim birimi size ait degil.'; end if;
-
-  select w.*, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_buyer_warehouse
-  from public.warehouses w
-  join public.cities c on c.id = w.city_id
-  where w.id = p_buyer_warehouse_id and w.player_id = v_player_id;
-  if not found then raise exception 'Hedef depo bulunamadi veya size ait degil.'; end if;
-  if v_buyer_warehouse.is_active is not true then raise exception 'Hedef depo aktif degil.'; end if;
-
-  select * into v_product from public.products where id = v_inventory.product_id;
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then raise exception 'Urun hacim bilgisi gecersiz.'; end if;
-
-  select * into v_source_city from public.cities where id = v_owner_city_id;
-  if not found then raise exception 'Kaynak sehir bulunamadi.'; end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_source_city.map_position_x - v_buyer_warehouse.city_x) / 2)), 2)
-      + cos(radians(v_buyer_warehouse.city_x)) * cos(radians(v_source_city.map_position_x))
-      * power(sin(radians((v_source_city.map_position_y - v_buyer_warehouse.city_y) / 2)), 2)
-    )
-  );
-
-  return query
-  with candidates as (
-    select
-      lv.id as vehicle_id,
-      lv.player_id as vehicle_owner_player_id,
-      lvt.name as vehicle_name,
-      (lv.player_id <> v_player_id) as is_rental,
-      lv.capacity,
-      lv.speed_kmh,
-      lv.current_fuel,
-      lv.fuel_capacity,
-      lv.fuel_rate,
-      lv.condition,
-      lv.rental_price,
-      v_distance_km as distance_km,
-      ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
-      ceil(v_distance_km * 0.005) as condition_needed,
-      case when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price) else 0 end as rental_cost,
-      greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
-      lv.status,
-      lc.is_active as company_is_active,
-      public.logistics_vehicle_matches_route(lv.route_city_a_id, lv.route_city_b_id, v_owner_city_id, v_buyer_warehouse.city_id) as route_matches
-    from public.logistics_vehicles lv
-    join public.logistics_vehicle_types lvt on lvt.id = lv.logistics_vehicle_type_id
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.player_id = v_player_id or (lv.player_id <> v_player_id and lv.is_available_for_rent = true)
-  ), real_options as (
-    select
-      c.vehicle_id, c.vehicle_owner_player_id, c.vehicle_name, c.is_rental, c.capacity, c.speed_kmh,
-      c.current_fuel, c.fuel_capacity, c.fuel_rate, c.condition, c.rental_price, c.distance_km,
-      c.fuel_needed, c.condition_needed, c.rental_cost, c.estimated_duration_seconds,
-      (
-        c.route_matches = true and c.status = 'idle' and c.company_is_active = true and c.capacity >= v_required_capacity
-        and c.current_fuel >= c.fuel_needed and c.condition > c.condition_needed
-      ) as can_select,
-      case
-        when c.route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
-        when c.status <> 'idle' then 'Arac su anda uygun degil.'
-        when c.company_is_active = false then 'Nakliye firmasi aktif degil.'
-        when c.capacity < v_required_capacity then 'Kapasite yetersiz.'
-        when c.current_fuel < c.fuel_needed then 'Yakit yetersiz.'
-        when c.condition <= c.condition_needed then 'Kondisyon yetersiz.'
-        else null
-      end as disabled_reason
-    from candidates c
-  )
-  select * from real_options
-  union all
-  select * from public.get_npc_rental_vehicle_option(v_owner_city_id, v_buyer_warehouse.city_id, v_distance_km)
-  where not exists (select 1 from real_options ro where ro.can_select)
-  order by 4 asc, 17 desc, 5 asc, 11 asc, 3 asc;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."get_production_output_transfer_vehicle_options"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_store_daily_performance"("p_player_id" "uuid", "p_store_id" "uuid", "p_days" integer DEFAULT 14) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -6187,9 +4999,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_store_daily_performance"("p_player_id" "uuid", "p_store_id" "uuid", "p_days" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_store_history_items"("p_store_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -6275,9 +5085,33 @@ CREATE OR REPLACE FUNCTION "public"."get_store_history_items"("p_store_id" "uuid
   ) ranked;
 $$;
 
-
 ALTER FUNCTION "public"."get_store_history_items"("p_store_id" "uuid") OWNER TO "postgres";
 
+CREATE OR REPLACE FUNCTION "public"."get_store_warehouse_id"("p_store_id" "uuid") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_store_warehouse_id uuid;
+begin
+  select w.id
+  into v_store_warehouse_id
+  from public.warehouses w
+  where w.store_id = p_store_id
+    and w.warehouse_kind = 'store'
+    and w.is_active = true
+  order by w.created_at desc
+  limit 1;
+
+  if v_store_warehouse_id is null then
+    raise exception 'Magazaya bagli aktif depo bulunamadi.';
+  end if;
+
+  return v_store_warehouse_id;
+end;
+$$;
+
+ALTER FUNCTION "public"."get_store_warehouse_id"("p_store_id" "uuid") OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."get_store_list_page_data"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -6355,6 +5189,7 @@ CREATE OR REPLACE FUNCTION "public"."get_store_list_page_data"() RETURNS "jsonb"
               'id', ss.id,
               'store_id', ss.store_id,
               'slot_index', ss.slot_index,
+              'brand_id', ss.brand_id,
               'product_id', ss.product_id,
               'product_name', p.urun_adi,
               'product_icon', p.urun_iconu,
@@ -6467,221 +5302,10 @@ CREATE OR REPLACE FUNCTION "public"."get_store_list_page_data"() RETURNS "jsonb"
   );
 $$;
 
-
 ALTER FUNCTION "public"."get_store_list_page_data"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_store_to_warehouse_vehicle_options"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) RETURNS TABLE("vehicle_id" "uuid", "vehicle_owner_player_id" "uuid", "vehicle_name" "text", "is_rental" boolean, "capacity" integer, "speed_kmh" integer, "current_fuel" integer, "fuel_capacity" integer, "fuel_rate" numeric, "condition" integer, "rental_price" numeric, "distance_km" numeric, "fuel_needed" numeric, "condition_needed" numeric, "rental_cost" numeric, "estimated_duration_seconds" integer, "can_select" boolean, "disabled_reason" "text")
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_store_slot record;
-  v_buyer_warehouse record;
-  v_product record;
-  v_required_capacity numeric := 0;
-  v_distance_km numeric := 0;
-begin
-  if v_player_id is null then raise exception 'Oturum acilmamis.'; end if;
-  if p_quantity is null or p_quantity <= 0 then raise exception 'Miktar 0''dan buyuk olmalidir.'; end if;
 
-  select ss.*, s.player_id, s.is_active as store_is_active, s.city_id as store_city_id, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_store_slot
-  from public.store_slots ss
-  join public.stores s on s.id = ss.store_id
-  join public.cities c on c.id = s.city_id
-  where ss.id = p_store_slot_id;
-  if not found or v_store_slot.player_id <> v_player_id then raise exception 'Magaza slotu bulunamadi veya size ait degil.'; end if;
-  if v_store_slot.store_is_active is not true then raise exception 'Magaza aktif degil.'; end if;
-  if coalesce(v_store_slot.product_id, '') = '' or coalesce(v_store_slot.quality_level, 0) = 0 then raise exception 'Magaza slotunda gecerli urun veya kalite yok.'; end if;
-  if p_quantity > coalesce(v_store_slot.quantity, 0) then raise exception 'Istenen miktar mevcut stoktan fazla.'; end if;
-
-  select w.*, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_buyer_warehouse
-  from public.warehouses w
-  join public.cities c on c.id = w.city_id
-  where w.id = p_buyer_warehouse_id and w.player_id = v_player_id;
-  if not found then raise exception 'Hedef depo bulunamadi veya size ait degil.'; end if;
-  if v_buyer_warehouse.is_active is not true then raise exception 'Hedef depo aktif degil.'; end if;
-
-  select * into v_product from public.products where id = v_store_slot.product_id;
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then raise exception 'Urun hacim bilgisi gecersiz.'; end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_store_slot.city_x - v_buyer_warehouse.city_x) / 2)), 2)
-      + cos(radians(v_buyer_warehouse.city_x)) * cos(radians(v_store_slot.city_x))
-      * power(sin(radians((v_store_slot.city_y - v_buyer_warehouse.city_y) / 2)), 2)
-    )
-  );
-
-  return query
-  with candidates as (
-    select
-      lv.id as vehicle_id,
-      lv.player_id as vehicle_owner_player_id,
-      lvt.name as vehicle_name,
-      (lv.player_id <> v_player_id) as is_rental,
-      lv.capacity,
-      lv.speed_kmh,
-      lv.current_fuel,
-      lv.fuel_capacity,
-      lv.fuel_rate,
-      lv.condition,
-      lv.rental_price,
-      v_distance_km as distance_km,
-      ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
-      ceil(v_distance_km * 0.005) as condition_needed,
-      case when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price) else 0 end as rental_cost,
-      greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
-      lv.status,
-      lv.is_available_for_rent,
-      lc.is_active as company_is_active,
-      public.logistics_vehicle_matches_route(lv.route_city_a_id, lv.route_city_b_id, v_store_slot.store_city_id, v_buyer_warehouse.city_id) as route_matches
-    from public.logistics_vehicles lv
-    join public.logistics_vehicle_types lvt on lvt.id = lv.logistics_vehicle_type_id
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.player_id = v_player_id or (lv.player_id <> v_player_id and lv.is_available_for_rent = true)
-  ), real_options as (
-    select
-      c.vehicle_id, c.vehicle_owner_player_id, c.vehicle_name, c.is_rental, c.capacity, c.speed_kmh,
-      c.current_fuel, c.fuel_capacity, c.fuel_rate, c.condition, c.rental_price, c.distance_km,
-      c.fuel_needed, c.condition_needed, c.rental_cost, c.estimated_duration_seconds,
-      (
-        c.route_matches = true and c.status = 'idle' and c.company_is_active = true and c.capacity >= v_required_capacity
-        and c.current_fuel >= c.fuel_needed and c.condition > c.condition_needed
-      ) as can_select,
-      case
-        when c.route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
-        when c.status <> 'idle' then 'Arac su anda uygun degil.'
-        when c.company_is_active = false then 'Nakliye firmasi aktif degil.'
-        when c.capacity < v_required_capacity then 'Kapasite yetersiz.'
-        when c.current_fuel < c.fuel_needed then 'Yakit yetersiz.'
-        when c.condition <= c.condition_needed then 'Kondisyon yetersiz.'
-        else null
-      end as disabled_reason
-    from candidates c
-  )
-  select * from real_options
-  union all
-  select * from public.get_npc_rental_vehicle_option(v_store_slot.store_city_id, v_buyer_warehouse.city_id, v_distance_km)
-  where not exists (select 1 from real_options ro where ro.can_select)
-  order by 4 asc, 17 desc, 5 asc, 11 asc, 3 asc;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."get_store_to_warehouse_vehicle_options"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_store_transfer_vehicle_options"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) RETURNS TABLE("vehicle_id" "uuid", "vehicle_owner_player_id" "uuid", "vehicle_name" "text", "is_rental" boolean, "capacity" integer, "speed_kmh" integer, "current_fuel" integer, "fuel_capacity" integer, "fuel_rate" numeric, "condition" integer, "rental_price" numeric, "distance_km" numeric, "fuel_needed" numeric, "condition_needed" numeric, "rental_cost" numeric, "estimated_duration_seconds" integer, "can_select" boolean, "disabled_reason" "text")
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_store_slot record;
-  v_warehouse_slot record;
-  v_product record;
-  v_required_capacity numeric := 0;
-  v_distance_km numeric := 0;
-begin
-  if v_player_id is null then raise exception 'Oturum acilmamis.'; end if;
-  if p_quantity is null or p_quantity <= 0 then raise exception 'Miktar 0''dan buyuk olmalidir.'; end if;
-
-  select ss.*, s.player_id, s.is_active as store_is_active, s.city_id as store_city_id, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_store_slot
-  from public.store_slots ss
-  join public.stores s on s.id = ss.store_id
-  join public.cities c on c.id = s.city_id
-  where ss.id = p_store_slot_id;
-  if not found or v_store_slot.player_id <> v_player_id then raise exception 'Magaza slotu bulunamadi veya size ait degil.'; end if;
-  if v_store_slot.store_is_active is not true then raise exception 'Magaza aktif degil.'; end if;
-
-  select ws.*, w.player_id as warehouse_player_id, w.city_id as warehouse_city_id, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_warehouse_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  join public.cities c on c.id = w.city_id
-  where ws.id = p_warehouse_slot_id;
-  if not found or v_warehouse_slot.warehouse_player_id <> v_player_id then raise exception 'Depo slotu bulunamadi veya size ait degil.'; end if;
-  if p_quantity > v_warehouse_slot.quantity then raise exception 'Istenen miktar mevcut stoktan fazla.'; end if;
-  if v_store_slot.product_id is not null and v_store_slot.quality_level > 0 and (
-    v_store_slot.product_id <> v_warehouse_slot.product_id or v_store_slot.quality_level <> v_warehouse_slot.quality_level
-  ) and (v_store_slot.quantity > 0 or coalesce(v_store_slot.pending_quantity, 0) > 0) then raise exception 'Slotta farkli urun veya kalite icin aktif stok/rezerve var.'; end if;
-  if (coalesce(v_store_slot.quantity, 0) + coalesce(v_store_slot.pending_quantity, 0) + p_quantity) > v_store_slot.capacity then raise exception 'Magaza slot kapasitesi yetersiz.'; end if;
-
-  select * into v_product from public.products where id = v_warehouse_slot.product_id;
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then raise exception 'Urun hacim bilgisi gecersiz.'; end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_warehouse_slot.city_x - v_store_slot.city_x) / 2)), 2)
-      + cos(radians(v_store_slot.city_x)) * cos(radians(v_warehouse_slot.city_x))
-      * power(sin(radians((v_warehouse_slot.city_y - v_store_slot.city_y) / 2)), 2)
-    )
-  );
-
-  return query
-  with candidates as (
-    select
-      lv.id as vehicle_id,
-      lv.player_id as vehicle_owner_player_id,
-      lvt.name as vehicle_name,
-      (lv.player_id <> v_player_id) as is_rental,
-      lv.capacity,
-      lv.speed_kmh,
-      lv.current_fuel,
-      lv.fuel_capacity,
-      lv.fuel_rate,
-      lv.condition,
-      lv.rental_price,
-      v_distance_km as distance_km,
-      ceil(v_distance_km * lv.fuel_rate) as fuel_needed,
-      ceil(v_distance_km * 0.005) as condition_needed,
-      case when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price) else 0 end as rental_cost,
-      greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as estimated_duration_seconds,
-      lv.status,
-      lv.is_available_for_rent,
-      lc.is_active as company_is_active,
-      public.logistics_vehicle_matches_route(lv.route_city_a_id, lv.route_city_b_id, v_warehouse_slot.warehouse_city_id, v_store_slot.store_city_id) as route_matches
-    from public.logistics_vehicles lv
-    join public.logistics_vehicle_types lvt on lvt.id = lv.logistics_vehicle_type_id
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.player_id = v_player_id or (lv.player_id <> v_player_id and lv.is_available_for_rent = true)
-  ), real_options as (
-    select
-      c.vehicle_id, c.vehicle_owner_player_id, c.vehicle_name, c.is_rental, c.capacity, c.speed_kmh,
-      c.current_fuel, c.fuel_capacity, c.fuel_rate, c.condition, c.rental_price, c.distance_km,
-      c.fuel_needed, c.condition_needed, c.rental_cost, c.estimated_duration_seconds,
-      (
-        c.route_matches = true and c.status = 'idle' and c.company_is_active = true and c.capacity >= v_required_capacity
-        and c.current_fuel >= c.fuel_needed and c.condition > c.condition_needed
-      ) as can_select,
-      case
-        when c.route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
-        when c.status <> 'idle' then 'Arac su anda uygun degil.'
-        when c.company_is_active = false then 'Nakliye firmasi aktif degil.'
-        when c.capacity < v_required_capacity then 'Kapasite yetersiz.'
-        when c.current_fuel < c.fuel_needed then 'Yakit yetersiz.'
-        when c.condition <= c.condition_needed then 'Kondisyon yetersiz.'
-        else null
-      end as disabled_reason
-    from candidates c
-  )
-  select * from real_options
-  union all
-  select * from public.get_npc_rental_vehicle_option(v_warehouse_slot.warehouse_city_id, v_store_slot.store_city_id, v_distance_km)
-  where not exists (select 1 from real_options ro where ro.can_select)
-  order by 4 asc, 17 desc, 5 asc, 11 asc, 3 asc;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."get_store_transfer_vehicle_options"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_store_types_catalog"() RETURNS "jsonb"
@@ -6695,9 +5319,7 @@ CREATE OR REPLACE FUNCTION "public"."get_store_types_catalog"() RETURNS "jsonb"
   from public.store_types st;
 $$;
 
-
 ALTER FUNCTION "public"."get_store_types_catalog"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_stores_list"("p_player_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -6803,9 +5425,7 @@ CREATE OR REPLACE FUNCTION "public"."get_stores_list"("p_player_id" "uuid") RETU
   where s.player_id = p_player_id;
 $$;
 
-
 ALTER FUNCTION "public"."get_stores_list"("p_player_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_total_experience_for_level"("p_level" integer) RETURNS integer
     LANGUAGE "plpgsql" IMMUTABLE
@@ -6819,681 +5439,10 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."get_total_experience_for_level"("p_level" integer) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_transfer_affected_targets"("p_transfer_id" "uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_transfer record;
-  v_inventory record;
-  v_warehouse_ids uuid[] := '{}';
-  v_store_ids uuid[] := '{}';
-  v_factory_ids uuid[] := '{}';
-  v_farm_ids uuid[] := '{}';
-  v_field_ids uuid[] := '{}';
-  v_mine_ids uuid[] := '{}';
-begin
-  select
-    seller_warehouse_id,
-    buyer_warehouse_id,
-    seller_store_id,
-    buyer_store_id,
-    seller_production_inventory_id,
-    buyer_production_inventory_id
-  into v_transfer
-  from public.logistics_transfers
-  where id = p_transfer_id;
 
-  if not found then
-    return jsonb_build_object(
-      'warehouse_ids', jsonb_build_array(),
-      'store_ids', jsonb_build_array(),
-      'factory_ids', jsonb_build_array(),
-      'farm_ids', jsonb_build_array(),
-      'field_ids', jsonb_build_array(),
-      'mine_ids', jsonb_build_array()
-    );
-  end if;
-
-  if v_transfer.seller_warehouse_id is not null then
-    v_warehouse_ids := array_append(v_warehouse_ids, v_transfer.seller_warehouse_id);
-  end if;
-  if v_transfer.buyer_warehouse_id is not null
-     and not (v_transfer.buyer_warehouse_id = any(v_warehouse_ids)) then
-    v_warehouse_ids := array_append(v_warehouse_ids, v_transfer.buyer_warehouse_id);
-  end if;
-
-  if v_transfer.seller_store_id is not null then
-    v_store_ids := array_append(v_store_ids, v_transfer.seller_store_id);
-  end if;
-  if v_transfer.buyer_store_id is not null
-     and not (v_transfer.buyer_store_id = any(v_store_ids)) then
-    v_store_ids := array_append(v_store_ids, v_transfer.buyer_store_id);
-  end if;
-
-  for v_inventory in
-    select owner_kind, owner_id
-    from public.production_inventory
-    where id in (
-      v_transfer.seller_production_inventory_id,
-      v_transfer.buyer_production_inventory_id
-    )
-  loop
-    case v_inventory.owner_kind
-      when 'factory' then
-        if not (v_inventory.owner_id = any(v_factory_ids)) then
-          v_factory_ids := array_append(v_factory_ids, v_inventory.owner_id);
-        end if;
-      when 'farm' then
-        if not (v_inventory.owner_id = any(v_farm_ids)) then
-          v_farm_ids := array_append(v_farm_ids, v_inventory.owner_id);
-        end if;
-      when 'field' then
-        if not (v_inventory.owner_id = any(v_field_ids)) then
-          v_field_ids := array_append(v_field_ids, v_inventory.owner_id);
-        end if;
-      when 'mine' then
-        if not (v_inventory.owner_id = any(v_mine_ids)) then
-          v_mine_ids := array_append(v_mine_ids, v_inventory.owner_id);
-        end if;
-    end case;
-  end loop;
-
-  return jsonb_build_object(
-    'warehouse_ids', to_jsonb(v_warehouse_ids),
-    'store_ids', to_jsonb(v_store_ids),
-    'factory_ids', to_jsonb(v_factory_ids),
-    'farm_ids', to_jsonb(v_farm_ids),
-    'field_ids', to_jsonb(v_field_ids),
-    'mine_ids', to_jsonb(v_mine_ids)
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."get_transfer_affected_targets"("p_transfer_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."get_transfer_vehicle_options"("p_source_kind" "text", "p_source_id" "uuid", "p_target_kind" "text", "p_target_id" "uuid", "p_quantity" integer) RETURNS TABLE("vehicle_id" "uuid", "vehicle_owner_player_id" "uuid", "vehicle_name" "text", "is_rental" boolean, "capacity" integer, "speed_kmh" integer, "current_fuel" integer, "fuel_capacity" integer, "fuel_rate" numeric, "condition" integer, "rental_price" numeric, "distance_km" numeric, "fuel_needed" numeric, "condition_needed" numeric, "rental_cost" numeric, "estimated_duration_seconds" integer, "can_select" boolean, "disabled_reason" "text", "fuel_cost" numeric, "total_price" numeric)
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_source_city_id uuid;
-  v_source_city_x numeric;
-  v_source_city_y numeric;
-  v_target_city_id uuid;
-  v_target_city_x numeric;
-  v_target_city_y numeric;
-  v_source_product_id text;
-  v_source_quality_level integer;
-  v_required_capacity numeric := 0;
-  v_distance_km numeric := 0;
-  v_available_target_capacity numeric := 0;
-  v_check_target_capacity boolean := false;
-  v_excluded_vehicle_owner_player_id uuid;
-  v_source_warehouse_id uuid;
-  v_owner_player_id uuid;
-  v_owner_city_id uuid;
-  v_product record;
-  v_warehouse_slot record;
-  v_store_slot record;
-  v_warehouse record;
-  v_inventory record;
-  v_city record;
-begin
-  if v_player_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Miktar 0''dan buyuk olmalidir.';
-  end if;
-
-  case p_source_kind
-    when 'market_slot' then
-      select
-        ws.*,
-        w.player_id as seller_player_id,
-        w.city_id as seller_city_id,
-        c.map_position_x as city_x,
-        c.map_position_y as city_y
-      into v_warehouse_slot
-      from public.warehouse_slots ws
-      join public.warehouses w on w.id = ws.warehouse_id
-      join public.cities c on c.id = w.city_id
-      where ws.id = p_source_id
-        and ws.is_available_for_sale = true;
-
-      if not found then
-        raise exception 'Satici slotu bulunamadi.';
-      end if;
-
-      if v_warehouse_slot.seller_player_id = v_player_id then
-        raise exception 'Kendi ilaninizi satin alamazsiniz.';
-      end if;
-
-      if p_quantity > coalesce(v_warehouse_slot.quantity, 0) then
-        raise exception 'Istenen miktar mevcut stoktan fazla.';
-      end if;
-
-      v_source_city_id := v_warehouse_slot.seller_city_id;
-      v_source_city_x := v_warehouse_slot.city_x;
-      v_source_city_y := v_warehouse_slot.city_y;
-      v_source_product_id := v_warehouse_slot.product_id;
-      v_source_quality_level := coalesce(v_warehouse_slot.quality_level, 0);
-      v_excluded_vehicle_owner_player_id := v_warehouse_slot.seller_player_id;
-
-    when 'warehouse_slot' then
-      select
-        ws.*,
-        w.player_id,
-        w.id as warehouse_id,
-        w.city_id as warehouse_city_id,
-        w.is_active as warehouse_is_active,
-        c.map_position_x as city_x,
-        c.map_position_y as city_y
-      into v_warehouse_slot
-      from public.warehouse_slots ws
-      join public.warehouses w on w.id = ws.warehouse_id
-      join public.cities c on c.id = w.city_id
-      where ws.id = p_source_id;
-
-      if not found or v_warehouse_slot.player_id <> v_player_id then
-        raise exception 'Depo slotu bulunamadi veya size ait degil.';
-      end if;
-
-      if p_quantity > coalesce(v_warehouse_slot.quantity, 0) then
-        raise exception 'Istenen miktar mevcut stoktan fazla.';
-      end if;
-
-      v_source_city_id := v_warehouse_slot.warehouse_city_id;
-      v_source_city_x := v_warehouse_slot.city_x;
-      v_source_city_y := v_warehouse_slot.city_y;
-      v_source_product_id := v_warehouse_slot.product_id;
-      v_source_quality_level := coalesce(v_warehouse_slot.quality_level, 0);
-      v_source_warehouse_id := v_warehouse_slot.warehouse_id;
-
-    when 'store_slot' then
-      select
-        ss.*,
-        s.player_id,
-        s.is_active as store_is_active,
-        s.city_id as store_city_id,
-        c.map_position_x as city_x,
-        c.map_position_y as city_y
-      into v_store_slot
-      from public.store_slots ss
-      join public.stores s on s.id = ss.store_id
-      join public.cities c on c.id = s.city_id
-      where ss.id = p_source_id;
-
-      if not found or v_store_slot.player_id <> v_player_id then
-        raise exception 'Magaza slotu bulunamadi veya size ait degil.';
-      end if;
-
-      if v_store_slot.store_is_active is not true then
-        raise exception 'Magaza aktif degil.';
-      end if;
-
-      if coalesce(v_store_slot.product_id, '') = '' or coalesce(v_store_slot.quality_level, 0) = 0 then
-        raise exception 'Magaza slotunda gecerli urun veya kalite yok.';
-      end if;
-
-      if p_quantity > coalesce(v_store_slot.quantity, 0) then
-        raise exception 'Istenen miktar mevcut stoktan fazla.';
-      end if;
-
-      v_source_city_id := v_store_slot.store_city_id;
-      v_source_city_x := v_store_slot.city_x;
-      v_source_city_y := v_store_slot.city_y;
-      v_source_product_id := v_store_slot.product_id;
-      v_source_quality_level := coalesce(v_store_slot.quality_level, 0);
-
-    when 'production_inventory' then
-      if p_target_kind <> 'warehouse' then
-        raise exception 'Production inventory kaynagi sadece depoya transfer icin desteklenir.';
-      end if;
-
-      select *
-      into v_inventory
-      from public.production_inventory
-      where id = p_source_id;
-
-      if not found then
-        raise exception 'Production inventory bulunamadi.';
-      end if;
-
-      if v_inventory.inventory_type <> 'output' then
-        raise exception 'Sadece output inventory icin output lojistigi desteklenir.';
-      end if;
-
-      if v_inventory.owner_kind not in ('factory', 'field', 'farm', 'mine') then
-        raise exception 'Bu owner_kind icin output lojistigi desteklenmiyor: %', v_inventory.owner_kind;
-      end if;
-
-      if coalesce(v_inventory.quantity, 0) < p_quantity then
-        raise exception 'Istenen miktar mevcut output stoktan fazla.';
-      end if;
-
-      if v_inventory.owner_kind = 'factory' then
-        select player_id, city_id into v_owner_player_id, v_owner_city_id
-        from public.factories
-        where id = v_inventory.owner_id;
-      elsif v_inventory.owner_kind = 'field' then
-        select player_id, city_id into v_owner_player_id, v_owner_city_id
-        from public.fields
-        where id = v_inventory.owner_id;
-      elsif v_inventory.owner_kind = 'farm' then
-        select player_id, city_id into v_owner_player_id, v_owner_city_id
-        from public.farms
-        where id = v_inventory.owner_id;
-      else
-        select player_id, city_id into v_owner_player_id, v_owner_city_id
-        from public.mines
-        where id = v_inventory.owner_id;
-      end if;
-
-      if v_owner_player_id is null then
-        raise exception 'Kaynak uretim birimi bulunamadi.';
-      end if;
-
-      if v_owner_player_id <> v_player_id then
-        raise exception 'Kaynak uretim birimi size ait degil.';
-      end if;
-
-      select * into v_city
-      from public.cities
-      where id = v_owner_city_id;
-
-      if not found then
-        raise exception 'Kaynak sehir bulunamadi.';
-      end if;
-
-      v_source_city_id := v_owner_city_id;
-      v_source_city_x := v_city.map_position_x;
-      v_source_city_y := v_city.map_position_y;
-      v_source_product_id := v_inventory.product_id;
-      v_source_quality_level := coalesce(v_inventory.quality_level, 0);
-
-    else
-      raise exception 'Desteklenmeyen kaynak tipi: %', p_source_kind;
-  end case;
-
-  case p_target_kind
-    when 'warehouse' then
-      select
-        w.*,
-        c.map_position_x as city_x,
-        c.map_position_y as city_y
-      into v_warehouse
-      from public.warehouses w
-      join public.cities c on c.id = w.city_id
-      where w.id = p_target_id
-        and w.player_id = v_player_id;
-
-      if not found then
-        raise exception 'Hedef depo bulunamadi veya size ait degil.';
-      end if;
-
-      if v_warehouse.is_active is not true then
-        raise exception 'Hedef depo aktif degil.';
-      end if;
-
-      if p_source_kind = 'warehouse_slot' and v_warehouse.id = v_source_warehouse_id then
-        raise exception 'Kaynak ve hedef depo ayni olamaz.';
-      end if;
-
-      v_target_city_id := v_warehouse.city_id;
-      v_target_city_x := v_warehouse.city_x;
-      v_target_city_y := v_warehouse.city_y;
-      v_check_target_capacity := p_source_kind = any (
-        array['market_slot', 'warehouse_slot']
-      );
-
-    when 'store_slot' then
-      if p_source_kind not in ('market_slot', 'warehouse_slot') then
-        raise exception 'Hedef magaza slotu bu transfer tipi icin desteklenmiyor.';
-      end if;
-
-      select
-        ss.*,
-        s.player_id,
-        s.is_active as store_is_active,
-        s.city_id as store_city_id,
-        c.map_position_x as city_x,
-        c.map_position_y as city_y
-      into v_store_slot
-      from public.store_slots ss
-      join public.stores s on s.id = ss.store_id
-      join public.cities c on c.id = s.city_id
-      where ss.id = p_target_id;
-
-      if not found or v_store_slot.player_id <> v_player_id then
-        raise exception 'Magaza slotu bulunamadi veya size ait degil.';
-      end if;
-
-      if v_store_slot.store_is_active is not true then
-        raise exception 'Magaza aktif degil.';
-      end if;
-
-      if v_store_slot.product_id is not null
-         and v_store_slot.quality_level > 0
-         and (
-           v_store_slot.product_id <> v_source_product_id
-           or v_store_slot.quality_level <> v_source_quality_level
-         )
-         and (
-           coalesce(v_store_slot.quantity, 0) > 0
-           or coalesce(v_store_slot.pending_quantity, 0) > 0
-         ) then
-        raise exception 'Slotta farkli urun veya kalite icin aktif stok/rezerve var.';
-      end if;
-
-      if (
-        coalesce(v_store_slot.quantity, 0)
-        + coalesce(v_store_slot.pending_quantity, 0)
-        + p_quantity
-      ) > coalesce(v_store_slot.capacity, 0) then
-        raise exception 'Magaza slot kapasitesi yetersiz.';
-      end if;
-
-      v_target_city_id := v_store_slot.store_city_id;
-      v_target_city_x := v_store_slot.city_x;
-      v_target_city_y := v_store_slot.city_y;
-
-    when 'production_inventory' then
-      if p_source_kind <> 'warehouse_slot' then
-        raise exception 'Hedef production inventory bu transfer tipi icin desteklenmiyor.';
-      end if;
-
-      if coalesce(v_warehouse_slot.warehouse_is_active, false) is not true then
-        raise exception 'Kaynak depo aktif degil.';
-      end if;
-
-      select *
-      into v_inventory
-      from public.production_inventory
-      where id = p_target_id;
-
-      if not found then
-        raise exception 'Production inventory bulunamadi.';
-      end if;
-
-      if v_inventory.inventory_type <> 'input' then
-        raise exception 'Sadece input inventory icin hammadde lojistigi desteklenir.';
-      end if;
-
-      if v_inventory.owner_kind not in ('factory', 'field', 'farm') then
-        raise exception 'Bu owner_kind icin input lojistigi desteklenmiyor: %', v_inventory.owner_kind;
-      end if;
-
-      if v_inventory.owner_kind = 'factory' then
-        select player_id, city_id into v_owner_player_id, v_owner_city_id
-        from public.factories
-        where id = v_inventory.owner_id;
-      elsif v_inventory.owner_kind = 'field' then
-        select player_id, city_id into v_owner_player_id, v_owner_city_id
-        from public.fields
-        where id = v_inventory.owner_id;
-      else
-        select player_id, city_id into v_owner_player_id, v_owner_city_id
-        from public.farms
-        where id = v_inventory.owner_id;
-      end if;
-
-      if v_owner_player_id is null then
-        raise exception 'Hedef uretim birimi bulunamadi.';
-      end if;
-
-      if v_owner_player_id <> v_player_id then
-        raise exception 'Hedef uretim birimi size ait degil.';
-      end if;
-
-      if v_inventory.product_id <> v_source_product_id then
-        raise exception 'Depo slotundaki urun ile input inventory urunu ayni olmalidir.';
-      end if;
-
-      if coalesce(v_inventory.quality_level, 0) <> v_source_quality_level then
-        raise exception 'Depo slotundaki kalite ile input inventory kalitesi ayni olmalidir.';
-      end if;
-
-      select * into v_city
-      from public.cities
-      where id = v_owner_city_id;
-
-      if not found then
-        raise exception 'Hedef sehir bulunamadi.';
-      end if;
-
-      v_target_city_id := v_owner_city_id;
-      v_target_city_x := v_city.map_position_x;
-      v_target_city_y := v_city.map_position_y;
-
-    else
-      raise exception 'Desteklenmeyen hedef tipi: %', p_target_kind;
-  end case;
-
-  select *
-  into v_product
-  from public.products
-  where id = v_source_product_id;
-
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then
-    raise exception 'Urun hacim bilgisi gecersiz.';
-  end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-
-  if v_check_target_capacity then
-    select greatest(
-      coalesce(v_warehouse.capacity, 0)::numeric
-      - coalesce(sum(ws.quantity::numeric * coalesce(p.birim_hacim, 0)), 0)
-      - coalesce(v_warehouse.reserved_capacity, 0)::numeric,
-      0
-    )
-    into v_available_target_capacity
-    from public.warehouse_slots ws
-    left join public.products p on p.id = ws.product_id
-    where ws.warehouse_id = v_warehouse.id;
-  end if;
-
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_source_city_x - v_target_city_x) / 2)), 2) +
-      cos(radians(v_target_city_x)) *
-      cos(radians(v_source_city_x)) *
-      power(sin(radians((v_source_city_y - v_target_city_y) / 2)), 2)
-    )
-  );
-
-  return query
-  with candidates as (
-    select
-      lv.id as v_id,
-      lv.player_id as v_owner_player_id,
-      lvt.name as v_name,
-      (lv.player_id <> v_player_id) as v_is_rental,
-      lv.capacity as v_capacity,
-      lv.speed_kmh as v_speed_kmh,
-      lv.current_fuel as v_current_fuel,
-      lv.fuel_capacity as v_fuel_capacity,
-      lv.fuel_rate as v_fuel_rate,
-      lv.condition as v_condition,
-      lv.rental_price as v_rental_price,
-      v_distance_km as v_distance_km_val,
-      ceil(v_distance_km * lv.fuel_rate) as v_fuel_needed,
-      ceil(v_distance_km * 0.005) as v_condition_needed,
-      case
-        when lv.player_id <> v_player_id then ceil(v_distance_km * lv.rental_price)
-        else 0
-      end as v_rental_cost,
-      greatest(1, ceil(((v_distance_km / greatest(lv.speed_kmh, 1)) / 4.0) * 3600))::integer as v_estimated_duration_seconds,
-      lv.status as v_status,
-      lc.is_active as v_company_is_active,
-      public.logistics_vehicle_matches_route(
-        lv.route_city_a_id,
-        lv.route_city_b_id,
-        v_source_city_id,
-        v_target_city_id
-      ) as v_route_matches
-    from public.logistics_vehicles lv
-    join public.logistics_vehicle_types lvt on lvt.id = lv.logistics_vehicle_type_id
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where (
-        lv.player_id = v_player_id
-        or (lv.player_id <> v_player_id and lv.is_available_for_rent = true)
-      )
-      and (
-        v_excluded_vehicle_owner_player_id is null
-        or lv.player_id <> v_excluded_vehicle_owner_player_id
-      )
-
-    union all
-
-    select
-      '00000000-0000-0000-0000-000000000000'::uuid as v_id,
-      '00000000-0000-0000-0000-000000000000'::uuid as v_owner_player_id,
-      'Sistem Nakliye Araci' as v_name,
-      true as v_is_rental,
-      999999 as v_capacity,
-      60 as v_speed_kmh,
-      999999 as v_current_fuel,
-      999999 as v_fuel_capacity,
-      0::numeric as v_fuel_rate,
-      100 as v_condition,
-      5.0::numeric as v_rental_price,
-      v_distance_km as v_distance_km_val,
-      0::numeric as v_fuel_needed,
-      0::numeric as v_condition_needed,
-      ceil(v_distance_km * 5.0) as v_rental_cost,
-      greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer as v_estimated_duration_seconds,
-      'idle' as v_status,
-      true as v_company_is_active,
-      true as v_route_matches
-  ),
-  evaluated as (
-    select
-      c.v_id,
-      c.v_owner_player_id,
-      c.v_name,
-      c.v_is_rental,
-      c.v_capacity,
-      c.v_speed_kmh,
-      c.v_current_fuel,
-      c.v_fuel_capacity,
-      c.v_vehicle_fuel_cost,
-      c.v_fuel_rate,
-      c.v_condition,
-      c.v_rental_price,
-      c.v_distance_km_val,
-      c.v_fuel_needed,
-      c.v_condition_needed,
-      c.v_rental_cost,
-      c.v_estimated_duration_seconds,
-      (
-        c.v_route_matches = true
-        and c.v_status = 'idle'
-        and c.v_company_is_active = true
-        and (v_check_target_capacity = false or v_available_target_capacity >= v_required_capacity)
-        and c.v_capacity >= v_required_capacity
-        and c.v_current_fuel >= c.v_fuel_needed
-        and c.v_condition > c.v_condition_needed
-      ) as v_can_select,
-      case
-        when c.v_route_matches is not true then 'Aracin rotasi bu sehir ciftini desteklemiyor.'
-        when c.v_status <> 'idle' then 'Arac su anda uygun degil.'
-        when c.v_company_is_active = false then 'Nakliye firmasi aktif degil.'
-        when v_check_target_capacity = true and v_available_target_capacity < v_required_capacity then 'Hedef depoda bos kapasite yetersiz.'
-        when c.v_capacity < v_required_capacity then 'Kapasite yetersiz.'
-        when c.v_current_fuel < c.v_fuel_needed then 'Yakit yetersiz.'
-        when c.v_condition <= c.v_condition_needed then 'Kondisyon yetersiz.'
-        else null
-      end as v_disabled_reason,
-      c.v_fuel_needed * c.v_vehicle_fuel_cost as v_fuel_cost,
-      c.v_rental_cost + (c.v_fuel_needed * c.v_vehicle_fuel_cost) as v_total_price
-    from candidates c
-  ),
-  selectable_exists as (
-    select exists(select 1 from evaluated e2 where e2.v_can_select = true) as has_selectable
-  ),
-  no_option_reason as (
-    select
-      case
-        when v_check_target_capacity = true and v_available_target_capacity < v_required_capacity then 'Hedef depoda bos kapasite yetersiz.'
-        when exists(select 1 from evaluated e2 where e2.v_disabled_reason = 'Hedef depoda bos kapasite yetersiz.') then 'Hedef depoda bos kapasite yetersiz.'
-        when exists(select 1 from evaluated e2 where e2.v_disabled_reason = 'Kapasite yetersiz.') then 'Bu miktar icin yeterli kapasiteye sahip arac yok.'
-        when exists(select 1 from evaluated e2 where e2.v_disabled_reason = 'Yakit yetersiz.') then 'Yeterli yakiti olan uygun arac yok.'
-        when exists(select 1 from evaluated e2 where e2.v_disabled_reason = 'Kondisyon yetersiz.') then 'Kondisyonu yeterli uygun arac yok.'
-        when exists(select 1 from evaluated e2 where e2.v_disabled_reason = 'Arac su anda uygun degil.') then 'Tum uygun araclar su anda mesgul veya kullanilamaz durumda.'
-        when exists(select 1 from evaluated e2 where e2.v_disabled_reason = 'Nakliye firmasi aktif degil.') then 'Uygun araclarin bagli oldugu nakliye firmalari aktif degil.'
-        when exists(select 1 from evaluated e2 where e2.v_disabled_reason = 'Aracin rotasi bu sehir ciftini desteklemiyor.') then 'Bu rota icin uygun arac yok.'
-        else 'Bu transfer icin uygun veya kiralanabilir arac bulunamadi.'
-      end as nr_disabled_reason
-  ),
-  final_res as (
-      select
-        e.v_id as out_vehicle_id,
-        e.v_owner_player_id as out_vehicle_owner_player_id,
-        e.v_name as out_vehicle_name,
-        e.v_is_rental as out_is_rental,
-        e.v_capacity as out_capacity,
-        e.v_speed_kmh as out_speed_kmh,
-        e.v_current_fuel as out_current_fuel,
-        e.v_fuel_capacity as out_fuel_capacity,
-        e.v_fuel_rate as out_fuel_rate,
-        e.v_condition as out_condition,
-        e.v_rental_price as out_rental_price,
-        e.v_distance_km_val as out_distance_km,
-        e.v_fuel_needed as out_fuel_needed,
-        e.v_condition_needed as out_condition_needed,
-        e.v_rental_cost as out_rental_cost,
-        e.v_estimated_duration_seconds as out_estimated_duration_seconds,
-        e.v_can_select as out_can_select,
-        e.v_disabled_reason as out_disabled_reason,
-        e.v_fuel_cost as out_fuel_cost,
-        e.v_total_price as out_total_price
-      from evaluated e
-      where e.v_can_select = true
-
-      union all
-
-      select
-        null::uuid as out_vehicle_id,
-        null::uuid as out_vehicle_owner_player_id,
-        null::text as out_vehicle_name,
-        false as out_is_rental,
-        0 as out_capacity,
-        0 as out_speed_kmh,
-        0 as out_current_fuel,
-        0 as out_fuel_capacity,
-        0::numeric as out_fuel_rate,
-        0 as out_condition,
-        0::numeric as out_rental_price,
-        0::numeric as out_distance_km,
-        0::numeric as out_fuel_needed,
-        0::numeric as out_condition_needed,
-        0::numeric as out_rental_cost,
-        0 as out_estimated_duration_seconds,
-        false as out_can_select,
-        nr.nr_disabled_reason as out_disabled_reason,
-        0::numeric as out_fuel_cost,
-        0::numeric as out_total_price
-      from no_option_reason nr
-      where not (select has_selectable from selectable_exists)
-  )
-  select * from final_res fr
-  order by fr.out_is_rental asc, fr.out_can_select desc, fr.out_capacity asc, fr.out_rental_price asc, fr.out_vehicle_name asc nulls last;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."get_transfer_vehicle_options"("p_source_kind" "text", "p_source_id" "uuid", "p_target_kind" "text", "p_target_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_warehouse_capacity_status"("p_warehouse_id" "uuid") RETURNS TABLE("warehouse_id" "uuid", "total_capacity" numeric, "used_capacity" numeric, "reserved_capacity" numeric, "available_capacity" numeric)
@@ -7525,9 +5474,7 @@ CREATE OR REPLACE FUNCTION "public"."get_warehouse_capacity_status"("p_warehouse
   left join used_space us on us.warehouse_id = tw.id;
 $$;
 
-
 ALTER FUNCTION "public"."get_warehouse_capacity_status"("p_warehouse_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_warehouse_list_page_data"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -7563,6 +5510,8 @@ CREATE OR REPLACE FUNCTION "public"."get_warehouse_list_page_data"() RETURNS "js
           'required_level', wt.required_level,
           'construction_time_minutes', wt.construction_time_minutes
         ),
+        'store_id', w.store_id,
+        'warehouse_kind', w.warehouse_kind,
         'warehouse_slots', coalesce(slot_rows.slots, '[]'::jsonb),
         'is_under_construction', false
       ) as payload
@@ -7575,6 +5524,7 @@ CREATE OR REPLACE FUNCTION "public"."get_warehouse_list_page_data"() RETURNS "js
           jsonb_build_object(
             'id', ws.id,
             'product_id', ws.product_id,
+            'brand_id', ws.brand_id,
             'product_name', p.urun_adi,
             'quantity', ws.quantity,
             'quality_level', ws.quality_level,
@@ -7600,6 +5550,7 @@ CREATE OR REPLACE FUNCTION "public"."get_warehouse_list_page_data"() RETURNS "js
       where ws.warehouse_id = w.id
     ) slot_rows on true
     where w.player_id = auth.uid()
+      and coalesce(w.warehouse_kind, 'normal') = 'normal'
   ),
   construction_rows as (
     select
@@ -7667,9 +5618,7 @@ CREATE OR REPLACE FUNCTION "public"."get_warehouse_list_page_data"() RETURNS "js
   );
 $$;
 
-
 ALTER FUNCTION "public"."get_warehouse_list_page_data"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_warehouse_type_detail"("p_type_id" "uuid") RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -7680,9 +5629,7 @@ CREATE OR REPLACE FUNCTION "public"."get_warehouse_type_detail"("p_type_id" "uui
   where wt.id = p_type_id;
 $$;
 
-
 ALTER FUNCTION "public"."get_warehouse_type_detail"("p_type_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."get_warehouse_types_catalog"() RETURNS "jsonb"
     LANGUAGE "sql" SECURITY DEFINER
@@ -7695,9 +5642,7 @@ CREATE OR REPLACE FUNCTION "public"."get_warehouse_types_catalog"() RETURNS "jso
   from public.warehouse_types wt;
 $$;
 
-
 ALTER FUNCTION "public"."get_warehouse_types_catalog"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."grant_player_experience"("p_player_id" "uuid", "p_amount" integer, "p_reason" "text", "p_meta" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -7811,9 +5756,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."grant_player_experience"("p_player_id" "uuid", "p_amount" integer, "p_reason" "text", "p_meta" "jsonb") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."handle_arge_research_mission_progress"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -7830,9 +5773,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."handle_arge_research_mission_progress"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."handle_building_construction_mission_progress"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -7850,9 +5791,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."handle_building_construction_mission_progress"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."handle_building_upgrade_mission_progress"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -7870,34 +5809,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."handle_building_upgrade_mission_progress"() OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."handle_logistics_transfer_mission_progress"() RETURNS "trigger"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid;
-begin
-  if tg_op = 'UPDATE'
-     and new.status = 'completed'
-     and coalesce(old.status, '') <> 'completed' then
-    v_player_id := coalesce(new.buyer_player_id, new.seller_player_id);
-    if v_player_id is not null then
-      perform public.increment_player_mission_progress(v_player_id, 'logistics_transfer_completed', 1);
-      perform public.increment_player_mission_progress(v_player_id, 'logistics_transfer_completed_' || coalesce(new.transfer_type, 'unknown'), 1);
-    end if;
-  end if;
-
-  return new;
-end;
-$$;
-
-
-ALTER FUNCTION "public"."handle_logistics_transfer_mission_progress"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."handle_store_sales_mission_progress"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -7920,9 +5832,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."handle_store_sales_mission_progress"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."increment_player_mission_progress"("p_player_id" "uuid", "p_event_key" "text", "p_amount" integer DEFAULT 1, "p_meta" "jsonb" DEFAULT '{}'::"jsonb") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -7957,9 +5867,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."increment_player_mission_progress"("p_player_id" "uuid", "p_event_key" "text", "p_amount" integer, "p_meta" "jsonb") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."logistics_vehicle_matches_route"("p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid", "p_from_city_id" "uuid", "p_to_city_id" "uuid") RETURNS boolean
     LANGUAGE "sql" IMMUTABLE
@@ -7974,9 +5882,7 @@ CREATE OR REPLACE FUNCTION "public"."logistics_vehicle_matches_route"("p_route_c
     );
 $$;
 
-
 ALTER FUNCTION "public"."logistics_vehicle_matches_route"("p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid", "p_from_city_id" "uuid", "p_to_city_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."now_turkey"() RETURNS timestamp without time zone
     LANGUAGE "sql" STABLE
@@ -7984,9 +5890,7 @@ CREATE OR REPLACE FUNCTION "public"."now_turkey"() RETURNS timestamp without tim
   select timezone('Europe/Istanbul', now());
 $$;
 
-
 ALTER FUNCTION "public"."now_turkey"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) RETURNS numeric
     LANGUAGE "sql" IMMUTABLE
@@ -8001,9 +5905,7 @@ CREATE OR REPLACE FUNCTION "public"."store_quality_price_multiplier"("p_quality_
   end;
 $$;
 
-
 ALTER FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."open_store_detail_page"("p_store_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -8035,6 +5937,7 @@ declare
   v_price_ratio numeric;
   v_price_multiplier numeric;
   v_quality_multiplier numeric;
+  v_brand_multiplier numeric;
   v_sold_qty integer;
   v_revenue numeric;
   v_profit numeric;
@@ -8097,6 +6000,7 @@ begin
         ss.product_id,
         ss.quantity,
         ss.quality_level,
+        ss.brand_id,
         ss.price,
         ss.cost,
         ss.boost_multiplier,
@@ -8123,6 +6027,11 @@ begin
       v_processed := true;
       v_elapsed_minutes_max := greatest(v_elapsed_minutes_max, floor(v_elapsed_minutes)::int);
       v_quality_multiplier := 1 + (greatest(v_slot.quality_level, 1) - 1) * 0.10;
+      v_brand_multiplier := case
+        when coalesce(v_slot.brand_id, '00000000-0000-0000-0000-000000000000'::uuid)
+          = '00000000-0000-0000-0000-000000000000'::uuid then 1.0
+        else 1.1
+      end;
 
       if coalesce(v_slot.price, 0) <= 0 then
         update public.store_slots
@@ -8176,6 +6085,7 @@ begin
             / greatest(v_elapsed_minutes, 1)
           )
         * v_quality_multiplier
+        * v_brand_multiplier
         * v_price_multiplier;
 
       if coalesce(v_slot.quantity, 0) <= 0 then
@@ -8397,7 +6307,13 @@ begin
       'total_stock_cost_value', coalesce(slot_data.total_stock_cost_value, 0),
       'total_stock_sale_value', coalesce(slot_data.total_stock_sale_value, 0)
     ),
-    'slots', coalesce(slot_data.slots, '[]'::jsonb)
+    'slots', coalesce(slot_data.slots, '[]'::jsonb),
+    'store_warehouse', store_warehouse_data.payload,
+    'store_warehouse_id', store_warehouse_data.store_warehouse_id,
+    'store_warehouse_name', store_warehouse_data.store_warehouse_name,
+    'store_warehouse_capacity', store_warehouse_data.store_warehouse_capacity,
+    'store_warehouse_used_capacity', store_warehouse_data.store_warehouse_used_capacity,
+    'store_warehouse_slots', coalesce(store_warehouse_data.store_warehouse_slots, '[]'::jsonb)
   )
   into v_store_json
   from public.stores s
@@ -8422,6 +6338,7 @@ begin
             'id', ss.id,
             'store_id', ss.store_id,
             'slot_index', ss.slot_index,
+            'brand_id', ss.brand_id,
             'product_id', ss.product_id,
             'quantity', ss.quantity,
             'quality_level', ss.quality_level,
@@ -8473,6 +6390,50 @@ begin
     left join public.products p on p.id = ss.product_id
     where ss.store_id = s.id
   ) slot_data on true
+  left join lateral (
+    select
+      w.id as store_warehouse_id,
+      w.name as store_warehouse_name,
+      coalesce(w.capacity, 0) as store_warehouse_capacity,
+      coalesce(warehouse_summary.used_capacity, 0) as store_warehouse_used_capacity,
+      coalesce(warehouse_summary.slots, '[]'::jsonb) as store_warehouse_slots,
+      jsonb_build_object(
+        'id', w.id,
+        'name', w.name,
+        'capacity', coalesce(w.capacity, 0),
+        'used_capacity', coalesce(warehouse_summary.used_capacity, 0),
+        'slots', coalesce(warehouse_summary.slots, '[]'::jsonb)
+      ) as payload
+    from public.warehouses w
+    left join lateral (
+      select
+        coalesce(sum(ws.quantity * coalesce(p.birim_hacim, 0)), 0) as used_capacity,
+        coalesce(
+          jsonb_agg(
+            jsonb_build_object(
+              'id', ws.id,
+              'product_id', ws.product_id,
+              'product_name', p.urun_adi,
+              'product_icon', p.urun_iconu,
+              'quality_level', ws.quality_level,
+              'brand_id', ws.brand_id,
+              'quantity', ws.quantity,
+              'cost', ws.cost
+            )
+            order by ws.created_at asc
+          ),
+          '[]'::jsonb
+        ) as slots
+      from public.warehouse_slots ws
+      left join public.products p on p.id = ws.product_id
+      where ws.warehouse_id = w.id
+    ) warehouse_summary on true
+    where w.store_id = s.id
+      and w.warehouse_kind = 'store'
+      and w.is_active = true
+    order by w.created_at desc
+    limit 1
+  ) store_warehouse_data on true
   where s.player_id = v_player_id
     and s.id = p_store_id;
 
@@ -8497,9 +6458,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."open_store_detail_page"("p_store_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."process_factory_production_entry"("p_player_id" "uuid" DEFAULT "auth"."uid"(), "p_factory_id" "uuid" DEFAULT NULL::"uuid", "p_tick_minutes" integer DEFAULT 10, "p_max_ticks" integer DEFAULT 144) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -8775,9 +6734,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."process_factory_production_entry"("p_player_id" "uuid", "p_factory_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."process_field_farm_production_entry"("p_player_id" "uuid" DEFAULT "auth"."uid"(), "p_owner_kind" "text" DEFAULT NULL::"text", "p_owner_id" "uuid" DEFAULT NULL::"uuid", "p_tick_minutes" integer DEFAULT 10, "p_max_ticks" integer DEFAULT 144) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -9070,9 +7027,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."process_field_farm_production_entry"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."process_mine_production_entry"("p_player_id" "uuid" DEFAULT "auth"."uid"(), "p_mine_id" "uuid" DEFAULT NULL::"uuid", "p_tick_minutes" integer DEFAULT 10, "p_max_ticks" integer DEFAULT 144) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -9229,9 +7184,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."process_mine_production_entry"("p_player_id" "uuid", "p_mine_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."process_player_production_entry"("p_player_id" "uuid" DEFAULT "auth"."uid"(), "p_owner_kind" "text" DEFAULT NULL::"text", "p_owner_id" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -9301,9 +7254,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."process_player_production_entry"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."purchase_logistics_vehicle"("p_player_id" "uuid", "p_logistics_company_id" "uuid", "p_logistics_vehicle_type_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -9426,9 +7377,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."purchase_logistics_vehicle"("p_player_id" "uuid", "p_logistics_company_id" "uuid", "p_logistics_vehicle_type_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."refuel_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -9507,9 +7456,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."refuel_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."repair_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -9601,9 +7548,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."repair_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."reserve_warehouse_capacity"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quantity" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -9698,9 +7643,1577 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."reserve_warehouse_capacity"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quantity" integer) OWNER TO "postgres";
 
+CREATE OR REPLACE FUNCTION "public"."add_product_to_warehouse_with_brand"(
+    "p_player_id" "uuid",
+    "p_warehouse_id" "uuid",
+    "p_product_id" "text",
+    "p_quality_level" integer,
+    "p_brand_id" "uuid" DEFAULT '00000000-0000-0000-0000-000000000000'::"uuid",
+    "p_quantity" integer DEFAULT 0,
+    "p_cost" numeric DEFAULT 0,
+    "p_transport_cost" numeric DEFAULT 0,
+    "p_release_reserved_capacity" boolean DEFAULT false,
+    "p_preferred_slot_id" "uuid" DEFAULT NULL::"uuid"
+) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
+  v_now timestamptz := timezone('utc'::text, now());
+  v_warehouse warehouses%rowtype;
+  v_product products%rowtype;
+  v_target_slot warehouse_slots%rowtype;
+  v_empty_slot warehouse_slots%rowtype;
+  v_target_slot_id uuid;
+  v_next_slot_index integer := 1;
+  v_used_capacity numeric := 0;
+  v_required_capacity numeric := 0;
+  v_reserved_before numeric := 0;
+  v_reserved_after numeric := 0;
+  v_released_reserved_capacity numeric := 0;
+  v_new_quantity integer := 0;
+  v_new_cost numeric := 0;
+  v_pending_to_release integer := 0;
+  v_incoming_total_cost numeric := 0;
+  v_incoming_unit_cost numeric := 0;
+begin
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'Eklenecek miktar 0 dan buyuk olmalidir.';
+  end if;
+
+  if p_quality_level is null or p_quality_level < 1 or p_quality_level > 5 then
+    raise exception 'Kalite seviyesi 1 ile 5 arasinda olmalidir.';
+  end if;
+
+  select *
+  into v_warehouse
+  from public.warehouses
+  where id = p_warehouse_id
+  for update;
+
+  if not found then
+    raise exception 'Hedef depo bulunamadi.';
+  end if;
+
+  if v_warehouse.player_id <> p_player_id then
+    raise exception 'Bu depo oyuncuya ait degil.';
+  end if;
+
+  select *
+  into v_product
+  from public.products
+  where id = p_product_id;
+
+  if not found then
+    raise exception 'Urun bulunamadi.';
+  end if;
+
+  v_required_capacity := p_quantity * coalesce(v_product.birim_hacim, 0);
+  v_incoming_total_cost := (p_quantity * coalesce(p_cost, 0)) + coalesce(p_transport_cost, 0);
+  v_incoming_unit_cost := case
+    when p_quantity <= 0 then coalesce(p_cost, 0)
+    else round(v_incoming_total_cost / p_quantity::numeric, 4)
+  end;
+
+  select coalesce(sum((ws.quantity + coalesce(ws.pending_quantity, 0)) * coalesce(p.birim_hacim, 0)), 0)
+  into v_used_capacity
+  from public.warehouse_slots ws
+  left join public.products p on p.id = ws.product_id
+  where ws.warehouse_id = p_warehouse_id;
+
+  v_reserved_before := coalesce(v_warehouse.reserved_capacity, 0);
+
+  if p_preferred_slot_id is not null then
+    select *
+    into v_target_slot
+    from public.warehouse_slots
+    where id = p_preferred_slot_id
+      and warehouse_id = p_warehouse_id
+    for update;
+  end if;
+
+  if not found
+     or v_target_slot.product_id is distinct from p_product_id
+     or coalesce(v_target_slot.quality_level, 0) <> p_quality_level
+     or coalesce(v_target_slot.brand_id, v_default_brand) <> coalesce(p_brand_id, v_default_brand) then
+    select *
+    into v_target_slot
+    from public.warehouse_slots
+    where warehouse_id = p_warehouse_id
+      and product_id = p_product_id
+      and quality_level = p_quality_level
+      and coalesce(brand_id, v_default_brand) = coalesce(p_brand_id, v_default_brand)
+    order by slot_index
+    limit 1
+    for update;
+  end if;
+
+  if found then
+    v_pending_to_release := least(coalesce(v_target_slot.pending_quantity, 0), p_quantity);
+  else
+    v_pending_to_release := 0;
+  end if;
+
+  if v_pending_to_release > 0 then
+    v_used_capacity := greatest(v_used_capacity - (v_pending_to_release * coalesce(v_product.birim_hacim, 0)), 0);
+  end if;
+
+  if p_release_reserved_capacity = false then
+    if v_used_capacity + v_reserved_before + v_required_capacity > coalesce(v_warehouse.capacity, 0) then
+      raise exception 'Depoda yeterli kapasite yok.';
+    end if;
+  end if;
+
+  if found then
+    v_target_slot_id := v_target_slot.id;
+    v_new_quantity := coalesce(v_target_slot.quantity, 0) + p_quantity;
+    v_new_cost := case
+      when v_new_quantity <= 0 then 0
+      when coalesce(v_target_slot.quantity, 0) <= 0 then v_incoming_unit_cost
+      else round(
+        (
+          coalesce(v_target_slot.quantity, 0) * coalesce(v_target_slot.cost, 0)
+          + v_incoming_total_cost
+        ) / v_new_quantity::numeric,
+        4
+      )
+    end;
+
+    update public.warehouse_slots
+    set
+      product_id = p_product_id,
+      quality_level = p_quality_level,
+      brand_id = coalesce(p_brand_id, v_default_brand),
+      quantity = v_new_quantity,
+      pending_quantity = greatest(coalesce(v_target_slot.pending_quantity, 0) - v_pending_to_release, 0),
+      cost = v_new_cost,
+      updated_at = v_now
+    where id = v_target_slot_id;
+  else
+    select *
+    into v_empty_slot
+    from public.warehouse_slots
+    where warehouse_id = p_warehouse_id
+      and product_id is null
+      and quantity = 0
+      and coalesce(pending_quantity, 0) = 0
+      and quality_level = 0
+    order by slot_index
+    limit 1
+    for update;
+
+    if found then
+      v_target_slot_id := v_empty_slot.id;
+
+      update public.warehouse_slots
+      set
+        product_id = p_product_id,
+        quality_level = p_quality_level,
+        brand_id = coalesce(p_brand_id, v_default_brand),
+        quantity = p_quantity,
+        pending_quantity = 0,
+        cost = v_incoming_unit_cost,
+        is_available_for_sale = false,
+        updated_at = v_now
+      where id = v_target_slot_id;
+    else
+      select coalesce(max(slot_index), 0) + 1
+      into v_next_slot_index
+      from public.warehouse_slots
+      where warehouse_id = p_warehouse_id;
+
+      insert into public.warehouse_slots (
+        warehouse_id,
+        slot_index,
+        brand_id,
+        product_id,
+        quality_level,
+        quantity,
+        pending_quantity,
+        cost,
+        is_available_for_sale,
+        created_at,
+        updated_at,
+        price
+      )
+      values (
+        p_warehouse_id,
+        v_next_slot_index,
+        coalesce(p_brand_id, v_default_brand),
+        p_product_id,
+        p_quality_level,
+        p_quantity,
+        0,
+        v_incoming_unit_cost,
+        false,
+        v_now,
+        v_now,
+        0
+      )
+      returning id into v_target_slot_id;
+    end if;
+  end if;
+
+  if p_release_reserved_capacity = true then
+    v_released_reserved_capacity := least(v_reserved_before, v_required_capacity);
+    v_reserved_after := greatest(v_reserved_before - v_required_capacity, 0);
+
+    update public.warehouses
+    set
+      reserved_capacity = v_reserved_after,
+      updated_at = v_now
+    where id = p_warehouse_id;
+  else
+    v_released_reserved_capacity := 0;
+    v_reserved_after := v_reserved_before;
+  end if;
+
+  return jsonb_build_object(
+    'success', true,
+    'warehouse_id', p_warehouse_id,
+    'warehouse_slot_id', v_target_slot_id,
+    'product_id', p_product_id,
+    'quality_level', p_quality_level,
+    'brand_id', coalesce(p_brand_id, v_default_brand),
+    'quantity', p_quantity,
+    'unit_cost', v_incoming_unit_cost,
+    'transport_cost', coalesce(p_transport_cost, 0),
+    'released_reserved_capacity', v_released_reserved_capacity,
+    'reserved_capacity_after', v_reserved_after
+  );
+end;
+$$;
+
+ALTER FUNCTION "public"."add_product_to_warehouse_with_brand"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quality_level" integer, "p_brand_id" "uuid", "p_quantity" integer, "p_cost" numeric, "p_transport_cost" numeric, "p_release_reserved_capacity" boolean, "p_preferred_slot_id" "uuid") OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."start_multi_logistics_transfer"(
+    "p_source_entity_kind" "text",
+    "p_source_entity_id" "uuid",
+    "p_target_entity_kind" "text",
+    "p_target_entity_id" "uuid",
+    "p_items" "jsonb",
+    "p_vehicle_id" "uuid" DEFAULT NULL::"uuid"
+) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
+  v_player_id uuid := auth.uid();
+  v_now timestamptz := timezone('utc'::text, now());
+  v_source_warehouse record;
+  v_target_warehouse record;
+  v_source_store record;
+  v_target_store record;
+  v_vehicle logistics_vehicles%rowtype;
+  v_source_city cities%rowtype;
+  v_target_city cities%rowtype;
+  v_transfer_id uuid;
+  v_item jsonb;
+  v_source_slot record;
+  v_target_slot record;
+  v_empty_slot record;
+  v_product products%rowtype;
+  v_item_count integer := 0;
+  v_total_quantity integer := 0;
+  v_total_volume numeric := 0;
+  v_total_cost numeric := 0;
+  v_total_price numeric := 0;
+  v_transport_cost numeric := 0;
+  v_rental_cost numeric := 0;
+  v_distance_km numeric := 0;
+  v_fuel_used numeric := 0;
+  v_condition_loss numeric := 0;
+  v_duration_seconds integer := 0;
+  v_finish_at timestamptz;
+  v_same_city boolean := false;
+  v_mode text := 'instant';
+  v_item_quantity integer;
+  v_item_reserved_capacity numeric;
+  v_target_slot_id uuid;
+  v_next_slot_index integer;
+  v_store_used_capacity numeric;
+  v_target_used_capacity numeric;
+  v_header_product_id text;
+  v_header_quality_level integer;
+  v_header_brand_id uuid;
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'Transfer kalemleri bos olamaz.';
+  end if;
+
+  if p_source_entity_kind not in ('warehouse', 'store') then
+    raise exception 'Desteklenmeyen kaynak turu: %', p_source_entity_kind;
+  end if;
+
+  if p_target_entity_kind not in ('warehouse', 'store') then
+    raise exception 'Desteklenmeyen hedef turu: %', p_target_entity_kind;
+  end if;
+
+  if p_source_entity_kind = 'warehouse' then
+    select w.*, c.map_position_x, c.map_position_y
+    into v_source_warehouse
+    from public.warehouses w
+    join public.cities c on c.id = w.city_id
+    where w.id = p_source_entity_id
+      and w.player_id = v_player_id
+    for update;
+
+    if not found then
+      raise exception 'Kaynak depo bulunamadi.';
+    end if;
+  else
+    select s.*
+    into v_source_store
+    from public.stores s
+    where s.id = p_source_entity_id
+      and s.player_id = v_player_id
+    for update;
+
+    if not found then
+      raise exception 'Kaynak magaza bulunamadi.';
+    end if;
+
+    select w.*, c.map_position_x, c.map_position_y
+    into v_source_warehouse
+    from public.warehouses w
+    join public.cities c on c.id = w.city_id
+    where w.store_id = v_source_store.id
+      and w.warehouse_kind = 'store'
+      and w.player_id = v_player_id
+      and w.is_active = true
+    order by w.created_at desc
+    limit 1
+    for update;
+
+    if not found then
+      raise exception 'Kaynak magazaya bagli depo bulunamadi.';
+    end if;
+  end if;
+
+  if p_target_entity_kind = 'warehouse' then
+    select w.*, c.map_position_x, c.map_position_y
+    into v_target_warehouse
+    from public.warehouses w
+    join public.cities c on c.id = w.city_id
+    where w.id = p_target_entity_id
+      and w.player_id = v_player_id
+    for update;
+
+    if not found then
+      raise exception 'Hedef depo bulunamadi.';
+    end if;
+  else
+    select s.*
+    into v_target_store
+    from public.stores s
+    where s.id = p_target_entity_id
+      and s.player_id = v_player_id
+    for update;
+
+    if not found then
+      raise exception 'Hedef magaza bulunamadi.';
+    end if;
+
+    select w.*, c.map_position_x, c.map_position_y
+    into v_target_warehouse
+    from public.warehouses w
+    join public.cities c on c.id = w.city_id
+    where w.store_id = v_target_store.id
+      and w.warehouse_kind = 'store'
+      and w.player_id = v_player_id
+      and w.is_active = true
+    order by w.created_at desc
+    limit 1
+    for update;
+
+    if not found then
+      raise exception 'Hedef magazaya bagli depo bulunamadi.';
+    end if;
+  end if;
+
+  if v_source_warehouse.id = v_target_warehouse.id then
+    raise exception 'Kaynak ve hedef ayni depo olamaz.';
+  end if;
+
+  v_item := p_items -> 0;
+  if v_item is null then
+    raise exception 'Transfer kalemleri bos olamaz.';
+  end if;
+
+  select ws.product_id, ws.quality_level, coalesce(ws.brand_id, v_default_brand)
+  into v_header_product_id, v_header_quality_level, v_header_brand_id
+  from public.warehouse_slots ws
+  join public.warehouses w on w.id = ws.warehouse_id
+  where ws.id = (v_item ->> 'source_warehouse_slot_id')::uuid
+    and w.id = v_source_warehouse.id;
+
+  if coalesce(v_header_product_id, '') = '' then
+    raise exception 'Ilk transfer kalemi icin kaynak slotu bulunamadi.';
+  end if;
+
+  v_same_city := v_source_warehouse.city_id = v_target_warehouse.city_id;
+  if v_same_city then
+    v_mode := 'instant';
+    v_finish_at := v_now;
+  else
+    v_mode := 'in_transit';
+
+    if p_vehicle_id is null then
+      raise exception 'Sehirler arasi transfer icin arac secilmelidir.';
+    end if;
+
+    select *
+    into v_vehicle
+    from public.logistics_vehicles
+    where id = p_vehicle_id
+      and player_id = v_player_id
+      and status = 'idle'
+    for update;
+
+    if not found then
+      raise exception 'Secilen arac kullanima uygun degil.';
+    end if;
+  end if;
+
+  insert into public.logistics_transfers (
+    buyer_player_id,
+    seller_player_id,
+    buyer_warehouse_id,
+    seller_warehouse_id,
+    logistics_vehicle_id,
+    vehicle_owner_player_id,
+    is_rental,
+    product_id,
+    quality_level,
+    quantity,
+    unit_price,
+    total_price,
+    product_unit_volume,
+    reserved_capacity_amount,
+    distance_km,
+    fuel_used,
+    condition_loss,
+    rental_cost,
+    transport_cost,
+    started_at,
+    finish_at,
+    status,
+    buyer_store_id,
+    transfer_type,
+    seller_store_id,
+    seller_entity_kind,
+    buyer_entity_kind,
+    item_count,
+    total_quantity,
+    brand_id,
+    created_at,
+    updated_at
+  ) values (
+    v_player_id,
+    v_player_id,
+    case when p_target_entity_kind = 'warehouse' then v_target_warehouse.id else null end,
+    case when p_source_entity_kind = 'warehouse' then v_source_warehouse.id else null end,
+    p_vehicle_id,
+    case when p_vehicle_id is not null then v_player_id else null end,
+    false,
+    v_header_product_id,
+    greatest(coalesce(v_header_quality_level, 1), 1),
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    v_now,
+    v_finish_at,
+    'in_transit',
+    case when p_target_entity_kind = 'store' then p_target_entity_id else null end,
+    case
+      when p_source_entity_kind = 'warehouse' and p_target_entity_kind = 'warehouse' then 'warehouse_to_warehouse'
+      when p_source_entity_kind = 'warehouse' and p_target_entity_kind = 'store' then 'warehouse_to_store'
+      when p_source_entity_kind = 'store' and p_target_entity_kind = 'warehouse' then 'store_to_warehouse'
+      else 'internal_transfer'
+    end,
+    case when p_source_entity_kind = 'store' then p_source_entity_id else null end,
+    p_source_entity_kind,
+    p_target_entity_kind,
+    1,
+    0,
+    coalesce(v_header_brand_id, v_default_brand),
+    v_now,
+    v_now
+  )
+  returning id into v_transfer_id;
+
+  for v_item in
+    select value from jsonb_array_elements(p_items)
+  loop
+    v_item_quantity := greatest(coalesce((v_item ->> 'quantity')::integer, 0), 0);
+    if v_item_quantity <= 0 then
+      raise exception 'Transfer miktari 0 dan buyuk olmalidir.';
+    end if;
+
+    select ws.*, w.player_id, w.store_id, w.city_id, w.warehouse_kind
+    into v_source_slot
+    from public.warehouse_slots ws
+    join public.warehouses w on w.id = ws.warehouse_id
+    where ws.id = (v_item ->> 'source_warehouse_slot_id')::uuid
+    for update;
+
+    if not found then
+      raise exception 'Kaynak depo slotu bulunamadi.';
+    end if;
+
+    if v_source_slot.player_id <> v_player_id then
+      raise exception 'Kaynak depo slotu oyuncuya ait degil.';
+    end if;
+
+    if v_source_slot.warehouse_id <> v_source_warehouse.id then
+      raise exception 'Tum kalemler secilen kaynak depoya ait olmalidir.';
+    end if;
+
+    if coalesce(v_source_slot.product_id, '') = '' then
+      raise exception 'Kaynak slotta urun bulunamadi.';
+    end if;
+
+    if coalesce(v_source_slot.quantity, 0) < v_item_quantity then
+      raise exception 'Kaynak slotta yeterli stok yok.';
+    end if;
+
+    select *
+    into v_product
+    from public.products
+    where id = v_source_slot.product_id;
+
+    if not found then
+      raise exception 'Urun bulunamadi.';
+    end if;
+
+    v_item_reserved_capacity := v_item_quantity * coalesce(v_product.birim_hacim, 0);
+
+    if p_target_entity_kind = 'warehouse' then
+      select coalesce(sum((ws.quantity + coalesce(ws.pending_quantity, 0)) * coalesce(p.birim_hacim, 0)), 0)
+      into v_target_used_capacity
+      from public.warehouse_slots ws
+      left join public.products p on p.id = ws.product_id
+      where ws.warehouse_id = v_target_warehouse.id;
+
+      if v_target_used_capacity + coalesce(v_target_warehouse.reserved_capacity, 0) + v_item_reserved_capacity > coalesce(v_target_warehouse.capacity, 0) then
+        raise exception 'Hedef depoda yeterli rezerve kapasite yok.';
+      end if;
+
+      update public.warehouses
+      set
+        reserved_capacity = coalesce(reserved_capacity, 0) + v_item_reserved_capacity,
+        updated_at = v_now
+      where id = v_target_warehouse.id;
+
+      v_target_slot_id := null;
+      v_target_warehouse.reserved_capacity := coalesce(v_target_warehouse.reserved_capacity, 0) + v_item_reserved_capacity;
+    else
+      select coalesce(sum((ws.quantity + coalesce(ws.pending_quantity, 0)) * coalesce(p.birim_hacim, 0)), 0)
+      into v_store_used_capacity
+      from public.warehouse_slots ws
+      left join public.products p on p.id = ws.product_id
+      where ws.warehouse_id = v_target_warehouse.id;
+
+      if v_store_used_capacity + v_item_reserved_capacity > coalesce(v_target_warehouse.capacity, 0) then
+        raise exception 'Hedef magaza deposunda yeterli kapasite yok.';
+      end if;
+
+      select *
+      into v_target_slot
+      from public.warehouse_slots
+      where warehouse_id = v_target_warehouse.id
+        and product_id = v_source_slot.product_id
+        and quality_level = v_source_slot.quality_level
+        and coalesce(brand_id, v_default_brand) = coalesce(v_source_slot.brand_id, v_default_brand)
+      order by slot_index
+      limit 1
+      for update;
+
+      if found then
+        v_target_slot_id := v_target_slot.id;
+        update public.warehouse_slots
+        set
+          pending_quantity = coalesce(pending_quantity, 0) + v_item_quantity,
+          updated_at = v_now
+        where id = v_target_slot_id;
+      else
+        select *
+        into v_empty_slot
+        from public.warehouse_slots
+        where warehouse_id = v_target_warehouse.id
+          and product_id is null
+          and quantity = 0
+          and coalesce(pending_quantity, 0) = 0
+          and quality_level = 0
+        order by slot_index
+        limit 1
+        for update;
+
+        if found then
+          v_target_slot_id := v_empty_slot.id;
+          update public.warehouse_slots
+          set
+            product_id = v_source_slot.product_id,
+            quality_level = v_source_slot.quality_level,
+            brand_id = coalesce(v_source_slot.brand_id, v_default_brand),
+            pending_quantity = v_item_quantity,
+            cost = coalesce(v_source_slot.cost, 0),
+            updated_at = v_now
+          where id = v_target_slot_id;
+        else
+          select coalesce(max(slot_index), 0) + 1
+          into v_next_slot_index
+          from public.warehouse_slots
+          where warehouse_id = v_target_warehouse.id;
+
+          insert into public.warehouse_slots (
+            warehouse_id,
+            slot_index,
+            brand_id,
+            product_id,
+            quality_level,
+            quantity,
+            pending_quantity,
+            cost,
+            is_available_for_sale,
+            created_at,
+            updated_at,
+            price
+          )
+          values (
+            v_target_warehouse.id,
+            v_next_slot_index,
+            coalesce(v_source_slot.brand_id, v_default_brand),
+            v_source_slot.product_id,
+            v_source_slot.quality_level,
+            0,
+            v_item_quantity,
+            coalesce(v_source_slot.cost, 0),
+            false,
+            v_now,
+            v_now,
+            0
+          )
+          returning id into v_target_slot_id;
+        end if;
+      end if;
+    end if;
+
+    update public.warehouse_slots
+    set
+      quantity = quantity - v_item_quantity,
+      updated_at = v_now
+    where id = v_source_slot.id;
+
+    if coalesce(v_source_slot.quantity, 0) - v_item_quantity <= 0
+       and coalesce(v_source_slot.pending_quantity, 0) <= 0 then
+      delete from public.warehouse_slots
+      where id = v_source_slot.id;
+    end if;
+
+    insert into public.logistics_transfer_items (
+      transfer_id,
+      source_warehouse_slot_id,
+      target_warehouse_slot_id,
+      product_id,
+      quality_level,
+      brand_id,
+      quantity,
+      unit_cost,
+      unit_price,
+      total_cost,
+      total_price,
+      product_unit_volume,
+      reserved_capacity_amount,
+      status,
+      created_at,
+      updated_at
+    )
+    values (
+      v_transfer_id,
+      v_source_slot.id,
+      v_target_slot_id,
+      v_source_slot.product_id,
+      v_source_slot.quality_level,
+      coalesce(v_source_slot.brand_id, v_default_brand),
+      v_item_quantity,
+      coalesce(v_source_slot.cost, 0),
+      0,
+      v_item_quantity * coalesce(v_source_slot.cost, 0),
+      0,
+      coalesce(v_product.birim_hacim, 0),
+      v_item_reserved_capacity,
+      'in_transit',
+      v_now,
+      v_now
+    );
+
+    v_item_count := v_item_count + 1;
+    v_total_quantity := v_total_quantity + v_item_quantity;
+    v_total_volume := v_total_volume + v_item_reserved_capacity;
+    v_total_cost := v_total_cost + (v_item_quantity * coalesce(v_source_slot.cost, 0));
+  end loop;
+
+  if v_item_count <= 0 then
+    raise exception 'Transfer icin gecerli kalem bulunamadi.';
+  end if;
+
+  if not v_same_city then
+    v_distance_km := round(
+      sqrt(
+        power(coalesce(v_source_warehouse.map_position_x, 0) - coalesce(v_target_warehouse.map_position_x, 0), 2)
+        + power(coalesce(v_source_warehouse.map_position_y, 0) - coalesce(v_target_warehouse.map_position_y, 0), 2)
+      ),
+      2
+    );
+
+    if coalesce(v_vehicle.capacity, 0) < ceil(v_total_volume) then
+      raise exception 'Secilen aracin kapasitesi bu transfer icin yetersiz.';
+    end if;
+
+    if coalesce(v_vehicle.speed_kmh, 0) <= 0 then
+      raise exception 'Secilen aracin hizi gecersiz.';
+    end if;
+
+    v_duration_seconds := greatest(60, ceil((greatest(v_distance_km, 1) / v_vehicle.speed_kmh) * 3600)::integer);
+    v_finish_at := v_now + make_interval(secs => v_duration_seconds);
+    v_fuel_used := round(v_distance_km * coalesce(v_vehicle.fuel_rate, 0), 2);
+    v_condition_loss := greatest(1, ceil(v_distance_km / 25.0));
+    v_transport_cost := round(v_fuel_used * coalesce(v_vehicle.fuel_cost, 0), 2);
+
+    if coalesce(v_vehicle.current_fuel, 0) < ceil(v_fuel_used) then
+      raise exception 'Aracta yeterli yakit yok.';
+    end if;
+
+    if coalesce(v_vehicle.condition, 0) <= 0 then
+      raise exception 'Aracin bakimi yetersiz.';
+    end if;
+
+    update public.logistics_vehicles
+    set
+      status = 'on_route',
+      current_fuel = greatest(current_fuel - ceil(v_fuel_used), 0),
+      condition = greatest(condition - ceil(v_condition_loss), 0),
+      updated_at = v_now
+    where id = v_vehicle.id;
+  end if;
+
+  update public.logistics_transfers
+  set
+    product_id = v_header_product_id,
+    quality_level = greatest(coalesce(v_header_quality_level, 1), 1),
+    quantity = greatest(v_total_quantity, 1),
+    unit_price = 0,
+    total_price = v_total_price,
+    product_unit_volume = greatest(v_total_volume, 0.0001),
+    reserved_capacity_amount = v_total_volume,
+    distance_km = v_distance_km,
+    fuel_used = v_fuel_used,
+    condition_loss = v_condition_loss,
+    rental_cost = v_rental_cost,
+    transport_cost = v_transport_cost,
+    finish_at = v_finish_at,
+    transfer_type = case
+      when p_source_entity_kind = 'warehouse' and p_target_entity_kind = 'warehouse' then 'warehouse_to_warehouse_multi'
+      when p_source_entity_kind = 'warehouse' and p_target_entity_kind = 'store' then 'warehouse_to_store_multi'
+      when p_source_entity_kind = 'store' and p_target_entity_kind = 'warehouse' then 'store_to_warehouse_multi'
+      else transfer_type
+    end,
+    item_count = v_item_count,
+    total_quantity = v_total_quantity,
+    brand_id = coalesce(v_header_brand_id, v_default_brand),
+    updated_at = v_now
+  where id = v_transfer_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'transfer_id', v_transfer_id,
+    'mode', v_mode,
+    'item_count', v_item_count,
+    'total_quantity', v_total_quantity,
+    'reserved_capacity_amount', v_total_volume,
+    'transport_cost', v_transport_cost,
+    'finish_at', v_finish_at
+  );
+end;
+$$;
+
+ALTER FUNCTION "public"."start_multi_logistics_transfer"("p_source_entity_kind" "text", "p_source_entity_id" "uuid", "p_target_entity_kind" "text", "p_target_entity_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."start_multi_market_transfer"(
+    "p_buyer_warehouse_id" "uuid",
+    "p_source_city_id" "uuid",
+    "p_items" "jsonb",
+    "p_vehicle_id" "uuid" DEFAULT NULL::"uuid"
+) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
+  v_player_id uuid := auth.uid();
+  v_npc_logistics_player_id uuid;
+  v_now timestamptz := timezone('utc'::text, now());
+  v_target_warehouse record;
+  v_source_city cities%rowtype;
+  v_vehicle logistics_vehicles%rowtype;
+  v_transfer_id uuid;
+  v_header_item jsonb;
+  v_header_slot record;
+  v_header_product products%rowtype;
+  v_header_source_kind text;
+  v_header_product_id text;
+  v_header_quality_level integer;
+  v_header_brand_id uuid;
+  v_header_seller_player_id uuid;
+  v_header_seller_warehouse_id uuid;
+  v_item jsonb;
+  v_seller_slot record;
+  v_product products%rowtype;
+  v_item_source_kind text;
+  v_item_product_id text;
+  v_item_quality_level integer := 1;
+  v_item_brand_id uuid;
+  v_item_unit_price numeric := 0;
+  v_item_unit_cost numeric := 0;
+  v_item_unit_volume numeric := 0;
+  v_item_city_id uuid;
+  v_item_quantity integer := 0;
+  v_item_reserved_capacity numeric := 0;
+  v_target_used_capacity numeric := 0;
+  v_total_volume numeric := 0;
+  v_total_quantity integer := 0;
+  v_total_price numeric := 0;
+  v_distance_km numeric := 0;
+  v_fuel_used numeric := 0;
+  v_condition_loss numeric := 0;
+  v_transport_cost numeric := 0;
+  v_rental_cost numeric := 0;
+  v_duration_seconds integer := 0;
+  v_finish_at timestamptz := v_now;
+  v_item_count integer := 0;
+  v_same_city boolean := false;
+  v_mode text := 'instant';
+  v_is_rental boolean := false;
+  v_buyer_cash numeric := 0;
+  v_total_payment numeric := 0;
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'Transfer sepeti bos olamaz.';
+  end if;
+
+  select w.*, c.map_position_x, c.map_position_y
+  into v_target_warehouse
+  from public.warehouses w
+  join public.cities c on c.id = w.city_id
+  where w.id = p_buyer_warehouse_id
+    and w.player_id = v_player_id
+    and w.is_active = true
+  for update;
+
+  if not found then
+    raise exception 'Hedef depo bulunamadi.';
+  end if;
+
+  v_header_item := p_items -> 0;
+  v_header_source_kind := coalesce(v_header_item ->> 'source_kind', 'warehouse_slot');
+
+  if v_header_source_kind = 'npc_market' then
+    v_npc_logistics_player_id := public.get_npc_logistics_player_id();
+    v_header_product_id := coalesce(v_header_item ->> 'product_id', '');
+    v_header_quality_level := greatest(coalesce((v_header_item ->> 'quality_level')::integer, 1), 1);
+    v_header_brand_id := coalesce(nullif(v_header_item ->> 'brand_id', '')::uuid, v_default_brand);
+    v_header_seller_player_id := v_npc_logistics_player_id;
+    v_header_seller_warehouse_id := null;
+
+    if coalesce(v_header_item ->> 'city_id', '') <> p_source_city_id::text then
+      raise exception 'Transfer sehir kilidi ilk secilen sehir ile eslesmiyor.';
+    end if;
+
+    select *
+    into v_header_product
+    from public.products
+    where id = v_header_product_id;
+
+    if not found then
+      raise exception 'Ilk NPC ilan urunu bulunamadi.';
+    end if;
+  else
+    select
+      ws.*,
+      w.id as seller_warehouse_id,
+      w.name as seller_warehouse_name,
+      w.player_id as seller_player_id,
+      w.city_id,
+      c.map_position_x,
+      c.map_position_y
+    into v_header_slot
+    from public.warehouse_slots ws
+    join public.warehouses w on w.id = ws.warehouse_id
+    join public.cities c on c.id = w.city_id
+    where ws.id = (v_header_item ->> 'seller_slot_id')::uuid
+    for update;
+
+    if not found then
+      raise exception 'Ilk satici slotu bulunamadi.';
+    end if;
+
+    if v_header_slot.seller_player_id = v_player_id then
+      raise exception 'Kendi market ilaninizi satin alamazsiniz.';
+    end if;
+
+    if v_header_slot.city_id <> p_source_city_id then
+      raise exception 'Transfer sehir kilidi ilk secilen sehir ile eslesmiyor.';
+    end if;
+
+    if coalesce(v_header_slot.product_id, '') = '' then
+      raise exception 'Ilk ilanda urun bulunamadi.';
+    end if;
+
+    select *
+    into v_header_product
+    from public.products
+    where id = v_header_slot.product_id;
+
+    if not found then
+      raise exception 'Ilk ilan urunu bulunamadi.';
+    end if;
+
+    v_header_product_id := v_header_slot.product_id;
+    v_header_quality_level := greatest(coalesce(v_header_slot.quality_level, 1), 1);
+    v_header_brand_id := coalesce(v_header_slot.brand_id, v_default_brand);
+    v_header_seller_player_id := v_header_slot.seller_player_id;
+    v_header_seller_warehouse_id := v_header_slot.seller_warehouse_id;
+  end if;
+
+  select *
+  into v_source_city
+  from public.cities
+  where id = p_source_city_id;
+
+  if not found then
+    raise exception 'Kaynak sehir bulunamadi.';
+  end if;
+
+  v_same_city := v_target_warehouse.city_id = p_source_city_id;
+  if not v_same_city then
+    v_mode := 'in_transit';
+  end if;
+
+  insert into public.logistics_transfers (
+    buyer_player_id,
+    seller_player_id,
+    buyer_warehouse_id,
+    seller_warehouse_id,
+    logistics_vehicle_id,
+    vehicle_owner_player_id,
+    is_rental,
+    product_id,
+    quality_level,
+    quantity,
+    unit_price,
+    total_price,
+    product_unit_volume,
+    reserved_capacity_amount,
+    distance_km,
+    fuel_used,
+    condition_loss,
+    rental_cost,
+    transport_cost,
+    started_at,
+    finish_at,
+    status,
+    transfer_type,
+    seller_entity_kind,
+    buyer_entity_kind,
+    item_count,
+    total_quantity,
+    brand_id,
+    created_at,
+    updated_at
+  ) values (
+    v_player_id,
+    v_header_seller_player_id,
+    v_target_warehouse.id,
+    v_header_seller_warehouse_id,
+    p_vehicle_id,
+    null,
+    false,
+    v_header_product_id,
+    v_header_quality_level,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    v_now,
+    v_now,
+    'in_transit',
+    'market_to_warehouse_multi',
+    case when v_header_source_kind = 'npc_market' then 'npc_market' else 'warehouse' end,
+    'warehouse',
+    1,
+    0,
+    v_header_brand_id,
+    v_now,
+    v_now
+  )
+  returning id into v_transfer_id;
+
+  select coalesce(sum((ws.quantity + coalesce(ws.pending_quantity, 0)) * coalesce(p.birim_hacim, 0)), 0)
+  into v_target_used_capacity
+  from public.warehouse_slots ws
+  left join public.products p on p.id = ws.product_id
+  where ws.warehouse_id = v_target_warehouse.id;
+
+  for v_item in
+    select value from jsonb_array_elements(p_items)
+  loop
+    v_item_quantity := greatest(coalesce((v_item ->> 'quantity')::integer, 0), 0);
+    if v_item_quantity <= 0 then
+      raise exception 'Transfer miktari 0 dan buyuk olmalidir.';
+    end if;
+
+    v_item_source_kind := coalesce(v_item ->> 'source_kind', 'warehouse_slot');
+    v_item_city_id := nullif(v_item ->> 'city_id', '')::uuid;
+    if v_item_city_id is null or v_item_city_id <> p_source_city_id then
+      raise exception 'Sepetteki tum ilanlar ayni sehirde olmalidir.';
+    end if;
+
+    if v_item_source_kind = 'npc_market' then
+      if v_npc_logistics_player_id is null then
+        v_npc_logistics_player_id := public.get_npc_logistics_player_id();
+      end if;
+
+      v_item_product_id := coalesce(v_item ->> 'product_id', '');
+      v_item_quality_level := greatest(coalesce((v_item ->> 'quality_level')::integer, 1), 1);
+      v_item_brand_id := coalesce(nullif(v_item ->> 'brand_id', '')::uuid, v_default_brand);
+      v_item_unit_price := greatest(coalesce((v_item ->> 'unit_price')::numeric, 0), 0);
+      v_item_unit_cost := greatest(coalesce((v_item ->> 'unit_cost')::numeric, v_item_unit_price), 0);
+
+      select *
+      into v_product
+      from public.products
+      where id = v_item_product_id;
+
+      if not found then
+        raise exception 'NPC urunu bulunamadi.';
+      end if;
+
+      v_item_unit_volume := coalesce((v_item ->> 'unit_volume')::numeric, coalesce(v_product.birim_hacim, 0));
+      v_item_reserved_capacity := v_item_quantity * v_item_unit_volume;
+    else
+      select
+        ws.*,
+        w.id as seller_warehouse_id,
+        w.name as seller_warehouse_name,
+        w.player_id as seller_player_id,
+        w.city_id
+      into v_seller_slot
+      from public.warehouse_slots ws
+      join public.warehouses w on w.id = ws.warehouse_id
+      where ws.id = (v_item ->> 'seller_slot_id')::uuid
+      for update;
+
+      if not found then
+        raise exception 'Satici slotu bulunamadi.';
+      end if;
+
+      if v_seller_slot.seller_player_id = v_player_id then
+        raise exception 'Kendi market ilaninizi satin alamazsiniz.';
+      end if;
+
+      if v_seller_slot.city_id <> p_source_city_id then
+        raise exception 'Sepetteki tum ilanlar ayni sehirde olmalidir.';
+      end if;
+
+      if coalesce(v_seller_slot.is_available_for_sale, false) = false
+         or coalesce(v_seller_slot.price, 0) <= 0 then
+        raise exception 'Secilen slot satisa uygun degil.';
+      end if;
+
+      if coalesce(v_seller_slot.quantity, 0) < v_item_quantity then
+        raise exception 'Satici stokunda yeterli urun yok.';
+      end if;
+
+      select *
+      into v_product
+      from public.products
+      where id = v_seller_slot.product_id;
+
+      if not found then
+        raise exception 'Urun bulunamadi.';
+      end if;
+
+      v_item_product_id := v_seller_slot.product_id;
+      v_item_quality_level := v_seller_slot.quality_level;
+      v_item_brand_id := coalesce(v_seller_slot.brand_id, v_default_brand);
+      v_item_unit_price := coalesce(v_seller_slot.price, 0);
+      v_item_unit_cost := coalesce(v_seller_slot.cost, 0);
+      v_item_unit_volume := coalesce(v_product.birim_hacim, 0);
+      v_item_reserved_capacity := v_item_quantity * v_item_unit_volume;
+    end if;
+
+    if v_target_used_capacity
+       + coalesce(v_target_warehouse.reserved_capacity, 0)
+       + v_total_volume
+       + v_item_reserved_capacity > coalesce(v_target_warehouse.capacity, 0) then
+      raise exception 'Hedef depoda yeterli kapasite yok.';
+    end if;
+
+    if v_item_source_kind <> 'npc_market' then
+      update public.warehouse_slots
+      set
+        quantity = quantity - v_item_quantity,
+        updated_at = v_now
+      where id = v_seller_slot.id;
+
+      if coalesce(v_seller_slot.quantity, 0) - v_item_quantity <= 0
+         and coalesce(v_seller_slot.pending_quantity, 0) <= 0 then
+        delete from public.warehouse_slots
+        where id = v_seller_slot.id;
+      end if;
+    end if;
+
+    insert into public.logistics_transfer_items (
+      transfer_id,
+      source_warehouse_slot_id,
+      target_warehouse_slot_id,
+      product_id,
+      quality_level,
+      brand_id,
+      quantity,
+      unit_cost,
+      unit_price,
+      total_cost,
+      total_price,
+      product_unit_volume,
+      reserved_capacity_amount,
+      status,
+      created_at,
+      updated_at
+    )
+    values (
+      v_transfer_id,
+      case when v_item_source_kind = 'npc_market' then null else v_seller_slot.id end,
+      null,
+      v_item_product_id,
+      v_item_quality_level,
+      v_item_brand_id,
+      v_item_quantity,
+      v_item_unit_cost,
+      v_item_unit_price,
+      v_item_quantity * v_item_unit_cost,
+      v_item_quantity * v_item_unit_price,
+      v_item_unit_volume,
+      v_item_reserved_capacity,
+      'in_transit',
+      v_now,
+      v_now
+    );
+
+    v_item_count := v_item_count + 1;
+    v_total_quantity := v_total_quantity + v_item_quantity;
+    v_total_volume := v_total_volume + v_item_reserved_capacity;
+    v_total_price := v_total_price + (v_item_quantity * v_item_unit_price);
+  end loop;
+
+  if v_item_count <= 0 then
+    raise exception 'Transfer icin kalem bulunamadi.';
+  end if;
+
+  if not v_same_city then
+    if p_vehicle_id is null then
+      raise exception 'Sehirler arasi transfer icin arac secilmelidir.';
+    end if;
+
+    if v_npc_logistics_player_id is null then
+      v_npc_logistics_player_id := public.get_npc_logistics_player_id();
+    end if;
+
+    select *
+    into v_vehicle
+    from public.logistics_vehicles
+    where id = p_vehicle_id
+      and (
+        player_id = v_player_id
+        or (player_id = v_npc_logistics_player_id and is_available_for_rent = true)
+      )
+      and status = 'idle'
+    for update;
+
+    if not found then
+      raise exception 'Secilen arac kullanima uygun degil.';
+    end if;
+
+    v_distance_km := round(
+      sqrt(
+        power(coalesce(v_source_city.map_position_x, 0) - coalesce(v_target_warehouse.map_position_x, 0), 2)
+        + power(coalesce(v_source_city.map_position_y, 0) - coalesce(v_target_warehouse.map_position_y, 0), 2)
+      ),
+      2
+    );
+
+    if coalesce(v_vehicle.capacity, 0) < ceil(v_total_volume) then
+      raise exception 'Secilen aracin kapasitesi bu transfer icin yetersiz.';
+    end if;
+
+    if coalesce(v_vehicle.speed_kmh, 0) <= 0 then
+      raise exception 'Secilen aracin hizi gecersiz.';
+    end if;
+
+    v_is_rental := v_vehicle.player_id = v_npc_logistics_player_id;
+
+    v_duration_seconds := greatest(60, ceil((greatest(v_distance_km, 1) / v_vehicle.speed_kmh) * 3600)::integer);
+    v_finish_at := v_now + make_interval(secs => v_duration_seconds);
+    v_fuel_used := round(v_distance_km * coalesce(v_vehicle.fuel_rate, 0), 2);
+    v_condition_loss := greatest(1, ceil(v_distance_km / 25.0));
+    v_transport_cost := case
+      when v_is_rental then round(v_distance_km * coalesce(v_vehicle.rental_price, 0), 2)
+      else round(v_fuel_used * coalesce(v_vehicle.fuel_cost, 0), 2)
+    end;
+    v_rental_cost := case when v_is_rental then v_transport_cost else 0 end;
+
+    if coalesce(v_vehicle.current_fuel, 0) < ceil(v_fuel_used) then
+      raise exception 'Aracta yeterli yakit yok.';
+    end if;
+
+    if coalesce(v_vehicle.condition, 0) <= 0 then
+      raise exception 'Aracin bakimi yetersiz.';
+    end if;
+
+    update public.logistics_vehicles
+    set
+      status = 'on_route',
+      current_fuel = greatest(current_fuel - ceil(v_fuel_used), 0),
+      condition = greatest(condition - ceil(v_condition_loss), 0),
+      updated_at = v_now
+    where id = v_vehicle.id;
+  end if;
+
+  v_total_payment := v_total_price + v_rental_cost;
+
+  select cash
+  into v_buyer_cash
+  from public.players
+  where id = v_player_id
+  for update;
+
+  if coalesce(v_buyer_cash, 0) < v_total_payment then
+    raise exception 'Yeterli nakit yok.';
+  end if;
+
+  update public.players
+  set cash = cash - v_total_payment
+  where id = v_player_id;
+
+  with seller_totals as (
+    select
+      case
+        when coalesce(v_item.value ->> 'source_kind', 'warehouse_slot') = 'npc_market'
+          then v_npc_logistics_player_id
+        else w.player_id
+      end as seller_player_id,
+      sum(
+        greatest(coalesce((v_item.value ->> 'quantity')::integer, 0), 0)
+        * greatest(
+            coalesce(
+              case
+                when coalesce(v_item.value ->> 'source_kind', 'warehouse_slot') = 'npc_market'
+                  then (v_item.value ->> 'unit_price')::numeric
+                else ws.price
+              end,
+              0
+            ),
+            0
+          )
+      ) as seller_amount
+    from jsonb_array_elements(p_items) v_item(value)
+    left join public.warehouse_slots ws
+      on coalesce(v_item.value ->> 'source_kind', 'warehouse_slot') <> 'npc_market'
+     and ws.id = nullif(v_item.value ->> 'seller_slot_id', '')::uuid
+    left join public.warehouses w
+      on w.id = ws.warehouse_id
+    group by 1
+  )
+  update public.players p
+  set cash = cash + st.seller_amount
+  from seller_totals st
+  where p.id = st.seller_player_id
+    and st.seller_player_id is not null
+    and coalesce(st.seller_amount, 0) > 0;
+
+  if v_is_rental and v_vehicle.player_id is not null then
+    update public.players
+    set cash = cash + v_rental_cost
+    where id = v_vehicle.player_id;
+  end if;
+
+  update public.warehouses
+  set
+    reserved_capacity = coalesce(reserved_capacity, 0) + v_total_volume,
+    updated_at = v_now
+  where id = v_target_warehouse.id;
+
+  update public.logistics_transfers
+  set
+    logistics_vehicle_id = p_vehicle_id,
+    vehicle_owner_player_id = case when p_vehicle_id is not null then v_vehicle.player_id else null end,
+    is_rental = v_is_rental,
+    quantity = greatest(v_total_quantity, 1),
+    total_price = v_total_price,
+    product_unit_volume = greatest(v_total_volume, 0.0001),
+    reserved_capacity_amount = v_total_volume,
+    distance_km = v_distance_km,
+    fuel_used = v_fuel_used,
+    condition_loss = v_condition_loss,
+    rental_cost = v_rental_cost,
+    transport_cost = v_transport_cost,
+    finish_at = v_finish_at,
+    item_count = v_item_count,
+    total_quantity = v_total_quantity,
+    updated_at = v_now
+  where id = v_transfer_id;
+
+  return jsonb_build_object(
+    'success', true,
+    'transfer_id', v_transfer_id,
+    'mode', v_mode,
+    'item_count', v_item_count,
+    'total_quantity', v_total_quantity,
+    'reserved_capacity_amount', v_total_volume,
+    'transport_cost', v_transport_cost,
+    'finish_at', v_finish_at
+  );
+end;
+$$;
+
+ALTER FUNCTION "public"."start_multi_market_transfer"("p_buyer_warehouse_id" "uuid", "p_source_city_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."complete_logistics_transfer"("p_transfer_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
+  v_player_id uuid := auth.uid();
+  v_now timestamptz := timezone('utc'::text, now());
+  v_transfer logistics_transfers%rowtype;
+  v_item logistics_transfer_items%rowtype;
+  v_target_store_warehouse_id uuid;
+  v_result jsonb;
+  v_completed_count integer := 0;
+  v_item_transport_cost numeric := 0;
+begin
+  if v_player_id is null then
+    raise exception 'Oturum acilmamis.';
+  end if;
+
+  select *
+  into v_transfer
+  from public.logistics_transfers
+  where id = p_transfer_id
+    and buyer_player_id = v_player_id
+  for update;
+
+  if not found then
+    raise exception 'Transfer bulunamadi.';
+  end if;
+
+  if v_transfer.status <> 'in_transit' then
+    raise exception 'Transfer tamamlanabilir durumda degil.';
+  end if;
+
+  if coalesce(v_transfer.finish_at, v_now) > v_now then
+    raise exception 'Transfer henuz hedefe ulasmadi.';
+  end if;
+
+  if coalesce(v_transfer.buyer_entity_kind, '') = 'store' then
+    select id
+    into v_target_store_warehouse_id
+    from public.warehouses
+    where store_id = v_transfer.buyer_store_id
+      and warehouse_kind = 'store'
+      and is_active = true
+    order by created_at desc
+    limit 1
+    for update;
+
+    if not found then
+      raise exception 'Hedef magazaya bagli depo bulunamadi.';
+    end if;
+  end if;
+
+  for v_item in
+    select *
+    from public.logistics_transfer_items
+    where transfer_id = p_transfer_id
+      and status = 'in_transit'
+    order by created_at, id
+    for update
+  loop
+    v_item_transport_cost := case
+      when coalesce(v_transfer.total_quantity, 0) > 0 then
+        round(
+          coalesce(v_transfer.transport_cost, 0)
+          * (coalesce(v_item.quantity, 0)::numeric / v_transfer.total_quantity::numeric),
+          4
+        )
+      else 0
+    end;
+
+    if coalesce(v_transfer.buyer_entity_kind, '') = 'warehouse' then
+      v_result := public.add_product_to_warehouse_with_brand(
+        v_player_id,
+        v_transfer.buyer_warehouse_id,
+        v_item.product_id,
+        v_item.quality_level,
+        coalesce(v_item.brand_id, v_default_brand),
+        v_item.quantity,
+        v_item.unit_cost,
+        v_item_transport_cost,
+        true,
+        null
+      );
+    elsif coalesce(v_transfer.buyer_entity_kind, '') = 'store' then
+      v_result := public.add_product_to_warehouse_with_brand(
+        v_player_id,
+        v_target_store_warehouse_id,
+        v_item.product_id,
+        v_item.quality_level,
+        coalesce(v_item.brand_id, v_default_brand),
+        v_item.quantity,
+        v_item.unit_cost,
+        v_item_transport_cost,
+        false,
+        v_item.target_warehouse_slot_id
+      );
+    else
+      raise exception 'Desteklenmeyen hedef turu: %', v_transfer.buyer_entity_kind;
+    end if;
+
+    update public.logistics_transfer_items
+    set
+      status = 'completed',
+      completed_at = v_now,
+      updated_at = v_now
+    where id = v_item.id;
+
+    v_completed_count := v_completed_count + 1;
+  end loop;
+
+  update public.logistics_transfers
+  set
+    status = 'completed',
+    completed_at = v_now,
+    updated_at = v_now
+  where id = p_transfer_id;
+
+  if v_transfer.logistics_vehicle_id is not null then
+    update public.logistics_vehicles
+    set
+      status = 'idle',
+      updated_at = v_now
+    where id = v_transfer.logistics_vehicle_id;
+  end if;
+
+  return jsonb_build_object(
+    'success', true,
+    'transfer_id', p_transfer_id,
+    'completed_item_count', v_completed_count,
+    'completed_at', v_now
+  );
+end;
+$$;
+
+ALTER FUNCTION "public"."complete_logistics_transfer"("p_transfer_id" "uuid") OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."start_warehouse_to_warehouse_transfer"(
+    "p_source_warehouse_id" "uuid",
+    "p_buyer_warehouse_id" "uuid",
+    "p_items" "jsonb",
+    "p_vehicle_id" "uuid" DEFAULT NULL::"uuid"
+) RETURNS "jsonb"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  select public.start_multi_logistics_transfer(
+    'warehouse',
+    p_source_warehouse_id,
+    'warehouse',
+    p_buyer_warehouse_id,
+    p_items,
+    p_vehicle_id
+  );
+$$;
+
+ALTER FUNCTION "public"."start_warehouse_to_warehouse_transfer"("p_source_warehouse_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."start_warehouse_to_store_transfer"(
+    "p_source_warehouse_id" "uuid",
+    "p_buyer_store_id" "uuid",
+    "p_items" "jsonb",
+    "p_vehicle_id" "uuid" DEFAULT NULL::"uuid"
+) RETURNS "jsonb"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  select public.start_multi_logistics_transfer(
+    'warehouse',
+    p_source_warehouse_id,
+    'store',
+    p_buyer_store_id,
+    p_items,
+    p_vehicle_id
+  );
+$$;
+
+ALTER FUNCTION "public"."start_warehouse_to_store_transfer"("p_source_warehouse_id" "uuid", "p_buyer_store_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."start_store_to_warehouse_transfer"(
+    "p_seller_store_id" "uuid",
+    "p_buyer_warehouse_id" "uuid",
+    "p_items" "jsonb",
+    "p_vehicle_id" "uuid" DEFAULT NULL::"uuid"
+) RETURNS "jsonb"
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  select public.start_multi_logistics_transfer(
+    'store',
+    p_seller_store_id,
+    'warehouse',
+    p_buyer_warehouse_id,
+    p_items,
+    p_vehicle_id
+  );
+$$;
+
+ALTER FUNCTION "public"."start_store_to_warehouse_transfer"("p_seller_store_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."rls_auto_enable"() RETURNS "event_trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -9730,9 +9243,7 @@ BEGIN
 END;
 $$;
 
-
 ALTER FUNCTION "public"."rls_auto_enable"() OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_factory_active"("p_factory_id" "uuid", "p_is_active" boolean) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -9765,9 +9276,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_factory_active"("p_factory_id" "uuid", "p_is_active" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_factory_product"("p_player_id" "uuid", "p_factory_id" "uuid", "p_product_id" "text", "p_quality_level" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10083,9 +9592,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_factory_product"("p_player_id" "uuid", "p_factory_id" "uuid", "p_product_id" "text", "p_quality_level" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_logistics_vehicle_active"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_active" boolean) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10125,9 +9632,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_logistics_vehicle_active"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_active" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_logistics_vehicle_rental"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_available_for_rent" boolean, "p_rental_price" numeric) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10166,9 +9671,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_logistics_vehicle_rental"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_available_for_rent" boolean, "p_rental_price" numeric) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_logistics_vehicle_route"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10236,9 +9739,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_logistics_vehicle_route"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_mine_active"("p_mine_id" "uuid", "p_is_active" boolean) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10271,9 +9772,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_mine_active"("p_mine_id" "uuid", "p_is_active" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_mine_product"("p_player_id" "uuid", "p_mine_id" "uuid", "p_product_id" "text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10461,9 +9960,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_mine_product"("p_player_id" "uuid", "p_mine_id" "uuid", "p_product_id" "text") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_player_avatar"("p_avatar_id" "text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10495,9 +9992,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_player_avatar"("p_avatar_id" "text") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_production_slot_active"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_is_active" boolean) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10548,9 +10043,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_production_slot_active"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_is_active" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10584,9 +10077,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean DEFAULT false) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10709,6 +10200,10 @@ begin
   where building_kind = 'store'
     and entity_id = p_store_id;
 
+  delete from public.warehouses
+  where store_id = p_store_id
+    and warehouse_kind = 'store';
+
   delete from public.stores
   where id = p_store_id
     and player_id = v_player_id;
@@ -10725,9 +10220,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_store_slot_active"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_is_active" boolean) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10769,9 +10262,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_store_slot_active"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_is_active" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_store_slot_price"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_price" numeric) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10823,16 +10314,26 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_store_slot_price"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_price" numeric) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
+begin
+  raise exception 'Bu fonksiyon artik dogrudan kullanilamaz. Magaza slotu urunu, magazaya bagli depo slotundan secilmelidir.';
+end;
+$$;
+
+ALTER FUNCTION "public"."set_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."set_store_slot_product_from_warehouse_slot"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
 declare
   v_slot record;
+  v_source_slot record;
 begin
   select ss.*, s.player_id
   into v_slot
@@ -10849,28 +10350,46 @@ begin
     raise exception 'Bu slot oyuncuya ait degil.';
   end if;
 
-  if p_product_id is null or length(trim(p_product_id)) = 0 then
-    raise exception 'Urun id bos olamaz.';
-  end if;
-
-  if not exists (
-    select 1 from public.products where id = p_product_id
-  ) then
-    raise exception 'Urun bulunamadi.';
-  end if;
-
-  if p_quality_level < 1 or p_quality_level > 5 then
-    raise exception 'Kalite seviyesi 1 ile 5 arasinda olmalidir.';
-  end if;
-
   if v_slot.quantity > 0 or coalesce(v_slot.pending_quantity, 0) > 0 then
     raise exception 'Stok veya yoldaki urun bulunan slotta urun veya kalite degistirilemez.';
   end if;
 
+  select ws.*, w.store_id, w.player_id
+  into v_source_slot
+  from public.warehouse_slots ws
+  join public.warehouses w on w.id = ws.warehouse_id
+  where ws.id = p_warehouse_slot_id
+  for update;
+
+  if not found then
+    raise exception 'Kaynak depo slotu bulunamadi.';
+  end if;
+
+  if v_source_slot.player_id <> p_player_id then
+    raise exception 'Kaynak depo slotu oyuncuya ait degil.';
+  end if;
+
+  if v_source_slot.store_id is distinct from v_slot.store_id then
+    raise exception 'Sadece ayni magazanin deposundaki urunler secilebilir.';
+  end if;
+
+  if coalesce(v_source_slot.product_id, '') = '' then
+    raise exception 'Kaynak depo slotunda urun bulunamadi.';
+  end if;
+
+  if coalesce(v_source_slot.quantity, 0) <= 0 then
+    raise exception 'Kaynak depo slotunda secilebilir stok bulunamadi.';
+  end if;
+
+  if coalesce(v_source_slot.quality_level, 0) < 1 or coalesce(v_source_slot.quality_level, 0) > 5 then
+    raise exception 'Kaynak depo slotunun kalite seviyesi gecersiz.';
+  end if;
+
   update public.store_slots
   set
-    product_id = p_product_id,
-    quality_level = p_quality_level,
+    product_id = v_source_slot.product_id,
+    quality_level = v_source_slot.quality_level,
+    brand_id = coalesce(v_source_slot.brand_id, '00000000-0000-0000-0000-000000000000'::uuid),
     updated_at = timezone('utc'::text, now())
   where id = p_store_slot_id;
 
@@ -10878,15 +10397,369 @@ begin
     'success', true,
     'store_slot_id', p_store_slot_id,
     'store_id', v_slot.store_id,
-    'product_id', p_product_id,
-    'quality_level', p_quality_level
+    'product_id', v_source_slot.product_id,
+    'quality_level', v_source_slot.quality_level,
+    'brand_id', coalesce(v_source_slot.brand_id, '00000000-0000-0000-0000-000000000000'::uuid),
+    'warehouse_slot_id', p_warehouse_slot_id
   );
 end;
 $$;
 
+ALTER FUNCTION "public"."set_store_slot_product_from_warehouse_slot"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid") OWNER TO "postgres";
 
-ALTER FUNCTION "public"."set_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) OWNER TO "postgres";
+CREATE OR REPLACE FUNCTION "public"."transfer_store_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
+  v_now timestamptz := timezone('utc'::text, now());
+  v_store_slot record;
+  v_warehouse_slot record;
+  v_available_capacity integer;
+  v_new_store_quantity integer;
+  v_new_store_cost numeric;
+  v_remaining_warehouse_quantity integer;
+begin
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'Transfer miktari 0 dan buyuk olmalidir.';
+  end if;
 
+  select ss.*, s.player_id
+  into v_store_slot
+  from public.store_slots ss
+  join public.stores s on s.id = ss.store_id
+  where ss.id = p_store_slot_id
+  for update;
+
+  if not found then
+    raise exception 'Magaza slotu bulunamadi.';
+  end if;
+
+  if v_store_slot.player_id <> p_player_id then
+    raise exception 'Bu magaza slotu oyuncuya ait degil.';
+  end if;
+
+  if coalesce(v_store_slot.is_active, true) = false then
+    raise exception 'Pasif magaza slotuna stok aktarilamaz.';
+  end if;
+
+  if coalesce(v_store_slot.product_id, '') = '' then
+    raise exception 'Once magaza slotu urununu magazaya bagli depodan secin.';
+  end if;
+
+  if coalesce(v_store_slot.quality_level, 0) < 1 or coalesce(v_store_slot.quality_level, 0) > 5 then
+    raise exception 'Magaza slotunun kalite seviyesi gecersiz.';
+  end if;
+
+  select ws.*, w.player_id, w.store_id
+  into v_warehouse_slot
+  from public.warehouse_slots ws
+  join public.warehouses w on w.id = ws.warehouse_id
+  where ws.id = p_warehouse_slot_id
+  for update;
+
+  if not found then
+    raise exception 'Magaza deposu slotu bulunamadi.';
+  end if;
+
+  if v_warehouse_slot.player_id <> p_player_id then
+    raise exception 'Bu magaza deposu slotu oyuncuya ait degil.';
+  end if;
+
+  if v_warehouse_slot.store_id is distinct from v_store_slot.store_id then
+    raise exception 'Sadece ayni magazanin deposundan stok aktarilabilir.';
+  end if;
+
+  if coalesce(v_warehouse_slot.product_id, '') = '' then
+    raise exception 'Kaynak depo slotunda urun bulunamadi.';
+  end if;
+
+  if coalesce(v_warehouse_slot.quality_level, 0) < 1 or coalesce(v_warehouse_slot.quality_level, 0) > 5 then
+    raise exception 'Kaynak depo slotunun kalite seviyesi gecersiz.';
+  end if;
+
+  if coalesce(v_warehouse_slot.quantity, 0) < p_quantity then
+    raise exception 'Kaynak depo slotunda yeterli stok yok.';
+  end if;
+
+  if v_store_slot.product_id <> v_warehouse_slot.product_id then
+    raise exception 'Magaza slotu ile depo slotundaki urun ayni olmalidir.';
+  end if;
+
+  if v_store_slot.quality_level <> v_warehouse_slot.quality_level then
+    raise exception 'Magaza slotu ile depo slotundaki kalite ayni olmalidir.';
+  end if;
+
+  if coalesce(v_store_slot.brand_id, v_default_brand) <> coalesce(v_warehouse_slot.brand_id, v_default_brand) then
+    raise exception 'Magaza slotu ile depo slotundaki brand ayni olmalidir.';
+  end if;
+
+  v_available_capacity := greatest(
+    coalesce(v_store_slot.capacity, 0)
+    - coalesce(v_store_slot.quantity, 0)
+    - coalesce(v_store_slot.pending_quantity, 0),
+    0
+  );
+
+  if p_quantity > v_available_capacity then
+    raise exception 'Magaza slotunda yeterli kapasite yok.';
+  end if;
+
+  v_new_store_quantity := coalesce(v_store_slot.quantity, 0) + p_quantity;
+  v_new_store_cost := case
+    when v_new_store_quantity <= 0 then 0
+    when coalesce(v_store_slot.quantity, 0) <= 0 then coalesce(v_warehouse_slot.cost, 0)
+    else round(
+      (
+        coalesce(v_store_slot.quantity, 0) * coalesce(v_store_slot.cost, 0)
+        + p_quantity * coalesce(v_warehouse_slot.cost, 0)
+      ) / v_new_store_quantity::numeric,
+      4
+    )
+  end;
+
+  update public.store_slots
+  set
+    product_id = v_warehouse_slot.product_id,
+    quality_level = v_warehouse_slot.quality_level,
+    brand_id = coalesce(v_warehouse_slot.brand_id, v_default_brand),
+    quantity = v_new_store_quantity,
+    cost = v_new_store_cost,
+    updated_at = v_now
+  where id = v_store_slot.id;
+
+  v_remaining_warehouse_quantity := coalesce(v_warehouse_slot.quantity, 0) - p_quantity;
+
+  if v_remaining_warehouse_quantity <= 0 then
+    delete from public.warehouse_slots
+    where id = v_warehouse_slot.id;
+  else
+    update public.warehouse_slots
+    set
+      quantity = v_remaining_warehouse_quantity,
+      updated_at = v_now
+    where id = v_warehouse_slot.id;
+  end if;
+
+  return jsonb_build_object(
+    'success', true,
+    'store_id', v_store_slot.store_id,
+    'store_slot_id', v_store_slot.id,
+    'warehouse_slot_id', v_warehouse_slot.id,
+    'product_id', v_warehouse_slot.product_id,
+    'quality_level', v_warehouse_slot.quality_level,
+    'brand_id', coalesce(v_warehouse_slot.brand_id, v_default_brand),
+    'transferred_quantity', p_quantity,
+    'store_slot_quantity', v_new_store_quantity,
+    'remaining_warehouse_quantity', greatest(v_remaining_warehouse_quantity, 0),
+    'message', 'Stok magaza deposundan magazaya aktarildi.'
+  );
+end;
+$$;
+
+ALTER FUNCTION "public"."transfer_store_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
+
+CREATE OR REPLACE FUNCTION "public"."transfer_store_slot_to_store_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
+  v_now timestamptz := timezone('utc'::text, now());
+  v_store_slot record;
+  v_store_warehouse record;
+  v_target_slot record;
+  v_empty_slot record;
+  v_product record;
+  v_required_capacity numeric := 0;
+  v_used_capacity numeric := 0;
+  v_next_slot_index integer := 1;
+  v_target_slot_id uuid;
+  v_target_quantity integer;
+  v_target_cost numeric;
+begin
+  if p_quantity is null or p_quantity <= 0 then
+    raise exception 'Transfer miktari 0 dan buyuk olmalidir.';
+  end if;
+
+  select ss.*, s.player_id
+  into v_store_slot
+  from public.store_slots ss
+  join public.stores s on s.id = ss.store_id
+  where ss.id = p_store_slot_id
+  for update;
+
+  if not found then
+    raise exception 'Magaza slotu bulunamadi.';
+  end if;
+
+  if v_store_slot.player_id <> p_player_id then
+    raise exception 'Bu magaza slotu oyuncuya ait degil.';
+  end if;
+
+  if coalesce(v_store_slot.product_id, '') = '' then
+    raise exception 'Magaza slotunda urun bulunamadi.';
+  end if;
+
+  if coalesce(v_store_slot.quality_level, 0) < 1 or coalesce(v_store_slot.quality_level, 0) > 5 then
+    raise exception 'Magaza slotunun kalite seviyesi gecersiz.';
+  end if;
+
+  if coalesce(v_store_slot.quantity, 0) < p_quantity then
+    raise exception 'Magaza slotunda yeterli stok yok.';
+  end if;
+
+  select *
+  into v_store_warehouse
+  from public.warehouses
+  where store_id = v_store_slot.store_id
+    and warehouse_kind = 'store'
+    and is_active = true
+  order by created_at desc
+  limit 1
+  for update;
+
+  if not found then
+    raise exception 'Magazaya bagli depo bulunamadi.';
+  end if;
+
+  select *
+  into v_product
+  from public.products
+  where id = v_store_slot.product_id;
+
+  if not found then
+    raise exception 'Urun bulunamadi.';
+  end if;
+
+  v_required_capacity := p_quantity * coalesce(v_product.birim_hacim, 0);
+
+  select coalesce(sum(ws.quantity * coalesce(p.birim_hacim, 0)), 0)
+  into v_used_capacity
+  from public.warehouse_slots ws
+  left join public.products p on p.id = ws.product_id
+  where ws.warehouse_id = v_store_warehouse.id;
+
+  if v_used_capacity + v_required_capacity > coalesce(v_store_warehouse.capacity, 0) then
+    raise exception 'Magaza deposunda yeterli kapasite yok.';
+  end if;
+
+  select *
+  into v_target_slot
+  from public.warehouse_slots
+  where warehouse_id = v_store_warehouse.id
+    and product_id = v_store_slot.product_id
+    and quality_level = v_store_slot.quality_level
+    and coalesce(brand_id, v_default_brand) = coalesce(v_store_slot.brand_id, v_default_brand)
+  order by slot_index
+  limit 1
+  for update;
+
+  if found then
+    v_target_slot_id := v_target_slot.id;
+    v_target_quantity := coalesce(v_target_slot.quantity, 0) + p_quantity;
+    v_target_cost := case
+      when v_target_quantity <= 0 then 0
+      when coalesce(v_target_slot.quantity, 0) <= 0 then coalesce(v_store_slot.cost, 0)
+      else round(
+        (
+          coalesce(v_target_slot.quantity, 0) * coalesce(v_target_slot.cost, 0)
+          + p_quantity * coalesce(v_store_slot.cost, 0)
+        ) / v_target_quantity::numeric,
+        4
+      )
+    end;
+
+    update public.warehouse_slots
+    set
+      quantity = v_target_quantity,
+      cost = v_target_cost,
+      updated_at = v_now
+    where id = v_target_slot_id;
+  else
+    select *
+    into v_empty_slot
+    from public.warehouse_slots
+    where warehouse_id = v_store_warehouse.id
+      and product_id is null
+      and quantity = 0
+      and quality_level = 0
+    order by slot_index
+    limit 1
+    for update;
+
+    if found then
+      v_target_slot_id := v_empty_slot.id;
+
+      update public.warehouse_slots
+      set
+        product_id = v_store_slot.product_id,
+        quality_level = v_store_slot.quality_level,
+        brand_id = coalesce(v_store_slot.brand_id, v_default_brand),
+        quantity = p_quantity,
+        cost = coalesce(v_store_slot.cost, 0),
+        updated_at = v_now
+      where id = v_target_slot_id;
+    else
+      select coalesce(max(slot_index), 0) + 1
+      into v_next_slot_index
+      from public.warehouse_slots
+      where warehouse_id = v_store_warehouse.id;
+
+      insert into public.warehouse_slots (
+        warehouse_id,
+        slot_index,
+        brand_id,
+        product_id,
+        quality_level,
+        quantity,
+        cost,
+        is_available_for_sale,
+        price,
+        created_at,
+        updated_at
+      )
+      values (
+        v_store_warehouse.id,
+        v_next_slot_index,
+        coalesce(v_store_slot.brand_id, v_default_brand),
+        v_store_slot.product_id,
+        v_store_slot.quality_level,
+        p_quantity,
+        coalesce(v_store_slot.cost, 0),
+        false,
+        0,
+        v_now,
+        v_now
+      )
+      returning id into v_target_slot_id;
+    end if;
+  end if;
+
+  update public.store_slots
+  set
+    quantity = quantity - p_quantity,
+    updated_at = v_now
+  where id = v_store_slot.id;
+
+  return jsonb_build_object(
+    'success', true,
+    'store_id', v_store_slot.store_id,
+    'store_slot_id', v_store_slot.id,
+    'warehouse_id', v_store_warehouse.id,
+    'warehouse_slot_id', v_target_slot_id,
+    'product_id', v_store_slot.product_id,
+    'quality_level', v_store_slot.quality_level,
+    'brand_id', coalesce(v_store_slot.brand_id, v_default_brand),
+    'transferred_quantity', p_quantity,
+    'remaining_store_slot_quantity', greatest(coalesce(v_store_slot.quantity, 0) - p_quantity, 0),
+    'message', 'Stok magazadan magaza deposuna aktarildi.'
+  );
+end;
+$$;
+
+ALTER FUNCTION "public"."transfer_store_slot_to_store_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."set_warehouse_slot_price"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_price" numeric) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10935,9 +10808,7 @@ exception when others then
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_warehouse_slot_price"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_price" numeric) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."set_warehouse_slot_sale_status"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_is_available_for_sale" boolean) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -10992,9 +10863,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."set_warehouse_slot_sale_status"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_is_available_for_sale" boolean) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."start_arge_center_construction"("p_player_id" "uuid", "p_name" "text" DEFAULT 'AR-GE Merkezi'::"text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -11078,9 +10947,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."start_arge_center_construction"("p_player_id" "uuid", "p_name" "text") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."start_arge_research"("p_player_id" "uuid", "p_product_id" "text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -11224,9 +11091,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."start_arge_research"("p_player_id" "uuid", "p_product_id" "text") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."start_building_boost"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid", "p_duration_hours" integer, "p_star_cost" integer) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -11390,9 +11255,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."start_building_boost"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid", "p_duration_hours" integer, "p_star_cost" integer) OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."start_building_construction"("p_player_id" "uuid", "p_building_kind" "text", "p_type_id" "uuid", "p_city_id" "uuid", "p_name" "text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -11614,9 +11477,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."start_building_construction"("p_player_id" "uuid", "p_building_kind" "text", "p_type_id" "uuid", "p_city_id" "uuid", "p_name" "text") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."start_building_upgrade"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -12305,9 +12166,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."start_building_upgrade"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."start_logistics_company_construction"("p_player_id" "uuid", "p_type_id" "uuid", "p_name" "text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -12428,1760 +12287,20 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."start_logistics_company_construction"("p_player_id" "uuid", "p_type_id" "uuid", "p_name" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."start_market_to_store_transfer"("p_market_listing_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_player record;
-  v_store_slot record;
-  v_listing record;
-  v_buyer_store record;
-  v_product record;
-  v_vehicle record;
-  v_transfer_id uuid;
-  v_distance_km numeric := 0;
-  v_required_capacity numeric := 0;
-  v_fuel_used numeric := 0;
-  v_condition_loss numeric := 0;
-  v_rental_cost numeric := 0;
-  v_transport_cost numeric := 0;
-  v_total_price numeric := 0;
-  v_tax_amount numeric := 0;
-  v_commission_amount numeric := 0;
-  v_duration_seconds integer := 0;
-  v_finish_at timestamptz;
-  v_add_result jsonb;
-  v_new_cost numeric := 0;
-  v_now timestamptz := timezone('utc'::text, now());
-begin
-  if v_player_id is null then raise exception 'Oturum acilmamis.'; end if;
-  if p_quantity is null or p_quantity <= 0 then raise exception 'Miktar 0''dan buyuk olmalidir.'; end if;
 
-  select * into v_player from public.players where id = v_player_id for update;
-  if not found then raise exception 'Oyuncu bulunamadi.'; end if;
 
-  select ss.*, s.player_id, s.id as buyer_store_id, s.is_active as store_is_active,
-         s.city_id as store_city_id, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_store_slot
-  from public.store_slots ss
-  join public.stores s on s.id = ss.store_id
-  join public.cities c on c.id = s.city_id
-  where ss.id = p_store_slot_id for update;
 
-  if not found or v_store_slot.player_id <> v_player_id then raise exception 'Magaza slotu bulunamadi veya size ait degil.'; end if;
-  if v_store_slot.store_is_active is not true then raise exception 'Magaza aktif degil.'; end if;
 
-  select ml.*, wm.city_id as market_city_id, c.map_position_x as market_x, c.map_position_y as market_y
-  into v_listing
-  from public.wholesale_market_listings ml
-  join public.wholesale_markets wm on wm.id = ml.market_id
-  join public.cities c on c.id = wm.city_id
-  where ml.id = p_market_listing_id for update;
 
-  if not found then raise exception 'Hal ilani bulunamadi.'; end if;
-  if v_listing.status <> 'active' then raise exception 'Bu ilan aktif degil.'; end if;
-  if p_quantity > v_listing.quantity then raise exception 'Istenen miktar ilandaki miktardan fazla.'; end if;
 
-  if v_store_slot.product_id is null or v_store_slot.quality_level = 0 then
-    if coalesce(v_store_slot.quantity, 0) > 0 or coalesce(v_store_slot.pending_quantity, 0) > 0 then
-      raise exception 'Slotta aktif stok veya rezerve varken urun atanamaz.';
-    end if;
-    update public.store_slots set product_id = v_listing.product_id, quality_level = v_listing.quality_level, updated_at = v_now where id = p_store_slot_id;
-    v_store_slot.product_id := v_listing.product_id;
-    v_store_slot.quality_level := v_listing.quality_level;
-  elsif v_store_slot.product_id <> v_listing.product_id or v_store_slot.quality_level <> v_listing.quality_level then
-    raise exception 'Magaza slotu urun veya kalite uyusmazligi.';
-  end if;
 
-  if (coalesce(v_store_slot.quantity, 0) + coalesce(v_store_slot.pending_quantity, 0) + p_quantity) > v_store_slot.capacity then
-    raise exception 'Magaza slot kapasitesi yetersiz.';
-  end if;
 
-  select * into v_product from public.products where id = v_listing.product_id;
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then raise exception 'Urun hacim bilgisi gecersiz.'; end if;
 
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_total_price := p_quantity * v_listing.unit_price;
 
-  if v_store_slot.store_city_id = v_listing.market_city_id then
-    v_new_cost := case
-      when coalesce(v_store_slot.quantity, 0) + p_quantity > 0 then
-        (coalesce(v_store_slot.quantity, 0) * coalesce(v_store_slot.cost, 0) + p_quantity * v_listing.unit_price)
-        / (coalesce(v_store_slot.quantity, 0) + p_quantity)
-      else v_listing.unit_price
-    end;
-    if coalesce(v_player.cash, 0) < v_total_price then raise exception 'Bu islem icin yeterli nakit yok.'; end if;
-    update public.players set cash = cash - v_total_price where id = v_player_id;
-    update public.players set cash = cash + v_total_price where id = v_listing.seller_player_id;
-    update public.wholesale_market_listings set quantity = quantity - p_quantity,
-      status = case when quantity - p_quantity <= 0 then 'completed' else status end, updated_at = v_now
-    where id = p_market_listing_id;
-    update public.store_slots set quantity = quantity + p_quantity, cost = v_new_cost, updated_at = v_now where id = p_store_slot_id;
-    insert into public.logistics_transfers (
-      buyer_player_id, seller_player_id, buyer_store_id, buyer_store_slot_id, market_listing_id,
-      logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-      product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-      reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost, transport_cost,
-      transfer_type, started_at, finish_at, completed_at, status, updated_at
-    )
-    values (
-      v_player_id, v_listing.seller_player_id, v_store_slot.buyer_store_id, p_store_slot_id, p_market_listing_id,
-      null, null, false,
-      v_listing.product_id, v_listing.quality_level, p_quantity, v_listing.unit_price, v_total_price, v_product.birim_hacim,
-      0, 0, 0, 0, 0, 0, 'market_to_store', v_now, v_now, v_now, 'completed', v_now
-    )
-    returning id into v_transfer_id;
-    return jsonb_build_object(
-      'success', true, 'mode', 'instant', 'transfer_id', v_transfer_id,
-      'store_slot_id', p_store_slot_id, 'product_id', v_listing.product_id,
-      'quality_level', v_listing.quality_level, 'quantity', p_quantity,
-      'transport_cost', 0, 'rental_cost', 0, 'new_cost', v_new_cost
-    );
-  end if;
 
-  if p_vehicle_id is null then raise exception 'Farkli sehir transferi icin arac secilmelidir.'; end if;
-
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_listing.market_x - v_store_slot.city_x) / 2)), 2) +
-      cos(radians(v_store_slot.city_x)) * cos(radians(v_listing.market_x)) *
-      power(sin(radians((v_listing.market_y - v_store_slot.city_y) / 2)), 2)
-    )
-  );
-
-  if p_vehicle_id = '00000000-0000-0000-0000-000000000000' then
-    select '00000000-0000-0000-0000-000000000000'::uuid as player_id into v_vehicle;
-    v_rental_cost := ceil(v_distance_km * 5.0);
-    v_transport_cost := v_rental_cost;
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer;
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  else
-    select lv.*, lc.is_active as company_is_active into v_vehicle
-    from public.logistics_vehicles lv
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.id = p_vehicle_id for update;
-    if not found then raise exception 'Arac bulunamadi.'; end if;
-    if v_vehicle.status <> 'idle' then raise exception 'Arac su anda uygun degil.'; end if;
-    if v_vehicle.company_is_active is not true then raise exception 'Aracin firmasi aktif degil.'; end if;
-    if v_vehicle.player_id <> v_player_id and v_vehicle.is_available_for_rent is not true then raise exception 'Kiralik arac uygun degil.'; end if;
-    if public.logistics_vehicle_matches_route(v_vehicle.route_city_a_id, v_vehicle.route_city_b_id, v_listing.market_city_id, v_store_slot.store_city_id) is not true then
-      raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
-    end if;
-    v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.005);
-    if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
-    if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
-    if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
-    v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  end if;
-
-  if coalesce(v_player.cash, 0) < (v_total_price + v_rental_cost) then
-    raise exception 'Kiralik arac ve satin alma icin yeterli nakit yok.';
-  end if;
-
-  update public.wholesale_market_listings set quantity = quantity - p_quantity,
-    status = case when quantity - p_quantity <= 0 then 'completed' else status end, updated_at = timezone('utc'::text, now())
-  where id = p_market_listing_id;
-  update public.players set cash = cash - v_total_price where id = v_player_id;
-  update public.players set cash = cash + v_total_price where id = v_listing.seller_player_id;
-
-  if v_rental_cost > 0 then
-    update public.players set cash = cash - v_rental_cost where id = v_player_id;
-    if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-      update public.players set cash = cash + v_rental_cost where id = v_vehicle.player_id;
-    end if;
-  end if;
-
-  if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-    update public.logistics_vehicles
-    set current_fuel = greatest(current_fuel - v_fuel_used::integer, 0),
-        condition = greatest(condition - v_condition_loss::integer, 0),
-        status = 'on_route', updated_at = timezone('utc'::text, now())
-    where id = p_vehicle_id;
-  end if;
-
-  update public.store_slots set pending_quantity = coalesce(pending_quantity, 0) + p_quantity, updated_at = timezone('utc'::text, now())
-  where id = p_store_slot_id;
-
-  insert into public.logistics_transfers (
-    buyer_player_id, seller_player_id, buyer_store_id, buyer_store_slot_id, market_listing_id,
-    logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-    product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-    reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost, transport_cost,
-    transfer_type, started_at, finish_at, status, updated_at
-  )
-  values (
-    v_player_id, v_listing.seller_player_id, v_store_slot.buyer_store_id, p_store_slot_id, p_market_listing_id,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else p_vehicle_id end,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else v_vehicle.player_id end,
-    (p_vehicle_id <> '00000000-0000-0000-0000-000000000000' and v_vehicle.player_id <> v_player_id),
-    v_listing.product_id, v_listing.quality_level, p_quantity, v_listing.unit_price, v_total_price,
-    v_product.birim_hacim, p_quantity, v_distance_km, v_fuel_used, v_condition_loss,
-    v_rental_cost, v_transport_cost, 'market_to_store',
-    timezone('utc'::text, now()), v_finish_at, 'in_transit', timezone('utc'::text, now())
-  )
-  returning id into v_transfer_id;
-
-  if v_rental_cost > 0
-     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
-     and v_vehicle.player_id is not null then
-    insert into public.logistics_finance_entries (
-      player_id, logistics_company_id, vehicle_id, entry_type, category,
-      amount, related_transfer_id, description, metadata
-    )
-    values (
-      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
-      'income', 'rental_income', v_rental_cost, v_transfer_id,
-      'Arac kiralama geliri',
-      jsonb_build_object('transfer_type', 'market_to_store')
-    );
-  end if;
-
-  return jsonb_build_object(
-    'success', true, 'mode', 'transfer', 'transfer_id', v_transfer_id,
-    'vehicle_id', p_vehicle_id, 'store_slot_id', p_store_slot_id,
-    'product_id', v_listing.product_id, 'quality_level', v_listing.quality_level,
-    'quantity', p_quantity, 'rental_cost', v_rental_cost, 'transport_cost', v_transport_cost,
-    'distance_km', round(v_distance_km, 2), 'fuel_used', v_fuel_used,
-    'condition_loss', v_condition_loss, 'duration_seconds', v_duration_seconds, 'finish_at', v_finish_at
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."start_market_to_store_transfer"("p_market_listing_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."start_market_transfer"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_buyer_id uuid := auth.uid();
-  v_buyer_player record;
-  v_seller_player record;
-  v_buyer_warehouse record;
-  v_seller_slot record;
-  v_product record;
-  v_vehicle record;
-  v_reserve_result jsonb;
-  v_add_result jsonb;
-  v_transfer_id uuid;
-  v_distance_km numeric := 0;
-  v_required_capacity numeric := 0;
-  v_fuel_used numeric := 0;
-  v_condition_loss numeric := 0;
-  v_rental_cost numeric := 0;
-  v_transport_cost numeric := 0;
-  v_duration_seconds integer := 0;
-  v_finish_at timestamptz;
-  v_total_price numeric := 0;
-  v_unit_price numeric := 0;
-  v_now timestamptz := timezone('utc'::text, now());
-begin
-  if v_buyer_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Miktar 0''dan buyuk olmalidir.';
-  end if;
-
-  select * into v_buyer_player
-  from public.players
-  where id = v_buyer_id
-  for update;
-
-  if not found then
-    raise exception 'Alici oyuncu bulunamadi.';
-  end if;
-
-  select w.*, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_buyer_warehouse
-  from public.warehouses w
-  join public.cities c on c.id = w.city_id
-  where w.id = p_buyer_warehouse_id
-    and w.player_id = v_buyer_id
-  for update;
-
-  if not found then
-    raise exception 'Alici deposu bulunamadi veya size ait degil.';
-  end if;
-
-  if v_buyer_warehouse.is_active is not true then
-    raise exception 'Alici deposu aktif degil.';
-  end if;
-
-  select ws.*, w.player_id as seller_player_id, w.id as seller_warehouse_id,
-         w.city_id as seller_city_id,
-         c.map_position_x as city_x, c.map_position_y as city_y
-  into v_seller_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  join public.cities c on c.id = w.city_id
-  where ws.id = p_seller_slot_id
-  for update;
-
-  if not found then
-    raise exception 'Satici slotu bulunamadi.';
-  end if;
-
-  if v_seller_slot.is_available_for_sale is not true then
-    raise exception 'Bu slot su anda satisa acik degil.';
-  end if;
-
-  if p_quantity > v_seller_slot.quantity then
-    raise exception 'Istenen miktar mevcut stoktan fazla.';
-  end if;
-
-  if v_seller_slot.seller_player_id = v_buyer_id then
-    raise exception 'Kendi ilaninizi satin alamazsiniz.';
-  end if;
-
-  select * into v_seller_player
-  from public.players
-  where id = v_seller_slot.seller_player_id
-  for update;
-
-  if not found then
-    raise exception 'Satici oyuncu bulunamadi.';
-  end if;
-
-  select * into v_product
-  from public.products
-  where id = v_seller_slot.product_id;
-
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then
-    raise exception 'Urun hacim bilgisi gecersiz.';
-  end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_unit_price := coalesce(v_seller_slot.price, 0);
-
-  if v_unit_price <= 0 then
-    raise exception 'Bu ilan icin gecerli satis fiyati yok.';
-  end if;
-
-  v_total_price := p_quantity * v_unit_price;
-
-  if v_seller_slot.seller_city_id = v_buyer_warehouse.city_id then
-    if coalesce(v_buyer_player.cash, 0) < v_total_price then
-      raise exception 'Yeterli nakit yok.';
-    end if;
-
-    update public.warehouse_slots
-    set
-      quantity = quantity - p_quantity,
-      is_available_for_sale = case when quantity - p_quantity > 0 then is_available_for_sale else false end,
-      updated_at = v_now
-    where id = p_seller_slot_id;
-
-    update public.players
-    set cash = cash - v_total_price
-    where id = v_buyer_id;
-
-    update public.players
-    set cash = cash + v_total_price
-    where id = v_seller_slot.seller_player_id;
-
-    v_add_result := public.add_product_to_warehouse(
-      v_buyer_id,
-      p_buyer_warehouse_id,
-      v_seller_slot.product_id,
-      v_seller_slot.quality_level,
-      p_quantity,
-      v_unit_price,
-      0,
-      false
-    );
-
-    insert into public.logistics_transfers (
-      buyer_player_id, seller_player_id, buyer_warehouse_id, seller_warehouse_id,
-      seller_warehouse_slot_id, logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-      product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-      reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost,
-      transport_cost, started_at, finish_at, completed_at, status, updated_at
-    )
-    values (
-      v_buyer_id, v_seller_slot.seller_player_id, p_buyer_warehouse_id, v_seller_slot.seller_warehouse_id,
-      p_seller_slot_id, null, null, false,
-      v_seller_slot.product_id, v_seller_slot.quality_level, p_quantity, v_unit_price, v_total_price, v_product.birim_hacim,
-      0, 0, 0, 0, 0,
-      0, v_now, v_now, v_now, 'completed', v_now
-    )
-    returning id into v_transfer_id;
-
-    return jsonb_build_object(
-      'success', true, 'mode', 'instant', 'transfer_id', v_transfer_id,
-      'warehouse_result', v_add_result, 'seller_slot_id', p_seller_slot_id,
-      'product_id', v_seller_slot.product_id, 'quality_level', v_seller_slot.quality_level,
-      'quantity', p_quantity, 'unit_price', v_unit_price, 'total_price', v_total_price
-    );
-  end if;
-
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_seller_slot.city_x - v_buyer_warehouse.city_x) / 2)), 2) +
-      cos(radians(v_buyer_warehouse.city_x)) *
-      cos(radians(v_seller_slot.city_x)) *
-      power(sin(radians((v_seller_slot.city_y - v_buyer_warehouse.city_y) / 2)), 2)
-    )
-  );
-
-  if p_vehicle_id = '00000000-0000-0000-0000-000000000000' then
-    select '00000000-0000-0000-0000-000000000000'::uuid as player_id into v_vehicle;
-    v_rental_cost := ceil(v_distance_km * 5.0);
-    v_transport_cost := v_rental_cost;
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer;
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  else
-    select lv.*, lc.is_active as company_is_active
-    into v_vehicle
-    from public.logistics_vehicles lv
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.id = p_vehicle_id
-    for update;
-    if not found then raise exception 'Arac bulunamadi.'; end if;
-    if v_vehicle.player_id = v_seller_slot.seller_player_id then raise exception 'Saticinin araci kullanilamaz.'; end if;
-    if v_vehicle.player_id <> v_buyer_id and v_vehicle.is_available_for_rent is not true then raise exception 'Kiralik arac uygun degil.'; end if;
-    if v_vehicle.status <> 'idle' then raise exception 'Arac su anda uygun degil.'; end if;
-    if v_vehicle.company_is_active is not true then raise exception 'Aracin firmasi aktif degil.'; end if;
-    if public.logistics_vehicle_matches_route(v_vehicle.route_city_a_id, v_vehicle.route_city_b_id, v_seller_slot.seller_city_id, v_buyer_warehouse.city_id) is not true then
-      raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
-    end if;
-    v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.005);
-    if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
-    if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
-    if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
-    v_rental_cost := case when v_vehicle.player_id <> v_buyer_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  end if;
-
-  if coalesce(v_buyer_player.cash, 0) < (v_total_price + v_rental_cost) then
-    raise exception 'Yeterli nakit yok.';
-  end if;
-
-  v_reserve_result := public.reserve_warehouse_capacity(v_buyer_id, p_buyer_warehouse_id, v_seller_slot.product_id, p_quantity);
-
-  update public.warehouse_slots
-  set quantity = quantity - p_quantity,
-      is_available_for_sale = case when quantity - p_quantity > 0 then is_available_for_sale else false end,
-      updated_at = timezone('utc'::text, now())
-  where id = p_seller_slot_id;
-
-  update public.players set cash = cash - (v_total_price + v_rental_cost) where id = v_buyer_id;
-  update public.players set cash = cash + v_total_price where id = v_seller_slot.seller_player_id;
-
-  if v_rental_cost > 0 and p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-    update public.players set cash = cash + v_rental_cost where id = v_vehicle.player_id;
-  end if;
-
-  if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-    update public.logistics_vehicles
-    set current_fuel = greatest(current_fuel - v_fuel_used::integer, 0),
-        condition = greatest(condition - v_condition_loss::integer, 0),
-        status = 'on_route',
-        updated_at = timezone('utc'::text, now())
-    where id = p_vehicle_id;
-  end if;
-
-  insert into public.logistics_transfers (
-    buyer_player_id, seller_player_id, buyer_warehouse_id, seller_warehouse_id,
-    seller_warehouse_slot_id, logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-    product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-    reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost,
-    transport_cost, started_at, finish_at, status, updated_at
-  )
-  values (
-    v_buyer_id, v_seller_slot.seller_player_id, p_buyer_warehouse_id, v_seller_slot.seller_warehouse_id,
-    p_seller_slot_id,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else p_vehicle_id end,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else v_vehicle.player_id end,
-    (p_vehicle_id <> '00000000-0000-0000-0000-000000000000' and v_vehicle.player_id <> v_buyer_id),
-    v_seller_slot.product_id, v_seller_slot.quality_level, p_quantity, v_unit_price, v_total_price,
-    v_product.birim_hacim, v_required_capacity, v_distance_km, v_fuel_used, v_condition_loss,
-    v_rental_cost, v_transport_cost, timezone('utc'::text, now()), v_finish_at, 'in_transit', timezone('utc'::text, now())
-  )
-  returning id into v_transfer_id;
-
-  if v_rental_cost > 0
-     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
-     and v_vehicle.player_id is not null then
-    insert into public.logistics_finance_entries (
-      player_id, logistics_company_id, vehicle_id, entry_type, category,
-      amount, related_transfer_id, description, metadata
-    )
-    values (
-      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
-      'income', 'rental_income', v_rental_cost, v_transfer_id,
-      'Arac kiralama geliri',
-      jsonb_build_object('transfer_type', 'market_to_warehouse')
-    );
-  end if;
-
-  return jsonb_build_object(
-    'success', true, 'transfer_id', v_transfer_id, 'vehicle_id', p_vehicle_id,
-    'seller_slot_id', p_seller_slot_id, 'product_id', v_seller_slot.product_id,
-    'quality_level', v_seller_slot.quality_level, 'quantity', p_quantity,
-    'unit_price', v_unit_price, 'total_price', v_total_price,
-    'rental_cost', v_rental_cost, 'transport_cost', v_transport_cost,
-    'distance_km', round(v_distance_km, 2), 'fuel_used', v_fuel_used,
-    'condition_loss', v_condition_loss, 'reserved_capacity_amount', v_required_capacity,
-    'duration_seconds', v_duration_seconds, 'finish_at', v_finish_at,
-    'reserve_result', v_reserve_result
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."start_market_transfer"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."start_production_to_warehouse_transfer"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_player record;
-  v_inventory record;
-  v_owner_city_id uuid;
-  v_owner_player_id uuid;
-  v_source_city record;
-  v_buyer_warehouse record;
-  v_vehicle record;
-  v_product record;
-  v_reserve_result jsonb;
-  v_transfer_id uuid;
-  v_distance_km numeric := 0;
-  v_required_capacity numeric := 0;
-  v_fuel_used numeric := 0;
-  v_condition_loss numeric := 0;
-  v_rental_cost numeric := 0;
-  v_transport_cost numeric := 0;
-  v_duration_seconds integer := 0;
-  v_finish_at timestamptz;
-  v_now timestamptz := timezone('utc'::text, now());
-  v_instant_result jsonb;
-begin
-  if v_player_id is null then raise exception 'Oturum acilmamis.'; end if;
-  if p_quantity is null or p_quantity <= 0 then raise exception 'Miktar 0''dan buyuk olmalidir.'; end if;
-
-  select * into v_player from public.players where id = v_player_id for update;
-  if not found then raise exception 'Oyuncu bulunamadi.'; end if;
-
-  select * into v_inventory from public.production_inventory where id = p_production_inventory_id for update;
-  if not found then raise exception 'Production inventory bulunamadi.'; end if;
-  if v_inventory.inventory_type <> 'output' then raise exception 'Sadece output inventory icin output lojistigi desteklenir.'; end if;
-  if v_inventory.owner_kind not in ('factory', 'field', 'farm', 'mine') then
-    raise exception 'Bu owner_kind icin output lojistigi desteklenmiyor: %', v_inventory.owner_kind;
-  end if;
-  if coalesce(v_inventory.quantity, 0) < p_quantity then raise exception 'Istenen miktar mevcut output stoktan fazla.'; end if;
-
-  if v_inventory.owner_kind = 'factory' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.factories where id = v_inventory.owner_id;
-  elsif v_inventory.owner_kind = 'field' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.fields where id = v_inventory.owner_id;
-  elsif v_inventory.owner_kind = 'farm' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.farms where id = v_inventory.owner_id;
-  else
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.mines where id = v_inventory.owner_id;
-  end if;
-
-  if v_owner_player_id is null then raise exception 'Kaynak uretim birimi bulunamadi.'; end if;
-  if v_owner_player_id <> v_player_id then raise exception 'Kaynak uretim birimi size ait degil.'; end if;
-
-  select w.*, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_buyer_warehouse
-  from public.warehouses w
-  join public.cities c on c.id = w.city_id
-  where w.id = p_buyer_warehouse_id and w.player_id = v_player_id for update;
-
-  if not found then raise exception 'Hedef depo bulunamadi veya size ait degil.'; end if;
-  if v_buyer_warehouse.is_active is not true then raise exception 'Hedef depo aktif degil.'; end if;
-
-  select * into v_product from public.products where id = v_inventory.product_id;
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then raise exception 'Urun hacim bilgisi gecersiz.'; end if;
-
-  if v_buyer_warehouse.city_id = v_owner_city_id then
-    v_instant_result := public.transfer_production_inventory_to_warehouse(v_player_id, p_production_inventory_id, p_buyer_warehouse_id, p_quantity);
-    return jsonb_build_object('success', true, 'message', 'Ayni sehir transferi aninda tamamlandi.', 'transfer_id', null, 'mode', 'instant', 'result', v_instant_result);
-  end if;
-
-  if p_vehicle_id is null then raise exception 'Farkli sehir transferi icin arac secilmelidir.'; end if;
-
-  select * into v_source_city from public.cities where id = v_owner_city_id;
-  if not found then raise exception 'Kaynak sehir bulunamadi.'; end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_source_city.map_position_x - v_buyer_warehouse.city_x) / 2)), 2)
-      + cos(radians(v_buyer_warehouse.city_x)) * cos(radians(v_source_city.map_position_x))
-      * power(sin(radians((v_source_city.map_position_y - v_buyer_warehouse.city_y) / 2)), 2)
-    )
-  );
-
-  if p_vehicle_id = '00000000-0000-0000-0000-000000000000' then
-    select '00000000-0000-0000-0000-000000000000'::uuid as player_id into v_vehicle;
-    v_rental_cost := ceil(v_distance_km * 5.0);
-    v_transport_cost := v_rental_cost;
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer;
-    v_finish_at := v_now + make_interval(secs => v_duration_seconds);
-    v_fuel_used := 0;
-    v_condition_loss := 0;
-  else
-    select lv.*, lc.is_active as company_is_active into v_vehicle
-    from public.logistics_vehicles lv
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.id = p_vehicle_id for update;
-    if not found then raise exception 'Arac bulunamadi.'; end if;
-    if v_vehicle.status <> 'idle' then raise exception 'Arac su anda uygun degil.'; end if;
-    if v_vehicle.company_is_active is not true then raise exception 'Aracin firmasi aktif degil.'; end if;
-    if v_vehicle.player_id <> v_player_id and v_vehicle.is_available_for_rent is not true then raise exception 'Kiralik arac uygun degil.'; end if;
-    if public.logistics_vehicle_matches_route(v_vehicle.route_city_a_id, v_vehicle.route_city_b_id, v_owner_city_id, v_buyer_warehouse.city_id) is not true then
-      raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
-    end if;
-    v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.005);
-    if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
-    if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
-    if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
-    v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
-    v_finish_at := v_now + make_interval(secs => v_duration_seconds);
-  end if;
-
-  if coalesce(v_player.cash, 0) < v_rental_cost then raise exception 'Kiralik arac icin yeterli nakit yok.'; end if;
-
-  v_reserve_result := public.reserve_warehouse_capacity(v_player_id, p_buyer_warehouse_id, v_inventory.product_id, p_quantity);
-
-  update public.production_inventory set quantity = quantity - p_quantity where id = p_production_inventory_id;
-
-  if v_rental_cost > 0 then
-    update public.players set cash = cash - v_rental_cost where id = v_player_id;
-    if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-      update public.players set cash = cash + v_rental_cost where id = v_vehicle.player_id;
-    end if;
-  end if;
-
-  if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-    update public.logistics_vehicles
-    set current_fuel = greatest(current_fuel - v_fuel_used::integer, 0),
-        condition = greatest(condition - v_condition_loss::integer, 0),
-        status = 'on_route', updated_at = v_now
-    where id = p_vehicle_id;
-  end if;
-
-  insert into public.logistics_transfers (
-    buyer_player_id, seller_player_id, buyer_warehouse_id, seller_production_inventory_id,
-    logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-    product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-    reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost, transport_cost,
-    transfer_type, seller_entity_kind, buyer_entity_kind, started_at, finish_at, status, updated_at
-  )
-  values (
-    v_player_id, v_player_id, p_buyer_warehouse_id, p_production_inventory_id,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else p_vehicle_id end,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else v_vehicle.player_id end,
-    (p_vehicle_id <> '00000000-0000-0000-0000-000000000000' and v_vehicle.player_id <> v_player_id),
-    v_inventory.product_id, v_inventory.quality_level, p_quantity, coalesce(v_inventory.cost, 0), 0,
-    v_product.birim_hacim, coalesce((v_reserve_result->>'reserved_added')::numeric, 0),
-    v_distance_km, v_fuel_used, v_condition_loss, v_rental_cost, v_transport_cost,
-    'production_to_warehouse', 'production_inventory', 'warehouse',
-    v_now, v_finish_at, 'in_transit', v_now
-  )
-  returning id into v_transfer_id;
-
-  if v_rental_cost > 0
-     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
-     and v_vehicle.player_id is not null then
-    insert into public.logistics_finance_entries (
-      player_id, logistics_company_id, vehicle_id, entry_type, category,
-      amount, related_transfer_id, description, metadata
-    )
-    values (
-      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
-      'income', 'rental_income', v_rental_cost, v_transfer_id,
-      'Arac kiralama geliri',
-      jsonb_build_object('transfer_type', 'production_to_warehouse')
-    );
-  end if;
-
-  return jsonb_build_object('success', true, 'message', 'Output lojistigi transferi baslatildi.', 'transfer_id', v_transfer_id, 'mode', 'transfer');
-end;
-$$;
-
-
-ALTER FUNCTION "public"."start_production_to_warehouse_transfer"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."start_store_to_warehouse_transfer"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_player record;
-  v_store_slot record;
-  v_buyer_warehouse record;
-  v_product record;
-  v_vehicle record;
-  v_reserve_result jsonb;
-  v_transfer_id uuid;
-  v_distance_km numeric := 0;
-  v_required_capacity numeric := 0;
-  v_fuel_used numeric := 0;
-  v_condition_loss numeric := 0;
-  v_rental_cost numeric := 0;
-  v_transport_cost numeric := 0;
-  v_duration_seconds integer := 0;
-  v_finish_at timestamptz;
-  v_unit_cost numeric := 0;
-  v_add_result jsonb;
-  v_now timestamptz := timezone('utc'::text, now());
-begin
-  if v_player_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Miktar 0''dan buyuk olmalidir.';
-  end if;
-
-  select * into v_player
-  from public.players
-  where id = v_player_id
-  for update;
-
-  if not found then
-    raise exception 'Oyuncu bulunamadi.';
-  end if;
-
-  select ss.*, s.player_id, s.id as seller_store_id, s.is_active as store_is_active,
-         s.city_id as store_city_id,
-         c.map_position_x as city_x, c.map_position_y as city_y
-  into v_store_slot
-  from public.store_slots ss
-  join public.stores s on s.id = ss.store_id
-  join public.cities c on c.id = s.city_id
-  where ss.id = p_store_slot_id
-  for update;
-
-  if not found or v_store_slot.player_id <> v_player_id then
-    raise exception 'Magaza slotu bulunamadi veya size ait degil.';
-  end if;
-
-  if v_store_slot.store_is_active is not true then
-    raise exception 'Magaza aktif degil.';
-  end if;
-
-  if coalesce(v_store_slot.product_id, '') = '' or coalesce(v_store_slot.quality_level, 0) = 0 then
-    raise exception 'Magaza slotunda gecerli urun veya kalite yok.';
-  end if;
-
-  if p_quantity > coalesce(v_store_slot.quantity, 0) then
-    raise exception 'Istenen miktar mevcut stoktan fazla.';
-  end if;
-
-  select w.*, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_buyer_warehouse
-  from public.warehouses w
-  join public.cities c on c.id = w.city_id
-  where w.id = p_buyer_warehouse_id
-    and w.player_id = v_player_id
-  for update;
-
-  if not found then
-    raise exception 'Hedef depo bulunamadi veya size ait degil.';
-  end if;
-
-  if v_buyer_warehouse.is_active is not true then
-    raise exception 'Hedef depo aktif degil.';
-  end if;
-
-  select * into v_product
-  from public.products
-  where id = v_store_slot.product_id;
-
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then
-    raise exception 'Urun hacim bilgisi gecersiz.';
-  end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_unit_cost := coalesce(v_store_slot.cost, 0);
-
-  if v_store_slot.store_city_id = v_buyer_warehouse.city_id then
-    update public.store_slots
-    set quantity = quantity - p_quantity,
-        updated_at = v_now
-    where id = p_store_slot_id;
-
-    v_add_result := public.add_product_to_warehouse(
-      v_player_id, p_buyer_warehouse_id, v_store_slot.product_id,
-      v_store_slot.quality_level, p_quantity, v_unit_cost, 0, false
-    );
-
-    insert into public.logistics_transfers (
-      buyer_player_id, seller_player_id, buyer_warehouse_id, seller_store_id,
-      seller_store_slot_id, logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-      product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-      reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost,
-      transport_cost, transfer_type, started_at, finish_at, completed_at, status, updated_at
-    )
-    values (
-      v_player_id, v_player_id, p_buyer_warehouse_id, v_store_slot.seller_store_id,
-      p_store_slot_id, null, null, false,
-      v_store_slot.product_id, v_store_slot.quality_level, p_quantity, v_unit_cost,
-      p_quantity * v_unit_cost, v_product.birim_hacim, 0, 0, 0, 0, 0, 0,
-      'store_to_warehouse', v_now, v_now, v_now, 'completed', v_now
-    )
-    returning id into v_transfer_id;
-
-    return jsonb_build_object(
-      'success', true, 'mode', 'instant', 'transfer_id', v_transfer_id,
-      'warehouse_result', v_add_result, 'warehouse_id', p_buyer_warehouse_id,
-      'store_slot_id', p_store_slot_id, 'product_id', v_store_slot.product_id,
-      'quality_level', v_store_slot.quality_level, 'quantity', p_quantity
-    );
-  end if;
-
-  if p_vehicle_id is null then
-    raise exception 'Farkli sehir transferi icin arac secilmelidir.';
-  end if;
-
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_store_slot.city_x - v_buyer_warehouse.city_x) / 2)), 2) +
-      cos(radians(v_buyer_warehouse.city_x)) *
-      cos(radians(v_store_slot.city_x)) *
-      power(sin(radians((v_store_slot.city_y - v_buyer_warehouse.city_y) / 2)), 2)
-    )
-  );
-
-  if p_vehicle_id = '00000000-0000-0000-0000-000000000000' then
-    select '00000000-0000-0000-0000-000000000000'::uuid as player_id into v_vehicle;
-    v_rental_cost := ceil(v_distance_km * 5.0);
-    v_transport_cost := v_rental_cost;
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer;
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  else
-    select lv.*, lc.is_active as company_is_active
-    into v_vehicle
-    from public.logistics_vehicles lv
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.id = p_vehicle_id
-    for update;
-    if not found then raise exception 'Arac bulunamadi.'; end if;
-    if v_vehicle.status <> 'idle' then raise exception 'Arac su anda uygun degil.'; end if;
-    if v_vehicle.company_is_active is not true then raise exception 'Aracin firmasi aktif degil.'; end if;
-    if v_vehicle.player_id <> v_player_id and v_vehicle.is_available_for_rent is not true then raise exception 'Kiralik arac uygun degil.'; end if;
-    if public.logistics_vehicle_matches_route(v_vehicle.route_city_a_id, v_vehicle.route_city_b_id, v_store_slot.store_city_id, v_buyer_warehouse.city_id) is not true then
-      raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
-    end if;
-    v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.005);
-    if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
-    if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
-    if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
-    v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  end if;
-
-  if coalesce(v_player.cash, 0) < v_rental_cost then
-    raise exception 'Kiralik arac icin yeterli nakit yok.';
-  end if;
-
-  v_reserve_result := public.reserve_warehouse_capacity(v_player_id, p_buyer_warehouse_id, v_store_slot.product_id, p_quantity);
-
-  update public.store_slots
-  set quantity = quantity - p_quantity, updated_at = timezone('utc'::text, now())
-  where id = p_store_slot_id;
-
-  if v_rental_cost > 0 then
-    update public.players set cash = cash - v_rental_cost where id = v_player_id;
-    if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-      update public.players set cash = cash + v_rental_cost where id = v_vehicle.player_id;
-    end if;
-  end if;
-
-  if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-    update public.logistics_vehicles
-    set current_fuel = greatest(current_fuel - v_fuel_used::integer, 0),
-        condition = greatest(condition - v_condition_loss::integer, 0),
-        status = 'on_route',
-        updated_at = timezone('utc'::text, now())
-    where id = p_vehicle_id;
-  end if;
-
-  insert into public.logistics_transfers (
-    buyer_player_id, seller_player_id, buyer_warehouse_id, seller_store_id,
-    seller_store_slot_id, logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-    product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-    reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost,
-    transport_cost, transfer_type, started_at, finish_at, status, updated_at
-  )
-  values (
-    v_player_id, v_player_id, p_buyer_warehouse_id, v_store_slot.seller_store_id,
-    p_store_slot_id,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else p_vehicle_id end,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else v_vehicle.player_id end,
-    (p_vehicle_id <> '00000000-0000-0000-0000-000000000000' and v_vehicle.player_id <> v_player_id),
-    v_store_slot.product_id, v_store_slot.quality_level, p_quantity, v_unit_cost, 0,
-    v_product.birim_hacim, p_quantity, v_distance_km, v_fuel_used, v_condition_loss,
-    v_rental_cost, v_transport_cost, 'store_to_warehouse',
-    timezone('utc'::text, now()), v_finish_at, 'in_transit', timezone('utc'::text, now())
-  )
-  returning id into v_transfer_id;
-
-  if v_rental_cost > 0
-     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
-     and v_vehicle.player_id is not null then
-    insert into public.logistics_finance_entries (
-      player_id, logistics_company_id, vehicle_id, entry_type, category,
-      amount, related_transfer_id, description, metadata
-    )
-    values (
-      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
-      'income', 'rental_income', v_rental_cost, v_transfer_id,
-      'Arac kiralama geliri',
-      jsonb_build_object('transfer_type', 'store_to_warehouse')
-    );
-  end if;
-
-  return jsonb_build_object(
-    'success', true, 'mode', 'transfer', 'transfer_id', v_transfer_id,
-    'vehicle_id', p_vehicle_id, 'warehouse_id', p_buyer_warehouse_id,
-    'store_slot_id', p_store_slot_id, 'product_id', v_store_slot.product_id,
-    'quality_level', v_store_slot.quality_level, 'quantity', p_quantity,
-    'rental_cost', v_rental_cost, 'transport_cost', v_transport_cost,
-    'distance_km', round(v_distance_km, 2), 'fuel_used', v_fuel_used,
-    'condition_loss', v_condition_loss, 'duration_seconds', v_duration_seconds,
-    'finish_at', v_finish_at, 'reserve_result', v_reserve_result
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."start_store_to_warehouse_transfer"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."start_warehouse_to_production_transfer"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_player record;
-  v_warehouse_slot record;
-  v_inventory record;
-  v_owner_city_id uuid;
-  v_owner_player_id uuid;
-  v_target_city record;
-  v_vehicle record;
-  v_product record;
-  v_transfer_id uuid;
-  v_distance_km numeric := 0;
-  v_required_capacity numeric := 0;
-  v_fuel_used numeric := 0;
-  v_condition_loss numeric := 0;
-  v_rental_cost numeric := 0;
-  v_transport_cost numeric := 0;
-  v_duration_seconds integer := 0;
-  v_finish_at timestamptz;
-  v_now timestamptz := timezone('utc'::text, now());
-  v_instant_result jsonb;
-begin
-  if v_player_id is null then raise exception 'Oturum acilmamis.'; end if;
-  if p_quantity is null or p_quantity <= 0 then raise exception 'Miktar 0''dan buyuk olmalidir.'; end if;
-
-  select * into v_player from public.players where id = v_player_id for update;
-  if not found then raise exception 'Oyuncu bulunamadi.'; end if;
-
-  select ws.*, w.player_id, w.id as warehouse_id, w.city_id, w.is_active as warehouse_is_active,
-         c.map_position_x as city_x, c.map_position_y as city_y
-  into v_warehouse_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  join public.cities c on c.id = w.city_id
-  where ws.id = p_warehouse_slot_id for update;
-
-  if not found or v_warehouse_slot.player_id <> v_player_id then raise exception 'Depo slotu bulunamadi veya size ait degil.'; end if;
-  if v_warehouse_slot.warehouse_is_active is not true then raise exception 'Kaynak depo aktif degil.'; end if;
-  if p_quantity > coalesce(v_warehouse_slot.quantity, 0) then raise exception 'Istenen miktar mevcut stoktan fazla.'; end if;
-
-  select * into v_inventory from public.production_inventory where id = p_production_inventory_id for update;
-  if not found then raise exception 'Production inventory bulunamadi.'; end if;
-  if v_inventory.inventory_type <> 'input' then raise exception 'Sadece input inventory icin hammadde lojistigi desteklenir.'; end if;
-  if v_inventory.owner_kind not in ('factory', 'field', 'farm') then
-    raise exception 'Bu owner_kind icin input lojistigi desteklenmiyor: %', v_inventory.owner_kind;
-  end if;
-
-  if v_inventory.owner_kind = 'factory' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.factories where id = v_inventory.owner_id;
-  elsif v_inventory.owner_kind = 'field' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.fields where id = v_inventory.owner_id;
-  else
-    select player_id, city_id into v_owner_player_id, v_owner_city_id from public.farms where id = v_inventory.owner_id;
-  end if;
-
-  if v_owner_player_id is null then raise exception 'Hedef uretim birimi bulunamadi.'; end if;
-  if v_owner_player_id <> v_player_id then raise exception 'Hedef uretim birimi size ait degil.'; end if;
-  if v_inventory.product_id <> v_warehouse_slot.product_id then raise exception 'Depo slotundaki urun ile input inventory urunu ayni olmalidir.'; end if;
-  if v_inventory.quality_level <> v_warehouse_slot.quality_level then raise exception 'Depo slotundaki kalite ile input inventory kalitesi ayni olmalidir.'; end if;
-
-  select * into v_product from public.products where id = v_warehouse_slot.product_id;
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then raise exception 'Urun hacim bilgisi gecersiz.'; end if;
-
-  if v_owner_city_id = v_warehouse_slot.city_id then
-    v_instant_result := public.transfer_warehouse_slot_to_production_inventory(v_player_id, p_warehouse_slot_id, p_production_inventory_id, p_quantity);
-    return jsonb_build_object('success', true, 'message', 'Ayni sehir transferi aninda tamamlandi.', 'transfer_id', null, 'mode', 'instant', 'result', v_instant_result);
-  end if;
-
-  if p_vehicle_id is null then raise exception 'Farkli sehir transferi icin arac secilmelidir.'; end if;
-
-  select * into v_target_city from public.cities where id = v_owner_city_id;
-  if not found then raise exception 'Hedef sehir bulunamadi.'; end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_warehouse_slot.city_x - v_target_city.map_position_x) / 2)), 2)
-      + cos(radians(v_target_city.map_position_x)) * cos(radians(v_warehouse_slot.city_x))
-      * power(sin(radians((v_warehouse_slot.city_y - v_target_city.map_position_y) / 2)), 2)
-    )
-  );
-
-  if p_vehicle_id = '00000000-0000-0000-0000-000000000000' then
-    select '00000000-0000-0000-0000-000000000000'::uuid as player_id into v_vehicle;
-    v_rental_cost := ceil(v_distance_km * 5.0);
-    v_transport_cost := v_rental_cost;
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer;
-    v_finish_at := v_now + make_interval(secs => v_duration_seconds);
-    v_fuel_used := 0;
-    v_condition_loss := 0;
-  else
-    select lv.*, lc.is_active as company_is_active into v_vehicle
-    from public.logistics_vehicles lv
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.id = p_vehicle_id for update;
-    if not found then raise exception 'Arac bulunamadi.'; end if;
-    if v_vehicle.status <> 'idle' then raise exception 'Arac su anda uygun degil.'; end if;
-    if v_vehicle.company_is_active is not true then raise exception 'Aracin firmasi aktif degil.'; end if;
-    if v_vehicle.player_id <> v_player_id and v_vehicle.is_available_for_rent is not true then raise exception 'Kiralik arac uygun degil.'; end if;
-    if public.logistics_vehicle_matches_route(v_vehicle.route_city_a_id, v_vehicle.route_city_b_id, v_warehouse_slot.city_id, v_owner_city_id) is not true then
-      raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
-    end if;
-    v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.005);
-    if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
-    if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
-    if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
-    v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
-    v_finish_at := v_now + make_interval(secs => v_duration_seconds);
-  end if;
-
-  if coalesce(v_player.cash, 0) < v_rental_cost then raise exception 'Kiralik arac icin yeterli nakit yok.'; end if;
-
-  update public.warehouse_slots set quantity = quantity - p_quantity, updated_at = v_now where id = p_warehouse_slot_id;
-  update public.production_inventory set pending_quantity = coalesce(pending_quantity, 0) + p_quantity where id = p_production_inventory_id;
-
-  if v_rental_cost > 0 then
-    update public.players set cash = cash - v_rental_cost where id = v_player_id;
-    if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-      update public.players set cash = cash + v_rental_cost where id = v_vehicle.player_id;
-    end if;
-  end if;
-
-  if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-    update public.logistics_vehicles
-    set current_fuel = greatest(current_fuel - v_fuel_used::integer, 0),
-        condition = greatest(condition - v_condition_loss::integer, 0),
-        status = 'on_route', updated_at = v_now
-    where id = p_vehicle_id;
-  end if;
-
-  insert into public.logistics_transfers (
-    buyer_player_id, seller_player_id, buyer_production_inventory_id, seller_warehouse_id, seller_warehouse_slot_id,
-    logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-    product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-    reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost, transport_cost,
-    transfer_type, seller_entity_kind, buyer_entity_kind, started_at, finish_at, status, updated_at
-  )
-  values (
-    v_player_id, v_player_id, p_production_inventory_id, v_warehouse_slot.warehouse_id, p_warehouse_slot_id,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else p_vehicle_id end,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else v_vehicle.player_id end,
-    (p_vehicle_id <> '00000000-0000-0000-0000-000000000000' and v_vehicle.player_id <> v_player_id),
-    v_warehouse_slot.product_id, v_warehouse_slot.quality_level, p_quantity, coalesce(v_warehouse_slot.cost, 0), 0,
-    v_product.birim_hacim, 0, v_distance_km, v_fuel_used, v_condition_loss, v_rental_cost, v_transport_cost,
-    'warehouse_to_production', 'warehouse', 'production_inventory',
-    v_now, v_finish_at, 'in_transit', v_now
-  )
-  returning id into v_transfer_id;
-
-  if v_rental_cost > 0
-     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
-     and v_vehicle.player_id is not null then
-    insert into public.logistics_finance_entries (
-      player_id, logistics_company_id, vehicle_id, entry_type, category,
-      amount, related_transfer_id, description, metadata
-    )
-    values (
-      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
-      'income', 'rental_income', v_rental_cost, v_transfer_id,
-      'Arac kiralama geliri',
-      jsonb_build_object('transfer_type', 'warehouse_to_production')
-    );
-  end if;
-
-  return jsonb_build_object('success', true, 'message', 'Uretim lojistigi transferi baslatildi.', 'transfer_id', v_transfer_id, 'mode', 'transfer');
-end;
-$$;
-
-
-ALTER FUNCTION "public"."start_warehouse_to_production_transfer"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."start_warehouse_to_store_transfer"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_player record;
-  v_store_slot record;
-  v_warehouse_slot record;
-  v_product record;
-  v_vehicle record;
-  v_transfer_id uuid;
-  v_distance_km numeric := 0;
-  v_required_capacity numeric := 0;
-  v_fuel_used numeric := 0;
-  v_condition_loss numeric := 0;
-  v_rental_cost numeric := 0;
-  v_transport_cost numeric := 0;
-  v_duration_seconds integer := 0;
-  v_finish_at timestamptz;
-  v_unit_cost numeric := 0;
-  v_new_cost numeric := 0;
-  v_now timestamptz := timezone('utc'::text, now());
-begin
-  if v_player_id is null then raise exception 'Oturum acilmamis.'; end if;
-  if p_quantity is null or p_quantity <= 0 then raise exception 'Miktar 0''dan buyuk olmalidir.'; end if;
-
-  select * into v_player from public.players where id = v_player_id for update;
-  if not found then raise exception 'Oyuncu bulunamadi.'; end if;
-
-  select ss.*, s.player_id, s.id as buyer_store_id, s.is_active as store_is_active,
-         s.city_id as store_city_id, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_store_slot
-  from public.store_slots ss
-  join public.stores s on s.id = ss.store_id
-  join public.cities c on c.id = s.city_id
-  where ss.id = p_store_slot_id for update;
-
-  if not found or v_store_slot.player_id <> v_player_id then raise exception 'Magaza slotu bulunamadi veya size ait degil.'; end if;
-  if v_store_slot.store_is_active is not true then raise exception 'Magaza aktif degil.'; end if;
-
-  select ws.*, w.player_id as warehouse_player_id, w.id as seller_warehouse_id,
-         w.city_id as warehouse_city_id,
-         c.map_position_x as city_x, c.map_position_y as city_y
-  into v_warehouse_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  join public.cities c on c.id = w.city_id
-  where ws.id = p_warehouse_slot_id for update;
-
-  if not found or v_warehouse_slot.warehouse_player_id <> v_player_id then raise exception 'Depo slotu bulunamadi veya size ait degil.'; end if;
-  if p_quantity > v_warehouse_slot.quantity then raise exception 'Istenen miktar mevcut stoktan fazla.'; end if;
-
-  if v_store_slot.product_id is null or v_store_slot.quality_level = 0 then
-    if coalesce(v_store_slot.quantity, 0) > 0 or coalesce(v_store_slot.pending_quantity, 0) > 0 then
-      raise exception 'Slotta aktif stok veya rezerve varken urun atanamaz.';
-    end if;
-    update public.store_slots set product_id = v_warehouse_slot.product_id, quality_level = v_warehouse_slot.quality_level, updated_at = v_now where id = p_store_slot_id;
-    v_store_slot.product_id := v_warehouse_slot.product_id;
-    v_store_slot.quality_level := v_warehouse_slot.quality_level;
-  elsif v_store_slot.product_id <> v_warehouse_slot.product_id or v_store_slot.quality_level <> v_warehouse_slot.quality_level then
-    raise exception 'Magaza slotu urun veya kalite uyusmazligi.';
-  end if;
-
-  if (coalesce(v_store_slot.quantity, 0) + coalesce(v_store_slot.pending_quantity, 0) + p_quantity) > v_store_slot.capacity then
-    raise exception 'Magaza slot kapasitesi yetersiz.';
-  end if;
-
-  select * into v_product from public.products where id = v_warehouse_slot.product_id;
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then raise exception 'Urun hacim bilgisi gecersiz.'; end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_unit_cost := coalesce(v_warehouse_slot.cost, 0);
-
-  if v_store_slot.store_city_id = v_warehouse_slot.warehouse_city_id then
-    v_new_cost := case
-      when coalesce(v_store_slot.quantity, 0) + p_quantity > 0 then
-        (coalesce(v_store_slot.quantity, 0) * coalesce(v_store_slot.cost, 0) + p_quantity * v_unit_cost)
-        / (coalesce(v_store_slot.quantity, 0) + p_quantity)
-      else coalesce(v_store_slot.cost, 0)
-    end;
-    update public.warehouse_slots set quantity = quantity - p_quantity, updated_at = v_now where id = p_warehouse_slot_id;
-    update public.store_slots set quantity = quantity + p_quantity, cost = v_new_cost, updated_at = v_now where id = p_store_slot_id;
-    insert into public.logistics_transfers (
-      buyer_player_id, seller_player_id, buyer_store_id, buyer_store_slot_id, seller_warehouse_id, seller_warehouse_slot_id,
-      logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-      product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-      reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost, transport_cost,
-      transfer_type, started_at, finish_at, completed_at, status, updated_at
-    )
-    values (
-      v_player_id, v_player_id, v_store_slot.buyer_store_id, p_store_slot_id,
-      v_warehouse_slot.seller_warehouse_id, p_warehouse_slot_id,
-      null, null, false,
-      v_warehouse_slot.product_id, v_warehouse_slot.quality_level, p_quantity, v_unit_cost,
-      p_quantity * v_unit_cost, v_product.birim_hacim, 0, 0, 0, 0, 0, 0,
-      'warehouse_to_store', v_now, v_now, v_now, 'completed', v_now
-    )
-    returning id into v_transfer_id;
-    return jsonb_build_object(
-      'success', true, 'mode', 'instant', 'transfer_id', v_transfer_id,
-      'store_slot_id', p_store_slot_id, 'warehouse_slot_id', p_warehouse_slot_id,
-      'product_id', v_warehouse_slot.product_id, 'quality_level', v_warehouse_slot.quality_level,
-      'quantity', p_quantity, 'transport_cost', 0, 'rental_cost', 0, 'new_cost', v_new_cost
-    );
-  end if;
-
-  if p_vehicle_id is null then raise exception 'Farkli sehir transferi icin arac secilmelidir.'; end if;
-
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_warehouse_slot.city_x - v_store_slot.city_x) / 2)), 2) +
-      cos(radians(v_store_slot.city_x)) * cos(radians(v_warehouse_slot.city_x)) *
-      power(sin(radians((v_warehouse_slot.city_y - v_store_slot.city_y) / 2)), 2)
-    )
-  );
-
-  if p_vehicle_id = '00000000-0000-0000-0000-000000000000' then
-    select '00000000-0000-0000-0000-000000000000'::uuid as player_id into v_vehicle;
-    v_rental_cost := ceil(v_distance_km * 5.0);
-    v_transport_cost := v_rental_cost;
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer;
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  else
-    select lv.*, lc.is_active as company_is_active into v_vehicle
-    from public.logistics_vehicles lv
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.id = p_vehicle_id for update;
-    if not found then raise exception 'Arac bulunamadi.'; end if;
-    if v_vehicle.status <> 'idle' then raise exception 'Arac su anda uygun degil.'; end if;
-    if v_vehicle.company_is_active is not true then raise exception 'Aracin firmasi aktif degil.'; end if;
-    if v_vehicle.player_id <> v_player_id and v_vehicle.is_available_for_rent is not true then raise exception 'Kiralik arac uygun degil.'; end if;
-    if public.logistics_vehicle_matches_route(v_vehicle.route_city_a_id, v_vehicle.route_city_b_id, v_warehouse_slot.warehouse_city_id, v_store_slot.store_city_id) is not true then
-      raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
-    end if;
-    v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.005);
-    if v_vehicle.capacity < v_required_capacity then raise exception 'Arac kapasitesi yetersiz.'; end if;
-    if v_vehicle.current_fuel < v_fuel_used then raise exception 'Aracin yakiti yetersiz.'; end if;
-    if v_vehicle.condition <= v_condition_loss then raise exception 'Aracin kondisyonu yetersiz.'; end if;
-    v_rental_cost := case when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0)) else 0 end;
-    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  end if;
-
-  if coalesce(v_player.cash, 0) < v_rental_cost then raise exception 'Kiralik arac icin yeterli nakit yok.'; end if;
-
-  update public.warehouse_slots set quantity = quantity - p_quantity, updated_at = timezone('utc'::text, now()) where id = p_warehouse_slot_id;
-
-  if v_rental_cost > 0 then
-    update public.players set cash = cash - v_rental_cost where id = v_player_id;
-    if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-      update public.players set cash = cash + v_rental_cost where id = v_vehicle.player_id;
-    end if;
-  end if;
-
-  if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-    update public.logistics_vehicles
-    set current_fuel = greatest(current_fuel - v_fuel_used::integer, 0),
-        condition = greatest(condition - v_condition_loss::integer, 0),
-        status = 'on_route', updated_at = timezone('utc'::text, now())
-    where id = p_vehicle_id;
-  end if;
-
-  update public.store_slots set pending_quantity = coalesce(pending_quantity, 0) + p_quantity, updated_at = timezone('utc'::text, now())
-  where id = p_store_slot_id;
-
-  insert into public.logistics_transfers (
-    buyer_player_id, seller_player_id, buyer_warehouse_id, buyer_store_id, buyer_store_slot_id,
-    seller_warehouse_id, seller_warehouse_slot_id,
-    logistics_vehicle_id, vehicle_owner_player_id, is_rental,
-    product_id, quality_level, quantity, unit_price, total_price, product_unit_volume,
-    reserved_capacity_amount, distance_km, fuel_used, condition_loss, rental_cost, transport_cost,
-    transfer_type, started_at, finish_at, status, updated_at
-  )
-  values (
-    v_player_id, v_player_id, null, v_store_slot.buyer_store_id, p_store_slot_id,
-    v_warehouse_slot.seller_warehouse_id, p_warehouse_slot_id,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else p_vehicle_id end,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else v_vehicle.player_id end,
-    (p_vehicle_id <> '00000000-0000-0000-0000-000000000000' and v_vehicle.player_id <> v_player_id),
-    v_warehouse_slot.product_id, v_warehouse_slot.quality_level, p_quantity, v_unit_cost, 0,
-    v_product.birim_hacim, p_quantity, v_distance_km, v_fuel_used, v_condition_loss,
-    v_rental_cost, v_transport_cost, 'warehouse_to_store',
-    timezone('utc'::text, now()), v_finish_at, 'in_transit', timezone('utc'::text, now())
-  )
-  returning id into v_transfer_id;
-
-  if v_rental_cost > 0
-     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
-     and v_vehicle.player_id is not null then
-    insert into public.logistics_finance_entries (
-      player_id, logistics_company_id, vehicle_id, entry_type, category,
-      amount, related_transfer_id, description, metadata
-    )
-    values (
-      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
-      'income', 'rental_income', v_rental_cost, v_transfer_id,
-      'Arac kiralama geliri',
-      jsonb_build_object('transfer_type', 'warehouse_to_store')
-    );
-  end if;
-
-  return jsonb_build_object(
-    'success', true, 'mode', 'transfer', 'transfer_id', v_transfer_id,
-    'vehicle_id', p_vehicle_id, 'store_slot_id', p_store_slot_id, 'warehouse_slot_id', p_warehouse_slot_id,
-    'product_id', v_warehouse_slot.product_id, 'quality_level', v_warehouse_slot.quality_level,
-    'quantity', p_quantity, 'rental_cost', v_rental_cost, 'transport_cost', v_transport_cost,
-    'distance_km', round(v_distance_km, 2), 'fuel_used', v_fuel_used,
-    'condition_loss', v_condition_loss, 'duration_seconds', v_duration_seconds, 'finish_at', v_finish_at
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."start_warehouse_to_store_transfer"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."start_warehouse_to_warehouse_transfer"("p_warehouse_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid" DEFAULT NULL::"uuid") RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_player record;
-  v_seller_slot record;
-  v_buyer_warehouse record;
-  v_product record;
-  v_vehicle record;
-  v_reserve_result jsonb;
-  v_transfer_id uuid;
-  v_distance_km numeric := 0;
-  v_required_capacity numeric := 0;
-  v_fuel_used numeric := 0;
-  v_condition_loss numeric := 0;
-  v_rental_cost numeric := 0;
-  v_transport_cost numeric := 0;
-  v_duration_seconds integer := 0;
-  v_finish_at timestamptz;
-  v_unit_cost numeric := 0;
-  v_add_result jsonb;
-  v_now timestamptz := timezone('utc'::text, now());
-  v_source_quantity_after integer := 0;
-begin
-  if v_player_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Miktar 0''dan buyuk olmalidir.';
-  end if;
-
-  select * into v_player
-  from public.players
-  where id = v_player_id
-  for update;
-
-  if not found then
-    raise exception 'Oyuncu bulunamadi.';
-  end if;
-
-  select ws.*, w.player_id, w.id as seller_warehouse_id, w.is_active as warehouse_is_active,
-         w.city_id as warehouse_city_id,
-         c.map_position_x as city_x, c.map_position_y as city_y
-  into v_seller_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  join public.cities c on c.id = w.city_id
-  where ws.id = p_warehouse_slot_id
-  for update;
-
-  if not found or v_seller_slot.player_id <> v_player_id then
-    raise exception 'Kaynak depo slotu bulunamadi veya size ait degil.';
-  end if;
-
-  if v_seller_slot.warehouse_is_active is not true then
-    raise exception 'Kaynak depo aktif degil.';
-  end if;
-
-  if coalesce(v_seller_slot.product_id, '') = '' or coalesce(v_seller_slot.quality_level, 0) = 0 then
-    raise exception 'Depo slotunda gecerli urun veya kalite yok.';
-  end if;
-
-  if p_quantity > coalesce(v_seller_slot.quantity, 0) then
-    raise exception 'Istenen miktar mevcut stoktan fazla.';
-  end if;
-
-  select w.*, c.map_position_x as city_x, c.map_position_y as city_y
-  into v_buyer_warehouse
-  from public.warehouses w
-  join public.cities c on c.id = w.city_id
-  where w.id = p_buyer_warehouse_id
-    and w.player_id = v_player_id
-  for update;
-
-  if not found then
-    raise exception 'Hedef depo bulunamadi veya size ait degil.';
-  end if;
-
-  if v_buyer_warehouse.id = v_seller_slot.seller_warehouse_id then
-    raise exception 'Kaynak ve hedef depo ayni olamaz.';
-  end if;
-
-  if v_buyer_warehouse.is_active is not true then
-    raise exception 'Hedef depo aktif degil.';
-  end if;
-
-  select * into v_product
-  from public.products
-  where id = v_seller_slot.product_id;
-
-  if not found or coalesce(v_product.birim_hacim, 0) <= 0 then
-    raise exception 'Urun hacim bilgisi gecersiz.';
-  end if;
-
-  v_required_capacity := p_quantity * v_product.birim_hacim;
-  v_unit_cost := coalesce(v_seller_slot.cost, 0);
-  v_source_quantity_after := greatest(coalesce(v_seller_slot.quantity, 0) - p_quantity, 0);
-
-  if v_seller_slot.warehouse_city_id = v_buyer_warehouse.city_id then
-    update public.warehouse_slots
-    set quantity = v_source_quantity_after,
-        updated_at = v_now
-    where id = p_warehouse_slot_id;
-
-    v_add_result := public.add_product_to_warehouse(
-      v_player_id,
-      p_buyer_warehouse_id,
-      v_seller_slot.product_id,
-      v_seller_slot.quality_level,
-      p_quantity,
-      v_unit_cost,
-      0,
-      false
-    );
-
-    insert into public.logistics_transfers (
-      buyer_player_id,
-      seller_player_id,
-      buyer_warehouse_id,
-      seller_warehouse_id,
-      seller_warehouse_slot_id,
-      logistics_vehicle_id,
-      vehicle_owner_player_id,
-      is_rental,
-      product_id,
-      quality_level,
-      quantity,
-      unit_price,
-      total_price,
-      product_unit_volume,
-      reserved_capacity_amount,
-      distance_km,
-      fuel_used,
-      condition_loss,
-      rental_cost,
-      transport_cost,
-      transfer_type,
-      started_at,
-      finish_at,
-      completed_at,
-      status,
-      updated_at
-    )
-    values (
-      v_player_id,
-      v_player_id,
-      p_buyer_warehouse_id,
-      v_seller_slot.seller_warehouse_id,
-      p_warehouse_slot_id,
-      null,
-      null,
-      false,
-      v_seller_slot.product_id,
-      v_seller_slot.quality_level,
-      p_quantity,
-      v_unit_cost,
-      p_quantity * v_unit_cost,
-      v_product.birim_hacim,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      'warehouse_to_warehouse',
-      v_now,
-      v_now,
-      v_now,
-      'completed',
-      v_now
-    )
-    returning id into v_transfer_id;
-
-    return jsonb_build_object(
-      'success', true,
-      'mode', 'instant',
-      'transfer_id', v_transfer_id,
-      'warehouse_result', v_add_result,
-      'source_warehouse_id', v_seller_slot.seller_warehouse_id,
-      'source_warehouse_slot_id', p_warehouse_slot_id,
-      'source_quantity_after', v_source_quantity_after,
-      'buyer_warehouse_id', p_buyer_warehouse_id,
-      'product_id', v_seller_slot.product_id,
-      'quality_level', v_seller_slot.quality_level,
-      'quantity', p_quantity
-    );
-  end if;
-
-  if p_vehicle_id is null then
-    raise exception 'Farkli sehir transferi icin arac secilmelidir.';
-  end if;
-
-  v_distance_km := 6371 * 2 * asin(
-    sqrt(
-      power(sin(radians((v_seller_slot.city_x - v_buyer_warehouse.city_x) / 2)), 2) +
-      cos(radians(v_buyer_warehouse.city_x)) *
-      cos(radians(v_seller_slot.city_x)) *
-      power(sin(radians((v_seller_slot.city_y - v_buyer_warehouse.city_y) / 2)), 2)
-    )
-  );
-
-  if p_vehicle_id = '00000000-0000-0000-0000-000000000000' then
-    select '00000000-0000-0000-0000-000000000000'::uuid as player_id
-    into v_vehicle;
-    v_rental_cost := ceil(v_distance_km * 5.0);
-    v_transport_cost := v_rental_cost;
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / 60.0) / 4.0) * 3600))::integer;
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  else
-    select lv.*, lc.is_active as company_is_active
-    into v_vehicle
-    from public.logistics_vehicles lv
-    join public.logistics_companies lc on lc.id = lv.logistics_company_id
-    where lv.id = p_vehicle_id
-    for update;
-
-    if not found then
-      raise exception 'Arac bulunamadi.';
-    end if;
-
-    if v_vehicle.status <> 'idle' then
-      raise exception 'Arac su anda uygun degil.';
-    end if;
-
-    if v_vehicle.company_is_active is not true then
-      raise exception 'Aracin firmasi aktif degil.';
-    end if;
-
-    if v_vehicle.player_id <> v_player_id and v_vehicle.is_available_for_rent is not true then
-      raise exception 'Kiralik arac uygun degil.';
-    end if;
-
-    if public.logistics_vehicle_matches_route(
-      v_vehicle.route_city_a_id,
-      v_vehicle.route_city_b_id,
-      v_seller_slot.warehouse_city_id,
-      v_buyer_warehouse.city_id
-    ) is not true then
-      raise exception 'Bu arac secilen sehir cifti icin atanmis degil.';
-    end if;
-
-    v_fuel_used := ceil(v_distance_km * v_vehicle.fuel_rate);
-    v_condition_loss := ceil(v_distance_km * 0.005);
-
-    if v_vehicle.capacity < v_required_capacity then
-      raise exception 'Arac kapasitesi yetersiz.';
-    end if;
-
-    if v_vehicle.current_fuel < v_fuel_used then
-      raise exception 'Aracin yakiti yetersiz.';
-    end if;
-
-    if v_vehicle.condition <= v_condition_loss then
-      raise exception 'Aracin kondisyonu yetersiz.';
-    end if;
-
-    v_rental_cost := case
-      when v_vehicle.player_id <> v_player_id then ceil(v_distance_km * coalesce(v_vehicle.rental_price, 0))
-      else 0
-    end;
-    v_transport_cost := v_rental_cost + (v_fuel_used * coalesce(v_vehicle.fuel_cost, 0));
-    v_duration_seconds := greatest(1, ceil(((v_distance_km / greatest(v_vehicle.speed_kmh, 1)) / 4.0) * 3600));
-    v_finish_at := timezone('utc'::text, now()) + make_interval(secs => v_duration_seconds);
-  end if;
-
-  if coalesce(v_player.cash, 0) < v_rental_cost then
-    raise exception 'Kiralik arac icin yeterli nakit yok.';
-  end if;
-
-  v_reserve_result := public.reserve_warehouse_capacity(
-    v_player_id,
-    p_buyer_warehouse_id,
-    v_seller_slot.product_id,
-    p_quantity
-  );
-
-  update public.warehouse_slots
-  set quantity = v_source_quantity_after,
-      updated_at = timezone('utc'::text, now())
-  where id = p_warehouse_slot_id;
-
-  if v_rental_cost > 0 then
-    update public.players
-    set cash = cash - v_rental_cost
-    where id = v_player_id;
-
-    if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-      update public.players
-      set cash = cash + v_rental_cost
-      where id = v_vehicle.player_id;
-    end if;
-  end if;
-
-  if p_vehicle_id <> '00000000-0000-0000-0000-000000000000' then
-    update public.logistics_vehicles
-    set
-      current_fuel = greatest(current_fuel - v_fuel_used::integer, 0),
-      condition = greatest(condition - v_condition_loss::integer, 0),
-      status = 'on_route',
-      updated_at = timezone('utc'::text, now())
-    where id = p_vehicle_id;
-  end if;
-
-  insert into public.logistics_transfers (
-    buyer_player_id,
-    seller_player_id,
-    buyer_warehouse_id,
-    seller_warehouse_id,
-    seller_warehouse_slot_id,
-    logistics_vehicle_id,
-    vehicle_owner_player_id,
-    is_rental,
-    product_id,
-    quality_level,
-    quantity,
-    unit_price,
-    total_price,
-    product_unit_volume,
-    reserved_capacity_amount,
-    distance_km,
-    fuel_used,
-    condition_loss,
-    rental_cost,
-    transport_cost,
-    transfer_type,
-    started_at,
-    finish_at,
-    status,
-    updated_at
-  )
-  values (
-    v_player_id,
-    v_player_id,
-    p_buyer_warehouse_id,
-    v_seller_slot.seller_warehouse_id,
-    p_warehouse_slot_id,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else p_vehicle_id end,
-    case when p_vehicle_id = '00000000-0000-0000-0000-000000000000' then null else v_vehicle.player_id end,
-    (p_vehicle_id <> '00000000-0000-0000-0000-000000000000' and v_vehicle.player_id <> v_player_id),
-    v_seller_slot.product_id,
-    v_seller_slot.quality_level,
-    p_quantity,
-    v_unit_cost,
-    0,
-    v_product.birim_hacim,
-    p_quantity,
-    v_distance_km,
-    v_fuel_used,
-    v_condition_loss,
-    v_rental_cost,
-    v_transport_cost,
-    'warehouse_to_warehouse',
-    timezone('utc'::text, now()),
-    v_finish_at,
-    'in_transit',
-    timezone('utc'::text, now())
-  )
-  returning id into v_transfer_id;
-
-  if v_rental_cost > 0
-     and p_vehicle_id <> '00000000-0000-0000-0000-000000000000'
-     and v_vehicle.player_id is not null then
-    insert into public.logistics_finance_entries (
-      player_id, logistics_company_id, vehicle_id, entry_type, category,
-      amount, related_transfer_id, description, metadata
-    )
-    values (
-      v_vehicle.player_id, v_vehicle.logistics_company_id, p_vehicle_id,
-      'income', 'rental_income', v_rental_cost, v_transfer_id,
-      'Arac kiralama geliri',
-      jsonb_build_object('transfer_type', 'warehouse_to_warehouse')
-    );
-  end if;
-
-  return jsonb_build_object(
-    'success', true,
-    'mode', 'transfer',
-    'transfer_id', v_transfer_id,
-    'vehicle_id', p_vehicle_id,
-    'source_warehouse_id', v_seller_slot.seller_warehouse_id,
-    'source_warehouse_slot_id', p_warehouse_slot_id,
-    'source_quantity_after', v_source_quantity_after,
-    'buyer_warehouse_id', p_buyer_warehouse_id,
-    'product_id', v_seller_slot.product_id,
-    'quality_level', v_seller_slot.quality_level,
-    'quantity', p_quantity,
-    'rental_cost', v_rental_cost,
-    'transport_cost', v_transport_cost,
-    'distance_km', round(v_distance_km, 2),
-    'fuel_used', v_fuel_used,
-    'condition_loss', v_condition_loss,
-    'duration_seconds', v_duration_seconds,
-    'finish_at', v_finish_at,
-    'reserve_result', v_reserve_result
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."start_warehouse_to_warehouse_transfer"("p_warehouse_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."sync_player_mission_snapshot"("p_player_id" "uuid") RETURNS "void"
@@ -14263,9 +12382,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."sync_player_mission_snapshot"("p_player_id" "uuid") OWNER TO "postgres";
-
 
 CREATE OR REPLACE FUNCTION "public"."to_turkey_time"("p_value" timestamp with time zone) RETURNS timestamp without time zone
     LANGUAGE "sql" STABLE
@@ -14273,925 +12390,13 @@ CREATE OR REPLACE FUNCTION "public"."to_turkey_time"("p_value" timestamp with ti
   select timezone('Europe/Istanbul', p_value);
 $$;
 
-
 ALTER FUNCTION "public"."to_turkey_time"("p_value" timestamp with time zone) OWNER TO "postgres";
 
+
 
-CREATE OR REPLACE FUNCTION "public"."transfer_production_inventory_to_warehouse"("p_player_id" "uuid", "p_production_inventory_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_inventory production_inventory%rowtype;
-  v_warehouse warehouses%rowtype;
-  v_product products%rowtype;
 
-  v_owner_city_id uuid;
-  v_owner_player_id uuid;
 
-  v_unit_volume numeric;
-  v_required_capacity numeric;
-  v_used_capacity numeric;
-  v_available_capacity numeric;
-
-  v_existing_slot warehouse_slots%rowtype;
-  v_warehouse_slot_id uuid;
-
-  v_new_slot_index integer;
-  v_quantity_after integer;
-  v_cost_after numeric;
-
-  v_inventory_quantity_after integer;
-begin
-  /*
-    1. Temel miktar kontrolü
-  */
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Aktarılacak miktar 0’dan büyük olmalıdır.';
-  end if;
-
-  /*
-    2. Production inventory kaydını kilitle
-  */
-  select *
-  into v_inventory
-  from production_inventory
-  where id = p_production_inventory_id
-  for update;
-
-  if not found then
-    raise exception 'Production inventory kaydı bulunamadı.';
-  end if;
-
-  if v_inventory.owner_kind not in ('factory', 'field', 'farm', 'mine') then
-    raise exception 'Geçersiz production inventory owner_kind: %', v_inventory.owner_kind;
-  end if;
-
-  if v_inventory.inventory_type not in ('input', 'output') then
-    raise exception 'Geçersiz inventory_type: %', v_inventory.inventory_type;
-  end if;
-
-  if v_inventory.quantity < p_quantity then
-    raise exception 'Production inventory içinde yeterli ürün yok. Mevcut: %, İstenen: %',
-      v_inventory.quantity,
-      p_quantity;
-  end if;
-
-  /*
-    3. Üretim birimi sahiplik ve şehir kontrolü
-  */
-  if v_inventory.owner_kind = 'factory' then
-    select player_id, city_id
-    into v_owner_player_id, v_owner_city_id
-    from factories
-    where id = v_inventory.owner_id;
-
-  elsif v_inventory.owner_kind = 'field' then
-    select player_id, city_id
-    into v_owner_player_id, v_owner_city_id
-    from fields
-    where id = v_inventory.owner_id;
-
-  elsif v_inventory.owner_kind = 'farm' then
-    select player_id, city_id
-    into v_owner_player_id, v_owner_city_id
-    from farms
-    where id = v_inventory.owner_id;
-
-  elsif v_inventory.owner_kind = 'mine' then
-    select player_id, city_id
-    into v_owner_player_id, v_owner_city_id
-    from mines
-    where id = v_inventory.owner_id;
-  end if;
-
-  if v_owner_player_id is null then
-    raise exception 'Production inventory sahibi olan üretim birimi bulunamadı.';
-  end if;
-
-  if v_owner_player_id <> p_player_id then
-    raise exception 'Bu production inventory kaydı oyuncuya ait değil.';
-  end if;
-
-  /*
-    4. Depoyu kilitle ve sahiplik kontrolü yap
-  */
-  select *
-  into v_warehouse
-  from warehouses
-  where id = p_warehouse_id
-  for update;
-
-  if not found then
-    raise exception 'Depo bulunamadı.';
-  end if;
-
-  if v_warehouse.player_id <> p_player_id then
-    raise exception 'Hedef depo oyuncuya ait değil.';
-  end if;
-
-  if v_warehouse.city_id <> v_owner_city_id then
-    raise exception 'Üretim birimi ve hedef depo aynı şehirde olmalıdır.';
-  end if;
-
-  /*
-    5. Ürün ve hacim kontrolü
-  */
-  select *
-  into v_product
-  from products
-  where id = v_inventory.product_id;
-
-  if not found then
-    raise exception 'Ürün bulunamadı: %', v_inventory.product_id;
-  end if;
-
-  v_unit_volume := coalesce(v_product.birim_hacim, 0);
-
-  if v_unit_volume <= 0 then
-    raise exception 'Ürünün birim_hacim değeri geçersiz: %', v_inventory.product_id;
-  end if;
-
-  v_required_capacity := p_quantity * v_unit_volume;
-
-  /*
-    6. Depo kapasitesi hesapla
-       used_capacity = warehouse_slots.quantity * products.birim_hacim
-       available = capacity - used_capacity - reserved_capacity
-  */
-  select coalesce(sum(ws.quantity * coalesce(p.birim_hacim, 0)), 0)
-  into v_used_capacity
-  from warehouse_slots ws
-  join products p on p.id = ws.product_id
-  where ws.warehouse_id = p_warehouse_id
-    and ws.product_id is not null
-    and ws.quantity > 0;
-
-  v_available_capacity :=
-    v_warehouse.capacity
-    - v_used_capacity
-    - coalesce(v_warehouse.reserved_capacity, 0);
-
-  if v_available_capacity < v_required_capacity then
-    raise exception 'Depoda yeterli boş kapasite yok. Gerekli: %, Uygun: %',
-      v_required_capacity,
-      v_available_capacity;
-  end if;
-
-  /*
-    7. Hedef warehouse_slot var mı?
-       Aynı warehouse + product + quality varsa ona ekle.
-       Yoksa yeni slot oluştur.
-  */
-  select *
-  into v_existing_slot
-  from warehouse_slots
-  where warehouse_id = p_warehouse_id
-    and product_id = v_inventory.product_id
-    and quality_level = v_inventory.quality_level
-  for update;
-
-  if found then
-    v_warehouse_slot_id := v_existing_slot.id;
-
-    v_quantity_after := v_existing_slot.quantity + p_quantity;
-
-    v_cost_after :=
-      (
-        (v_existing_slot.quantity * v_existing_slot.cost)
-        +
-        (p_quantity * v_inventory.cost)
-      )
-      / v_quantity_after;
-
-    update warehouse_slots
-    set
-      quantity = v_quantity_after,
-      cost = v_cost_after,
-      updated_at = timezone('utc'::text, now())
-    where id = v_existing_slot.id;
-
-  else
-    select coalesce(max(slot_index), 0) + 1
-    into v_new_slot_index
-    from warehouse_slots
-    where warehouse_id = p_warehouse_id;
-
-    insert into warehouse_slots (
-      warehouse_id,
-      slot_index,
-      product_id,
-      quality_level,
-      quantity,
-      cost,
-      is_available_for_sale,
-      created_at,
-      updated_at
-    )
-    values (
-      p_warehouse_id,
-      v_new_slot_index,
-      v_inventory.product_id,
-      v_inventory.quality_level,
-      p_quantity,
-      v_inventory.cost,
-      false,
-      timezone('utc'::text, now()),
-      timezone('utc'::text, now())
-    )
-    returning id into v_warehouse_slot_id;
-
-    v_quantity_after := p_quantity;
-    v_cost_after := v_inventory.cost;
-  end if;
-
-  /*
-    8. Production inventory'den miktarı düş.
-       Satır silinmez.
-       pending_quantity korunur.
-  */
-  v_inventory_quantity_after := v_inventory.quantity - p_quantity;
-
-  update production_inventory
-  set quantity = v_inventory_quantity_after
-  where id = p_production_inventory_id;
-
-  /*
-    9. Warehouse updated_at güncelle
-  */
-  update warehouses
-  set updated_at = timezone('utc'::text, now())
-  where id = p_warehouse_id;
-
-  return jsonb_build_object(
-    'success', true,
-    'production_inventory_id', p_production_inventory_id,
-    'warehouse_id', p_warehouse_id,
-    'warehouse_slot_id', v_warehouse_slot_id,
-    'owner_kind', v_inventory.owner_kind,
-    'owner_id', v_inventory.owner_id,
-    'inventory_type', v_inventory.inventory_type,
-    'city_id', v_owner_city_id,
-    'product_id', v_inventory.product_id,
-    'quality_level', v_inventory.quality_level,
-    'transferred_quantity', p_quantity,
-    'unit_volume', v_unit_volume,
-    'transferred_capacity', v_required_capacity,
-    'warehouse_used_capacity_before', v_used_capacity,
-    'warehouse_reserved_capacity', coalesce(v_warehouse.reserved_capacity, 0),
-    'warehouse_available_capacity_before', v_available_capacity,
-    'inventory_quantity_after', v_inventory_quantity_after,
-    'inventory_pending_quantity', v_inventory.pending_quantity,
-    'warehouse_slot_quantity_after', v_quantity_after,
-    'warehouse_slot_cost_after', v_cost_after
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."transfer_production_inventory_to_warehouse"("p_player_id" "uuid", "p_production_inventory_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."transfer_store_slot_to_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_store_slot record;
-  v_warehouse record;
-  v_product record;
-  v_existing_warehouse_slot record;
-
-  v_used_capacity numeric := 0;
-  v_incoming_capacity numeric := 0;
-  v_available_capacity numeric := 0;
-
-  v_new_warehouse_slot_index integer;
-  v_warehouse_slot_id uuid;
-
-  v_new_warehouse_quantity integer;
-  v_new_warehouse_cost numeric;
-
-  v_new_store_quantity integer;
-begin
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Aktarılacak miktar 0''dan büyük olmalıdır.';
-  end if;
-
-  -- Mağaza slotunu, mağaza sahipliğini ve şehir bilgisini al
-  select
-    ss.*,
-    s.player_id,
-    s.city_id
-  into v_store_slot
-  from public.store_slots ss
-  join public.stores s on s.id = ss.store_id
-  where ss.id = p_store_slot_id
-  for update;
-
-  if not found then
-    raise exception 'Mağaza slotu bulunamadı.';
-  end if;
-
-  if v_store_slot.player_id <> p_player_id then
-    raise exception 'Bu mağaza slotu oyuncuya ait değil.';
-  end if;
-
-  if v_store_slot.product_id is null
-     or v_store_slot.quality_level < 1
-     or v_store_slot.quality_level > 5 then
-    raise exception 'Mağaza slotunda geçerli ürün ve kalite seçili olmalıdır.';
-  end if;
-
-  if v_store_slot.quantity < p_quantity then
-    raise exception 'Mağaza slotunda yeterli ürün yok. Mevcut: %, İstenen: %',
-      v_store_slot.quantity,
-      p_quantity;
-  end if;
-
-  -- Depoyu kilitle
-  select *
-  into v_warehouse
-  from public.warehouses
-  where id = p_warehouse_id
-    and player_id = p_player_id
-  for update;
-
-  if not found then
-    raise exception 'Depo bulunamadı veya oyuncuya ait değil.';
-  end if;
-
-  -- Aynı şehir kontrolü
-  if v_store_slot.city_id <> v_warehouse.city_id then
-    raise exception 'Mağaza ve depo aynı şehirde olmalıdır.';
-  end if;
-
-  -- Ürün hacmini al
-  select *
-  into v_product
-  from public.products
-  where id = v_store_slot.product_id;
-
-  if not found then
-    raise exception 'Ürün bulunamadı.';
-  end if;
-
-  if v_product.birim_hacim is null or v_product.birim_hacim <= 0 then
-    raise exception 'Ürünün birim_hacim değeri geçerli değil.';
-  end if;
-
-  v_incoming_capacity := p_quantity * v_product.birim_hacim;
-
-  -- Depoda kullanılan kapasite
-  select coalesce(sum(ws.quantity * p.birim_hacim), 0)
-  into v_used_capacity
-  from public.warehouse_slots ws
-  join public.products p on p.id = ws.product_id
-  where ws.warehouse_id = p_warehouse_id;
-
-  v_available_capacity :=
-    coalesce(v_warehouse.capacity, 0)
-    - v_used_capacity
-    - coalesce(v_warehouse.reserved_capacity, 0);
-
-  if v_incoming_capacity > v_available_capacity then
-    raise exception 'Depo kapasitesi yetersiz. Boş kapasite: %, Eklenecek hacim: %',
-      v_available_capacity,
-      v_incoming_capacity;
-  end if;
-
-  -- Depoda aynı ürün + kalite slotu var mı?
-  select *
-  into v_existing_warehouse_slot
-  from public.warehouse_slots
-  where warehouse_id = p_warehouse_id
-    and product_id = v_store_slot.product_id
-    and quality_level = v_store_slot.quality_level
-  for update;
-
-  if found then
-    v_warehouse_slot_id := v_existing_warehouse_slot.id;
-    v_new_warehouse_quantity := v_existing_warehouse_slot.quantity + p_quantity;
-
-    v_new_warehouse_cost :=
-      (
-        (v_existing_warehouse_slot.quantity * v_existing_warehouse_slot.cost)
-        +
-        (p_quantity * v_store_slot.cost)
-      )
-      / v_new_warehouse_quantity;
-
-    update public.warehouse_slots
-    set
-      quantity = v_new_warehouse_quantity,
-      cost = v_new_warehouse_cost,
-      updated_at = timezone('utc'::text, now())
-    where id = v_existing_warehouse_slot.id;
-
-  else
-    select coalesce(max(slot_index), 0) + 1
-    into v_new_warehouse_slot_index
-    from public.warehouse_slots
-    where warehouse_id = p_warehouse_id;
-
-    insert into public.warehouse_slots (
-      warehouse_id,
-      slot_index,
-      product_id,
-      quality_level,
-      quantity,
-      cost,
-      is_available_for_sale
-    )
-    values (
-      p_warehouse_id,
-      v_new_warehouse_slot_index,
-      v_store_slot.product_id,
-      v_store_slot.quality_level,
-      p_quantity,
-      v_store_slot.cost,
-      false
-    )
-    returning id into v_warehouse_slot_id;
-
-    v_new_warehouse_quantity := p_quantity;
-    v_new_warehouse_cost := v_store_slot.cost;
-  end if;
-
-  v_new_store_quantity := v_store_slot.quantity - p_quantity;
-
-  -- Mağaza slotundan düş
-  -- Quantity 0 olsa bile ürün, kalite, fiyat ve cost korunur.
-  update public.store_slots
-  set
-    quantity = v_new_store_quantity,
-    updated_at = timezone('utc'::text, now())
-  where id = p_store_slot_id;
-
-  update public.warehouses
-  set updated_at = timezone('utc'::text, now())
-  where id = p_warehouse_id;
-
-  return jsonb_build_object(
-    'success', true,
-    'store_slot_id', p_store_slot_id,
-    'warehouse_id', p_warehouse_id,
-    'warehouse_slot_id', v_warehouse_slot_id,
-    'city_id', v_warehouse.city_id,
-    'product_id', v_store_slot.product_id,
-    'quality_level', v_store_slot.quality_level,
-    'transferred_quantity', p_quantity,
-    'store_quantity_after', v_new_store_quantity,
-    'warehouse_quantity_after', v_new_warehouse_quantity,
-    'warehouse_cost_after', v_new_warehouse_cost,
-    'transferred_capacity', v_incoming_capacity,
-    'warehouse_available_capacity_before', v_available_capacity
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."transfer_store_slot_to_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."transfer_warehouse_fuel_to_logistics_company"("p_logistics_company_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_player_id uuid := auth.uid();
-  v_company record;
-  v_slot record;
-  v_available_capacity integer;
-  v_unit_cost numeric;
-  v_new_fuel_cost numeric;
-begin
-  if v_player_id is null then
-    raise exception 'Oturum acilmamis.';
-  end if;
-
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Miktar 0''dan buyuk olmalidir.';
-  end if;
-
-  select *
-  into v_company
-  from public.logistics_companies
-  where id = p_logistics_company_id
-    and player_id = v_player_id
-  for update;
-
-  if not found then
-    raise exception 'Lojistik merkezi bulunamadi.';
-  end if;
-
-  select
-    ws.*,
-    w.player_id,
-    w.is_active as warehouse_is_active
-  into v_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  where ws.id = p_warehouse_slot_id
-  for update;
-
-  if not found or v_slot.player_id <> v_player_id then
-    raise exception 'Depo slotu bulunamadi veya size ait degil.';
-  end if;
-
-  if v_slot.warehouse_is_active is not true then
-    raise exception 'Kaynak depo aktif degil.';
-  end if;
-
-  if coalesce(v_slot.product_id, '') <> 'YAKIT' then
-    raise exception 'Bu slotta yakit bulunmuyor.';
-  end if;
-
-  if coalesce(v_slot.quantity, 0) < p_quantity then
-    raise exception 'Depoda yeterli yakit yok.';
-  end if;
-
-  v_available_capacity := greatest(coalesce(v_company.fuel_capacity, 0) - coalesce(v_company.current_fuel, 0), 0);
-
-  if v_available_capacity <= 0 then
-    raise exception 'Merkez yakit deposu dolu.';
-  end if;
-
-  if p_quantity > v_available_capacity then
-    raise exception 'Merkez yakit kapasitesi yetersiz. Bos kapasite: %', v_available_capacity;
-  end if;
-
-  v_unit_cost := coalesce(v_slot.cost, 0);
-  v_new_fuel_cost := case
-    when coalesce(v_company.current_fuel, 0) + p_quantity > 0 then
-      (
-        coalesce(v_company.current_fuel, 0) * coalesce(v_company.fuel_cost, 0)
-        + p_quantity * v_unit_cost
-      ) / (coalesce(v_company.current_fuel, 0) + p_quantity)
-    else 0
-  end;
-
-  update public.warehouse_slots
-  set
-    quantity = quantity - p_quantity,
-    is_available_for_sale = case when quantity - p_quantity > 0 then is_available_for_sale else false end,
-    updated_at = timezone('utc'::text, now())
-  where id = p_warehouse_slot_id;
-
-  update public.logistics_companies
-  set
-    current_fuel = current_fuel + p_quantity,
-    fuel_cost = v_new_fuel_cost,
-    updated_at = timezone('utc'::text, now())
-  where id = p_logistics_company_id;
-
-  insert into public.logistics_finance_entries (
-    player_id,
-    logistics_company_id,
-    entry_type,
-    category,
-    amount,
-    quantity,
-    unit_cost,
-    related_warehouse_slot_id,
-    description,
-    metadata
-  )
-  values (
-    v_player_id,
-    p_logistics_company_id,
-    'expense',
-    'fuel_purchase',
-    p_quantity * v_unit_cost,
-    p_quantity,
-    v_unit_cost,
-    p_warehouse_slot_id,
-    'Depodan lojistik yakit aktarimi',
-    jsonb_build_object(
-      'source', 'warehouse'
-    )
-  );
-
-  return jsonb_build_object(
-    'success', true,
-    'company_id', p_logistics_company_id,
-    'warehouse_slot_id', p_warehouse_slot_id,
-    'fuel_added', p_quantity,
-    'unit_cost', v_unit_cost,
-    'company_current_fuel', coalesce(v_company.current_fuel, 0) + p_quantity,
-    'company_fuel_cost', v_new_fuel_cost
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."transfer_warehouse_fuel_to_logistics_company"("p_logistics_company_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."transfer_warehouse_slot_to_production_inventory"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_warehouse_slot record;
-  v_inventory record;
-  v_owner_city_id uuid;
-  v_owner_player_id uuid;
-  v_input_capacity integer := 0;
-  v_used_input_quantity integer := 0;
-  v_new_inventory_quantity integer;
-  v_new_inventory_cost numeric;
-  v_remaining_warehouse_quantity integer;
-begin
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Transfer quantity must be greater than 0.';
-  end if;
-
-  select ws.*, w.player_id, w.city_id
-  into v_warehouse_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  where ws.id = p_warehouse_slot_id
-  for update;
-
-  if not found then
-    raise exception 'Warehouse slot not found.';
-  end if;
-
-  if v_warehouse_slot.player_id <> p_player_id then
-    raise exception 'Warehouse slot does not belong to player.';
-  end if;
-
-  if v_warehouse_slot.product_id is null
-     or v_warehouse_slot.quality_level < 1
-     or v_warehouse_slot.quality_level > 5 then
-    raise exception 'Warehouse slot does not contain a valid product and quality.';
-  end if;
-
-  if v_warehouse_slot.quantity < p_quantity then
-    raise exception 'Not enough quantity in warehouse slot. Current: %, Requested: %',
-      v_warehouse_slot.quantity,
-      p_quantity;
-  end if;
-
-  select *
-  into v_inventory
-  from public.production_inventory
-  where id = p_production_inventory_id
-  for update;
-
-  if not found then
-    raise exception 'Production inventory record not found.';
-  end if;
-
-  if v_inventory.inventory_type <> 'input' then
-    raise exception 'Only input inventories can receive products.';
-  end if;
-
-  if v_inventory.owner_kind not in ('factory', 'field', 'farm') then
-    raise exception 'Input transfer is not supported for owner_kind: %', v_inventory.owner_kind;
-  end if;
-
-  if v_inventory.owner_kind = 'factory' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id
-    from public.factories where id = v_inventory.owner_id;
-    if not found then
-      raise exception 'Factory not found.';
-    end if;
-  elsif v_inventory.owner_kind = 'field' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id
-    from public.fields where id = v_inventory.owner_id;
-    if not found then
-      raise exception 'Field not found.';
-    end if;
-  elsif v_inventory.owner_kind = 'farm' then
-    select player_id, city_id into v_owner_player_id, v_owner_city_id
-    from public.farms where id = v_inventory.owner_id;
-    if not found then
-      raise exception 'Farm not found.';
-    end if;
-  end if;
-
-  if v_owner_player_id <> p_player_id then
-    raise exception 'Target production owner does not belong to player.';
-  end if;
-
-  if v_owner_city_id <> v_warehouse_slot.city_id then
-    raise exception 'Warehouse and production owner must be in the same city.';
-  end if;
-
-  if v_inventory.product_id <> v_warehouse_slot.product_id then
-    raise exception 'Product mismatch between warehouse slot and input inventory.';
-  end if;
-
-  if v_inventory.quality_level <> v_warehouse_slot.quality_level then
-    raise exception 'Quality mismatch between warehouse slot and input inventory.';
-  end if;
-
-  perform pg_advisory_xact_lock(
-    hashtext('production_input_capacity:' || v_inventory.owner_kind || ':' || v_inventory.owner_id::text)
-  );
-
-  if v_inventory.owner_kind = 'factory' then
-    select coalesce(input_capacity, 0) into v_input_capacity
-    from public.factories where id = v_inventory.owner_id;
-  elsif v_inventory.owner_kind = 'field' then
-    select coalesce(input_capacity, 0) into v_input_capacity
-    from public.fields where id = v_inventory.owner_id;
-  elsif v_inventory.owner_kind = 'farm' then
-    select coalesce(input_capacity, 0) into v_input_capacity
-    from public.farms where id = v_inventory.owner_id;
-  end if;
-
-  select coalesce(sum(pi.quantity), 0)::integer
-  into v_used_input_quantity
-  from public.production_inventory pi
-  where pi.owner_kind = v_inventory.owner_kind
-    and pi.owner_id = v_inventory.owner_id
-    and pi.inventory_type = 'input';
-
-  if v_used_input_quantity + p_quantity > v_input_capacity then
-    raise exception 'Input capacity exceeded. Current: %, Capacity: %, Requested add: %',
-      v_used_input_quantity,
-      v_input_capacity,
-      p_quantity;
-  end if;
-
-  v_new_inventory_quantity := v_inventory.quantity + p_quantity;
-  v_new_inventory_cost := (((v_inventory.quantity * v_inventory.cost) + (p_quantity * v_warehouse_slot.cost)) / v_new_inventory_quantity);
-  v_remaining_warehouse_quantity := v_warehouse_slot.quantity - p_quantity;
-
-  update public.warehouse_slots
-  set quantity = v_remaining_warehouse_quantity,
-      updated_at = timezone('utc'::text, now())
-  where id = p_warehouse_slot_id;
-
-  update public.production_inventory
-  set quantity = v_new_inventory_quantity,
-      cost = v_new_inventory_cost
-  where id = p_production_inventory_id;
-
-  return jsonb_build_object(
-    'success', true,
-    'warehouse_slot_id', p_warehouse_slot_id,
-    'production_inventory_id', p_production_inventory_id,
-    'owner_kind', v_inventory.owner_kind,
-    'owner_id', v_inventory.owner_id,
-    'city_id', v_owner_city_id,
-    'product_id', v_inventory.product_id,
-    'quality_level', v_inventory.quality_level,
-    'transferred_quantity', p_quantity,
-    'warehouse_quantity_after', v_remaining_warehouse_quantity,
-    'inventory_quantity_after', v_new_inventory_quantity,
-    'inventory_cost_after', v_new_inventory_cost
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."transfer_warehouse_slot_to_production_inventory"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
-
-CREATE OR REPLACE FUNCTION "public"."transfer_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) RETURNS "jsonb"
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO 'public'
-    AS $$
-declare
-  v_warehouse_slot record;
-  v_store_slot record;
-
-  v_new_store_quantity integer;
-  v_new_store_cost numeric;
-  v_remaining_warehouse_quantity integer;
-begin
-  if p_quantity is null or p_quantity <= 0 then
-    raise exception 'Aktarılacak miktar 0''dan büyük olmalıdır.';
-  end if;
-
-  -- Depo slotunu, depo sahipliğini ve şehir bilgisini al
-  select
-    ws.*,
-    w.player_id,
-    w.city_id
-  into v_warehouse_slot
-  from public.warehouse_slots ws
-  join public.warehouses w on w.id = ws.warehouse_id
-  where ws.id = p_warehouse_slot_id
-  for update;
-
-  if not found then
-    raise exception 'Depo slotu bulunamadı.';
-  end if;
-
-  if v_warehouse_slot.player_id <> p_player_id then
-    raise exception 'Bu depo slotu oyuncuya ait değil.';
-  end if;
-
-  -- Mağaza slotunu, mağaza sahipliğini ve şehir bilgisini al
-  select
-    ss.*,
-    s.player_id,
-    s.city_id
-  into v_store_slot
-  from public.store_slots ss
-  join public.stores s on s.id = ss.store_id
-  where ss.id = p_store_slot_id
-  for update;
-
-  if not found then
-    raise exception 'Mağaza slotu bulunamadı.';
-  end if;
-
-  if v_store_slot.player_id <> p_player_id then
-    raise exception 'Bu mağaza slotu oyuncuya ait değil.';
-  end if;
-
-  -- Depo ve mağaza aynı şehirde olmalı
-  if v_warehouse_slot.city_id <> v_store_slot.city_id then
-    raise exception 'Depo ve mağaza aynı şehirde olmalıdır.';
-  end if;
-
-  -- Depo slotunda ürün olmalı
-  if v_warehouse_slot.product_id is null
-     or v_warehouse_slot.quality_level = 0 then
-    raise exception 'Depo slotunda ürün seçili değil.';
-  end if;
-
-  -- Depoda yeterli stok olmalı
-  if v_warehouse_slot.quantity < p_quantity then
-    raise exception 'Depoda yeterli ürün yok. Mevcut: %, İstenen: %',
-      v_warehouse_slot.quantity,
-      p_quantity;
-  end if;
-
-  -- Mağaza slotunda ürün seçilmiş olmalı
-  if v_store_slot.product_id is null
-     or v_store_slot.quality_level = 0 then
-    raise exception 'Mağaza slotunda önce ürün ve kalite seçilmelidir.';
-  end if;
-
-  -- Ürün ve kalite aynı olmalı
-  if v_store_slot.product_id <> v_warehouse_slot.product_id
-     or v_store_slot.quality_level <> v_warehouse_slot.quality_level then
-    raise exception 'Depo slotundaki ürün/kalite ile mağaza slotundaki ürün/kalite aynı olmalıdır.';
-  end if;
-
-  -- Mağaza slot kapasitesi yeterli olmalı
-  if v_store_slot.quantity + p_quantity > v_store_slot.capacity then
-    raise exception 'Mağaza slot kapasitesi yetersiz. Mevcut: %, Kapasite: %, Eklenmek istenen: %',
-      v_store_slot.quantity,
-      v_store_slot.capacity,
-      p_quantity;
-  end if;
-
-  v_new_store_quantity := v_store_slot.quantity + p_quantity;
-
-  -- Mağaza slotu için ağırlıklı ortalama maliyet
-  v_new_store_cost :=
-    (
-      (v_store_slot.quantity * v_store_slot.cost)
-      +
-      (p_quantity * v_warehouse_slot.cost)
-    )
-    / v_new_store_quantity;
-
-  v_remaining_warehouse_quantity := v_warehouse_slot.quantity - p_quantity;
-
-  -- Depodan miktar düş
-  -- Stok 0 olsa bile ürün bilgileri korunur.
-  update public.warehouse_slots
-  set
-    quantity = v_remaining_warehouse_quantity,
-    updated_at = timezone('utc'::text, now())
-  where id = p_warehouse_slot_id;
-
-  -- Mağaza slotuna miktar ekle
-  update public.store_slots
-  set
-    quantity = v_new_store_quantity,
-    cost = v_new_store_cost,
-    updated_at = timezone('utc'::text, now())
-  where id = p_store_slot_id;
-
-  return jsonb_build_object(
-    'success', true,
-    'warehouse_slot_id', p_warehouse_slot_id,
-    'store_slot_id', p_store_slot_id,
-    'city_id', v_store_slot.city_id,
-    'product_id', v_store_slot.product_id,
-    'quality_level', v_store_slot.quality_level,
-    'transferred_quantity', p_quantity,
-    'store_quantity', v_new_store_quantity,
-    'store_capacity', v_store_slot.capacity,
-    'store_cost', v_new_store_cost,
-    'warehouse_remaining_quantity', v_remaining_warehouse_quantity
-  );
-end;
-$$;
-
-
-ALTER FUNCTION "public"."transfer_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) OWNER TO "postgres";
-
+
 
 CREATE OR REPLACE FUNCTION "public"."upgrade_player_product_quality"("p_player_id" "uuid", "p_product_id" "text") RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -15306,9 +12511,7 @@ begin
 end;
 $$;
 
-
 ALTER FUNCTION "public"."upgrade_player_product_quality"("p_player_id" "uuid", "p_product_id" "text") OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."arge_centers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15322,9 +12525,7 @@ CREATE TABLE IF NOT EXISTS "public"."arge_centers" (
     "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
 );
 
-
 ALTER TABLE "public"."arge_centers" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."arge_researches" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15341,9 +12542,7 @@ CREATE TABLE IF NOT EXISTS "public"."arge_researches" (
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
 );
 
-
 ALTER TABLE "public"."arge_researches" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."building_boosts" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15362,9 +12561,7 @@ CREATE TABLE IF NOT EXISTS "public"."building_boosts" (
     "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
 );
 
-
 ALTER TABLE "public"."building_boosts" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."building_constructions" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15375,6 +12572,7 @@ CREATE TABLE IF NOT EXISTS "public"."building_constructions" (
     "started_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
     "finish_at" timestamp with time zone NOT NULL,
     "completed_at" timestamp with time zone,
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
     CONSTRAINT "building_constructions_completed_at_check" CHECK (((("status" = 'in_progress'::"text") AND ("completed_at" IS NULL)) OR (("status" = ANY (ARRAY['complete'::"text", 'cancelled'::"text"])) AND ("completed_at" IS NOT NULL)))),
     CONSTRAINT "building_constructions_kind_check" CHECK (("building_kind" = ANY (ARRAY['store'::"text", 'warehouse'::"text", 'factory'::"text", 'field'::"text", 'farm'::"text", 'mine'::"text", 'logistics_company'::"text", 'arge_center'::"text"]))),
     CONSTRAINT "building_constructions_params_check" CHECK ((("jsonb_typeof"("params") = 'object'::"text") AND ("params" <> '{}'::"jsonb"))),
@@ -15382,9 +12580,7 @@ CREATE TABLE IF NOT EXISTS "public"."building_constructions" (
     CONSTRAINT "building_constructions_time_check" CHECK (("finish_at" > "started_at"))
 );
 
-
 ALTER TABLE "public"."building_constructions" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."building_upgrades" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15402,9 +12598,7 @@ CREATE TABLE IF NOT EXISTS "public"."building_upgrades" (
     "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
 );
 
-
 ALTER TABLE "public"."building_upgrades" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."cities" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15420,9 +12614,7 @@ CREATE TABLE IF NOT EXISTS "public"."cities" (
     CONSTRAINT "cities_tax_rate_check" CHECK (("tax_rate" >= (0)::numeric))
 );
 
-
 ALTER TABLE "public"."cities" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."factories" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15449,9 +12641,7 @@ CREATE TABLE IF NOT EXISTS "public"."factories" (
     CONSTRAINT "factories_quality_level_check" CHECK ((("quality_level" >= 0) AND ("quality_level" <= 5)))
 );
 
-
 ALTER TABLE "public"."factories" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."factory_types" (
     "id" "uuid" NOT NULL,
@@ -15466,9 +12656,7 @@ CREATE TABLE IF NOT EXISTS "public"."factory_types" (
     "output_capacity" integer
 );
 
-
 ALTER TABLE "public"."factory_types" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."farm_types" (
     "id" "uuid" NOT NULL,
@@ -15484,9 +12672,7 @@ CREATE TABLE IF NOT EXISTS "public"."farm_types" (
     CONSTRAINT "farm_types_output_capacity_check" CHECK (("output_capacity" >= 0))
 );
 
-
 ALTER TABLE "public"."farm_types" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."farms" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15509,9 +12695,7 @@ CREATE TABLE IF NOT EXISTS "public"."farms" (
     CONSTRAINT "farms_slot_count_check" CHECK ((("current_slot_count" >= 0) AND ("max_slot_count" >= 0) AND ("current_slot_count" <= "max_slot_count")))
 );
 
-
 ALTER TABLE "public"."farms" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."field_types" (
     "id" "uuid" NOT NULL,
@@ -15528,9 +12712,7 @@ CREATE TABLE IF NOT EXISTS "public"."field_types" (
     "max_slot_count" integer DEFAULT 5
 );
 
-
 ALTER TABLE "public"."field_types" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."fields" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15553,9 +12735,7 @@ CREATE TABLE IF NOT EXISTS "public"."fields" (
     CONSTRAINT "fields_slot_count_check" CHECK ((("current_slot_count" >= 0) AND ("max_slot_count" >= 0) AND ("current_slot_count" <= "max_slot_count")))
 );
 
-
 ALTER TABLE "public"."fields" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."game_settings" (
     "key" "text" NOT NULL,
@@ -15564,9 +12744,7 @@ CREATE TABLE IF NOT EXISTS "public"."game_settings" (
     "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
 );
 
-
 ALTER TABLE "public"."game_settings" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."logistics_companies" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15590,9 +12768,7 @@ CREATE TABLE IF NOT EXISTS "public"."logistics_companies" (
     CONSTRAINT "logistics_companies_vehicle_count_check" CHECK ((("current_vehicle_count" >= 0) AND ("max_vehicle_count" >= 0) AND ("current_vehicle_count" <= "max_vehicle_count")))
 );
 
-
 ALTER TABLE "public"."logistics_companies" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."logistics_company_types" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15611,9 +12787,7 @@ CREATE TABLE IF NOT EXISTS "public"."logistics_company_types" (
     CONSTRAINT "logistics_company_types_required_level_check" CHECK (("required_level" >= 1))
 );
 
-
 ALTER TABLE "public"."logistics_company_types" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."logistics_transfers" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15652,23 +12826,58 @@ CREATE TABLE IF NOT EXISTS "public"."logistics_transfers" (
     "buyer_entity_kind" "text",
     "seller_production_inventory_id" "uuid",
     "buyer_production_inventory_id" "uuid",
+    "item_count" integer DEFAULT 1 NOT NULL,
+    "total_quantity" integer DEFAULT 0 NOT NULL,
+    "brand_id" "uuid" DEFAULT '00000000-0000-0000-0000-000000000000'::"uuid" NOT NULL,
     CONSTRAINT "logistics_transfers_condition_loss_check" CHECK (("condition_loss" >= (0)::numeric)),
     CONSTRAINT "logistics_transfers_distance_km_check" CHECK (("distance_km" >= (0)::numeric)),
     CONSTRAINT "logistics_transfers_fuel_used_check" CHECK (("fuel_used" >= (0)::numeric)),
+    CONSTRAINT "logistics_transfers_item_count_check" CHECK (("item_count" > 0)),
     CONSTRAINT "logistics_transfers_product_unit_volume_check" CHECK (("product_unit_volume" > (0)::numeric)),
     CONSTRAINT "logistics_transfers_quality_level_check" CHECK ((("quality_level" >= 1) AND ("quality_level" <= 5))),
     CONSTRAINT "logistics_transfers_quantity_check" CHECK (("quantity" > 0)),
     CONSTRAINT "logistics_transfers_rental_cost_check" CHECK (("rental_cost" >= (0)::numeric)),
     CONSTRAINT "logistics_transfers_reserved_capacity_amount_check" CHECK (("reserved_capacity_amount" >= (0)::numeric)),
     CONSTRAINT "logistics_transfers_status_check" CHECK (("status" = ANY (ARRAY['in_transit'::"text", 'completed'::"text"]))),
+    CONSTRAINT "logistics_transfers_total_quantity_check" CHECK (("total_quantity" >= 0)),
     CONSTRAINT "logistics_transfers_total_price_check" CHECK (("total_price" >= (0)::numeric)),
     CONSTRAINT "logistics_transfers_transport_cost_check" CHECK (("transport_cost" >= (0)::numeric)),
     CONSTRAINT "logistics_transfers_unit_price_check" CHECK (("unit_price" >= (0)::numeric))
 );
 
-
 ALTER TABLE "public"."logistics_transfers" OWNER TO "postgres";
 
+CREATE TABLE IF NOT EXISTS "public"."logistics_transfer_items" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "transfer_id" "uuid" NOT NULL,
+    "source_warehouse_slot_id" "uuid",
+    "target_warehouse_slot_id" "uuid",
+    "product_id" "text" NOT NULL,
+    "quality_level" integer NOT NULL,
+    "brand_id" "uuid" DEFAULT '00000000-0000-0000-0000-000000000000'::"uuid" NOT NULL,
+    "quantity" integer NOT NULL,
+    "unit_cost" numeric DEFAULT 0 NOT NULL,
+    "unit_price" numeric DEFAULT 0 NOT NULL,
+    "total_cost" numeric DEFAULT 0 NOT NULL,
+    "total_price" numeric DEFAULT 0 NOT NULL,
+    "product_unit_volume" numeric NOT NULL,
+    "reserved_capacity_amount" numeric DEFAULT 0 NOT NULL,
+    "status" "text" DEFAULT 'in_transit'::"text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
+    "completed_at" timestamp with time zone,
+    CONSTRAINT "logistics_transfer_items_product_unit_volume_check" CHECK (("product_unit_volume" >= (0)::numeric)),
+    CONSTRAINT "logistics_transfer_items_quality_level_check" CHECK ((("quality_level" >= 1) AND ("quality_level" <= 5))),
+    CONSTRAINT "logistics_transfer_items_quantity_check" CHECK (("quantity" > 0)),
+    CONSTRAINT "logistics_transfer_items_reserved_capacity_amount_check" CHECK (("reserved_capacity_amount" >= (0)::numeric)),
+    CONSTRAINT "logistics_transfer_items_status_check" CHECK (("status" = ANY (ARRAY['in_transit'::"text", 'completed'::"text"]))),
+    CONSTRAINT "logistics_transfer_items_total_cost_check" CHECK (("total_cost" >= (0)::numeric)),
+    CONSTRAINT "logistics_transfer_items_total_price_check" CHECK (("total_price" >= (0)::numeric)),
+    CONSTRAINT "logistics_transfer_items_unit_cost_check" CHECK (("unit_cost" >= (0)::numeric)),
+    CONSTRAINT "logistics_transfer_items_unit_price_check" CHECK (("unit_price" >= (0)::numeric))
+);
+
+ALTER TABLE "public"."logistics_transfer_items" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."logistics_vehicle_types" (
     "id" "uuid" NOT NULL,
@@ -15684,9 +12893,7 @@ CREATE TABLE IF NOT EXISTS "public"."logistics_vehicle_types" (
     "created_at" timestamp with time zone
 );
 
-
 ALTER TABLE "public"."logistics_vehicle_types" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."mine_types" (
     "id" "uuid" NOT NULL,
@@ -15700,9 +12907,7 @@ CREATE TABLE IF NOT EXISTS "public"."mine_types" (
     "output_capacity" integer
 );
 
-
 ALTER TABLE "public"."mine_types" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."mines" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15727,9 +12932,7 @@ CREATE TABLE IF NOT EXISTS "public"."mines" (
     CONSTRAINT "mines_quality_level_check" CHECK ((("quality_level" >= 0) AND ("quality_level" <= 5)))
 );
 
-
 ALTER TABLE "public"."mines" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."mission_definitions" (
     "id" "text" NOT NULL,
@@ -15752,9 +12955,7 @@ CREATE TABLE IF NOT EXISTS "public"."mission_definitions" (
     CONSTRAINT "mission_definitions_target_count_check" CHECK (("target_count" > 0))
 );
 
-
 ALTER TABLE "public"."mission_definitions" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."player_experience_logs" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15769,9 +12970,7 @@ CREATE TABLE IF NOT EXISTS "public"."player_experience_logs" (
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL
 );
 
-
 ALTER TABLE "public"."player_experience_logs" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."player_missions" (
     "player_id" "uuid" NOT NULL,
@@ -15787,9 +12986,7 @@ CREATE TABLE IF NOT EXISTS "public"."player_missions" (
     CONSTRAINT "player_missions_progress_count_check" CHECK (("progress_count" >= 0))
 );
 
-
 ALTER TABLE "public"."player_missions" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."player_product_quality_levels" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15801,9 +12998,7 @@ CREATE TABLE IF NOT EXISTS "public"."player_product_quality_levels" (
     CONSTRAINT "player_product_quality_levels_quality_check" CHECK ((("max_quality_level" >= 1) AND ("max_quality_level" <= 5)))
 );
 
-
 ALTER TABLE "public"."player_product_quality_levels" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."players" (
     "id" "uuid" NOT NULL,
@@ -15817,9 +13012,7 @@ CREATE TABLE IF NOT EXISTS "public"."players" (
     "player_name" "text" DEFAULT 'Oyuncu'::"text" NOT NULL
 );
 
-
 ALTER TABLE "public"."players" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."production_inventory" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15839,9 +13032,7 @@ CREATE TABLE IF NOT EXISTS "public"."production_inventory" (
     CONSTRAINT "production_inventory_quantity_check" CHECK (("quantity" >= 0))
 );
 
-
 ALTER TABLE "public"."production_inventory" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."production_slots" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15862,9 +13053,7 @@ CREATE TABLE IF NOT EXISTS "public"."production_slots" (
     CONSTRAINT "production_slots_slot_index_check" CHECK (("slot_index" > 0))
 );
 
-
 ALTER TABLE "public"."production_slots" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."products" (
     "id" "text" NOT NULL,
@@ -15890,9 +13079,7 @@ CREATE TABLE IF NOT EXISTS "public"."products" (
     "piyasadaki_stok" integer
 );
 
-
 ALTER TABLE "public"."products" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."store_daily_performance" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15913,14 +13100,13 @@ CREATE TABLE IF NOT EXISTS "public"."store_daily_performance" (
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
-
 ALTER TABLE "public"."store_daily_performance" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."store_slots" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "store_id" "uuid" NOT NULL,
     "slot_index" integer NOT NULL,
+    "brand_id" "uuid" DEFAULT '00000000-0000-0000-0000-000000000000'::"uuid" NOT NULL,
     "product_id" "text",
     "quantity" integer DEFAULT 0 NOT NULL,
     "quality_level" integer DEFAULT 0 NOT NULL,
@@ -15945,9 +13131,7 @@ CREATE TABLE IF NOT EXISTS "public"."store_slots" (
     CONSTRAINT "store_slots_slot_index_check" CHECK (("slot_index" > 0))
 );
 
-
 ALTER TABLE "public"."store_slots" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."store_types" (
     "id" "uuid" NOT NULL,
@@ -15963,9 +13147,7 @@ CREATE TABLE IF NOT EXISTS "public"."store_types" (
     "slot_capacity" integer
 );
 
-
 ALTER TABLE "public"."store_types" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."stores" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -15986,17 +13168,17 @@ CREATE TABLE IF NOT EXISTS "public"."stores" (
     CONSTRAINT "stores_slot_count_check" CHECK ((("current_slot_count" >= 0) AND ("max_slot_count" >= 0) AND ("current_slot_count" <= "max_slot_count")))
 );
 
-
 ALTER TABLE "public"."stores" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."warehouse_slots" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "warehouse_id" "uuid" NOT NULL,
     "slot_index" integer NOT NULL,
+    "brand_id" "uuid" DEFAULT '00000000-0000-0000-0000-000000000000'::"uuid" NOT NULL,
     "product_id" "text",
     "quality_level" integer DEFAULT 0 NOT NULL,
     "quantity" integer DEFAULT 0 NOT NULL,
+    "pending_quantity" integer DEFAULT 0 NOT NULL,
     "cost" numeric DEFAULT 0 NOT NULL,
     "is_available_for_sale" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT "timezone"('utc'::"text", "now"()) NOT NULL,
@@ -16004,15 +13186,14 @@ CREATE TABLE IF NOT EXISTS "public"."warehouse_slots" (
     "price" numeric DEFAULT 0 NOT NULL,
     CONSTRAINT "warehouse_slots_cost_check" CHECK (("cost" >= (0)::numeric)),
     CONSTRAINT "warehouse_slots_empty_or_filled_check" CHECK (((("product_id" IS NULL) AND ("quantity" = 0) AND ("quality_level" = 0)) OR (("product_id" IS NOT NULL) AND (("quality_level" >= 1) AND ("quality_level" <= 5))))),
+    CONSTRAINT "warehouse_slots_pending_quantity_check" CHECK (("pending_quantity" >= 0)),
     CONSTRAINT "warehouse_slots_price_check" CHECK (("price" >= (0)::numeric)),
     CONSTRAINT "warehouse_slots_quality_level_check" CHECK ((("quality_level" >= 0) AND ("quality_level" <= 5))),
     CONSTRAINT "warehouse_slots_quantity_check" CHECK (("quantity" >= 0)),
     CONSTRAINT "warehouse_slots_slot_index_check" CHECK (("slot_index" > 0))
 );
 
-
 ALTER TABLE "public"."warehouse_slots" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."warehouse_types" (
     "id" "uuid" NOT NULL,
@@ -16030,15 +13211,15 @@ CREATE TABLE IF NOT EXISTS "public"."warehouse_types" (
     CONSTRAINT "warehouse_types_required_level_check" CHECK (("required_level" >= 1))
 );
 
-
 ALTER TABLE "public"."warehouse_types" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."warehouses" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "player_id" "uuid" NOT NULL,
     "warehouse_type_id" "uuid" NOT NULL,
     "city_id" "uuid" NOT NULL,
+    "store_id" "uuid",
+    "warehouse_kind" "text" DEFAULT 'normal'::"text" NOT NULL,
     "name" "text" NOT NULL,
     "level" integer DEFAULT 1 NOT NULL,
     "capacity" numeric DEFAULT 0 NOT NULL,
@@ -16049,880 +13230,530 @@ CREATE TABLE IF NOT EXISTS "public"."warehouses" (
     CONSTRAINT "warehouses_capacity_check" CHECK (("capacity" >= (0)::numeric)),
     CONSTRAINT "warehouses_level_check" CHECK (("level" >= 1)),
     CONSTRAINT "warehouses_name_not_empty_check" CHECK (("length"(TRIM(BOTH FROM "name")) > 0)),
-    CONSTRAINT "warehouses_reserved_capacity_check" CHECK (("reserved_capacity" >= (0)::numeric))
+    CONSTRAINT "warehouses_reserved_capacity_check" CHECK (("reserved_capacity" >= (0)::numeric)),
+    CONSTRAINT "warehouses_store_kind_check" CHECK (("warehouse_kind" = ANY (ARRAY['normal'::"text", 'store'::"text"]))),
+    CONSTRAINT "warehouses_store_link_check" CHECK (((("warehouse_kind" = 'normal'::"text") AND ("store_id" IS NULL)) OR (("warehouse_kind" = 'store'::"text") AND ("store_id" IS NOT NULL))))
 );
 
-
 ALTER TABLE "public"."warehouses" OWNER TO "postgres";
-
 
 ALTER TABLE ONLY "public"."arge_centers"
     ADD CONSTRAINT "arge_centers_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."arge_researches"
     ADD CONSTRAINT "arge_researches_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."building_boosts"
     ADD CONSTRAINT "building_boosts_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."building_constructions"
     ADD CONSTRAINT "building_constructions_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."building_upgrades"
     ADD CONSTRAINT "building_upgrades_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."field_types"
     ADD CONSTRAINT "ciftlik_types_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."cities"
     ADD CONSTRAINT "cities_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."factory_types"
     ADD CONSTRAINT "fabrika_types_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."factories"
     ADD CONSTRAINT "factories_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."farm_types"
     ADD CONSTRAINT "farm_types_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."farms"
     ADD CONSTRAINT "farms_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."fields"
     ADD CONSTRAINT "fields_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."game_settings"
     ADD CONSTRAINT "game_settings_pkey" PRIMARY KEY ("key");
 
-
-
 ALTER TABLE ONLY "public"."logistics_companies"
     ADD CONSTRAINT "logistics_companies_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."logistics_company_types"
     ADD CONSTRAINT "logistics_company_types_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_pkey" PRIMARY KEY ("id");
 
-
+ALTER TABLE ONLY "public"."logistics_transfer_items"
+    ADD CONSTRAINT "logistics_transfer_items_pkey" PRIMARY KEY ("id");
 
 ALTER TABLE ONLY "public"."logistics_vehicle_types"
     ADD CONSTRAINT "logistics_vehicle_types_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."logistics_vehicles"
     ADD CONSTRAINT "logistics_vehicles_pkey" PRIMARY KEY ("id");
-
 
 ALTER TABLE ONLY "public"."logistics_finance_entries"
     ADD CONSTRAINT "logistics_finance_entries_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."mine_types"
     ADD CONSTRAINT "maden_types_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."mines"
     ADD CONSTRAINT "mines_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."mission_definitions"
     ADD CONSTRAINT "mission_definitions_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."player_experience_logs"
     ADD CONSTRAINT "player_experience_logs_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."player_missions"
     ADD CONSTRAINT "player_missions_pkey" PRIMARY KEY ("player_id", "mission_id");
-
-
 
 ALTER TABLE ONLY "public"."player_product_quality_levels"
     ADD CONSTRAINT "player_product_quality_levels_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."player_product_quality_levels"
     ADD CONSTRAINT "player_product_quality_levels_unique" UNIQUE ("player_id", "product_id");
-
-
 
 ALTER TABLE ONLY "public"."players"
     ADD CONSTRAINT "players_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."production_inventory"
     ADD CONSTRAINT "production_inventory_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."production_inventory"
     ADD CONSTRAINT "production_inventory_unique_item" UNIQUE ("owner_kind", "owner_id", "inventory_type", "product_id", "quality_level");
 
-
-
 ALTER TABLE ONLY "public"."production_slots"
     ADD CONSTRAINT "production_slots_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."production_slots"
     ADD CONSTRAINT "production_slots_unique_slot_index" UNIQUE ("owner_kind", "owner_id", "slot_index");
 
-
-
 ALTER TABLE ONLY "public"."products"
     ADD CONSTRAINT "products_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."store_daily_performance"
     ADD CONSTRAINT "store_daily_performance_performance_date_store_id_store_slo_key" UNIQUE ("performance_date", "store_id", "store_slot_id");
 
-
-
 ALTER TABLE ONLY "public"."store_daily_performance"
     ADD CONSTRAINT "store_daily_performance_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."store_slots"
     ADD CONSTRAINT "store_slots_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."store_slots"
     ADD CONSTRAINT "store_slots_unique_slot_index" UNIQUE ("store_id", "slot_index");
-
-
 
 ALTER TABLE ONLY "public"."store_types"
     ADD CONSTRAINT "store_types_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."stores"
     ADD CONSTRAINT "stores_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."warehouse_slots"
     ADD CONSTRAINT "warehouse_slots_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."warehouse_slots"
     ADD CONSTRAINT "warehouse_slots_unique_slot_index" UNIQUE ("warehouse_id", "slot_index");
-
-
 
 ALTER TABLE ONLY "public"."warehouse_types"
     ADD CONSTRAINT "warehouse_types_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."warehouses"
     ADD CONSTRAINT "warehouses_pkey" PRIMARY KEY ("id");
 
-
-
 CREATE UNIQUE INDEX "idx_arge_centers_player_id" ON "public"."arge_centers" USING "btree" ("player_id");
-
-
 
 CREATE INDEX "idx_arge_researches_player_id" ON "public"."arge_researches" USING "btree" ("player_id");
 
-
-
 CREATE INDEX "idx_arge_researches_status_finish" ON "public"."arge_researches" USING "btree" ("status", "finish_at");
-
-
 
 CREATE INDEX "idx_building_boosts_entity" ON "public"."building_boosts" USING "btree" ("building_kind", "entity_id");
 
-
-
 CREATE INDEX "idx_building_boosts_finish_at" ON "public"."building_boosts" USING "btree" ("finish_at");
-
-
 
 CREATE INDEX "idx_building_boosts_player_id" ON "public"."building_boosts" USING "btree" ("player_id");
 
-
-
 CREATE INDEX "idx_building_boosts_status" ON "public"."building_boosts" USING "btree" ("status");
-
-
 
 CREATE INDEX "idx_building_upgrades_entity" ON "public"."building_upgrades" USING "btree" ("building_kind", "entity_id");
 
-
-
 CREATE INDEX "idx_building_upgrades_finish_at" ON "public"."building_upgrades" USING "btree" ("finish_at");
-
-
 
 CREATE INDEX "idx_building_upgrades_player_id" ON "public"."building_upgrades" USING "btree" ("player_id");
 
-
-
 CREATE INDEX "idx_building_upgrades_status" ON "public"."building_upgrades" USING "btree" ("status");
-
-
 
 CREATE INDEX "idx_factories_city_id" ON "public"."factories" USING "btree" ("city_id");
 
-
-
 CREATE INDEX "idx_factories_factory_type_id" ON "public"."factories" USING "btree" ("factory_type_id");
-
-
 
 CREATE INDEX "idx_factories_player_id" ON "public"."factories" USING "btree" ("player_id");
 
-
-
 CREATE INDEX "idx_factories_product_id" ON "public"."factories" USING "btree" ("product_id");
-
-
 
 CREATE INDEX "idx_farms_active_output_capacity" ON "public"."farms" USING "btree" ("id", "output_capacity") WHERE ("is_active" = true);
 
-
-
 CREATE INDEX "idx_farms_city_id" ON "public"."farms" USING "btree" ("city_id");
-
-
 
 CREATE INDEX "idx_farms_farm_type_id" ON "public"."farms" USING "btree" ("farm_type_id");
 
-
-
 CREATE INDEX "idx_farms_player_id" ON "public"."farms" USING "btree" ("player_id");
-
-
 
 CREATE INDEX "idx_fields_active_output_capacity" ON "public"."fields" USING "btree" ("id", "output_capacity") WHERE ("is_active" = true);
 
-
-
 CREATE INDEX "idx_fields_city_id" ON "public"."fields" USING "btree" ("city_id");
-
-
 
 CREATE INDEX "idx_fields_field_type_id" ON "public"."fields" USING "btree" ("field_type_id");
 
-
-
 CREATE INDEX "idx_fields_player_id" ON "public"."fields" USING "btree" ("player_id");
-
-
 
 CREATE INDEX "idx_logistics_companies_city_id" ON "public"."logistics_companies" USING "btree" ("city_id");
 
-
-
 CREATE INDEX "idx_logistics_companies_player_id" ON "public"."logistics_companies" USING "btree" ("player_id");
-
 
 CREATE INDEX "idx_logistics_finance_entries_player_created_at" ON "public"."logistics_finance_entries" USING "btree" ("player_id", "created_at" DESC);
 
-
 CREATE INDEX "idx_logistics_finance_entries_player_category" ON "public"."logistics_finance_entries" USING "btree" ("player_id", "category");
-
-
 
 CREATE INDEX "idx_logistics_transfers_buyer_player_id" ON "public"."logistics_transfers" USING "btree" ("buyer_player_id");
 
+CREATE INDEX "idx_logistics_transfer_items_transfer_id" ON "public"."logistics_transfer_items" USING "btree" ("transfer_id");
 
+CREATE INDEX "idx_logistics_transfer_items_source_slot_id" ON "public"."logistics_transfer_items" USING "btree" ("source_warehouse_slot_id");
+
+CREATE INDEX "idx_logistics_transfer_items_target_slot_id" ON "public"."logistics_transfer_items" USING "btree" ("target_warehouse_slot_id");
 
 CREATE INDEX "idx_logistics_transfers_status_finish_at" ON "public"."logistics_transfers" USING "btree" ("status", "finish_at");
 
-
-
 CREATE INDEX "idx_logistics_transfers_vehicle_id" ON "public"."logistics_transfers" USING "btree" ("logistics_vehicle_id");
-
-
 
 CREATE INDEX "idx_logistics_vehicles_company_id" ON "public"."logistics_vehicles" USING "btree" ("logistics_company_id");
 
-
-
 CREATE INDEX "idx_logistics_vehicles_player_id" ON "public"."logistics_vehicles" USING "btree" ("player_id");
-
-
 
 CREATE INDEX "idx_logistics_vehicles_route_city_a_id" ON "public"."logistics_vehicles" USING "btree" ("route_city_a_id");
 
-
-
 CREATE INDEX "idx_logistics_vehicles_route_city_b_id" ON "public"."logistics_vehicles" USING "btree" ("route_city_b_id");
-
-
 
 CREATE INDEX "idx_logistics_vehicles_status" ON "public"."logistics_vehicles" USING "btree" ("status");
 
-
-
 CREATE INDEX "idx_logistics_vehicles_vehicle_type_id" ON "public"."logistics_vehicles" USING "btree" ("logistics_vehicle_type_id");
-
-
 
 CREATE INDEX "idx_mines_active_product" ON "public"."mines" USING "btree" ("id", "product_id", "quality_level") WHERE (("is_active" = true) AND ("product_id" IS NOT NULL));
 
-
-
 CREATE INDEX "idx_mines_city_id" ON "public"."mines" USING "btree" ("city_id");
-
-
 
 CREATE INDEX "idx_mines_mine_type_id" ON "public"."mines" USING "btree" ("mine_type_id");
 
-
-
 CREATE INDEX "idx_mines_player_id" ON "public"."mines" USING "btree" ("player_id");
-
-
 
 CREATE INDEX "idx_mines_product_id" ON "public"."mines" USING "btree" ("product_id");
 
-
-
 CREATE INDEX "idx_mission_definitions_active_order" ON "public"."mission_definitions" USING "btree" ("is_active", "mission_type", "display_order");
-
-
 
 CREATE INDEX "idx_player_experience_logs_player_created_at" ON "public"."player_experience_logs" USING "btree" ("player_id", "created_at" DESC);
 
-
-
 CREATE INDEX "idx_player_missions_player_claim" ON "public"."player_missions" USING "btree" ("player_id", "is_claimed", "is_completed");
-
-
 
 CREATE INDEX "idx_production_inventory_field_farm_input" ON "public"."production_inventory" USING "btree" ("owner_kind", "owner_id", "product_id", "quality_level") WHERE (("owner_kind" = ANY (ARRAY['field'::"text", 'farm'::"text"])) AND ("inventory_type" = 'input'::"text"));
 
-
-
 CREATE INDEX "idx_production_inventory_field_farm_output" ON "public"."production_inventory" USING "btree" ("owner_kind", "owner_id", "product_id", "quality_level") WHERE (("owner_kind" = ANY (ARRAY['field'::"text", 'farm'::"text"])) AND ("inventory_type" = 'output'::"text"));
-
-
 
 CREATE INDEX "idx_production_inventory_mine_output_active" ON "public"."production_inventory" USING "btree" ("owner_id", "product_id", "quality_level") WHERE (("owner_kind" = 'mine'::"text") AND ("inventory_type" = 'output'::"text"));
 
-
-
 CREATE INDEX "idx_production_inventory_owner" ON "public"."production_inventory" USING "btree" ("owner_kind", "owner_id");
-
-
 
 CREATE INDEX "idx_production_inventory_owner_inventory_type" ON "public"."production_inventory" USING "btree" ("owner_kind", "owner_id", "inventory_type");
 
-
-
 CREATE INDEX "idx_production_inventory_product_id" ON "public"."production_inventory" USING "btree" ("product_id");
-
-
 
 CREATE INDEX "idx_production_slots_field_farm_active" ON "public"."production_slots" USING "btree" ("owner_kind", "owner_id", "product_id", "quality_level", "slot_index") WHERE (("owner_kind" = ANY (ARRAY['field'::"text", 'farm'::"text"])) AND ("is_active" = true) AND ("product_id" IS NOT NULL));
 
-
-
 CREATE INDEX "idx_production_slots_owner" ON "public"."production_slots" USING "btree" ("owner_kind", "owner_id");
-
-
 
 CREATE INDEX "idx_production_slots_product_id" ON "public"."production_slots" USING "btree" ("product_id");
 
-
-
 CREATE INDEX "idx_store_daily_performance_player_date" ON "public"."store_daily_performance" USING "btree" ("player_id", "performance_date" DESC);
-
-
 
 CREATE INDEX "idx_store_daily_performance_store_date" ON "public"."store_daily_performance" USING "btree" ("store_id", "performance_date" DESC);
 
-
-
 CREATE INDEX "idx_store_slots_product_id" ON "public"."store_slots" USING "btree" ("product_id");
-
-
 
 CREATE INDEX "idx_store_slots_store_id" ON "public"."store_slots" USING "btree" ("store_id");
 
-
-
 CREATE INDEX "idx_stores_city_id" ON "public"."stores" USING "btree" ("city_id");
-
-
 
 CREATE INDEX "idx_stores_player_id" ON "public"."stores" USING "btree" ("player_id");
 
-
-
 CREATE INDEX "idx_stores_store_type_id" ON "public"."stores" USING "btree" ("store_type_id");
-
-
 
 CREATE INDEX "idx_warehouse_slots_product_id" ON "public"."warehouse_slots" USING "btree" ("product_id");
 
-
-
 CREATE INDEX "idx_warehouse_slots_warehouse_id" ON "public"."warehouse_slots" USING "btree" ("warehouse_id");
-
-
 
 CREATE INDEX "idx_warehouses_city_id" ON "public"."warehouses" USING "btree" ("city_id");
 
-
-
 CREATE INDEX "idx_warehouses_player_id" ON "public"."warehouses" USING "btree" ("player_id");
 
+CREATE INDEX "idx_warehouses_store_id" ON "public"."warehouses" USING "btree" ("store_id");
 
+CREATE UNIQUE INDEX "idx_warehouses_active_store_unique" ON "public"."warehouses" USING "btree" ("store_id") WHERE (("warehouse_kind" = 'store'::"text") AND ("is_active" = true));
 
 CREATE INDEX "idx_warehouses_warehouse_type_id" ON "public"."warehouses" USING "btree" ("warehouse_type_id");
 
-
-
 CREATE INDEX "logistics_transfers_buyer_production_inventory_idx" ON "public"."logistics_transfers" USING "btree" ("buyer_production_inventory_id");
-
-
 
 CREATE INDEX "logistics_transfers_seller_production_inventory_idx" ON "public"."logistics_transfers" USING "btree" ("seller_production_inventory_id");
 
-
-
 CREATE UNIQUE INDEX "uq_arge_researches_one_active_per_player_product" ON "public"."arge_researches" USING "btree" ("player_id", "product_id") WHERE ("status" = 'in_progress'::"text");
-
-
 
 CREATE UNIQUE INDEX "uq_building_constructions_one_active_per_player" ON "public"."building_constructions" USING "btree" ("player_id") WHERE ("status" = 'in_progress'::"text");
 
-
-
 CREATE OR REPLACE TRIGGER "trg_arge_researches_mission_progress" AFTER UPDATE OF "status" ON "public"."arge_researches" FOR EACH ROW EXECUTE FUNCTION "public"."handle_arge_research_mission_progress"();
-
-
 
 CREATE OR REPLACE TRIGGER "trg_building_constructions_mission_progress" AFTER UPDATE OF "status" ON "public"."building_constructions" FOR EACH ROW EXECUTE FUNCTION "public"."handle_building_construction_mission_progress"();
 
-
-
 CREATE OR REPLACE TRIGGER "trg_building_upgrades_mission_progress" AFTER UPDATE OF "status" ON "public"."building_upgrades" FOR EACH ROW EXECUTE FUNCTION "public"."handle_building_upgrade_mission_progress"();
 
-
-
-CREATE OR REPLACE TRIGGER "trg_logistics_transfers_mission_progress" AFTER UPDATE OF "status" ON "public"."logistics_transfers" FOR EACH ROW EXECUTE FUNCTION "public"."handle_logistics_transfer_mission_progress"();
-
-
-
 CREATE OR REPLACE TRIGGER "trg_store_daily_performance_mission_progress" AFTER INSERT OR UPDATE OF "sold_quantity" ON "public"."store_daily_performance" FOR EACH ROW EXECUTE FUNCTION "public"."handle_store_sales_mission_progress"();
-
-
 
 ALTER TABLE ONLY "public"."arge_centers"
     ADD CONSTRAINT "arge_centers_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id");
 
-
-
 ALTER TABLE ONLY "public"."arge_researches"
     ADD CONSTRAINT "arge_researches_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."building_boosts"
     ADD CONSTRAINT "building_boosts_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id");
 
-
-
 ALTER TABLE ONLY "public"."building_constructions"
     ADD CONSTRAINT "building_constructions_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."building_upgrades"
     ADD CONSTRAINT "building_upgrades_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id");
 
-
-
 ALTER TABLE ONLY "public"."factories"
     ADD CONSTRAINT "factories_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id");
-
-
 
 ALTER TABLE ONLY "public"."factories"
     ADD CONSTRAINT "factories_factory_type_id_fkey" FOREIGN KEY ("factory_type_id") REFERENCES "public"."factory_types"("id");
 
-
-
 ALTER TABLE ONLY "public"."factories"
     ADD CONSTRAINT "factories_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."factories"
     ADD CONSTRAINT "factories_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id");
 
-
-
 ALTER TABLE ONLY "public"."farms"
     ADD CONSTRAINT "farms_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id");
-
-
 
 ALTER TABLE ONLY "public"."farms"
     ADD CONSTRAINT "farms_farm_type_id_fkey" FOREIGN KEY ("farm_type_id") REFERENCES "public"."farm_types"("id");
 
-
-
 ALTER TABLE ONLY "public"."farms"
     ADD CONSTRAINT "farms_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."fields"
     ADD CONSTRAINT "fields_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id");
 
-
-
 ALTER TABLE ONLY "public"."fields"
     ADD CONSTRAINT "fields_field_type_id_fkey" FOREIGN KEY ("field_type_id") REFERENCES "public"."field_types"("id");
-
-
 
 ALTER TABLE ONLY "public"."fields"
     ADD CONSTRAINT "fields_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."logistics_companies"
     ADD CONSTRAINT "logistics_companies_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id");
-
-
 
 ALTER TABLE ONLY "public"."logistics_companies"
     ADD CONSTRAINT "logistics_companies_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_buyer_player_id_fkey" FOREIGN KEY ("buyer_player_id") REFERENCES "public"."players"("id");
 
+ALTER TABLE ONLY "public"."logistics_transfer_items"
+    ADD CONSTRAINT "logistics_transfer_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id");
 
+ALTER TABLE ONLY "public"."logistics_transfer_items"
+    ADD CONSTRAINT "logistics_transfer_items_source_warehouse_slot_id_fkey" FOREIGN KEY ("source_warehouse_slot_id") REFERENCES "public"."warehouse_slots"("id") ON DELETE SET NULL;
+
+ALTER TABLE ONLY "public"."logistics_transfer_items"
+    ADD CONSTRAINT "logistics_transfer_items_target_warehouse_slot_id_fkey" FOREIGN KEY ("target_warehouse_slot_id") REFERENCES "public"."warehouse_slots"("id") ON DELETE SET NULL;
+
+ALTER TABLE ONLY "public"."logistics_transfer_items"
+    ADD CONSTRAINT "logistics_transfer_items_transfer_id_fkey" FOREIGN KEY ("transfer_id") REFERENCES "public"."logistics_transfers"("id") ON DELETE CASCADE;
 
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_buyer_production_inventory_fk" FOREIGN KEY ("buyer_production_inventory_id") REFERENCES "public"."production_inventory"("id") ON DELETE SET NULL;
 
-
-
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_buyer_store_id_fkey" FOREIGN KEY ("buyer_store_id") REFERENCES "public"."stores"("id");
-
-
 
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_buyer_store_slot_id_fkey" FOREIGN KEY ("buyer_store_slot_id") REFERENCES "public"."store_slots"("id");
 
-
-
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_buyer_warehouse_id_fkey" FOREIGN KEY ("buyer_warehouse_id") REFERENCES "public"."warehouses"("id");
-
-
 
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_logistics_vehicle_id_fkey" FOREIGN KEY ("logistics_vehicle_id") REFERENCES "public"."logistics_vehicles"("id");
 
-
-
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id");
-
-
 
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_seller_player_id_fkey" FOREIGN KEY ("seller_player_id") REFERENCES "public"."players"("id");
 
-
-
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_seller_production_inventory_fk" FOREIGN KEY ("seller_production_inventory_id") REFERENCES "public"."production_inventory"("id") ON DELETE SET NULL;
-
-
 
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_seller_store_id_fkey" FOREIGN KEY ("seller_store_id") REFERENCES "public"."stores"("id");
 
-
-
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_seller_store_slot_id_fkey" FOREIGN KEY ("seller_store_slot_id") REFERENCES "public"."store_slots"("id");
-
-
 
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_seller_warehouse_id_fkey" FOREIGN KEY ("seller_warehouse_id") REFERENCES "public"."warehouses"("id");
 
-
-
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_seller_warehouse_slot_id_fkey" FOREIGN KEY ("seller_warehouse_slot_id") REFERENCES "public"."warehouse_slots"("id") ON DELETE SET NULL;
-
-
 
 ALTER TABLE ONLY "public"."logistics_transfers"
     ADD CONSTRAINT "logistics_transfers_vehicle_owner_player_id_fkey" FOREIGN KEY ("vehicle_owner_player_id") REFERENCES "public"."players"("id");
 
-
 ALTER TABLE ONLY "public"."logistics_finance_entries"
     ADD CONSTRAINT "logistics_finance_entries_logistics_company_id_fkey" FOREIGN KEY ("logistics_company_id") REFERENCES "public"."logistics_companies"("id") ON DELETE SET NULL;
-
 
 ALTER TABLE ONLY "public"."logistics_finance_entries"
     ADD CONSTRAINT "logistics_finance_entries_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
 
-
 ALTER TABLE ONLY "public"."logistics_finance_entries"
     ADD CONSTRAINT "logistics_finance_entries_related_transfer_id_fkey" FOREIGN KEY ("related_transfer_id") REFERENCES "public"."logistics_transfers"("id") ON DELETE SET NULL;
-
 
 ALTER TABLE ONLY "public"."logistics_finance_entries"
     ADD CONSTRAINT "logistics_finance_entries_related_warehouse_slot_id_fkey" FOREIGN KEY ("related_warehouse_slot_id") REFERENCES "public"."warehouse_slots"("id") ON DELETE SET NULL;
 
-
 ALTER TABLE ONLY "public"."logistics_finance_entries"
     ADD CONSTRAINT "logistics_finance_entries_vehicle_id_fkey" FOREIGN KEY ("vehicle_id") REFERENCES "public"."logistics_vehicles"("id") ON DELETE SET NULL;
-
-
 
 ALTER TABLE ONLY "public"."logistics_vehicles"
     ADD CONSTRAINT "logistics_vehicles_logistics_company_id_fkey" FOREIGN KEY ("logistics_company_id") REFERENCES "public"."logistics_companies"("id") ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."logistics_vehicles"
     ADD CONSTRAINT "logistics_vehicles_logistics_vehicle_type_id_fkey" FOREIGN KEY ("logistics_vehicle_type_id") REFERENCES "public"."logistics_vehicle_types"("id");
-
-
 
 ALTER TABLE ONLY "public"."logistics_vehicles"
     ADD CONSTRAINT "logistics_vehicles_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."logistics_vehicles"
     ADD CONSTRAINT "logistics_vehicles_route_city_a_id_fkey" FOREIGN KEY ("route_city_a_id") REFERENCES "public"."cities"("id");
-
-
 
 ALTER TABLE ONLY "public"."logistics_vehicles"
     ADD CONSTRAINT "logistics_vehicles_route_city_b_id_fkey" FOREIGN KEY ("route_city_b_id") REFERENCES "public"."cities"("id");
 
-
-
 ALTER TABLE ONLY "public"."mines"
     ADD CONSTRAINT "mines_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id");
-
-
 
 ALTER TABLE ONLY "public"."mines"
     ADD CONSTRAINT "mines_mine_type_id_fkey" FOREIGN KEY ("mine_type_id") REFERENCES "public"."mine_types"("id");
 
-
-
 ALTER TABLE ONLY "public"."mines"
     ADD CONSTRAINT "mines_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."mines"
     ADD CONSTRAINT "mines_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id");
 
-
-
 ALTER TABLE ONLY "public"."player_experience_logs"
     ADD CONSTRAINT "player_experience_logs_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."player_missions"
     ADD CONSTRAINT "player_missions_mission_id_fkey" FOREIGN KEY ("mission_id") REFERENCES "public"."mission_definitions"("id") ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."player_missions"
     ADD CONSTRAINT "player_missions_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."player_product_quality_levels"
     ADD CONSTRAINT "player_product_quality_levels_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."player_product_quality_levels"
     ADD CONSTRAINT "player_product_quality_levels_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."players"
     ADD CONSTRAINT "players_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."production_inventory"
     ADD CONSTRAINT "production_inventory_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id");
-
-
 
 ALTER TABLE ONLY "public"."production_slots"
     ADD CONSTRAINT "production_slots_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id");
 
-
-
 ALTER TABLE ONLY "public"."store_daily_performance"
     ADD CONSTRAINT "store_daily_performance_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."store_daily_performance"
     ADD CONSTRAINT "store_daily_performance_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."store_daily_performance"
     ADD CONSTRAINT "store_daily_performance_store_slot_id_fkey" FOREIGN KEY ("store_slot_id") REFERENCES "public"."store_slots"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."store_slots"
     ADD CONSTRAINT "store_slots_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id");
 
-
-
 ALTER TABLE ONLY "public"."store_slots"
     ADD CONSTRAINT "store_slots_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."stores"
     ADD CONSTRAINT "stores_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id");
 
-
-
 ALTER TABLE ONLY "public"."stores"
     ADD CONSTRAINT "stores_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."stores"
     ADD CONSTRAINT "stores_store_type_id_fkey" FOREIGN KEY ("store_type_id") REFERENCES "public"."store_types"("id");
 
-
-
 ALTER TABLE ONLY "public"."warehouse_slots"
     ADD CONSTRAINT "warehouse_slots_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id");
-
-
 
 ALTER TABLE ONLY "public"."warehouse_slots"
     ADD CONSTRAINT "warehouse_slots_warehouse_id_fkey" FOREIGN KEY ("warehouse_id") REFERENCES "public"."warehouses"("id") ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."warehouses"
     ADD CONSTRAINT "warehouses_city_id_fkey" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id");
-
-
 
 ALTER TABLE ONLY "public"."warehouses"
     ADD CONSTRAINT "warehouses_player_id_fkey" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE CASCADE;
 
-
+ALTER TABLE ONLY "public"."warehouses"
+    ADD CONSTRAINT "warehouses_store_id_fkey" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE CASCADE;
 
 ALTER TABLE ONLY "public"."warehouses"
     ADD CONSTRAINT "warehouses_warehouse_type_id_fkey" FOREIGN KEY ("warehouse_type_id") REFERENCES "public"."warehouse_types"("id");
 
-
-
 CREATE POLICY "Allow everyone to read cities" ON "public"."cities" FOR SELECT USING (true);
-
-
 
 CREATE POLICY "Allow everyone to read factory_types" ON "public"."factory_types" FOR SELECT USING (true);
 
-
-
 CREATE POLICY "Allow everyone to read farm_types" ON "public"."farm_types" FOR SELECT USING (true);
-
-
 
 CREATE POLICY "Allow everyone to read field_types" ON "public"."field_types" FOR SELECT USING (true);
 
-
-
 CREATE POLICY "Allow everyone to read logistics_vehicle_types" ON "public"."logistics_vehicle_types" FOR SELECT USING (true);
-
-
 
 CREATE POLICY "Allow everyone to read mine_types" ON "public"."mine_types" FOR SELECT USING (true);
 
-
-
 CREATE POLICY "Allow everyone to read store_types" ON "public"."store_types" FOR SELECT USING (true);
-
-
 
 CREATE POLICY "Enable read access for all users" ON "public"."logistics_company_types" FOR SELECT USING (true);
 
-
-
 CREATE POLICY "Enable read access for all users" ON "public"."products" FOR SELECT USING (true);
 
-
-
 CREATE POLICY "Enable read access for all users" ON "public"."warehouse_types" FOR SELECT USING (true);
-
-
 
 CREATE POLICY "Players can view owned production inventory" ON "public"."production_inventory" FOR SELECT USING (((("owner_kind" = 'field'::"text") AND (EXISTS ( SELECT 1
    FROM "public"."fields" "f"
@@ -16934,8 +13765,6 @@ CREATE POLICY "Players can view owned production inventory" ON "public"."product
    FROM "public"."mines" "m"
   WHERE (("m"."id" = "production_inventory"."owner_id") AND ("m"."player_id" = "auth"."uid"())))))));
 
-
-
 CREATE POLICY "Players can view owned production slots" ON "public"."production_slots" FOR SELECT USING (((("owner_kind" = 'field'::"text") AND (EXISTS ( SELECT 1
    FROM "public"."fields" "f"
   WHERE (("f"."id" = "production_slots"."owner_id") AND ("f"."player_id" = "auth"."uid"()))))) OR (("owner_kind" = 'farm'::"text") AND (EXISTS ( SELECT 1
@@ -16946,1657 +13775,877 @@ CREATE POLICY "Players can view owned production slots" ON "public"."production_
    FROM "public"."mines" "m"
   WHERE (("m"."id" = "production_slots"."owner_id") AND ("m"."player_id" = "auth"."uid"())))))));
 
-
-
 CREATE POLICY "Players can view related logistics transfers" ON "public"."logistics_transfers" FOR SELECT TO "authenticated" USING ((("buyer_player_id" = "auth"."uid"()) OR ("seller_player_id" = "auth"."uid"()) OR ("vehicle_owner_player_id" = "auth"."uid"())));
 
-
+CREATE POLICY "Players can view related logistics transfer items" ON "public"."logistics_transfer_items" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."logistics_transfers" "lt"
+  WHERE (("lt"."id" = "logistics_transfer_items"."transfer_id") AND (("lt"."buyer_player_id" = "auth"."uid"()) OR ("lt"."seller_player_id" = "auth"."uid"()) OR ("lt"."vehicle_owner_player_id" = "auth"."uid"()))))));
 
 CREATE POLICY "Players can view their own arge centers" ON "public"."arge_centers" FOR SELECT USING (("auth"."uid"() = "player_id"));
 
-
-
 CREATE POLICY "Players can view their own arge researches" ON "public"."arge_researches" FOR SELECT USING (("auth"."uid"() = "player_id"));
-
-
 
 CREATE POLICY "Players can view their own logistics companies" ON "public"."logistics_companies" FOR SELECT TO "authenticated" USING (("player_id" = "auth"."uid"()));
 
-
-
 CREATE POLICY "Players can view their own logistics vehicles" ON "public"."logistics_vehicles" FOR SELECT TO "authenticated" USING (("player_id" = "auth"."uid"()));
 
-
 CREATE POLICY "Players can view their own logistics finance entries" ON "public"."logistics_finance_entries" FOR SELECT TO "authenticated" USING (("player_id" = "auth"."uid"()));
-
-
 
 CREATE POLICY "Players can view their own warehouse slots" ON "public"."warehouse_slots" FOR SELECT TO "authenticated" USING (("warehouse_id" IN ( SELECT "warehouses"."id"
    FROM "public"."warehouses"
   WHERE ("warehouses"."player_id" = "auth"."uid"()))));
 
-
-
 CREATE POLICY "Players can view their own warehouses" ON "public"."warehouses" FOR SELECT TO "authenticated" USING (("player_id" = "auth"."uid"()));
-
-
 
 CREATE POLICY "Users can insert their own building boosts" ON "public"."building_boosts" FOR INSERT WITH CHECK (("auth"."uid"() = "player_id"));
 
-
-
 CREATE POLICY "Users can insert their own building constructions" ON "public"."building_constructions" FOR INSERT WITH CHECK (("auth"."uid"() = "player_id"));
-
-
 
 CREATE POLICY "Users can insert their own building upgrades" ON "public"."building_upgrades" FOR INSERT WITH CHECK (("auth"."uid"() = "player_id"));
 
-
-
 CREATE POLICY "Users can insert their own player data" ON "public"."players" FOR INSERT WITH CHECK (("auth"."uid"() = "id"));
-
-
 
 CREATE POLICY "Users can update their own building boosts" ON "public"."building_boosts" FOR UPDATE USING (("auth"."uid"() = "player_id"));
 
-
-
 CREATE POLICY "Users can update their own building constructions" ON "public"."building_constructions" FOR UPDATE USING (("auth"."uid"() = "player_id"));
-
-
 
 CREATE POLICY "Users can update their own building upgrades" ON "public"."building_upgrades" FOR UPDATE USING (("auth"."uid"() = "player_id"));
 
-
-
 CREATE POLICY "Users can update their own player data" ON "public"."players" FOR UPDATE USING (("auth"."uid"() = "id"));
-
-
 
 CREATE POLICY "Users can view their own building boosts" ON "public"."building_boosts" FOR SELECT USING (("auth"."uid"() = "player_id"));
 
-
-
 CREATE POLICY "Users can view their own building constructions" ON "public"."building_constructions" FOR SELECT USING (("auth"."uid"() = "player_id"));
-
-
 
 CREATE POLICY "Users can view their own building upgrades" ON "public"."building_upgrades" FOR SELECT USING (("auth"."uid"() = "player_id"));
 
-
-
 CREATE POLICY "Users can view their own factories" ON "public"."factories" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "player_id"));
-
-
 
 CREATE POLICY "Users can view their own farms" ON "public"."farms" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "player_id"));
 
-
-
 CREATE POLICY "Users can view their own fields" ON "public"."fields" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "player_id"));
-
-
 
 CREATE POLICY "Users can view their own mines" ON "public"."mines" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "player_id"));
 
-
-
 CREATE POLICY "Users can view their own player data" ON "public"."players" FOR SELECT USING (("auth"."uid"() = "id"));
-
-
 
 ALTER TABLE "public"."arge_centers" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."arge_researches" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."building_boosts" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."building_constructions" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."building_upgrades" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."cities" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."factories" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."factory_types" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."farm_types" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."farms" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."field_types" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."fields" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."game_settings" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."logistics_companies" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."logistics_company_types" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."logistics_finance_entries" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."logistics_transfers" ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE "public"."logistics_transfer_items" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."logistics_vehicle_types" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."logistics_vehicles" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."mine_types" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."mines" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."mission_definitions" ENABLE ROW LEVEL SECURITY;
 
-
 CREATE POLICY "mission_definitions_read_authenticated" ON "public"."mission_definitions" FOR SELECT TO "authenticated" USING (true);
-
-
 
 ALTER TABLE "public"."player_experience_logs" ENABLE ROW LEVEL SECURITY;
 
-
 CREATE POLICY "player_experience_logs_select_own" ON "public"."player_experience_logs" FOR SELECT USING (("auth"."uid"() = "player_id"));
-
-
 
 ALTER TABLE "public"."player_missions" ENABLE ROW LEVEL SECURITY;
 
-
 CREATE POLICY "player_missions_insert_own" ON "public"."player_missions" FOR INSERT TO "authenticated" WITH CHECK (("player_id" = "auth"."uid"()));
-
-
 
 CREATE POLICY "player_missions_read_own" ON "public"."player_missions" FOR SELECT TO "authenticated" USING (("player_id" = "auth"."uid"()));
 
-
-
 CREATE POLICY "player_missions_update_own" ON "public"."player_missions" FOR UPDATE TO "authenticated" USING (("player_id" = "auth"."uid"())) WITH CHECK (("player_id" = "auth"."uid"()));
-
-
 
 ALTER TABLE "public"."player_product_quality_levels" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."players" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."production_inventory" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."production_slots" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."products" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."store_daily_performance" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."store_slots" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."store_types" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."stores" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."warehouse_slots" ENABLE ROW LEVEL SECURITY;
-
 
 ALTER TABLE "public"."warehouse_types" ENABLE ROW LEVEL SECURITY;
 
-
 ALTER TABLE "public"."warehouses" ENABLE ROW LEVEL SECURITY;
-
-
-
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
-
-
-
-
-
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."players";
-
-
-
-
-
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 GRANT ALL ON FUNCTION "public"."add_product_to_warehouse"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quality_level" integer, "p_quantity" integer, "p_cost" numeric, "p_transport_cost" numeric, "p_release_reserved_capacity" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."add_product_to_warehouse"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quality_level" integer, "p_quantity" integer, "p_cost" numeric, "p_transport_cost" numeric, "p_release_reserved_capacity" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."add_product_to_warehouse"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quality_level" integer, "p_quantity" integer, "p_cost" numeric, "p_transport_cost" numeric, "p_release_reserved_capacity" boolean) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."add_production_slot"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."add_production_slot"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."add_production_slot"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."add_store_slot"("p_player_id" "uuid", "p_store_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."add_store_slot"("p_player_id" "uuid", "p_store_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."add_store_slot"("p_player_id" "uuid", "p_store_id" "uuid") TO "service_role";
-
-
 
 REVOKE ALL ON FUNCTION "public"."assign_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."assign_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."assign_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."bootstrap_game_session"() TO "anon";
 GRANT ALL ON FUNCTION "public"."bootstrap_game_session"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."bootstrap_game_session"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."build_experience_progress_payload"("p_total_experience" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."build_experience_progress_payload"("p_total_experience" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."build_experience_progress_payload"("p_total_experience" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."build_level_progress_payload"("p_level" integer, "p_current_experience" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."build_level_progress_payload"("p_level" integer, "p_current_experience" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."build_level_progress_payload"("p_level" integer, "p_current_experience" integer) TO "service_role";
 
-
-
 REVOKE ALL ON FUNCTION "public"."build_player_mission_payload"("p_player_id" "uuid", "p_mission_id" "text") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."build_player_mission_payload"("p_player_id" "uuid", "p_mission_id" "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."buy_market_fuel_for_logistics_company"("p_logistics_company_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."buy_market_fuel_for_logistics_company"("p_logistics_company_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."buy_market_fuel_for_logistics_company"("p_logistics_company_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."calculate_experience_reward"("p_reason" "text", "p_meta" "jsonb") TO "anon";
-GRANT ALL ON FUNCTION "public"."calculate_experience_reward"("p_reason" "text", "p_meta" "jsonb") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."calculate_experience_reward"("p_reason" "text", "p_meta" "jsonb") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."cancel_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."cancel_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."cancel_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "service_role";
-
-
-
-REVOKE ALL ON FUNCTION "public"."change_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."change_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."change_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "service_role";
-
-
-
-REVOKE ALL ON FUNCTION "public"."claim_player_mission_reward"("p_mission_id" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."claim_player_mission_reward"("p_mission_id" "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."claim_player_mission_reward"("p_mission_id" "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."clear_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."clear_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."clear_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_arge_research"("p_research_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_arge_research"("p_research_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_arge_research"("p_research_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_building_upgrade"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_building_upgrade"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_building_upgrade"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_due_arge_researches"() TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_due_arge_researches"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_due_arge_researches"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_due_building_boosts"("p_limit" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_due_building_boosts"("p_limit" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_due_building_boosts"("p_limit" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_due_building_constructions"("p_limit" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_due_building_constructions"("p_limit" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_due_building_constructions"("p_limit" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_due_building_upgrades"("p_limit" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_due_building_upgrades"("p_limit" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_due_building_upgrades"("p_limit" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_due_market_transfers"("p_buyer_player_id" "uuid", "p_limit" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_due_market_transfers"("p_buyer_player_id" "uuid", "p_limit" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_due_market_transfers"("p_buyer_player_id" "uuid", "p_limit" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_market_transfer"("p_transfer_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_market_transfer"("p_transfer_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_market_transfer"("p_transfer_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_market_transfer_system"("p_transfer_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_market_transfer_system"("p_transfer_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_market_transfer_system"("p_transfer_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."complete_production_logistics_transfer"("p_transfer_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."complete_production_logistics_transfer"("p_transfer_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."complete_production_logistics_transfer"("p_transfer_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."delete_warehouse_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."delete_warehouse_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."delete_warehouse_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."logistics_vehicles" TO "anon";
-GRANT ALL ON TABLE "public"."logistics_vehicles" TO "authenticated";
-GRANT ALL ON TABLE "public"."logistics_vehicles" TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."ensure_npc_rental_vehicle"("p_from_city_id" "uuid", "p_to_city_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."ensure_npc_rental_vehicle"("p_from_city_id" "uuid", "p_to_city_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."ensure_npc_rental_vehicle"("p_from_city_id" "uuid", "p_to_city_id" "uuid") TO "service_role";
-
-
-
-REVOKE ALL ON FUNCTION "public"."ensure_player_mission_rows"("p_player_id" "uuid") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."ensure_player_mission_rows"("p_player_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."ensure_player_record_exists"("p_user_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."ensure_player_record_exists"("p_user_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."ensure_player_record_exists"("p_user_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."finish_arge_with_gold"("p_player_id" "uuid", "p_research_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."finish_arge_with_gold"("p_player_id" "uuid", "p_research_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."finish_arge_with_gold"("p_player_id" "uuid", "p_research_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."finish_building_boost"("p_player_id" "uuid", "p_boost_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."finish_building_boost"("p_player_id" "uuid", "p_boost_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."finish_building_boost"("p_player_id" "uuid", "p_boost_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."finish_building_upgrade_with_gold"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."finish_building_upgrade_with_gold"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."finish_building_upgrade_with_gold"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."finish_construction_with_gold"("p_player_id" "uuid", "p_construction_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."finish_construction_with_gold"("p_player_id" "uuid", "p_construction_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."finish_construction_with_gold"("p_player_id" "uuid", "p_construction_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."finish_market_transfer_with_stars"("p_transfer_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."finish_market_transfer_with_stars"("p_transfer_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."finish_market_transfer_with_stars"("p_transfer_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_active_arge_researches"("p_player_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."get_active_arge_researches"("p_player_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_active_arge_researches"("p_player_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_active_cities"() TO "anon";
-GRANT ALL ON FUNCTION "public"."get_active_cities"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_active_cities"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_all_products_catalog"() TO "anon";
-GRANT ALL ON FUNCTION "public"."get_all_products_catalog"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_all_products_catalog"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_arge_products_with_quality"() TO "anon";
-GRANT ALL ON FUNCTION "public"."get_arge_products_with_quality"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_arge_products_with_quality"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_available_products_for_store"("p_store_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."get_available_products_for_store"("p_store_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_available_products_for_store"("p_store_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_buyer_active_market_transfers"() TO "anon";
-GRANT ALL ON FUNCTION "public"."get_buyer_active_market_transfers"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_buyer_active_market_transfers"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_buyer_transfer_history_items"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_buyer_transfer_history_items"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_buyer_transfer_history_items"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_buyer_transfer_map_items"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_buyer_transfer_map_items"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_buyer_transfer_map_items"() TO "service_role";
 
+GRANT ALL ON FUNCTION "public"."buy_market_fuel_for_logistics_company"("p_logistics_company_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."buy_market_fuel_for_logistics_company"("p_logistics_company_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."buy_market_fuel_for_logistics_company"("p_logistics_company_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "service_role";
 
+GRANT ALL ON FUNCTION "public"."calculate_experience_reward"("p_reason" "text", "p_meta" "jsonb") TO "anon";
+GRANT ALL ON FUNCTION "public"."calculate_experience_reward"("p_reason" "text", "p_meta" "jsonb") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."calculate_experience_reward"("p_reason" "text", "p_meta" "jsonb") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."cancel_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."cancel_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."cancel_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."change_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."change_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."change_production_slot_product"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."claim_player_mission_reward"("p_mission_id" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."claim_player_mission_reward"("p_mission_id" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."claim_player_mission_reward"("p_mission_id" "text") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."clear_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."clear_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."clear_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."complete_arge_research"("p_research_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_arge_research"("p_research_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_arge_research"("p_research_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."complete_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_building_construction"("p_player_id" "uuid", "p_construction_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."complete_building_upgrade"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_building_upgrade"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_building_upgrade"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."complete_due_arge_researches"() TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_due_arge_researches"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_due_arge_researches"() TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."complete_due_building_boosts"("p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_due_building_boosts"("p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_due_building_boosts"("p_limit" integer) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."complete_due_building_constructions"("p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_due_building_constructions"("p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_due_building_constructions"("p_limit" integer) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."complete_due_building_upgrades"("p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_due_building_upgrades"("p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_due_building_upgrades"("p_limit" integer) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."delete_warehouse_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."delete_warehouse_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."delete_warehouse_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid") TO "service_role";
+
+GRANT ALL ON TABLE "public"."logistics_vehicles" TO "anon";
+GRANT ALL ON TABLE "public"."logistics_vehicles" TO "authenticated";
+GRANT ALL ON TABLE "public"."logistics_vehicles" TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."ensure_npc_rental_vehicle"("p_from_city_id" "uuid", "p_to_city_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."ensure_npc_rental_vehicle"("p_from_city_id" "uuid", "p_to_city_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."ensure_npc_rental_vehicle"("p_from_city_id" "uuid", "p_to_city_id" "uuid") TO "service_role";
+
+REVOKE ALL ON FUNCTION "public"."ensure_player_mission_rows"("p_player_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."ensure_player_mission_rows"("p_player_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."ensure_player_record_exists"("p_user_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."ensure_player_record_exists"("p_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."ensure_player_record_exists"("p_user_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."finish_arge_with_gold"("p_player_id" "uuid", "p_research_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."finish_arge_with_gold"("p_player_id" "uuid", "p_research_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."finish_arge_with_gold"("p_player_id" "uuid", "p_research_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."finish_building_boost"("p_player_id" "uuid", "p_boost_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."finish_building_boost"("p_player_id" "uuid", "p_boost_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."finish_building_boost"("p_player_id" "uuid", "p_boost_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."finish_building_upgrade_with_gold"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."finish_building_upgrade_with_gold"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."finish_building_upgrade_with_gold"("p_player_id" "uuid", "p_upgrade_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."finish_construction_with_gold"("p_player_id" "uuid", "p_construction_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."finish_construction_with_gold"("p_player_id" "uuid", "p_construction_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."finish_construction_with_gold"("p_player_id" "uuid", "p_construction_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."get_active_arge_researches"("p_player_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_active_arge_researches"("p_player_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_active_arge_researches"("p_player_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."get_active_cities"() TO "anon";
+GRANT ALL ON FUNCTION "public"."get_active_cities"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_active_cities"() TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."get_all_products_catalog"() TO "anon";
+GRANT ALL ON FUNCTION "public"."get_all_products_catalog"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_all_products_catalog"() TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."get_arge_products_with_quality"() TO "anon";
+GRANT ALL ON FUNCTION "public"."get_arge_products_with_quality"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_arge_products_with_quality"() TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."get_available_products_for_store"("p_store_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_available_products_for_store"("p_store_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_available_products_for_store"("p_store_id" "uuid") TO "service_role";
 
 GRANT ALL ON FUNCTION "public"."get_cities_catalog"("p_only_active" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_cities_catalog"("p_only_active" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_cities_catalog"("p_only_active" boolean) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_city_map_detail"("p_city_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_city_map_detail"("p_city_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_city_map_detail"("p_city_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_experience_required_for_level"("p_level" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_experience_required_for_level"("p_level" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_experience_required_for_level"("p_level" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_factory_detail_data"("p_factory_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_factory_detail_data"("p_factory_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_factory_detail_data"("p_factory_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_factory_list_items"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_factory_list_items"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_factory_list_items"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_factory_types_catalog"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_factory_types_catalog"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_factory_types_catalog"() TO "service_role";
-
-
 
 REVOKE ALL ON FUNCTION "public"."get_farm_detail"("p_player_id" "uuid", "p_farm_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."get_farm_detail"("p_player_id" "uuid", "p_farm_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_farm_detail"("p_player_id" "uuid", "p_farm_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_farm_detail"("p_player_id" "uuid", "p_farm_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_farm_list_items"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_farm_list_items"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_farm_list_items"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_farm_types_catalog"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_farm_types_catalog"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_farm_types_catalog"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_field_detail_data"("p_field_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_field_detail_data"("p_field_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_field_detail_data"("p_field_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_field_list_items"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_field_list_items"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_field_list_items"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_field_types_catalog"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_field_types_catalog"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_field_types_catalog"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_logistics_company_types_catalog"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_logistics_company_types_catalog"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_logistics_company_types_catalog"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_logistics_entry_state"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_logistics_entry_state"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_logistics_entry_state"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_logistics_vehicle_types_catalog"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_logistics_vehicle_types_catalog"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_logistics_vehicle_types_catalog"() TO "service_role";
 
-
-
-GRANT ALL ON FUNCTION "public"."get_market_buyer_store_slot_detail"("p_store_slot_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."get_market_buyer_store_slot_detail"("p_store_slot_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_market_buyer_store_slot_detail"("p_store_slot_id" "uuid") TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."get_market_buyer_warehouse_detail"("p_warehouse_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_market_buyer_warehouse_detail"("p_warehouse_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_market_buyer_warehouse_detail"("p_warehouse_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_market_listings_for_product"("p_product_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_market_listings_for_product"("p_product_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_market_listings_for_product"("p_product_id" "text") TO "service_role";
 
-
+GRANT ALL ON FUNCTION "public"."get_market_listings_for_city"("p_city_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_market_listings_for_city"("p_city_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_market_listings_for_city"("p_city_id" "uuid") TO "service_role";
 
 GRANT ALL ON FUNCTION "public"."get_market_product_detail"("p_product_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_market_product_detail"("p_product_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_market_product_detail"("p_product_id" "text") TO "service_role";
 
-
-
-GRANT ALL ON FUNCTION "public"."get_market_transfer_vehicle_options"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."get_market_transfer_vehicle_options"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_market_transfer_vehicle_options"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_market_transfer_vehicle_options_for_store"("p_store_slot_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."get_market_transfer_vehicle_options_for_store"("p_store_slot_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_market_transfer_vehicle_options_for_store"("p_store_slot_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."get_mine_detail_data"("p_mine_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_mine_detail_data"("p_mine_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_mine_detail_data"("p_mine_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_mine_list_items"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_mine_list_items"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_mine_list_items"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_mine_types_catalog"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_mine_types_catalog"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_mine_types_catalog"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_npc_logistics_player_id"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_npc_logistics_player_id"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_npc_logistics_player_id"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_npc_rental_vehicle_option"("p_from_city_id" "uuid", "p_to_city_id" "uuid", "p_distance_km" numeric) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_npc_rental_vehicle_option"("p_from_city_id" "uuid", "p_to_city_id" "uuid", "p_distance_km" numeric) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_npc_rental_vehicle_option"("p_from_city_id" "uuid", "p_to_city_id" "uuid", "p_distance_km" numeric) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_player_active_building_boost"("p_building_kind" "text", "p_entity_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_active_building_boost"("p_building_kind" "text", "p_entity_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_active_building_boost"("p_building_kind" "text", "p_entity_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_player_active_building_upgrade"("p_building_kind" "text", "p_entity_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_active_building_upgrade"("p_building_kind" "text", "p_entity_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_active_building_upgrade"("p_building_kind" "text", "p_entity_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_player_active_warehouses_basic"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_active_warehouses_basic"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_active_warehouses_basic"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_player_active_warehouses_with_slots"("p_city_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_active_warehouses_with_slots"("p_city_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_active_warehouses_with_slots"("p_city_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_player_arge_center"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_arge_center"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_arge_center"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_player_building_constructions"("p_building_kind" "text", "p_status" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_building_constructions"("p_building_kind" "text", "p_status" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_building_constructions"("p_building_kind" "text", "p_status" "text") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_player_level_from_experience"("p_experience" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_level_from_experience"("p_experience" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_level_from_experience"("p_experience" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_player_level_progress"("p_player_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_level_progress"("p_player_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_level_progress"("p_player_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_player_logistics_company"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_company"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_company"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicle_performance"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicle_performance"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicle_performance"() TO "service_role";
-
 
 GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_entries"("p_limit" integer) TO "service_role";
 
-
 GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_summary"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_summary"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_finance_summary"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicles"("p_player_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicles"("p_player_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_logistics_vehicles"("p_player_id" "uuid") TO "service_role";
 
-
-
 REVOKE ALL ON FUNCTION "public"."get_player_mission_dashboard"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."get_player_mission_dashboard"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_mission_dashboard"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_player_profile"("p_player_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_profile"("p_player_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_profile"("p_player_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_player_warehouse_detail"("p_warehouse_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_warehouse_detail"("p_warehouse_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_warehouse_detail"("p_warehouse_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_player_warehouses_raw"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_player_warehouses_raw"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_player_warehouses_raw"() TO "service_role";
 
-
-
 REVOKE ALL ON FUNCTION "public"."get_producible_products_for_owner_type"("p_player_id" "uuid", "p_owner_kind" "text", "p_type_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."get_producible_products_for_owner_type"("p_player_id" "uuid", "p_owner_kind" "text", "p_type_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_producible_products_for_owner_type"("p_player_id" "uuid", "p_owner_kind" "text", "p_type_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_production_input_transfer_vehicle_options"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."get_production_input_transfer_vehicle_options"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_production_input_transfer_vehicle_options"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_production_output_transfer_vehicle_options"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."get_production_output_transfer_vehicle_options"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_production_output_transfer_vehicle_options"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_store_daily_performance"("p_player_id" "uuid", "p_store_id" "uuid", "p_days" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_store_daily_performance"("p_player_id" "uuid", "p_store_id" "uuid", "p_days" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_store_daily_performance"("p_player_id" "uuid", "p_store_id" "uuid", "p_days" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_store_history_items"("p_store_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_store_history_items"("p_store_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_store_history_items"("p_store_id" "uuid") TO "service_role";
 
-
+GRANT ALL ON FUNCTION "public"."get_store_warehouse_id"("p_store_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_store_warehouse_id"("p_store_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_store_warehouse_id"("p_store_id" "uuid") TO "service_role";
 
 GRANT ALL ON FUNCTION "public"."get_store_list_page_data"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_store_list_page_data"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_store_list_page_data"() TO "service_role";
 
-
-
-GRANT ALL ON FUNCTION "public"."get_store_to_warehouse_vehicle_options"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."get_store_to_warehouse_vehicle_options"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_store_to_warehouse_vehicle_options"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_store_transfer_vehicle_options"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."get_store_transfer_vehicle_options"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_store_transfer_vehicle_options"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."get_store_types_catalog"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_store_types_catalog"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_store_types_catalog"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_stores_list"("p_player_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_stores_list"("p_player_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_stores_list"("p_player_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_total_experience_for_level"("p_level" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_total_experience_for_level"("p_level" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_total_experience_for_level"("p_level" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_transfer_affected_targets"("p_transfer_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."get_transfer_affected_targets"("p_transfer_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_transfer_affected_targets"("p_transfer_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."get_transfer_vehicle_options"("p_source_kind" "text", "p_source_id" "uuid", "p_target_kind" "text", "p_target_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."get_transfer_vehicle_options"("p_source_kind" "text", "p_source_id" "uuid", "p_target_kind" "text", "p_target_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_transfer_vehicle_options"("p_source_kind" "text", "p_source_id" "uuid", "p_target_kind" "text", "p_target_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_warehouse_capacity_status"("p_warehouse_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_warehouse_capacity_status"("p_warehouse_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_warehouse_capacity_status"("p_warehouse_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_warehouse_list_page_data"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_warehouse_list_page_data"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_warehouse_list_page_data"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."get_warehouse_type_detail"("p_type_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_warehouse_type_detail"("p_type_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_warehouse_type_detail"("p_type_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."get_warehouse_types_catalog"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_warehouse_types_catalog"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_warehouse_types_catalog"() TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."grant_player_experience"("p_player_id" "uuid", "p_amount" integer, "p_reason" "text", "p_meta" "jsonb") TO "anon";
 GRANT ALL ON FUNCTION "public"."grant_player_experience"("p_player_id" "uuid", "p_amount" integer, "p_reason" "text", "p_meta" "jsonb") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."grant_player_experience"("p_player_id" "uuid", "p_amount" integer, "p_reason" "text", "p_meta" "jsonb") TO "service_role";
 
-
-
 REVOKE ALL ON FUNCTION "public"."handle_arge_research_mission_progress"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."handle_arge_research_mission_progress"() TO "service_role";
-
-
 
 REVOKE ALL ON FUNCTION "public"."handle_building_construction_mission_progress"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."handle_building_construction_mission_progress"() TO "service_role";
 
-
-
 REVOKE ALL ON FUNCTION "public"."handle_building_upgrade_mission_progress"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."handle_building_upgrade_mission_progress"() TO "service_role";
-
-
-
-REVOKE ALL ON FUNCTION "public"."handle_logistics_transfer_mission_progress"() FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."handle_logistics_transfer_mission_progress"() TO "service_role";
-
-
 
 REVOKE ALL ON FUNCTION "public"."handle_store_sales_mission_progress"() FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."handle_store_sales_mission_progress"() TO "service_role";
 
-
-
 REVOKE ALL ON FUNCTION "public"."increment_player_mission_progress"("p_player_id" "uuid", "p_event_key" "text", "p_amount" integer, "p_meta" "jsonb") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."increment_player_mission_progress"("p_player_id" "uuid", "p_event_key" "text", "p_amount" integer, "p_meta" "jsonb") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."logistics_vehicle_matches_route"("p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid", "p_from_city_id" "uuid", "p_to_city_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."logistics_vehicle_matches_route"("p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid", "p_from_city_id" "uuid", "p_to_city_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."logistics_vehicle_matches_route"("p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid", "p_from_city_id" "uuid", "p_to_city_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."now_turkey"() TO "anon";
 GRANT ALL ON FUNCTION "public"."now_turkey"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."now_turkey"() TO "service_role";
-
 
 GRANT ALL ON FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."store_quality_price_multiplier"("p_quality_level" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."open_store_detail_page"("p_store_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."open_store_detail_page"("p_store_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."open_store_detail_page"("p_store_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."process_factory_production_entry"("p_player_id" "uuid", "p_factory_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."process_factory_production_entry"("p_player_id" "uuid", "p_factory_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."process_factory_production_entry"("p_player_id" "uuid", "p_factory_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."process_field_farm_production_entry"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."process_field_farm_production_entry"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."process_field_farm_production_entry"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."process_mine_production_entry"("p_player_id" "uuid", "p_mine_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."process_mine_production_entry"("p_player_id" "uuid", "p_mine_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."process_mine_production_entry"("p_player_id" "uuid", "p_mine_id" "uuid", "p_tick_minutes" integer, "p_max_ticks" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."process_player_production_entry"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."process_player_production_entry"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."process_player_production_entry"("p_player_id" "uuid", "p_owner_kind" "text", "p_owner_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."purchase_logistics_vehicle"("p_player_id" "uuid", "p_logistics_company_id" "uuid", "p_logistics_vehicle_type_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."purchase_logistics_vehicle"("p_player_id" "uuid", "p_logistics_company_id" "uuid", "p_logistics_vehicle_type_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."purchase_logistics_vehicle"("p_player_id" "uuid", "p_logistics_company_id" "uuid", "p_logistics_vehicle_type_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."refuel_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."refuel_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."refuel_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."repair_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."repair_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."repair_logistics_vehicle"("p_player_id" "uuid", "p_vehicle_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."reserve_warehouse_capacity"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quantity" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."reserve_warehouse_capacity"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quantity" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."reserve_warehouse_capacity"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quantity" integer) TO "service_role";
 
+GRANT ALL ON FUNCTION "public"."add_product_to_warehouse_with_brand"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quality_level" integer, "p_brand_id" "uuid", "p_quantity" integer, "p_cost" numeric, "p_transport_cost" numeric, "p_release_reserved_capacity" boolean, "p_preferred_slot_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."add_product_to_warehouse_with_brand"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quality_level" integer, "p_brand_id" "uuid", "p_quantity" integer, "p_cost" numeric, "p_transport_cost" numeric, "p_release_reserved_capacity" boolean, "p_preferred_slot_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."add_product_to_warehouse_with_brand"("p_player_id" "uuid", "p_warehouse_id" "uuid", "p_product_id" "text", "p_quality_level" integer, "p_brand_id" "uuid", "p_quantity" integer, "p_cost" numeric, "p_transport_cost" numeric, "p_release_reserved_capacity" boolean, "p_preferred_slot_id" "uuid") TO "service_role";
 
+GRANT ALL ON FUNCTION "public"."start_multi_logistics_transfer"("p_source_entity_kind" "text", "p_source_entity_id" "uuid", "p_target_entity_kind" "text", "p_target_entity_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."start_multi_logistics_transfer"("p_source_entity_kind" "text", "p_source_entity_id" "uuid", "p_target_entity_kind" "text", "p_target_entity_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."start_multi_logistics_transfer"("p_source_entity_kind" "text", "p_source_entity_id" "uuid", "p_target_entity_kind" "text", "p_target_entity_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."complete_logistics_transfer"("p_transfer_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_logistics_transfer"("p_transfer_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_logistics_transfer"("p_transfer_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."start_warehouse_to_warehouse_transfer"("p_source_warehouse_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."start_warehouse_to_warehouse_transfer"("p_source_warehouse_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."start_warehouse_to_warehouse_transfer"("p_source_warehouse_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."start_warehouse_to_store_transfer"("p_source_warehouse_id" "uuid", "p_buyer_store_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."start_warehouse_to_store_transfer"("p_source_warehouse_id" "uuid", "p_buyer_store_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."start_warehouse_to_store_transfer"("p_source_warehouse_id" "uuid", "p_buyer_store_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."start_store_to_warehouse_transfer"("p_seller_store_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."start_store_to_warehouse_transfer"("p_seller_store_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."start_store_to_warehouse_transfer"("p_seller_store_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "service_role";
 
 GRANT ALL ON FUNCTION "public"."rls_auto_enable"() TO "anon";
 GRANT ALL ON FUNCTION "public"."rls_auto_enable"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."rls_auto_enable"() TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."set_factory_active"("p_factory_id" "uuid", "p_is_active" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_factory_active"("p_factory_id" "uuid", "p_is_active" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_factory_active"("p_factory_id" "uuid", "p_is_active" boolean) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."set_factory_product"("p_player_id" "uuid", "p_factory_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_factory_product"("p_player_id" "uuid", "p_factory_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_factory_product"("p_player_id" "uuid", "p_factory_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."set_logistics_vehicle_active"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_active" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_logistics_vehicle_active"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_active" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_logistics_vehicle_active"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_active" boolean) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."set_logistics_vehicle_rental"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_available_for_rent" boolean, "p_rental_price" numeric) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_logistics_vehicle_rental"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_available_for_rent" boolean, "p_rental_price" numeric) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_logistics_vehicle_rental"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_is_available_for_rent" boolean, "p_rental_price" numeric) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."set_logistics_vehicle_route"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."set_logistics_vehicle_route"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_logistics_vehicle_route"("p_player_id" "uuid", "p_vehicle_id" "uuid", "p_route_city_a_id" "uuid", "p_route_city_b_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."set_mine_active"("p_mine_id" "uuid", "p_is_active" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_mine_active"("p_mine_id" "uuid", "p_is_active" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_mine_active"("p_mine_id" "uuid", "p_is_active" boolean) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."set_mine_product"("p_player_id" "uuid", "p_mine_id" "uuid", "p_product_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."set_mine_product"("p_player_id" "uuid", "p_mine_id" "uuid", "p_product_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_mine_product"("p_player_id" "uuid", "p_mine_id" "uuid", "p_product_id" "text") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."set_player_avatar"("p_avatar_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."set_player_avatar"("p_avatar_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_player_avatar"("p_avatar_id" "text") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."set_production_slot_active"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_is_active" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_production_slot_active"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_is_active" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_production_slot_active"("p_player_id" "uuid", "p_production_slot_id" "uuid", "p_is_active" boolean) TO "service_role";
-
 
 GRANT ALL ON FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_store_active"("p_store_id" "uuid", "p_is_active" boolean) TO "service_role";
 
-
 GRANT ALL ON FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."sell_store"("p_store_id" "uuid", "p_confirm" boolean) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."set_store_slot_active"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_is_active" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_store_slot_active"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_is_active" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_store_slot_active"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_is_active" boolean) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."set_store_slot_price"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_price" numeric) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_store_slot_price"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_price" numeric) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_store_slot_price"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_price" numeric) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."set_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_store_slot_product"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_product_id" "text", "p_quality_level" integer) TO "service_role";
 
+GRANT ALL ON FUNCTION "public"."set_store_slot_product_from_warehouse_slot"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."set_store_slot_product_from_warehouse_slot"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."set_store_slot_product_from_warehouse_slot"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid") TO "service_role";
 
+GRANT ALL ON FUNCTION "public"."transfer_store_slot_to_store_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."transfer_store_slot_to_store_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."transfer_store_slot_to_store_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."transfer_store_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."transfer_store_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."transfer_store_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) TO "service_role";
 
 GRANT ALL ON FUNCTION "public"."set_warehouse_slot_price"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_price" numeric) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_warehouse_slot_price"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_price" numeric) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_warehouse_slot_price"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_price" numeric) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."set_warehouse_slot_sale_status"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_is_available_for_sale" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."set_warehouse_slot_sale_status"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_is_available_for_sale" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_warehouse_slot_sale_status"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_is_available_for_sale" boolean) TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."start_arge_center_construction"("p_player_id" "uuid", "p_name" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."start_arge_center_construction"("p_player_id" "uuid", "p_name" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."start_arge_center_construction"("p_player_id" "uuid", "p_name" "text") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."start_arge_research"("p_player_id" "uuid", "p_product_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."start_arge_research"("p_player_id" "uuid", "p_product_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."start_arge_research"("p_player_id" "uuid", "p_product_id" "text") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."start_building_boost"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid", "p_duration_hours" integer, "p_star_cost" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."start_building_boost"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid", "p_duration_hours" integer, "p_star_cost" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."start_building_boost"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid", "p_duration_hours" integer, "p_star_cost" integer) TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."start_building_construction"("p_player_id" "uuid", "p_building_kind" "text", "p_type_id" "uuid", "p_city_id" "uuid", "p_name" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."start_building_construction"("p_player_id" "uuid", "p_building_kind" "text", "p_type_id" "uuid", "p_city_id" "uuid", "p_name" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."start_building_construction"("p_player_id" "uuid", "p_building_kind" "text", "p_type_id" "uuid", "p_city_id" "uuid", "p_name" "text") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."start_building_upgrade"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."start_building_upgrade"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."start_building_upgrade"("p_player_id" "uuid", "p_building_kind" "text", "p_entity_id" "uuid") TO "service_role";
 
-
-
 GRANT ALL ON FUNCTION "public"."start_logistics_company_construction"("p_player_id" "uuid", "p_type_id" "uuid", "p_name" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."start_logistics_company_construction"("p_player_id" "uuid", "p_type_id" "uuid", "p_name" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."start_logistics_company_construction"("p_player_id" "uuid", "p_type_id" "uuid", "p_name" "text") TO "service_role";
 
-
-
-GRANT ALL ON FUNCTION "public"."start_market_to_store_transfer"("p_market_listing_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."start_market_to_store_transfer"("p_market_listing_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."start_market_to_store_transfer"("p_market_listing_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."start_market_transfer"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."start_market_transfer"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."start_market_transfer"("p_buyer_warehouse_id" "uuid", "p_seller_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."start_production_to_warehouse_transfer"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."start_production_to_warehouse_transfer"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."start_production_to_warehouse_transfer"("p_production_inventory_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."start_store_to_warehouse_transfer"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."start_store_to_warehouse_transfer"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."start_store_to_warehouse_transfer"("p_store_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."start_warehouse_to_production_transfer"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."start_warehouse_to_production_transfer"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."start_warehouse_to_production_transfer"("p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."start_warehouse_to_store_transfer"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."start_warehouse_to_store_transfer"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."start_warehouse_to_store_transfer"("p_store_slot_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."start_warehouse_to_warehouse_transfer"("p_warehouse_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."start_warehouse_to_warehouse_transfer"("p_warehouse_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."start_warehouse_to_warehouse_transfer"("p_warehouse_slot_id" "uuid", "p_buyer_warehouse_id" "uuid", "p_quantity" integer, "p_vehicle_id" "uuid") TO "service_role";
-
-
+GRANT ALL ON FUNCTION "public"."start_multi_market_transfer"("p_buyer_warehouse_id" "uuid", "p_source_city_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."start_multi_market_transfer"("p_buyer_warehouse_id" "uuid", "p_source_city_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."start_multi_market_transfer"("p_buyer_warehouse_id" "uuid", "p_source_city_id" "uuid", "p_items" "jsonb", "p_vehicle_id" "uuid") TO "service_role";
 
 REVOKE ALL ON FUNCTION "public"."sync_player_mission_snapshot"("p_player_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."sync_player_mission_snapshot"("p_player_id" "uuid") TO "service_role";
-
-
 
 GRANT ALL ON FUNCTION "public"."to_turkey_time"("p_value" timestamp with time zone) TO "anon";
 GRANT ALL ON FUNCTION "public"."to_turkey_time"("p_value" timestamp with time zone) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."to_turkey_time"("p_value" timestamp with time zone) TO "service_role";
 
-
-
-GRANT ALL ON FUNCTION "public"."transfer_production_inventory_to_warehouse"("p_player_id" "uuid", "p_production_inventory_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."transfer_production_inventory_to_warehouse"("p_player_id" "uuid", "p_production_inventory_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."transfer_production_inventory_to_warehouse"("p_player_id" "uuid", "p_production_inventory_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."transfer_store_slot_to_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."transfer_store_slot_to_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."transfer_store_slot_to_warehouse"("p_player_id" "uuid", "p_store_slot_id" "uuid", "p_warehouse_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."transfer_warehouse_fuel_to_logistics_company"("p_logistics_company_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."transfer_warehouse_fuel_to_logistics_company"("p_logistics_company_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."transfer_warehouse_fuel_to_logistics_company"("p_logistics_company_id" "uuid", "p_warehouse_slot_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."transfer_warehouse_slot_to_production_inventory"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."transfer_warehouse_slot_to_production_inventory"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."transfer_warehouse_slot_to_production_inventory"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_production_inventory_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."transfer_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) TO "anon";
-GRANT ALL ON FUNCTION "public"."transfer_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."transfer_warehouse_slot_to_store_slot"("p_player_id" "uuid", "p_warehouse_slot_id" "uuid", "p_store_slot_id" "uuid", "p_quantity" integer) TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."upgrade_player_product_quality"("p_player_id" "uuid", "p_product_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."upgrade_player_product_quality"("p_player_id" "uuid", "p_product_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."upgrade_player_product_quality"("p_player_id" "uuid", "p_product_id" "text") TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 GRANT ALL ON TABLE "public"."arge_centers" TO "anon";
 GRANT ALL ON TABLE "public"."arge_centers" TO "authenticated";
 GRANT ALL ON TABLE "public"."arge_centers" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."arge_researches" TO "anon";
 GRANT ALL ON TABLE "public"."arge_researches" TO "authenticated";
 GRANT ALL ON TABLE "public"."arge_researches" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."building_boosts" TO "anon";
 GRANT ALL ON TABLE "public"."building_boosts" TO "authenticated";
 GRANT ALL ON TABLE "public"."building_boosts" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."building_constructions" TO "anon";
 GRANT ALL ON TABLE "public"."building_constructions" TO "authenticated";
 GRANT ALL ON TABLE "public"."building_constructions" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."building_upgrades" TO "anon";
 GRANT ALL ON TABLE "public"."building_upgrades" TO "authenticated";
 GRANT ALL ON TABLE "public"."building_upgrades" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."cities" TO "anon";
 GRANT ALL ON TABLE "public"."cities" TO "authenticated";
 GRANT ALL ON TABLE "public"."cities" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."factories" TO "anon";
 GRANT ALL ON TABLE "public"."factories" TO "authenticated";
 GRANT ALL ON TABLE "public"."factories" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."factory_types" TO "anon";
 GRANT ALL ON TABLE "public"."factory_types" TO "authenticated";
 GRANT ALL ON TABLE "public"."factory_types" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."farm_types" TO "anon";
 GRANT ALL ON TABLE "public"."farm_types" TO "authenticated";
 GRANT ALL ON TABLE "public"."farm_types" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."farms" TO "anon";
 GRANT ALL ON TABLE "public"."farms" TO "authenticated";
 GRANT ALL ON TABLE "public"."farms" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."field_types" TO "anon";
 GRANT ALL ON TABLE "public"."field_types" TO "authenticated";
 GRANT ALL ON TABLE "public"."field_types" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."fields" TO "anon";
 GRANT ALL ON TABLE "public"."fields" TO "authenticated";
 GRANT ALL ON TABLE "public"."fields" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."game_settings" TO "anon";
 GRANT ALL ON TABLE "public"."game_settings" TO "authenticated";
 GRANT ALL ON TABLE "public"."game_settings" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."logistics_companies" TO "anon";
 GRANT ALL ON TABLE "public"."logistics_companies" TO "authenticated";
 GRANT ALL ON TABLE "public"."logistics_companies" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."logistics_company_types" TO "anon";
 GRANT ALL ON TABLE "public"."logistics_company_types" TO "authenticated";
 GRANT ALL ON TABLE "public"."logistics_company_types" TO "service_role";
 
-
 GRANT ALL ON TABLE "public"."logistics_finance_entries" TO "anon";
 GRANT ALL ON TABLE "public"."logistics_finance_entries" TO "authenticated";
 GRANT ALL ON TABLE "public"."logistics_finance_entries" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."logistics_transfers" TO "anon";
 GRANT ALL ON TABLE "public"."logistics_transfers" TO "authenticated";
 GRANT ALL ON TABLE "public"."logistics_transfers" TO "service_role";
 
-
+GRANT ALL ON TABLE "public"."logistics_transfer_items" TO "anon";
+GRANT ALL ON TABLE "public"."logistics_transfer_items" TO "authenticated";
+GRANT ALL ON TABLE "public"."logistics_transfer_items" TO "service_role";
 
 GRANT ALL ON TABLE "public"."logistics_vehicle_types" TO "anon";
 GRANT ALL ON TABLE "public"."logistics_vehicle_types" TO "authenticated";
 GRANT ALL ON TABLE "public"."logistics_vehicle_types" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."mine_types" TO "anon";
 GRANT ALL ON TABLE "public"."mine_types" TO "authenticated";
 GRANT ALL ON TABLE "public"."mine_types" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."mines" TO "anon";
 GRANT ALL ON TABLE "public"."mines" TO "authenticated";
 GRANT ALL ON TABLE "public"."mines" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."mission_definitions" TO "anon";
 GRANT ALL ON TABLE "public"."mission_definitions" TO "authenticated";
 GRANT ALL ON TABLE "public"."mission_definitions" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."player_experience_logs" TO "anon";
 GRANT ALL ON TABLE "public"."player_experience_logs" TO "authenticated";
 GRANT ALL ON TABLE "public"."player_experience_logs" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."player_missions" TO "anon";
 GRANT ALL ON TABLE "public"."player_missions" TO "authenticated";
 GRANT ALL ON TABLE "public"."player_missions" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."player_product_quality_levels" TO "anon";
 GRANT ALL ON TABLE "public"."player_product_quality_levels" TO "authenticated";
 GRANT ALL ON TABLE "public"."player_product_quality_levels" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."players" TO "anon";
 GRANT ALL ON TABLE "public"."players" TO "authenticated";
 GRANT ALL ON TABLE "public"."players" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."production_inventory" TO "anon";
 GRANT ALL ON TABLE "public"."production_inventory" TO "authenticated";
 GRANT ALL ON TABLE "public"."production_inventory" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."production_slots" TO "anon";
 GRANT ALL ON TABLE "public"."production_slots" TO "authenticated";
 GRANT ALL ON TABLE "public"."production_slots" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."products" TO "anon";
 GRANT ALL ON TABLE "public"."products" TO "authenticated";
 GRANT ALL ON TABLE "public"."products" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."store_daily_performance" TO "anon";
 GRANT ALL ON TABLE "public"."store_daily_performance" TO "authenticated";
 GRANT ALL ON TABLE "public"."store_daily_performance" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."store_slots" TO "anon";
 GRANT ALL ON TABLE "public"."store_slots" TO "authenticated";
 GRANT ALL ON TABLE "public"."store_slots" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."store_types" TO "anon";
 GRANT ALL ON TABLE "public"."store_types" TO "authenticated";
 GRANT ALL ON TABLE "public"."store_types" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."stores" TO "anon";
 GRANT ALL ON TABLE "public"."stores" TO "authenticated";
 GRANT ALL ON TABLE "public"."stores" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."warehouse_slots" TO "anon";
 GRANT ALL ON TABLE "public"."warehouse_slots" TO "authenticated";
 GRANT ALL ON TABLE "public"."warehouse_slots" TO "service_role";
-
-
 
 GRANT ALL ON TABLE "public"."warehouse_types" TO "anon";
 GRANT ALL ON TABLE "public"."warehouse_types" TO "authenticated";
 GRANT ALL ON TABLE "public"."warehouse_types" TO "service_role";
 
-
-
 GRANT ALL ON TABLE "public"."warehouses" TO "anon";
 GRANT ALL ON TABLE "public"."warehouses" TO "authenticated";
 GRANT ALL ON TABLE "public"."warehouses" TO "service_role";
-
-
-
-
-
-
-
-
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "service_role";
 
-
-
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "service_role";
 
-
-
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

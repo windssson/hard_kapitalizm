@@ -48,8 +48,13 @@ class FarmListItemModel {
     required this.slots,
   });
 
+  int get totalOutputCapacity {
+    final slotCount = farm.currentSlotCount > 0 ? farm.currentSlotCount : 1;
+    return farm.outputCapacity * slotCount;
+  }
+
   double get outputStockRatio {
-    if (farm.outputCapacity <= 0) return 0.0;
-    return (outputStockQuantity / farm.outputCapacity).clamp(0.0, 1.0);
+    if (totalOutputCapacity <= 0) return 0.0;
+    return (outputStockQuantity / totalOutputCapacity).clamp(0.0, 1.0);
   }
 }

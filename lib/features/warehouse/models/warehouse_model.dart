@@ -2,6 +2,9 @@ class WarehouseModel {
   final String id;
   final String playerId;
   final String warehouseTypeId;
+  final String? storeId;
+  final String warehouseKind;
+  final Map<String, dynamic>? warehouseType;
   final String? typeIcon; // Depo tipi ikonu
   final String cityId;
   final String? cityName;
@@ -21,6 +24,9 @@ class WarehouseModel {
     required this.id,
     required this.playerId,
     required this.warehouseTypeId,
+    this.storeId,
+    this.warehouseKind = 'normal',
+    this.warehouseType,
     this.typeIcon,
     required this.cityId,
     this.cityName,
@@ -52,6 +58,9 @@ class WarehouseModel {
       id: (json['id'] ?? '').toString(),
       playerId: (json['player_id'] ?? '').toString(),
       warehouseTypeId: (json['warehouse_type_id'] ?? '').toString(),
+      storeId: json['store_id']?.toString(),
+      warehouseKind: (json['warehouse_kind'] ?? 'normal').toString(),
+      warehouseType: warehouseTypeJson,
       typeIcon: warehouseTypeJson?['icon']?.toString(),
       cityId: (json['city_id'] ?? '').toString(),
       cityName: cityJson?['name']?.toString(),
@@ -80,6 +89,9 @@ class WarehouseModel {
     String? id,
     String? playerId,
     String? warehouseTypeId,
+    Object? storeId = _warehouseUnset,
+    String? warehouseKind,
+    Object? warehouseType = _warehouseUnset,
     String? typeIcon,
     String? cityId,
     Object? cityName = _warehouseUnset,
@@ -98,6 +110,13 @@ class WarehouseModel {
       id: id ?? this.id,
       playerId: playerId ?? this.playerId,
       warehouseTypeId: warehouseTypeId ?? this.warehouseTypeId,
+      storeId: identical(storeId, _warehouseUnset)
+          ? this.storeId
+          : storeId as String?,
+      warehouseKind: warehouseKind ?? this.warehouseKind,
+      warehouseType: identical(warehouseType, _warehouseUnset)
+          ? this.warehouseType
+          : warehouseType as Map<String, dynamic>?,
       typeIcon: typeIcon ?? this.typeIcon,
       cityId: cityId ?? this.cityId,
       cityName: identical(cityName, _warehouseUnset)
@@ -121,6 +140,7 @@ class WarehouseModel {
 
 class WarehouseSlotModel {
   final String id;
+  final String brandId;
   final String? productId;
   final String? productName;
   final String? productIcon;
@@ -133,6 +153,7 @@ class WarehouseSlotModel {
 
   WarehouseSlotModel({
     required this.id,
+    this.brandId = '00000000-0000-0000-0000-000000000000',
     this.productId,
     this.productName,
     this.productIcon,
@@ -153,6 +174,8 @@ class WarehouseSlotModel {
     
     return WarehouseSlotModel(
       id: (json['id'] ?? '').toString(),
+      brandId: (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+          .toString(),
       productId: json['product_id']?.toString(),
       productName: json['product_name'] as String? ?? productJson?['urun_adi'] as String?,
       productIcon: productJson?['urun_iconu'] as String?,
@@ -167,6 +190,7 @@ class WarehouseSlotModel {
 
   WarehouseSlotModel copyWith({
     String? id,
+    String? brandId,
     Object? productId = _warehouseUnset,
     Object? productName = _warehouseUnset,
     Object? productIcon = _warehouseUnset,
@@ -179,6 +203,7 @@ class WarehouseSlotModel {
   }) {
     return WarehouseSlotModel(
       id: id ?? this.id,
+      brandId: brandId ?? this.brandId,
       productId: identical(productId, _warehouseUnset)
           ? this.productId
           : productId as String?,

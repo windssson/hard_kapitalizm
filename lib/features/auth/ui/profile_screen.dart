@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/achievement/models/achievement_badge_model.dart';
+import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,6 +25,44 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final int _selectedIndex = 4;
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() async {
+      try {
+        final synced = await ref.read(authManagerProvider).syncGoogleProfileIfLinked();
+        if (synced) {
+          ref.invalidate(authIdentityProvider);
+          ref.invalidate(playerProvider);
+        }
+      } catch (_) {}
+    });
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      data,
+    ) async {
+      final event = data.event;
+      if (event != AuthChangeEvent.signedIn &&
+          event != AuthChangeEvent.userUpdated &&
+          event != AuthChangeEvent.tokenRefreshed) {
+        return;
+      }
+
+      try {
+        await ref.read(authManagerProvider).syncLinkedGoogleProfileMetadata();
+      } catch (_) {}
+
+      ref.invalidate(authIdentityProvider);
+      ref.invalidate(playerProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
@@ -31,6 +74,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       case 2:
         context.go('/transfer-map');
         break;
+      case 3:
+        context.go('/market');
+        break;
       case 4:
         context.go('/profile');
         break;
@@ -40,6 +86,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final playerAsyncValue = ref.watch(playerProvider);
+    final authIdentityAsync = ref.watch(authIdentityProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -60,7 +107,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       );
                     }
-                    return _buildProfileContent(player);
+                    return _buildProfileContent(
+                      player,
+                      authIdentityAsync.asData?.value,
+                    );
                   },
                   loading: () => Center(
                     child: CircularProgressIndicator(color: AppColors.gold),
@@ -148,7 +198,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileContent(PlayerModel player) {
+  Widget _buildProfileContent(
+    PlayerModel player,
+    AuthIdentityState? authIdentity,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -341,6 +394,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
         SizedBox(height: 24.h),
+        _buildAccountLinkCard(authIdentity),
+        SizedBox(height: 24.h),
         Text('Rozetler ve Basarilar', style: AppTextStyles.h2),
         SizedBox(height: 12.h),
         Container(
@@ -445,6 +500,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         SizedBox(height: 24.h),
         Text('Finansal Durum', style: AppTextStyles.h2),
         SizedBox(height: 12.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sirket Degeri',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Text(
+                player.companyValue.toStringAsFixed(0),
+                style: AppTextStyles.h1.copyWith(
+                  fontSize: 24.sp,
+                  color: AppColors.gold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 12.h),
         Row(
           children: [
             _buildStatCard(
@@ -493,6 +579,127 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildAccountLinkCard(AuthIdentityState? authIdentity) {
+    final isGoogleLinked = authIdentity?.isGoogleLinked ?? false;
+    final linkedEmail = authIdentity?.effectiveEmail;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isGoogleLinked ? Icons.verified_user_rounded : Icons.link_rounded,
+                color: isGoogleLinked ? AppColors.green : AppColors.gold,
+                size: 18.sp,
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  isGoogleLinked ? 'Google Hesabi Bagli' : 'Hesabi Guvenceye Al',
+                  style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            isGoogleLinked
+                ? 'Hesabin Google ile bagli. Oyuncu verilerin korunur, cihaz degistirdiginde ayni hesaba geri donebilirsin.'
+                : 'Gecici cihaz hesabini Google ile baglayarak ilerlemeni guvenceye al. Mevcut oyuncu kaydin aynen korunur.',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (linkedEmail != null && linkedEmail.isNotEmpty) ...[
+            SizedBox(height: 10.h),
+            Text(
+              linkedEmail,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          SizedBox(height: 12.h),
+          SizedBox(
+            width: double.infinity,
+            height: 46.h,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isGoogleLinked
+                    ? AppColors.green.withValues(alpha: 0.14)
+                    : AppColors.cardBgLight,
+                side: BorderSide(
+                  color: isGoogleLinked
+                      ? AppColors.green.withValues(alpha: 0.45)
+                      : AppColors.gold.withValues(alpha: 0.35),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+              ),
+              onPressed: isGoogleLinked ? null : _handleGoogleLink,
+              icon: Icon(
+                isGoogleLinked ? Icons.check_circle_rounded : Icons.g_mobiledata_rounded,
+                color: isGoogleLinked ? AppColors.green : Colors.white,
+                size: 22.sp,
+              ),
+              label: Text(
+                isGoogleLinked ? 'Google Baglandi' : 'Google Hesabina Bagla',
+                style: TextStyle(
+                  color: isGoogleLinked ? AppColors.green : Colors.white,
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleGoogleLink() async {
+    try {
+      await ref.read(authManagerProvider).linkGoogleIdentity();
+      await ref.read(authManagerProvider).syncLinkedGoogleProfileMetadata();
+      ref.invalidate(authIdentityProvider);
+      ref.invalidate(playerProvider);
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: 'Google hesabi basariyla baglandi.',
+        type: SnackbarType.success,
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.message,
+        type: SnackbarType.error,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString(),
+        type: SnackbarType.error,
+      );
+    }
   }
 
   Widget _buildStatCard(IconData icon, String label, String value, Color color) {

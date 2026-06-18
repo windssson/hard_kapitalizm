@@ -27,9 +27,12 @@ class PlayerNotificationModel {
 
   bool get isUnread => status == 'unread';
   bool get isWarning => kind == 'warning';
+  bool get isEvent => kind == 'event';
+  bool get isResolved => status == 'resolved';
   bool get isActiveWarning => isWarning && status != 'resolved';
   bool get isActiveReminder =>
       category == 'inactive_reminder' && status != 'resolved';
+  bool get needsAttention => isActiveWarning || isActiveReminder;
 
   factory PlayerNotificationModel.fromJson(Map<String, dynamic> json) {
     return PlayerNotificationModel(

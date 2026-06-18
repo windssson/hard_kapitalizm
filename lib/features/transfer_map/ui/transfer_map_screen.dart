@@ -11,12 +11,10 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
-import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
@@ -66,8 +64,7 @@ class TransferMapScreen extends ConsumerStatefulWidget {
 
 class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   final int _selectedIndex = 2;
-  Timer? _timer;
-  DateTime _now = DateTime.now();
+  Timer? _dueTransferTimer;
   bool _isCompletingDueTransfers = false;
   int _selectedTab = 0;
   _ActiveTransferFilter _activeFilter = _ActiveTransferFilter.all;
@@ -81,21 +78,57 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      _checkDueTransfers();
-    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkDueTransfers();
+      final transfers = ref.read(buyerTransferMapProvider).value;
+      if (transfers != null) {
+        _scheduleDueTransferCheckForTransfers(transfers);
+      }
     });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _dueTransferTimer?.cancel();
     _activeScrollController.dispose();
     _historyScrollController.dispose();
     super.dispose();
+  }
+
+  void _scheduleDueTransferCheckForTransfers(
+    List<TransferMapItemModel> transfers,
+  ) {
+    _dueTransferTimer?.cancel();
+
+    if (!mounted || transfers.isEmpty) return;
+
+    final now = DateTime.now();
+    final pendingTransfers = transfers
+        .where((transfer) => transfer.status == 'in_transit')
+        .toList();
+
+    if (pendingTransfers.isEmpty) return;
+
+    DateTime? nextDueAt;
+    for (final transfer in pendingTransfers) {
+      if (nextDueAt == null || transfer.finishAt.isBefore(nextDueAt)) {
+        nextDueAt = transfer.finishAt;
+      }
+    }
+
+    if (nextDueAt == null) return;
+
+    final delay = nextDueAt.isAfter(now)
+        ? nextDueAt.difference(now)
+        : Duration.zero;
+
+    _dueTransferTimer = Timer(delay, () async {
+      if (!mounted) return;
+      await _checkDueTransfers();
+      final refreshedTransfers = ref.read(buyerTransferMapProvider).value;
+      if (refreshedTransfers != null) {
+        _scheduleDueTransferCheckForTransfers(refreshedTransfers);
+      }
+    });
   }
 
   void _onNavSelected(int index) {
@@ -106,6 +139,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         break;
       case 2:
         context.go('/transfer-map');
+        break;
+      case 3:
+        context.go('/market');
         break;
       case 4:
         context.go('/profile');
@@ -189,16 +225,42 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
     _isCompletingDueTransfers = true;
     try {
-      final result = await ref
-          .read(marketActionProvider)
-          .completeDueMarketTransfers();
+      var completedCount = 0;
+      final affectedWarehouseIds = <String>{};
+      final affectedStoreIds = <String>{};
+      final affectedFactoryIds = <String>{};
+      final affectedFarmIds = <String>{};
+      final affectedFieldIds = <String>{};
+      final affectedMineIds = <String>{};
+
+      for (final transfer in dueTransfers) {
+        final result = await _completeTransfer(ref, transfer);
+        if (result['success'] == true) {
+          completedCount += 1;
+          affectedWarehouseIds.addAll(_affectedIds(result, 'warehouse_ids'));
+          affectedStoreIds.addAll(_affectedIds(result, 'store_ids'));
+          affectedFactoryIds.addAll(_affectedIds(result, 'factory_ids'));
+          affectedFarmIds.addAll(_affectedIds(result, 'farm_ids'));
+          affectedFieldIds.addAll(_affectedIds(result, 'field_ids'));
+          affectedMineIds.addAll(_affectedIds(result, 'mine_ids'));
+        }
+      }
+
       ref.invalidate(buyerTransferMapProvider);
       ref.invalidate(buyerTransferHistoryProvider);
-      _invalidateAffectedTransferTargets(result);
+      _invalidateAffectedTransferTargets({
+        'affected': {
+          'warehouse_ids': affectedWarehouseIds.toList(),
+          'store_ids': affectedStoreIds.toList(),
+          'factory_ids': affectedFactoryIds.toList(),
+          'farm_ids': affectedFarmIds.toList(),
+          'field_ids': affectedFieldIds.toList(),
+          'mine_ids': affectedMineIds.toList(),
+        },
+      });
       if (!mounted) return;
 
-      final completedCount = (result['completed_count'] as num?)?.toInt() ?? 0;
-      if (result['success'] == true && completedCount > 0) {
+      if (completedCount > 0) {
         AppSnackbar.show(
           context,
           title: 'Teslimat Tamamlandi',
@@ -211,7 +273,27 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       }
     } finally {
       _isCompletingDueTransfers = false;
+      final refreshedTransfers = ref.read(buyerTransferMapProvider).value;
+      if (refreshedTransfers != null) {
+        _scheduleDueTransferCheckForTransfers(refreshedTransfers);
+      }
     }
+  }
+
+  Future<Map<String, dynamic>> _completeTransfer(
+    WidgetRef ref,
+    TransferMapItemModel transfer,
+  ) {
+    if (_isLogisticsTransferType(transfer.transferType)) {
+      return ref
+          .read(warehouseActionProvider)
+          .completeLogisticsTransfer(transfer.id);
+    }
+    return Future.value({
+      'success': false,
+      'message':
+          'Eski market transfer akisi kapatildi. Bu kayit yeni sistem disinda kalmis.',
+    });
   }
 
   Future<void> _showTransferInfo(TransferMapItemModel transfer) async {
@@ -221,7 +303,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       transfer.buyerWarehouse.city,
     );
     final totalCost = transfer.totalPrice + transfer.transportCost;
-    final unitCost = transfer.quantity > 0 ? totalCost / transfer.quantity : 0.0;
+    final unitCost = transfer.displayQuantity > 0
+        ? totalCost / transfer.displayQuantity
+        : 0.0;
     await showDialog<void>(
       context: context,
       builder: (context) => Dialog(
@@ -242,9 +326,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               builder: (context, ref, _) {
                 final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
                 final remaining = transfer.finishAt.difference(now);
-                final remainingSeconds = remaining.inSeconds;
-                final showButton = transfer.status == 'in_transit' && remainingSeconds > 0;
-                final starCost = remainingSeconds > 0 ? (remainingSeconds / 600.0).ceil() : 0;
 
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -270,7 +351,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                transfer.product.name,
+                                transfer.displayTitle,
                                 style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
                               ),
                               SizedBox(height: 4.h),
@@ -331,7 +412,27 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                               ),
                             ),
                             SizedBox(height: 14.h),
-                            _buildDialogDetailRow('Miktar', '${transfer.quantity} adet'),
+                            _buildDialogDetailRow(
+                              'Miktar',
+                              '${transfer.displayQuantity} adet',
+                            ),
+                            if (!transfer.isMultiItem) ...[
+                              _buildDialogDetailRow(
+                                'Kalite',
+                                'Kalite ${transfer.qualityLevel}',
+                              ),
+                              _buildDialogDetailRow(
+                                'Brand',
+                                transfer.hasBrand
+                                    ? 'Brandli Urun'
+                                    : 'Standart Brand',
+                              ),
+                            ],
+                            if (transfer.isMultiItem)
+                              _buildDialogDetailRow(
+                                'Kalem Sayisi',
+                                '${transfer.itemCount} farkli urun',
+                              ),
                             _buildDialogDetailRow(
                               'Nakliye Tipi',
                               transfer.isRental ? 'Kiralik Arac' : 'Ozmal Arac',
@@ -404,18 +505,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         ),
                       ),
                     ),
-                    if (showButton) ...[
-                      SizedBox(height: 12.h),
-                      GoldFinishButton(
-                        starCost: starCost,
-                        onPressed: () => _confirmFinishWithStars(
-                          context,
-                          ref,
-                          transfer,
-                          starCost,
-                        ),
-                      ),
-                    ],
                   ],
                 );
               },
@@ -426,6 +515,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     );
   }
 
+  /*
   Future<void> _confirmFinishWithStars(
     BuildContext context,
     WidgetRef ref,
@@ -553,6 +643,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     }
   }
 
+  */
   Widget _buildDialogInfoRow(IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -614,6 +705,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   Widget build(BuildContext context) {
     final transfersAsync = ref.watch(buyerTransferMapProvider);
     final historyAsync = ref.watch(buyerTransferHistoryProvider);
+    ref.listen<AsyncValue<List<TransferMapItemModel>>>(
+      buyerTransferMapProvider,
+      (_, next) {
+        next.whenData(_scheduleDueTransferCheckForTransfers);
+      },
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -626,139 +723,167 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           children: [
             const SecondaryTopBar(title: 'Transfer Haritasi'),
             Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 8.h),
+              padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 6.h),
               child: _buildModeSelector(),
             ),
             Expanded(
               child: _selectedTab == 0
-                  ? Consumer(
-                      builder: (context, ref, _) {
-                        _now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-                        return transfersAsync.when(
-                          data: (transfers) {
-                            final filteredTransfers = _applyActiveFilter(
-                              transfers,
-                            );
-                            TransferMapItemModel? selectedTransfer;
-                            if (filteredTransfers.isNotEmpty) {
-                              for (final item in filteredTransfers) {
-                                if (item.id == _selectedTransferId) {
-                                  selectedTransfer = item;
-                                  break;
-                                }
-                              }
-                              selectedTransfer ??= filteredTransfers.first;
+                  ? transfersAsync.when(
+                      data: (transfers) {
+                        _pruneTransferCardKeys(transfers);
+                        final filteredTransfers = _applyActiveFilter(transfers);
+                        final activeCounts = _countActiveFilters(transfers);
+                        TransferMapItemModel? selectedTransfer;
+                        if (filteredTransfers.isNotEmpty) {
+                          for (final item in filteredTransfers) {
+                            if (item.id == _selectedTransferId) {
+                              selectedTransfer = item;
+                              break;
                             }
-                            final dueCount = transfers
-                                .where((transfer) => !transfer.finishAt.isAfter(_now))
-                                .length;
+                          }
+                          selectedTransfer ??= filteredTransfers.first;
+                        }
+                        final dueCount = transfers
+                            .where(
+                              (transfer) =>
+                                  !transfer.finishAt.isAfter(DateTime.now()),
+                            )
+                            .length;
 
-                            return RefreshIndicator(
-                              onRefresh: () async {
-                                await _checkDueTransfers();
-                                ref.invalidate(buyerTransferMapProvider);
-                              },
-                              child: filteredTransfers.isEmpty
-                                  ? ListView(
-                                      physics: const AlwaysScrollableScrollPhysics(),
-                                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                                      children: [
-                                        SizedBox(height: 12.h),
-                                        _buildActiveOverview(transfers),
-                                        SizedBox(height: 12.h),
-                                        _buildActiveFilterBar(transfers),
-                                        SizedBox(height: 120.h),
-                                        _buildEmptyState(
-                                          hasAnyTransfers: transfers.isNotEmpty,
+                        return RefreshIndicator(
+                          onRefresh: () async {
+                            await _checkDueTransfers();
+                            ref.invalidate(buyerTransferMapProvider);
+                          },
+                          child: filteredTransfers.isEmpty
+                              ? ListView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                                  children: [
+                                    SizedBox(height: 8.h),
+                                    _buildActiveOverview(
+                                      transfers,
+                                      counts: activeCounts,
+                                    ),
+                                    SizedBox(height: 8.h),
+                                    _buildActiveFilterBar(
+                                      transfers,
+                                      counts: activeCounts,
+                                    ),
+                                    SizedBox(height: 120.h),
+                                    _buildEmptyState(
+                                      hasAnyTransfers: transfers.isNotEmpty,
+                                    ),
+                                  ],
+                                )
+                              : CustomScrollView(
+                                  controller: _activeScrollController,
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  slivers: [
+                                    SliverToBoxAdapter(
+                                      child: Padding(
+                                        padding: EdgeInsets.fromLTRB(
+                                          12.w,
+                                          8.h,
+                                          12.w,
+                                          0,
                                         ),
-                                      ],
-                                    )
-                                  : SingleChildScrollView(
-                                      controller: _activeScrollController,
-                                      physics: const AlwaysScrollableScrollPhysics(),
-                                      padding: EdgeInsets.only(
-                                        top: 12.h,
-                                        bottom: 24.h,
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          Padding(
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: 12.w,
+                                        child: Column(
+                                          children: [
+                                            _buildActiveOverview(
+                                              transfers,
+                                              counts: activeCounts,
                                             ),
-                                            child: Column(
-                                              children: [
-                                                _buildActiveOverview(transfers),
-                                                SizedBox(height: 12.h),
-                                                _buildActiveFilterBar(transfers),
-                                              ],
+                                            SizedBox(height: 8.h),
+                                            _buildActiveFilterBar(
+                                              transfers,
+                                              counts: activeCounts,
                                             ),
-                                          ),
-                                          SizedBox(height: 12.h),
-                                          if (dueCount > 0) ...[
-                                            Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 12.w,
-                                              ),
-                                              child: _buildDueTransfersBanner(dueCount),
-                                            ),
-                                            SizedBox(height: 12.h),
                                           ],
-                                          RepaintBoundary(
-                                            child: _buildMapCard(
-                                              filteredTransfers,
-                                              selectedTransferId:
-                                                  selectedTransfer?.id ??
-                                                  _selectedTransferId,
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding: EdgeInsets.fromLTRB(
-                                              12.w,
-                                              16.h,
-                                              12.w,
-                                              0,
-                                            ),
-                                            child: Column(
-                                              children: [
-                                                ...filteredTransfers.map(
-                                                  (transfer) => KeyedSubtree(
-                                                    key: _cardKeyFor(transfer.id),
-                                                    child: RepaintBoundary(
-                                                      child: _buildTransferSummaryCard(
-                                                        transfer,
-                                                        isSelected:
-                                                            transfer.id ==
-                                                            (selectedTransfer?.id ??
-                                                                _selectedTransferId),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ),
                                     ),
-                            );
-                          },
-                          loading: () => const Center(
-                            child: CircularProgressIndicator(color: AppColors.gold),
-                          ),
-                          error: (error, stack) => Center(
-                            child: Text(
-                              'Hata: ${error.toString()}',
-                              style: AppTextStyles.body.copyWith(
-                                color: AppColors.red,
-                              ),
-                            ),
-                          ),
+                                    if (dueCount > 0)
+                                      SliverToBoxAdapter(
+                                        child: Padding(
+                                          padding: EdgeInsets.fromLTRB(
+                                            12.w,
+                                            8.h,
+                                            12.w,
+                                            0,
+                                          ),
+                                          child: _buildDueTransfersBanner(
+                                            dueCount,
+                                          ),
+                                        ),
+                                      ),
+                                    SliverToBoxAdapter(
+                                      child: Padding(
+                                        padding: EdgeInsets.fromLTRB(
+                                          12.w,
+                                          8.h,
+                                          12.w,
+                                          0,
+                                        ),
+                                        child: RepaintBoundary(
+                                          child: _buildMapCard(
+                                            filteredTransfers,
+                                            selectedTransferId:
+                                                selectedTransfer?.id ??
+                                                _selectedTransferId,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    SliverPadding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        12.w,
+                                        16.h,
+                                        12.w,
+                                        24.h,
+                                      ),
+                                      sliver: SliverList(
+                                        delegate: SliverChildBuilderDelegate(
+                                          (context, index) {
+                                            final transfer =
+                                                filteredTransfers[index];
+                                            return KeyedSubtree(
+                                              key: _cardKeyFor(transfer.id),
+                                              child: RepaintBoundary(
+                                                child: _buildTransferSummaryCard(
+                                                  transfer,
+                                                  isSelected:
+                                                      transfer.id ==
+                                                      (selectedTransfer?.id ??
+                                                          _selectedTransferId),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          childCount: filteredTransfers.length,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         );
                       },
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(color: AppColors.gold),
+                      ),
+                      error: (error, stack) => Center(
+                        child: Text(
+                          'Hata: ${error.toString()}',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.red,
+                          ),
+                        ),
+                      ),
                     )
                   : historyAsync.when(
                       data: (history) {
+                        final historyCounts = _countHistoryFilters(history);
                         final filteredHistory = _sortHistory(
                           _applyHistoryFilter(history),
                         );
@@ -774,7 +899,10 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                   SizedBox(height: 12.h),
                                   _buildHistoryOverview(history),
                                   SizedBox(height: 12.h),
-                                  _buildHistoryFilterBar(history),
+                                  _buildHistoryFilterBar(
+                                    history,
+                                    counts: historyCounts,
+                                  ),
                                   SizedBox(height: 10.h),
                                   _buildHistorySortBar(),
                                   SizedBox(height: 120.h),
@@ -799,7 +927,10 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                         children: [
                                           _buildHistoryOverview(history),
                                           SizedBox(height: 12.h),
-                                          _buildHistoryFilterBar(history),
+                                          _buildHistoryFilterBar(
+                                            history,
+                                            counts: historyCounts,
+                                          ),
                                           SizedBox(height: 10.h),
                                           _buildHistorySortBar(),
                                           SizedBox(height: 2.h),
@@ -830,17 +961,51 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     );
   }
 
-  Widget _buildActiveFilterBar(List<TransferMapItemModel> transfers) {
+  Map<_ActiveTransferFilter, int> _countActiveFilters(
+    List<TransferMapItemModel> transfers,
+  ) {
+    final now = DateTime.now();
     final counts = <_ActiveTransferFilter, int>{
-      for (final filter in _ActiveTransferFilter.values)
-        filter: _applyActiveFilter(
-          transfers,
-          override: filter,
-        ).length,
+      for (final filter in _ActiveTransferFilter.values) filter: 0,
     };
 
+    for (final transfer in transfers) {
+      counts[_ActiveTransferFilter.all] =
+          (counts[_ActiveTransferFilter.all] ?? 0) + 1;
+      if (transfer.isRental) {
+        counts[_ActiveTransferFilter.rental] =
+            (counts[_ActiveTransferFilter.rental] ?? 0) + 1;
+      } else {
+        counts[_ActiveTransferFilter.owned] =
+            (counts[_ActiveTransferFilter.owned] ?? 0) + 1;
+      }
+
+      final sameCity = _isSameCityTransfer(transfer);
+      if (sameCity) {
+        counts[_ActiveTransferFilter.sameCity] =
+            (counts[_ActiveTransferFilter.sameCity] ?? 0) + 1;
+      } else {
+        counts[_ActiveTransferFilter.intercity] =
+            (counts[_ActiveTransferFilter.intercity] ?? 0) + 1;
+      }
+
+      if (transfer.finishAt.difference(now).inMinutes <= 10) {
+        counts[_ActiveTransferFilter.urgent] =
+            (counts[_ActiveTransferFilter.urgent] ?? 0) + 1;
+      }
+    }
+
+    return counts;
+  }
+
+  Widget _buildActiveFilterBar(
+    List<TransferMapItemModel> transfers, {
+    Map<_ActiveTransferFilter, int>? counts,
+  }) {
+    final resolvedCounts = counts ?? _countActiveFilters(transfers);
+
     return SizedBox(
-      height: 36.h,
+      height: 32.h,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemBuilder: (context, index) {
@@ -852,7 +1017,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             }),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.gold.withValues(alpha: 0.16)
@@ -870,24 +1035,24 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     filter.label,
                     style: TextStyle(
                       color: isSelected ? AppColors.gold : Colors.white,
-                      fontSize: 11.sp,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(width: 6.w),
+                  SizedBox(width: 5.w),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
+                    padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(999.r),
                     ),
                     child: Text(
-                      '${counts[filter] ?? 0}',
+                      '${resolvedCounts[filter] ?? 0}',
                       style: TextStyle(
                         color: isSelected
                             ? AppColors.goldLight
                             : AppColors.textMuted,
-                        fontSize: 10.sp,
+                        fontSize: 9.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -905,43 +1070,43 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
   Widget _buildOverviewStrip(List<_OverviewItem> items) {
     return SizedBox(
-      height: 86.h,
+      height: 72.h,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemBuilder: (context, index) {
           final item = items[index];
           return Container(
-            width: 132.w,
-            padding: EdgeInsets.all(12.w),
+            width: 118.w,
+            padding: EdgeInsets.fromLTRB(10.w, 9.h, 10.w, 8.h),
             decoration: BoxDecoration(
               color: AppColors.cardBg,
-              borderRadius: BorderRadius.circular(16.r),
+              borderRadius: BorderRadius.circular(14.r),
               border: Border.all(color: item.color.withValues(alpha: 0.22)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(item.icon, color: item.color, size: 18.sp),
-                SizedBox(height: 8.h),
+                Icon(item.icon, color: item.color, size: 15.sp),
+                SizedBox(height: 6.h),
                 Text(
                   item.value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 16.sp,
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                SizedBox(height: 4.h),
+                SizedBox(height: 2.h),
                 Text(
                   item.label,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                    fontSize: 9.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -949,57 +1114,81 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             ),
           );
         },
-        separatorBuilder: (_, __) => SizedBox(width: 10.w),
+        separatorBuilder: (_, __) => SizedBox(width: 8.w),
         itemCount: items.length,
       ),
     );
   }
 
-  Widget _buildActiveOverview(List<TransferMapItemModel> transfers) {
-    final urgentCount = transfers
-        .where((transfer) => transfer.finishAt.difference(_now).inMinutes <= 10)
-        .length;
-    final intercityCount = transfers
-        .where((transfer) => !_isSameCityTransfer(transfer))
-        .length;
-    final rentalCount = transfers.where((transfer) => transfer.isRental).length;
+  Widget _buildActiveOverview(
+    List<TransferMapItemModel> transfers, {
+    Map<_ActiveTransferFilter, int>? counts,
+  }) {
+    final resolvedCounts = counts ?? _countActiveFilters(transfers);
 
     return _buildOverviewStrip([
       _OverviewItem(
         label: 'Aktif transfer',
-        value: '${transfers.length}',
+        value: '${resolvedCounts[_ActiveTransferFilter.all] ?? transfers.length}',
         color: AppColors.gold,
         icon: Icons.route,
       ),
       _OverviewItem(
         label: 'Yaklasan teslimat',
-        value: '$urgentCount',
+        value: '${resolvedCounts[_ActiveTransferFilter.urgent] ?? 0}',
         color: AppColors.red,
         icon: Icons.timer_outlined,
       ),
       _OverviewItem(
         label: 'Sehirler arasi',
-        value: '$intercityCount',
+        value: '${resolvedCounts[_ActiveTransferFilter.intercity] ?? 0}',
         color: AppColors.blue,
         icon: Icons.swap_horiz,
       ),
       _OverviewItem(
         label: 'Kiralik aracli',
-        value: '$rentalCount',
+        value: '${resolvedCounts[_ActiveTransferFilter.rental] ?? 0}',
         color: Colors.orange,
         icon: Icons.local_shipping_outlined,
       ),
     ]);
   }
 
-  Widget _buildHistoryFilterBar(List<TransferHistoryItemModel> history) {
+  Map<_HistoryTransferFilter, int> _countHistoryFilters(
+    List<TransferHistoryItemModel> history,
+  ) {
     final counts = <_HistoryTransferFilter, int>{
-      for (final filter in _HistoryTransferFilter.values)
-        filter: _applyHistoryFilter(
-          history,
-          override: filter,
-        ).length,
+      for (final filter in _HistoryTransferFilter.values) filter: 0,
     };
+
+    for (final item in history) {
+      counts[_HistoryTransferFilter.all] =
+          (counts[_HistoryTransferFilter.all] ?? 0) + 1;
+      if (item.status == 'completed') {
+        counts[_HistoryTransferFilter.completed] =
+            (counts[_HistoryTransferFilter.completed] ?? 0) + 1;
+      }
+      if (item.status == 'cancelled') {
+        counts[_HistoryTransferFilter.cancelled] =
+            (counts[_HistoryTransferFilter.cancelled] ?? 0) + 1;
+      }
+      if (item.isRental) {
+        counts[_HistoryTransferFilter.rental] =
+            (counts[_HistoryTransferFilter.rental] ?? 0) + 1;
+      } else {
+        counts[_HistoryTransferFilter.owned] =
+            (counts[_HistoryTransferFilter.owned] ?? 0) + 1;
+      }
+    }
+
+    return counts;
+  }
+
+  Widget _buildHistoryFilterBar(
+    List<TransferHistoryItemModel> history, {
+    Map<_HistoryTransferFilter, int>? counts,
+  }) {
+    final resolvedCounts = counts ?? _countHistoryFilters(history);
 
     return SizedBox(
       height: 36.h,
@@ -1044,7 +1233,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                       borderRadius: BorderRadius.circular(999.r),
                     ),
                     child: Text(
-                      '${counts[filter] ?? 0}',
+                      '${resolvedCounts[filter] ?? 0}',
                       style: TextStyle(
                         color: isSelected
                             ? AppColors.goldLight
@@ -1158,22 +1347,22 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   Widget _buildDueTransfersBanner(int dueCount) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: AppColors.gold.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
       ),
       child: Row(
         children: [
-          Icon(Icons.notifications_active, color: AppColors.gold, size: 18.sp),
-          SizedBox(width: 8.w),
+          Icon(Icons.notifications_active, color: AppColors.gold, size: 16.sp),
+          SizedBox(width: 6.w),
           Expanded(
             child: Text(
               '$dueCount transfer teslimata hazir. Otomatik tamamlanacak.',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 11.sp,
+                fontSize: 10.sp,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1188,6 +1377,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     _ActiveTransferFilter? override,
   }) {
     final filter = override ?? _activeFilter;
+    final now = DateTime.now();
     return transfers.where((transfer) {
       switch (filter) {
         case _ActiveTransferFilter.all:
@@ -1201,9 +1391,14 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         case _ActiveTransferFilter.sameCity:
           return _isSameCityTransfer(transfer);
         case _ActiveTransferFilter.urgent:
-          return transfer.finishAt.difference(_now).inMinutes <= 10;
+          return transfer.finishAt.difference(now).inMinutes <= 10;
       }
     }).toList();
+  }
+
+  void _pruneTransferCardKeys(List<TransferMapItemModel> transfers) {
+    final validIds = transfers.map((transfer) => transfer.id).toSet();
+    _transferCardKeys.removeWhere((key, _) => !validIds.contains(key));
   }
 
   List<TransferHistoryItemModel> _applyHistoryFilter(
@@ -1268,6 +1463,20 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
   bool _isSameCityTransfer(TransferMapItemModel transfer) {
     return transfer.sellerWarehouse.city.id == transfer.buyerWarehouse.city.id;
+  }
+
+  bool _isLogisticsTransferType(String transferType) {
+    return transferType == 'warehouse_to_warehouse' ||
+        transferType == 'market_to_warehouse' ||
+        transferType == 'warehouse_to_store' ||
+        transferType == 'store_to_warehouse' ||
+        transferType == 'warehouse_to_production' ||
+        transferType == 'production_to_warehouse' ||
+        transferType == 'market_to_warehouse_multi' ||
+        transferType == 'warehouse_to_warehouse_multi' ||
+        transferType == 'warehouse_to_store_multi' ||
+        transferType == 'store_to_warehouse_multi' ||
+        transferType == 'internal_transfer';
   }
 
   String _buildDeliveryCompletionMessage(
@@ -1654,67 +1863,45 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                               ),
                             );
                           }),
-                          ...transfers.map((transfer) {
-                            final start = project(
-                              transfer.sellerWarehouse.city,
-                            );
-                            final end = project(transfer.buyerWarehouse.city);
-                            final progress = _calculateProgress(transfer);
-                            final position = Offset.lerp(start, end, progress)!;
-                            return Positioned(
-                              left: position.dx - 15.w,
-                              top: position.dy - 15.w,
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedTransferId = transfer.id;
-                                  });
-                                  _focusTransferCard(transfers, transfer.id);
-                                  _showTransferInfo(transfer);
-                                },
-                                child: Container(
-                                  width: 30.w,
-                                  height: 30.w,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.cardBg,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: transfer.id == selectedTransferId
-                                          ? AppColors.blue
-                                          : transfer.isRental
-                                          ? Colors.orange
-                                          : AppColors.gold,
-                                      width: transfer.id == selectedTransferId
-                                          ? 3
-                                          : 2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color:
-                                            (transfer.id == selectedTransferId
-                                                    ? AppColors.blue
-                                                    : transfer.isRental
-                                                    ? Colors.orange
-                                                    : AppColors.gold)
-                                                .withValues(alpha: 0.4),
-                                        blurRadius: 12,
-                                        spreadRadius: 2,
+                          Positioned.fill(
+                            child: Consumer(
+                              builder: (context, ref, _) {
+                                final now =
+                                    ref.watch(secondTickerProvider).value ??
+                                    DateTime.now();
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    for (final transfer in transfers)
+                                      _TransferMapMovingMarker(
+                                        transfer: transfer,
+                                        selectedTransferId: selectedTransferId,
+                                        start: project(
+                                          transfer.sellerWarehouse.city,
+                                        ),
+                                        end: project(
+                                          transfer.buyerWarehouse.city,
+                                        ),
+                                        progress: _calculateProgress(
+                                          transfer,
+                                          now: now,
+                                        ),
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedTransferId = transfer.id;
+                                          });
+                                          _focusTransferCard(
+                                            transfers,
+                                            transfer.id,
+                                          );
+                                          _showTransferInfo(transfer);
+                                        },
                                       ),
-                                    ],
-                                  ),
-                                  child: Icon(
-                                    transfer.isRental
-                                        ? Icons.local_shipping
-                                        : Icons.directions_car,
-                                    color: transfer.isRental
-                                        ? Colors.orange
-                                        : AppColors.gold,
-                                    size: 15.sp,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -1732,7 +1919,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     TransferMapItemModel transfer, {
     bool isSelected = false,
   }) {
-    final progress = _calculateProgress(transfer);
     final accentColor = transfer.isRental ? Colors.orange : AppColors.gold;
     final sameCity = _isSameCityTransfer(transfer);
     final routeDistanceKm = _estimateRouteDistanceKm(
@@ -1740,14 +1926,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       transfer.buyerWarehouse.city,
     );
     final totalCost = transfer.totalPrice + transfer.transportCost;
-    final unitLogisticsCost = transfer.quantity > 0
-        ? transfer.transportCost / transfer.quantity
+    final unitLogisticsCost = transfer.displayQuantity > 0
+        ? transfer.transportCost / transfer.displayQuantity
         : 0.0;
     final logisticsLabel = transfer.isRental
         ? 'Nakliye ${_formatCurrency(unitLogisticsCost)} / adet'
         : 'Ozmal transfer';
-
-    final remaining = transfer.finishAt.difference(_now);
 
     return GestureDetector(
       onTap: () {
@@ -1804,7 +1988,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     Row(
                       children: [
                         Text(
-                          transfer.product.name,
+                          transfer.displayTitle,
                           style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1861,6 +2045,29 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               ),
             ],
           ),
+          SizedBox(height: 8.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: [
+              _buildInlineMetaChip(
+                '${transfer.sellerKindLabel} -> ${transfer.buyerKindLabel}',
+                AppColors.gold,
+              ),
+              if (!transfer.isMultiItem)
+                _buildInlineMetaChip(
+                  _buildQualityBrandSummary(
+                    qualityLevel: transfer.qualityLevel,
+                    hasBrand: transfer.hasBrand,
+                  ),
+                  Colors.white,
+                ),
+              _buildInlineMetaChip(
+                '${routeDistanceKm.toStringAsFixed(0)} km',
+                sameCity ? AppColors.green : AppColors.blue,
+              ),
+            ],
+          ),
           SizedBox(height: 10.h),
           Container(
             width: double.infinity,
@@ -1870,54 +2077,45 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               borderRadius: BorderRadius.circular(12.r),
               border: Border.all(color: accentColor.withValues(alpha: 0.18)),
             ),
-            child: Row(
-              children: [
-                Icon(Icons.schedule, color: accentColor, size: 16.sp),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: Text(
-                    'Kalan Sure: ${_formatRemaining(remaining)}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Varis ${_formatDateTime(transfer.finishAt)}',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 10.sp,
-                  ),
-                ),
-              ],
+            child: _TransferLiveMeta(
+              transfer: transfer,
+              accentColor: accentColor,
+              formatRemaining: _formatRemaining,
+              formatDateTime: _formatDateTime,
             ),
           ),
           SizedBox(height: 12.h),
           _buildCompactMetaRow(
             leftIcon: Icons.inventory_2_outlined,
-            leftText: '${transfer.quantity} adet',
-            rightIcon: Icons.straighten,
-            rightText: '${routeDistanceKm.toStringAsFixed(0)} km',
+            leftText: '${transfer.displayQuantity} adet',
+            rightIcon: Icons.payments_outlined,
+            rightText: _formatCurrency(transfer.totalPrice),
           ),
           SizedBox(height: 6.h),
           _buildCompactMetaRow(
-            leftIcon: Icons.payments_outlined,
-            leftText: _formatCurrency(totalCost),
+            leftIcon: Icons.local_shipping_outlined,
+            leftText: _formatCurrency(transfer.transportCost + transfer.rentalCost),
             rightIcon: transfer.isRental
                 ? Icons.local_shipping_outlined
                 : Icons.directions_car_outlined,
             rightText: logisticsLabel,
           ),
+          if (transfer.isMultiItem) ...[
+            SizedBox(height: 6.h),
+            _buildCompactMetaRow(
+              leftIcon: Icons.payments_outlined,
+              leftText: _formatCurrency(totalCost),
+              rightIcon: Icons.list_alt_outlined,
+              rightText: '${transfer.itemCount} kalem',
+            ),
+          ],
           SizedBox(height: 10.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(4.r),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.black.withValues(alpha: 0.3),
-              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-              minHeight: 6.h,
+            child: _TransferProgressBar(
+              transfer: transfer,
+              accentColor: accentColor,
+              calculateProgress: _calculateProgress,
             ),
           ),
           SizedBox(height: 8.h),
@@ -1925,7 +2123,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             children: [
               Expanded(
                 child: Text(
-                  '${transfer.sellerWarehouse.city.name} - ${transfer.buyerWarehouse.city.name}',
+                  '${transfer.sellerWarehouse.name} -> ${transfer.buyerWarehouse.name}',
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 10.sp,
@@ -2157,8 +2355,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         ? '-'
         : _formatDateTime(item.completedAt!);
     final totalMinutes = item.finishAt.difference(item.startedAt).inMinutes;
-    final unitLogisticsCost = item.quantity > 0
-        ? item.transportCost / item.quantity
+    final unitLogisticsCost = item.displayQuantity > 0
+        ? item.transportCost / item.displayQuantity
         : 0.0;
     final totalCost = item.totalPrice + item.transportCost;
 
@@ -2197,7 +2395,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.product.name,
+                      item.displayTitle,
                       style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
                     ),
                     Text(
@@ -2221,17 +2419,37 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               _buildTransferChip(_statusLabel(item.status), statusColor),
             ],
           ),
+          SizedBox(height: 8.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: [
+              _buildInlineMetaChip(
+                '${item.sellerKind} -> ${item.buyerKind}',
+                AppColors.gold,
+              ),
+              if (!item.isMultiItem)
+                _buildInlineMetaChip(
+                  _buildQualityBrandSummary(
+                    qualityLevel: item.qualityLevel,
+                    hasBrand: item.hasBrand,
+                  ),
+                  Colors.white,
+                ),
+              _buildInlineMetaChip('${totalMinutes} dk', statusColor),
+            ],
+          ),
           SizedBox(height: 12.h),
           _buildCompactMetaRow(
             leftIcon: Icons.inventory_2_outlined,
-            leftText: '${item.quantity} adet',
-            rightIcon: Icons.timelapse_outlined,
-            rightText: '${totalMinutes} dk',
+            leftText: '${item.displayQuantity} adet',
+            rightIcon: Icons.payments_outlined,
+            rightText: _formatCurrency(item.totalPrice),
           ),
           SizedBox(height: 6.h),
           _buildCompactMetaRow(
-            leftIcon: Icons.payments_outlined,
-            leftText: _formatCurrency(totalCost),
+            leftIcon: Icons.local_shipping_outlined,
+            leftText: _formatCurrency(item.transportCost + item.rentalCost),
             rightIcon: item.isRental
                 ? Icons.local_shipping_outlined
                 : Icons.directions_car_outlined,
@@ -2239,6 +2457,15 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ? '${_formatCurrency(unitLogisticsCost)} / adet'
                 : 'Ozmal transfer',
           ),
+          if (item.isMultiItem) ...[
+            SizedBox(height: 6.h),
+            _buildCompactMetaRow(
+              leftIcon: Icons.payments_outlined,
+              leftText: _formatCurrency(totalCost),
+              rightIcon: Icons.list_alt_outlined,
+              rightText: '${item.itemCount} kalem',
+            ),
+          ],
           SizedBox(height: 6.h),
           _buildMetaLine(Icons.event_outlined, completedText),
         ],
@@ -2246,10 +2473,15 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     );
   }
 
-  double _calculateProgress(TransferMapItemModel transfer) {
+  double _calculateProgress(
+    TransferMapItemModel transfer, {
+    DateTime? now,
+  }) {
     final total = transfer.finishAt.difference(transfer.startedAt).inSeconds;
     if (total <= 0) return 1;
-    final elapsed = _now.difference(transfer.startedAt).inSeconds;
+    final elapsed = (now ?? DateTime.now())
+        .difference(transfer.startedAt)
+        .inSeconds;
     return (elapsed / total).clamp(0.0, 1.0);
   }
 
@@ -2295,6 +2527,166 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
   String _formatCurrency(double value) {
     return '${value.toStringAsFixed(1)} TL';
+  }
+
+  String _buildQualityBrandSummary({
+    required int qualityLevel,
+    required bool hasBrand,
+  }) {
+    final brandLabel = hasBrand ? 'Brandli' : 'Standart';
+    return 'Q$qualityLevel | $brandLabel';
+  }
+
+  Widget _buildInlineMetaChip(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+}
+
+class _TransferLiveMeta extends ConsumerWidget {
+  final TransferMapItemModel transfer;
+  final Color accentColor;
+  final String Function(Duration duration) formatRemaining;
+  final String Function(DateTime value) formatDateTime;
+
+  const _TransferLiveMeta({
+    required this.transfer,
+    required this.accentColor,
+    required this.formatRemaining,
+    required this.formatDateTime,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final remaining = transfer.finishAt.difference(now);
+
+    return Row(
+      children: [
+        Icon(Icons.schedule, color: accentColor, size: 16.sp),
+        SizedBox(width: 8.w),
+        Expanded(
+          child: Text(
+            'Kalan Sure: ${formatRemaining(remaining)}',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Text(
+          'Varis ${formatDateTime(transfer.finishAt)}',
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 10.sp,
+          ),
+        ),
+      ],
+    );
+  }
+
+}
+
+class _TransferProgressBar extends ConsumerWidget {
+  final TransferMapItemModel transfer;
+  final Color accentColor;
+  final double Function(TransferMapItemModel transfer, {DateTime? now})
+  calculateProgress;
+
+  const _TransferProgressBar({
+    required this.transfer,
+    required this.accentColor,
+    required this.calculateProgress,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final progress = calculateProgress(transfer, now: now);
+
+    return LinearProgressIndicator(
+      value: progress,
+      backgroundColor: Colors.black.withValues(alpha: 0.3),
+      valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+      minHeight: 6.h,
+    );
+  }
+}
+
+class _TransferMapMovingMarker extends StatelessWidget {
+  final TransferMapItemModel transfer;
+  final String? selectedTransferId;
+  final Offset start;
+  final Offset end;
+  final double progress;
+  final VoidCallback onTap;
+
+  const _TransferMapMovingMarker({
+    required this.transfer,
+    required this.selectedTransferId,
+    required this.start,
+    required this.end,
+    required this.progress,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final position = Offset.lerp(start, end, progress)!;
+    final isSelected = transfer.id == selectedTransferId;
+    final color = isSelected
+        ? AppColors.blue
+        : transfer.isRental
+        ? Colors.orange
+        : AppColors.gold;
+
+    return Positioned(
+      left: position.dx - 15.w,
+      top: position.dy - 15.w,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 30.w,
+          height: 30.w,
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: color,
+              width: isSelected ? 3 : 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.4),
+                blurRadius: 12,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Icon(
+            transfer.isRental ? Icons.local_shipping : Icons.directions_car,
+            color: transfer.isRental ? Colors.orange : AppColors.gold,
+            size: 15.sp,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -2363,7 +2755,25 @@ class _TransferMapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _TransferMapPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _TransferMapPainter oldDelegate) {
+    if (selectedTransferId != oldDelegate.selectedTransferId) {
+      return true;
+    }
+    if (transfers.length != oldDelegate.transfers.length) {
+      return true;
+    }
+    for (var i = 0; i < transfers.length; i++) {
+      final current = transfers[i];
+      final previous = oldDelegate.transfers[i];
+      if (current.id != previous.id ||
+          current.isRental != previous.isRental ||
+          current.sellerWarehouse.city.id != previous.sellerWarehouse.city.id ||
+          current.buyerWarehouse.city.id != previous.buyerWarehouse.city.id) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
 
 class _OverviewItem {

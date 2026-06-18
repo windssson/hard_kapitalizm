@@ -49,6 +49,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       case 2:
         context.go('/transfer-map');
         break;
+      case 3:
+        context.go('/market');
+        break;
       case 4:
         context.go('/profile');
         break;
@@ -342,7 +345,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                   child: _buildStatItem(
                     Icons.inventory_2,
                     AppColors.gold,
-                    'Toplam Output',
+                    'Toplam Urun',
                     _formatCompact(totalOutputStock),
                     Colors.white,
                   ),
@@ -728,7 +731,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                   ),
                   SizedBox(width: 6.w),
                   Text(
-                    'Depolama Kapasitesi',
+                    'Urun Deposu',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 11.sp,
@@ -738,7 +741,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                 ],
               ),
               Text(
-                '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.field.outputCapacity)}',
+                '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.totalOutputCapacity)}',
                 style: TextStyle(
                   color: ratio >= 0.9 ? AppColors.red : Colors.white,
                   fontSize: 12.sp,
