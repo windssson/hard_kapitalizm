@@ -115,21 +115,21 @@ $$;
 
 drop trigger if exists factories_apply_brand_selection on public.factories;
 create trigger factories_apply_brand_selection
-before insert or update of product_id
+before insert or update of product_id, quality_level
 on public.factories
 for each row
 execute function public.apply_production_brand_selection();
 
 drop trigger if exists mines_apply_brand_selection on public.mines;
 create trigger mines_apply_brand_selection
-before insert or update of product_id
+before insert or update of product_id, quality_level
 on public.mines
 for each row
 execute function public.apply_production_brand_selection();
 
 drop trigger if exists production_slots_apply_brand_selection on public.production_slots;
 create trigger production_slots_apply_brand_selection
-before insert or update of product_id
+before insert or update of product_id, quality_level
 on public.production_slots
 for each row
 execute function public.apply_production_brand_selection();

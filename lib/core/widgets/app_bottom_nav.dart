@@ -27,7 +27,7 @@ class AppBottomNav extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildNavItem(0, Icons.home, 'Ana Sayfa'),
-            _buildNavItem(1, Icons.business, 'İşletmeler'),
+            _buildNavItem(1, Icons.apartment_rounded, 'Sirket'),
             _buildNavItem(2, Icons.map, 'Harita'),
             _buildNavItem(3, Icons.storefront, 'Pazar'),
             _buildNavItem(4, Icons.person, 'Profil'),

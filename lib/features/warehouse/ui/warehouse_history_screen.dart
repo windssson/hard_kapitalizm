@@ -183,6 +183,7 @@ class _WarehouseHistoryScreenState
     final incomingCount = items.where((item) => item.isIncoming).length;
     final outgoingCount = items.where((item) => item.isOutgoing).length;
     final salesCount = items.where((item) => item.isSale).length;
+    final brandedCount = items.where((item) => item.hasBrand).length;
     final totalQuantity = items.fold<int>(
       0,
       (sum, item) => sum + item.quantity,
@@ -223,6 +224,11 @@ class _WarehouseHistoryScreenState
               _buildSummaryChip('Giris', incomingCount.toString(), AppColors.green),
               _buildSummaryChip('Cikis', outgoingCount.toString(), AppColors.blue),
               _buildSummaryChip('Satis', salesCount.toString(), AppColors.gold),
+              _buildSummaryChip(
+                'Markali',
+                brandedCount.toString(),
+                AppColors.gold,
+              ),
               _buildSummaryChip(
                 'Toplam Adet',
                 _formatCompactNumber(totalQuantity.toDouble()),
@@ -393,7 +399,7 @@ class _WarehouseHistoryScreenState
               ),
               _buildStatusChip('Kalite ${item.qualityLevel}', Colors.white),
               _buildStatusChip(
-                item.hasBrand ? 'Brandli' : 'Standart Brand',
+                item.hasBrand ? 'Markali' : 'Brandsiz',
                 item.hasBrand ? AppColors.gold : AppColors.textMuted,
               ),
             ],

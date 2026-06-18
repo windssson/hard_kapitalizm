@@ -173,7 +173,7 @@ begin
       and owner_id = v_row.factory_id
       and inventory_type = 'input'
       and product_id = v_row.h1_id
-      and quality_level = v_row.quality_level
+      and quality_level = greatest(v_row.quality_level - 1, 1)
     for update;
 
     select coalesce(quantity, 0), coalesce(cost, 0)
@@ -183,7 +183,7 @@ begin
       and owner_id = v_row.factory_id
       and inventory_type = 'input'
       and product_id = v_row.h2_id
-      and quality_level = v_row.quality_level
+      and quality_level = greatest(v_row.quality_level - 1, 1)
     for update;
 
     select coalesce(quantity, 0), coalesce(cost, 0)
@@ -193,7 +193,7 @@ begin
       and owner_id = v_row.factory_id
       and inventory_type = 'input'
       and product_id = v_row.h3_id
-      and quality_level = v_row.quality_level
+      and quality_level = greatest(v_row.quality_level - 1, 1)
     for update;
 
     if (v_h1_required > 0 and coalesce(v_h1_quantity, 0) < v_h1_required)
@@ -215,7 +215,7 @@ begin
         and owner_id = v_row.factory_id
         and inventory_type = 'input'
         and product_id = v_row.h1_id
-        and quality_level = v_row.quality_level;
+        and quality_level = greatest(v_row.quality_level - 1, 1);
     end if;
 
     if v_h2_required > 0 then
@@ -225,7 +225,7 @@ begin
         and owner_id = v_row.factory_id
         and inventory_type = 'input'
         and product_id = v_row.h2_id
-        and quality_level = v_row.quality_level;
+        and quality_level = greatest(v_row.quality_level - 1, 1);
     end if;
 
     if v_h3_required > 0 then
@@ -235,7 +235,7 @@ begin
         and owner_id = v_row.factory_id
         and inventory_type = 'input'
         and product_id = v_row.h3_id
-        and quality_level = v_row.quality_level;
+        and quality_level = greatest(v_row.quality_level - 1, 1);
     end if;
 
     v_total_input_cost := (v_h1_required * coalesce(v_h1_cost, 0))
@@ -478,7 +478,7 @@ begin
       and owner_id = v_row.owner_id
       and inventory_type = 'input'
       and product_id = v_row.h1_id
-      and quality_level = 1
+      and quality_level = greatest(v_row.quality_level - 1, 1)
     for update;
 
     select coalesce(quantity, 0), coalesce(cost, 0)
@@ -488,7 +488,7 @@ begin
       and owner_id = v_row.owner_id
       and inventory_type = 'input'
       and product_id = v_row.h2_id
-      and quality_level = 1
+      and quality_level = greatest(v_row.quality_level - 1, 1)
     for update;
 
     select coalesce(quantity, 0), coalesce(cost, 0)
@@ -498,7 +498,7 @@ begin
       and owner_id = v_row.owner_id
       and inventory_type = 'input'
       and product_id = v_row.h3_id
-      and quality_level = 1
+      and quality_level = greatest(v_row.quality_level - 1, 1)
     for update;
 
     v_h1_max := case when v_row.h1_id is not null and v_row.h1_per_unit > 0 then floor(coalesce(v_h1_max, 0) / v_row.h1_per_unit)::integer else v_tentative_output end;
@@ -528,7 +528,7 @@ begin
         and owner_id = v_row.owner_id
         and inventory_type = 'input'
         and product_id = v_row.h1_id
-        and quality_level = 1;
+        and quality_level = greatest(v_row.quality_level - 1, 1);
     end if;
 
     if v_h2_required > 0 then
@@ -538,7 +538,7 @@ begin
         and owner_id = v_row.owner_id
         and inventory_type = 'input'
         and product_id = v_row.h2_id
-        and quality_level = 1;
+        and quality_level = greatest(v_row.quality_level - 1, 1);
     end if;
 
     if v_h3_required > 0 then
@@ -548,7 +548,7 @@ begin
         and owner_id = v_row.owner_id
         and inventory_type = 'input'
         and product_id = v_row.h3_id
-        and quality_level = 1;
+        and quality_level = greatest(v_row.quality_level - 1, 1);
     end if;
 
     v_total_input_cost := (v_h1_required * coalesce(v_h1_cost, 0))

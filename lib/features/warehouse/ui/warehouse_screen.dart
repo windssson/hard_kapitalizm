@@ -22,7 +22,7 @@ class WarehouseScreen extends ConsumerStatefulWidget {
 }
 
 class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
-  final int _selectedIndex = 1;
+  final int _selectedIndex = -1;
   String _selectedFilter = 'Tumu';
 
   void _onNavSelected(int index) {
@@ -30,6 +30,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     switch (index) {
       case 0:
         context.go('/home');
+        break;
+      case 1:
+        context.go('/company');
         break;
       case 2:
         context.go('/transfer-map');

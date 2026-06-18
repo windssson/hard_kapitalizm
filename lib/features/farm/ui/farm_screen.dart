@@ -24,7 +24,7 @@ class FarmScreen extends ConsumerStatefulWidget {
 
 class _FarmScreenState extends ConsumerState<FarmScreen>
     with RouteRefreshMixin<FarmScreen> {
-  final int _selectedIndex = 1;
+  final int _selectedIndex = -1;
   String _selectedFilter = 'Tumu';
 
   @override
@@ -46,6 +46,9 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     switch (index) {
       case 0:
         context.go('/home');
+        break;
+      case 1:
+        context.go('/company');
         break;
       case 2:
         context.go('/transfer-map');

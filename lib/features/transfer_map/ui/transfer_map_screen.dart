@@ -137,6 +137,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       case 0:
         context.go('/home');
         break;
+      case 1:
+        context.go('/company');
+        break;
       case 2:
         context.go('/transfer-map');
         break;
@@ -1305,6 +1308,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         .where((item) => item.status == 'cancelled')
         .length;
     final rentalCount = history.where((item) => item.isRental).length;
+    final brandedCount = history.where((item) => item.hasBrand).length;
     final totalValue = history.fold<double>(
       0,
       (sum, item) => sum + item.totalPrice + item.transportCost,
@@ -1334,6 +1338,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         value: '$rentalCount',
         color: Colors.orange,
         icon: Icons.local_shipping_outlined,
+      ),
+      _OverviewItem(
+        label: 'Markali',
+        value: '$brandedCount',
+        color: AppColors.gold,
+        icon: Icons.workspace_premium_outlined,
       ),
       _OverviewItem(
         label: 'Toplam hacim',
@@ -2533,7 +2543,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     required int qualityLevel,
     required bool hasBrand,
   }) {
-    final brandLabel = hasBrand ? 'Brandli' : 'Standart';
+    final brandLabel = hasBrand ? 'Markali' : 'Brandsiz';
     return 'Q$qualityLevel | $brandLabel';
   }
 

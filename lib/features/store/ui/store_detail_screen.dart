@@ -107,10 +107,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   }
 
   void _onNavSelected(int index) {
-    if (index == 1) return;
+    if (index == -1) return;
     switch (index) {
       case 0:
         context.go('/home');
+        break;
+      case 1:
+        context.go('/company');
         break;
       case 2:
         context.go('/transfer-map');
@@ -131,7 +134,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       bottomNavigationBar: AppBottomNav(
-        selectedIndex: 1,
+        selectedIndex: -1,
         onItemSelected: _onNavSelected,
       ),
       body: SafeArea(

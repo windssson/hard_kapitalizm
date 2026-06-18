@@ -41,7 +41,7 @@ declare
   v_hammadde_2_miktar numeric;
   v_hammadde_3_miktar numeric;
 
-  v_input_quality_level integer := 1;
+  v_input_quality_level integer;
   v_inventory_id uuid;
   v_output_inventory_id uuid;
 begin
@@ -50,6 +50,8 @@ begin
   if p_quality_level is null or p_quality_level < 1 or p_quality_level > 5 then
     raise exception 'Kalite seviyesi 1 ile 5 arasinda olmalidir.';
   end if;
+
+  v_input_quality_level := greatest(1, least(coalesce(p_quality_level, 1), 5) - 1);
 
   select *
   into v_slot

@@ -57,6 +57,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       case 0:
         context.go('/home');
         break;
+      case 1:
+        context.go('/company');
+        break;
       case 2:
         context.go('/transfer-map');
         break;
@@ -131,7 +134,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       bottomNavigationBar: AppBottomNav(
-        selectedIndex: 1,
+        selectedIndex: -1,
         onItemSelected: _onNavSelected,
       ),
       body: SafeArea(

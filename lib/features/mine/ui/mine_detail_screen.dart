@@ -622,6 +622,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final outputInventory = detail.outputInventories.isNotEmpty
         ? detail.outputInventories.first
         : null;
+    final isBranded =
+        detail.mine.brandId != SelectableProductionProductModel.defaultBrandId;
     final quantity = detail.totalOutputQuantity;
     final progress = _safeProgress(
       quantity.toDouble(),
@@ -695,6 +697,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            if (isBranded) ...[
+                              _buildTag('MARKALI', AppColors.gold),
+                              SizedBox(width: 6.w),
+                            ],
                             _buildTag(
                               detail.mine.isActive ? 'AKTIF' : 'PASIF',
                               detail.mine.isActive
@@ -1307,7 +1313,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         id: product.id,
         title: product.urunAdi,
         subtitle: 'Saatlik uretim: ${product.uretimAdedi}',
-        badgeText: 'Maks Kalite: ${selectableProduct.maxQualityLevel}',
+        badgeText:
+            'Maks Kalite: ${selectableProduct.maxQualityLevel}'
+            '${selectableProduct.hasPreferredBrand ? ' • Marka Hazir' : ''}',
         iconPath: product.urunIconu,
         onTap: () async {
           Navigator.pop(context);

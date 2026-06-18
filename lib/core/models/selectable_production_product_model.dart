@@ -28,4 +28,14 @@ class SelectableProductionProductModel {
   }
 
   bool get hasPreferredBrand => preferredBrandId != defaultBrandId;
+
+  int get suggestedOutputQualityLevel => maxQualityLevel.clamp(1, 5);
+
+  int get requiredInputQualityLevel =>
+      inputQualityForOutput(suggestedOutputQualityLevel);
+
+  static int inputQualityForOutput(int outputQualityLevel) {
+    final normalizedQuality = outputQualityLevel.clamp(1, 5);
+    return normalizedQuality <= 2 ? 1 : normalizedQuality - 1;
+  }
 }

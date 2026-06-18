@@ -95,6 +95,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   case 0:
                     context.go('/home');
                     break;
+                  case 1:
+                    context.go('/company');
+                    break;
                   case 2:
                     context.go('/transfer-map');
                     break;

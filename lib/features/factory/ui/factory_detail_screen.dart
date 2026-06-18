@@ -1046,6 +1046,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     FactoryProductionInventoryModel? inventory,
   ) {
     final quantity = inventory?.quantity ?? 0;
+    final isBranded =
+        (inventory?.brandId ?? detail.factory.brandId) !=
+        SelectableProductionProductModel.defaultBrandId;
     final progress = _safeProgress(
       quantity.toDouble(),
       detail.factory.outputCapacity.toDouble(),
@@ -1064,13 +1067,23 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Uretilen urun stogu',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Uretilen urun stogu',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (isBranded) ...[
+                      SizedBox(width: 8.w),
+                      _buildInlineMetaChip('Markali', AppColors.gold),
+                    ],
+                  ],
                 ),
               ),
               FilledButton.icon(
@@ -1193,6 +1206,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     ),
                     SizedBox(height: 4.h),
                     _buildQualityStars(inventory.qualityLevel),
+                    if (!inventory.isInput) ...[
+                      SizedBox(height: 4.h),
+                      _buildInlineMetaChip(
+                        inventory.brandId !=
+                                SelectableProductionProductModel.defaultBrandId
+                            ? 'Markali'
+                            : 'Brandsiz',
+                        inventory.brandId !=
+                                SelectableProductionProductModel.defaultBrandId
+                            ? AppColors.gold
+                            : AppColors.textMuted,
+                      ),
+                    ],
                     SizedBox(height: 4.h),
                     Text(
                       'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL',
@@ -1781,7 +1807,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         id: product.id,
         title: product.urunAdi,
         subtitle: 'Saatlik üretim: ${product.uretimAdedi}',
-        badgeText: 'Maks Kalite: ${selectableProduct.maxQualityLevel}',
+        badgeText:
+            'Maks Kalite: ${selectableProduct.maxQualityLevel}'
+            '${selectableProduct.hasPreferredBrand ? ' • Marka Hazir' : ''}',
         iconPath: product.urunIconu,
         onTap: () async {
           Navigator.pop(context);
@@ -1810,10 +1838,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     SelectableProductionProductModel selectableProduct,
   ) async {
     final product = selectableProduct.product;
+    final qualityLevel = selectableProduct.suggestedOutputQualityLevel;
     final result = await ref.read(factoryActionProvider).setFactoryProduct(
           factoryId: detail.factory.id,
           productId: product.id,
-          qualityLevel: selectableProduct.maxQualityLevel,
+          qualityLevel: qualityLevel,
           syncProviders: false,
         );
 
@@ -1829,7 +1858,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         context,
         title: 'Basarili',
         message:
-            '${product.urunAdi} otomatik kalite ${selectableProduct.maxQualityLevel} ile ayarlandi.$cleanupNote',
+            '${product.urunAdi} otomatik kalite $qualityLevel ile ayarlandi.$cleanupNote',
         type: SnackbarType.success,
       );
       return;
@@ -2392,6 +2421,25 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       (sum, inventory) => sum + inventory.quantity + inventory.pendingQuantity,
     );
     return (capacity - usedAndPending.ceil()).clamp(0, capacity);
+  }
+
+  Widget _buildInlineMetaChip(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 
   Future<void> _showQuantityDialog({

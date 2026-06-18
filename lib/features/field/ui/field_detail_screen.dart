@@ -1525,6 +1525,19 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                     ),
                     SizedBox(height: 2.h),
                     _buildQualityStars(inventory.qualityLevel),
+                    if (!inventory.isInput) ...[
+                      SizedBox(height: 4.h),
+                      _buildInlineMetaChip(
+                        inventory.brandId !=
+                                SelectableProductionProductModel.defaultBrandId
+                            ? 'Markali'
+                            : 'Brandsiz',
+                        inventory.brandId !=
+                                SelectableProductionProductModel.defaultBrandId
+                            ? AppColors.gold
+                            : AppColors.textMuted,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1609,6 +1622,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     ProductionInventoryModel inventory,
   ) {
     final ratio = _inventoryRatio(inventory.quantity, detail.field.outputCapacity);
+    final isBranded =
+        inventory.brandId != SelectableProductionProductModel.defaultBrandId;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1631,6 +1646,10 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 ),
               ),
             ),
+            if (isBranded) ...[
+              SizedBox(width: 6.w),
+              _buildInlineMetaChip('Markali', AppColors.gold),
+            ],
             FilledButton.tonalIcon(
               onPressed: () => _startInventoryToWarehouseFlow(
                 context,
@@ -1800,7 +1819,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         id: product.id,
         title: product.urunAdi,
         subtitle: 'Saatlik üretim: ${product.uretimAdedi}',
-        badgeText: 'Maks Kalite: ${selectableProduct.maxQualityLevel}',
+        badgeText:
+            'Maks Kalite: ${selectableProduct.maxQualityLevel}'
+            '${selectableProduct.hasPreferredBrand ? ' • Marka Hazir' : ''}',
         iconPath: product.urunIconu,
         isDisabled: isDisabled,
         disabledReason: isDisabled ? 'Bu ürün başka bir slotta kullanılıyor' : null,
@@ -1833,18 +1854,19 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     SelectableProductionProductModel selectableProduct,
   ) async {
     final product = selectableProduct.product;
+    final qualityLevel = selectableProduct.suggestedOutputQualityLevel;
     final action = ref.read(fieldActionProvider);
     final result = slot.isEmpty
         ? await action.assignProductionSlotProduct(
             slotId: slot.id,
             productId: product.id,
-            qualityLevel: selectableProduct.maxQualityLevel,
+            qualityLevel: qualityLevel,
             syncProviders: false,
           )
         : await action.changeProductionSlotProduct(
             slotId: slot.id,
             productId: product.id,
-            qualityLevel: selectableProduct.maxQualityLevel,
+            qualityLevel: qualityLevel,
             syncProviders: false,
           );
 
@@ -1870,8 +1892,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         context,
         title: 'Basarili',
         message: slot.isEmpty
-            ? '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} ile eklendi.'
-            : '${product.urunAdi} kalite ${selectableProduct.maxQualityLevel} olarak degistirildi.$cleanupNote',
+            ? '${product.urunAdi} kalite $qualityLevel ile eklendi.'
+            : '${product.urunAdi} kalite $qualityLevel olarak degistirildi.$cleanupNote',
         type: SnackbarType.success,
       );
       return;
@@ -2505,6 +2527,25 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   double _inventoryRatio(int current, int capacity) {
     if (capacity <= 0) return 0.0;
     return (current / capacity).clamp(0.0, 1.0);
+  }
+
+  Widget _buildInlineMetaChip(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 
   Color _inputColorForProduct(String productId) {
