@@ -67,6 +67,7 @@ class ProductionSlotModel {
   final String ownerId;
   final int slotIndex;
   final String? productId;
+  final String brandId;
   final int qualityLevel;
   final double boostMultiplier;
   final bool isActive;
@@ -78,6 +79,7 @@ class ProductionSlotModel {
     required this.ownerId,
     required this.slotIndex,
     required this.productId,
+    required this.brandId,
     required this.qualityLevel,
     required this.boostMultiplier,
     required this.isActive,
@@ -93,6 +95,9 @@ class ProductionSlotModel {
       ownerId: (json['owner_id'] ?? '').toString(),
       slotIndex: (json['slot_index'] as num?)?.toInt() ?? 0,
       productId: json['product_id'] as String?,
+      brandId:
+          (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+              .toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       boostMultiplier: (json['boost_multiplier'] as num?)?.toDouble() ?? 1,
       isActive: json['is_active'] as bool? ?? true,
@@ -109,6 +114,7 @@ class ProductionInventoryModel {
   final String ownerId;
   final String inventoryType;
   final String productId;
+  final String brandId;
   final int qualityLevel;
   final int quantity;
   final double pendingQuantity;
@@ -121,6 +127,7 @@ class ProductionInventoryModel {
     required this.ownerId,
     required this.inventoryType,
     required this.productId,
+    required this.brandId,
     required this.qualityLevel,
     required this.quantity,
     required this.pendingQuantity,
@@ -138,6 +145,9 @@ class ProductionInventoryModel {
       ownerId: (json['owner_id'] ?? '').toString(),
       inventoryType: (json['inventory_type'] ?? '').toString(),
       productId: (json['product_id'] ?? '').toString(),
+      brandId:
+          (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+              .toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       pendingQuantity: (json['pending_quantity'] as num?)?.toDouble() ?? 0,
@@ -169,9 +179,7 @@ class FieldDetailModel {
     for (final slot in slots) {
       final product = slot.product;
       if (slot.isEmpty || product == null) continue;
-      if ((product.hammadde1Id ?? '').isNotEmpty) ids.add(product.hammadde1Id!);
-      if ((product.hammadde2Id ?? '').isNotEmpty) ids.add(product.hammadde2Id!);
-      if ((product.hammadde3Id ?? '').isNotEmpty) ids.add(product.hammadde3Id!);
+      ids.addAll(product.inputProductIds);
     }
     return ids;
   }
@@ -202,7 +210,8 @@ class FieldDetailModel {
               (slot) =>
                   !slot.isEmpty &&
                   slot.productId == e.productId &&
-                  slot.qualityLevel == e.qualityLevel,
+                  slot.qualityLevel == e.qualityLevel &&
+                  slot.brandId == e.brandId,
             ),
           )
           .toList()

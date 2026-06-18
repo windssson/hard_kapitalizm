@@ -9,6 +9,7 @@ security definer
 set search_path to 'public'
 as $function$
 declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
   v_slot public.production_slots%rowtype;
   v_product public.products%rowtype;
   v_old_product public.products%rowtype;
@@ -150,7 +151,8 @@ begin
       and owner_id = v_slot.owner_id
       and inventory_type = 'output'
       and product_id = v_old_product_id
-      and quality_level = v_old_quality_level;
+      and quality_level = v_old_quality_level
+      and brand_id = coalesce(v_slot.brand_id, v_default_brand);
 
     if v_existing_output_quantity > 0 then
       raise exception 'Bu slotun mevcut output stogu var. Urun degistirmeden once stoklari depoya aktar.';
@@ -213,9 +215,17 @@ begin
 
     if not found then
       insert into public.production_inventory (
-        owner_kind, owner_id, inventory_type, product_id, quality_level, quantity, pending_quantity, cost
+        owner_kind, owner_id, inventory_type, product_id, quality_level, brand_id, quantity, pending_quantity, cost
       ) values (
-        v_slot.owner_kind, v_slot.owner_id, 'input', v_hammadde_1_id, v_input_quality_level, 0, 0, 0
+        v_slot.owner_kind,
+        v_slot.owner_id,
+        'input',
+        v_hammadde_1_id,
+        v_input_quality_level,
+        v_default_brand,
+        0,
+        0,
+        0
       );
       v_created_input_count := v_created_input_count + 1;
     end if;
@@ -232,9 +242,17 @@ begin
 
     if not found then
       insert into public.production_inventory (
-        owner_kind, owner_id, inventory_type, product_id, quality_level, quantity, pending_quantity, cost
+        owner_kind, owner_id, inventory_type, product_id, quality_level, brand_id, quantity, pending_quantity, cost
       ) values (
-        v_slot.owner_kind, v_slot.owner_id, 'input', v_hammadde_2_id, v_input_quality_level, 0, 0, 0
+        v_slot.owner_kind,
+        v_slot.owner_id,
+        'input',
+        v_hammadde_2_id,
+        v_input_quality_level,
+        v_default_brand,
+        0,
+        0,
+        0
       );
       v_created_input_count := v_created_input_count + 1;
     end if;
@@ -251,9 +269,17 @@ begin
 
     if not found then
       insert into public.production_inventory (
-        owner_kind, owner_id, inventory_type, product_id, quality_level, quantity, pending_quantity, cost
+        owner_kind, owner_id, inventory_type, product_id, quality_level, brand_id, quantity, pending_quantity, cost
       ) values (
-        v_slot.owner_kind, v_slot.owner_id, 'input', v_hammadde_3_id, v_input_quality_level, 0, 0, 0
+        v_slot.owner_kind,
+        v_slot.owner_id,
+        'input',
+        v_hammadde_3_id,
+        v_input_quality_level,
+        v_default_brand,
+        0,
+        0,
+        0
       );
       v_created_input_count := v_created_input_count + 1;
     end if;
@@ -265,13 +291,22 @@ begin
     and owner_id = v_slot.owner_id
     and inventory_type = 'output'
     and product_id = p_product_id
-    and quality_level = p_quality_level;
+    and quality_level = p_quality_level
+    and brand_id = public.resolve_player_product_brand(v_owner_player_id, p_product_id);
 
   if not found then
     insert into public.production_inventory (
-      owner_kind, owner_id, inventory_type, product_id, quality_level, quantity, pending_quantity, cost
+      owner_kind, owner_id, inventory_type, product_id, quality_level, brand_id, quantity, pending_quantity, cost
     ) values (
-      v_slot.owner_kind, v_slot.owner_id, 'output', p_product_id, p_quality_level, 0, 0, 0
+      v_slot.owner_kind,
+      v_slot.owner_id,
+      'output',
+      p_product_id,
+      p_quality_level,
+      public.resolve_player_product_brand(v_owner_player_id, p_product_id),
+      0,
+      0,
+      0
     ) returning id into v_output_inventory_id;
     v_created_output_count := 1;
   end if;
@@ -298,6 +333,7 @@ begin
             and coalesce(ps.product_id, '') <> ''
             and ps.product_id = pi.product_id
             and ps.quality_level = pi.quality_level
+            and ps.brand_id = pi.brand_id
         )
       )
       and not (

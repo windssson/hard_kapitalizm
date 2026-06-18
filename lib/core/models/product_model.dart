@@ -98,4 +98,10 @@ class ProductModel {
       'created_at': createdAt.toIso8601String(),
     };
   }
+
+  Set<String> get inputProductIds => {
+    if ((hammadde1Id ?? '').isNotEmpty) hammadde1Id!,
+    if ((hammadde2Id ?? '').isNotEmpty) hammadde2Id!,
+    if ((hammadde3Id ?? '').isNotEmpty) hammadde3Id!,
+  };
 }

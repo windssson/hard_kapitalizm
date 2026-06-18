@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -25,6 +27,8 @@ import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
+import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MarketScreen extends ConsumerStatefulWidget {
   final String productId;
@@ -37,10 +41,10 @@ class MarketScreen extends ConsumerStatefulWidget {
 
   const MarketScreen({
     super.key,
-    required this.productId,
-    required this.warehouseId,
-    required this.playerId,
-    required this.cityId,
+    this.productId = '',
+    this.warehouseId = '',
+    this.playerId = '',
+    this.cityId = '',
     this.targetType = 'warehouse',
     this.storeId = '',
     this.storeSlotId = '',
@@ -51,9 +55,39 @@ class MarketScreen extends ConsumerStatefulWidget {
 }
 
 class _MarketScreenState extends ConsumerState<MarketScreen> {
+  static const _marketProductPrefKey = 'market_last_product_id';
+  static const _marketWarehousePrefKey = 'market_last_warehouse_id';
+  static const _marketCityPrefKey = 'market_last_city_id';
+
   final List<_MarketCartItem> _cartItems = [];
   String? _lockedSourceCityId;
   bool _cityCatalogEnabled = false;
+  String _productSearchQuery = '';
+  String _warehouseCityFilter = '';
+  late String _selectedProductId;
+  late String _selectedWarehouseId;
+  late String _selectedCityId;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedProductId = widget.productId;
+    _selectedWarehouseId = widget.warehouseId;
+    _selectedCityId = widget.cityId;
+    _warehouseCityFilter = widget.cityId;
+    if (widget.productId.isEmpty || widget.warehouseId.isEmpty || widget.cityId.isEmpty) {
+      _restoreLastMarketSelection();
+    }
+  }
+
+  String get _activeProductId => _selectedProductId;
+  String get _activeWarehouseId => _selectedWarehouseId;
+  String get _activeCityId => _selectedCityId;
+  bool get _requiresInitialSelection =>
+      !_isStoreTarget &&
+      (_activeProductId.isEmpty ||
+          _activeWarehouseId.isEmpty ||
+          _activeCityId.isEmpty);
 
   bool get _isStoreTarget =>
       widget.targetType == 'store' && widget.storeSlotId.isNotEmpty;
@@ -69,9 +103,41 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   bool get _isLockedToCityCatalog =>
       _lockedSourceCityId != null && _cityCatalogEnabled;
 
+  Future<void> _restoreLastMarketSelection() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedProductId = prefs.getString(_marketProductPrefKey) ?? '';
+    final savedWarehouseId = prefs.getString(_marketWarehousePrefKey) ?? '';
+    final savedCityId = prefs.getString(_marketCityPrefKey) ?? '';
+
+    if (!mounted) return;
+    setState(() {
+      if (_selectedProductId.isEmpty && savedProductId.isNotEmpty) {
+        _selectedProductId = savedProductId;
+      }
+      if (_selectedWarehouseId.isEmpty && savedWarehouseId.isNotEmpty) {
+        _selectedWarehouseId = savedWarehouseId;
+      }
+      if (_selectedCityId.isEmpty && savedCityId.isNotEmpty) {
+        _selectedCityId = savedCityId;
+      }
+      if (_warehouseCityFilter.isEmpty && savedCityId.isNotEmpty) {
+        _warehouseCityFilter = savedCityId;
+      }
+    });
+  }
+
+  Future<void> _persistLastMarketSelection() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_marketProductPrefKey, _selectedProductId);
+    await prefs.setString(_marketWarehousePrefKey, _selectedWarehouseId);
+    await prefs.setString(_marketCityPrefKey, _selectedCityId);
+  }
+
   Future<void> _refreshPage() async {
-    ref.invalidate(marketProductProvider(widget.productId));
-    ref.invalidate(marketListingsProvider(widget.productId));
+    if (_activeProductId.isNotEmpty) {
+      ref.invalidate(marketProductProvider(_activeProductId));
+      ref.invalidate(marketListingsProvider(_activeProductId));
+    }
     if (_lockedSourceCityId != null) {
       ref.invalidate(marketCityListingsProvider(_lockedSourceCityId!));
     }
@@ -82,16 +148,20 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       return;
     }
 
-    ref.invalidate(marketBuyerWarehouseProvider(widget.warehouseId));
-    ref.invalidate(warehouseCapacityStatusProvider(widget.warehouseId));
-    ref.invalidate(warehouseDetailProvider(widget.warehouseId));
+    if (_activeWarehouseId.isNotEmpty) {
+      ref.invalidate(marketBuyerWarehouseProvider(_activeWarehouseId));
+      ref.invalidate(warehouseCapacityStatusProvider(_activeWarehouseId));
+      ref.invalidate(warehouseDetailProvider(_activeWarehouseId));
+    }
   }
 
   Future<void> _refreshAfterPurchase({
     required bool isInstant,
   }) async {
-    ref.invalidate(marketProductProvider(widget.productId));
-    ref.invalidate(marketListingsProvider(widget.productId));
+    if (_activeProductId.isNotEmpty) {
+      ref.invalidate(marketProductProvider(_activeProductId));
+      ref.invalidate(marketListingsProvider(_activeProductId));
+    }
     if (_lockedSourceCityId != null) {
       ref.invalidate(marketCityListingsProvider(_lockedSourceCityId!));
     }
@@ -103,10 +173,14 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         ref.invalidate(storeDetailPageProvider(widget.storeId));
       }
     } else {
-      ref.invalidate(marketBuyerWarehouseProvider(widget.warehouseId));
-      ref.invalidate(warehouseCapacityStatusProvider(widget.warehouseId));
+      if (_activeWarehouseId.isNotEmpty) {
+        ref.invalidate(marketBuyerWarehouseProvider(_activeWarehouseId));
+        ref.invalidate(warehouseCapacityStatusProvider(_activeWarehouseId));
+      }
       ref.invalidate(warehouseListProvider);
-      ref.invalidate(warehouseDetailProvider(widget.warehouseId));
+      if (_activeWarehouseId.isNotEmpty) {
+        ref.invalidate(warehouseDetailProvider(_activeWarehouseId));
+      }
     }
   }
 
@@ -132,6 +206,30 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       return;
     }
 
+    final capacityStatus = !_isStoreTarget && _activeWarehouseId.isNotEmpty
+        ? ref.read(warehouseCapacityStatusProvider(_activeWarehouseId)).value
+        : null;
+    if (!_canAddListingToCart(
+      listing: listing,
+      product: product,
+      capacity: capacityStatus,
+      buyerStoreSlot: buyerStoreSlot,
+    )) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Kapasite Yetersiz',
+        message: _listingCapacityWarning(
+          listing: listing,
+          product: product,
+          capacity: capacityStatus,
+          buyerStoreSlot: buyerStoreSlot,
+        ),
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
     final selection = await showDialog<_MarketCartSelection?>(
       context: context,
       barrierDismissible: true,
@@ -143,7 +241,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           child: _AddToCartSheet(
             listing: listing,
             buyerStoreSlot: buyerStoreSlot,
-            buyerWarehouseId: _isStoreTarget ? null : widget.warehouseId,
+            buyerWarehouseId: _isStoreTarget ? null : _activeWarehouseId,
             product: product,
           ),
         ),
@@ -187,6 +285,23 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return match?.listing.cityName ?? '-';
   }
 
+  void _decrementCartItem(_MarketCartItem item) {
+    setState(() {
+      final index = _cartItems.indexWhere((entry) => entry.key == item.key);
+      if (index < 0) return;
+      final current = _cartItems[index];
+      if (current.quantity <= 1) {
+        _cartItems.removeAt(index);
+      } else {
+        _cartItems[index] = current.copyWith(quantity: current.quantity - 1);
+      }
+      if (_cartItems.isEmpty) {
+        _lockedSourceCityId = null;
+        _cityCatalogEnabled = false;
+      }
+    });
+  }
+
   void _removeCartItem(_MarketCartItem item) {
     setState(() {
       _cartItems.removeWhere((entry) => entry.key == item.key);
@@ -224,7 +339,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     }
 
     return sameCity
-        .where((listing) => listing.productId == widget.productId)
+        .where((listing) => listing.productId == _activeProductId)
         .toList();
   }
 
@@ -305,7 +420,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       storeSlotId: slot.id,
       storeId: store.id,
       storeName: store.name,
-      cityId: store.cityId ?? widget.cityId,
+      cityId: store.cityId ?? _activeCityId,
       cityName:
           store.cityName ??
           rawStoreSlot?.cityName ??
@@ -348,7 +463,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         (_lockedSourceCityId ??
                 buyerStoreSlot?.cityId ??
                 buyer?.cityId ??
-                widget.cityId)
+                _activeCityId)
             .toString();
     if (cityId.isEmpty) return listings;
 
@@ -539,18 +654,552 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
+  bool _canAddListingToCart({
+    required MarketListingModel listing,
+    required ProductModel? product,
+    required WarehouseCapacityStatusModel? capacity,
+    required MarketBuyerStoreSlotModel? buyerStoreSlot,
+  }) {
+    if (_isStoreTarget) {
+      return (buyerStoreSlot?.availableCapacity ?? 0) > 0;
+    }
+    final unitVolume = listing.unitVolume > 0
+        ? listing.unitVolume
+        : (product?.birimHacim ?? 0);
+    if (unitVolume <= 0) return false;
+    return (capacity?.availableCapacity ?? 0) >= unitVolume;
+  }
+
+  String? _buildCapacityBannerMessage({
+    required ProductModel? product,
+    required WarehouseCapacityStatusModel? capacity,
+    required MarketBuyerStoreSlotModel? buyerStoreSlot,
+    required List<MarketListingModel> listings,
+  }) {
+    if (_requiresInitialSelection) return null;
+
+    if (_isStoreTarget) {
+      final available = buyerStoreSlot?.availableCapacity ?? 0;
+      if (available <= 0) {
+        return 'Hedef slotta bos alan kalmadi. Sepete ekleme kapatildi.';
+      }
+      if (listings.isEmpty) return null;
+      return null;
+    }
+
+    final available = capacity?.availableCapacity ?? 0;
+    if (available <= 0) {
+      return 'Secili depoda hic bos kapasite kalmadi. Yeni alim baslatilamaz.';
+    }
+
+    final unitVolume = product?.birimHacim ?? 0;
+    if (unitVolume > 0) {
+      final maxUnits = (available / unitVolume).floor();
+      if (maxUnits <= 0) {
+        return 'Bu urun icin secili depoda yeterli yer yok. En az ${unitVolume.toStringAsFixed(1)} m3 bos alan gerekli.';
+      }
+      if (maxUnits < 5) {
+        return 'Dikkat: secili depoda bu urunden en fazla $maxUnits adet yer var.';
+      }
+    }
+
+    return null;
+  }
+
+  String _listingCapacityWarning({
+    required MarketListingModel listing,
+    required ProductModel? product,
+    required WarehouseCapacityStatusModel? capacity,
+    required MarketBuyerStoreSlotModel? buyerStoreSlot,
+  }) {
+    if (_isStoreTarget) {
+      final available = buyerStoreSlot?.availableCapacity ?? 0;
+      return 'Hedef slotta bos alan yok. Kalan alan: ${available.toStringAsFixed(0)}.';
+    }
+    final unitVolume = listing.unitVolume > 0
+        ? listing.unitVolume
+        : (product?.birimHacim ?? 0);
+    final available = capacity?.availableCapacity ?? 0;
+    return 'Bu ilan sepete eklenemiyor. Gereken en az hacim: ${unitVolume.toStringAsFixed(1)} m3, mevcut bos kapasite: ${available.toStringAsFixed(1)} m3.';
+  }
+
+  void _onNavSelected(int index) {
+    if (index == 3) return;
+    switch (index) {
+      case 0:
+        context.go('/home');
+        break;
+      case 2:
+        context.go('/transfer-map');
+        break;
+      case 4:
+        context.go('/profile');
+        break;
+    }
+  }
+
+  void _resetCartState() {
+    _cartItems.clear();
+    _lockedSourceCityId = null;
+    _cityCatalogEnabled = false;
+  }
+
+  Widget _buildInitialSelectionCard(
+    List<ProductModel> products,
+    List<WarehouseModel> warehouses,
+  ) {
+    final activeWarehouses = warehouses
+        .where((warehouse) => warehouse.isActive && warehouse.warehouseKind != 'store')
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final sortedProducts = [...products]
+      ..sort((a, b) => a.urunAdi.compareTo(b.urunAdi));
+    final filteredProducts = sortedProducts.where((product) {
+      final query = _productSearchQuery.trim().toLowerCase();
+      if (query.isEmpty) return true;
+      return product.urunAdi.toLowerCase().contains(query);
+    }).toList();
+    final selectedProduct = sortedProducts
+        .where((product) => product.id == _activeProductId)
+        .firstOrNull;
+    final selectedWarehouse = activeWarehouses
+        .where((warehouse) => warehouse.id == _activeWarehouseId)
+        .firstOrNull;
+    final cityGroups = <String, List<WarehouseModel>>{};
+    for (final warehouse in activeWarehouses) {
+      final cityName = (warehouse.cityName ?? 'Bilinmeyen Sehir').trim();
+      cityGroups.putIfAbsent(cityName, () => []).add(warehouse);
+    }
+    final sortedCityNames = cityGroups.keys.toList()..sort();
+    final visibleCityNames = _warehouseCityFilter.isEmpty
+        ? sortedCityNames
+        : sortedCityNames.where((cityName) {
+            final firstWarehouse = cityGroups[cityName]!.first;
+            return firstWarehouse.cityId == _warehouseCityFilter;
+          }).toList();
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Pazar Hazirligi',
+            style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            'Bu giriste once urunu ve hedef depoyu seciyoruz. Sonra pazar listelemesi aciliyor.',
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 11.sp,
+            ),
+          ),
+          SizedBox(height: 14.h),
+          TextField(
+            onChanged: (value) {
+              setState(() {
+                _productSearchQuery = value;
+              });
+            },
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Urun ara',
+              hintStyle: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12.sp,
+              ),
+              prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+              filled: true,
+              fillColor: AppColors.cardBgLight.withValues(alpha: 0.35),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(
+                  color: AppColors.border.withValues(alpha: 0.7),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: const BorderSide(color: AppColors.gold),
+              ),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            'Urun',
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 11.sp,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          if (filteredProducts.isEmpty)
+            _buildInfoBox('Aramaya uygun urun bulunamadi.', AppColors.red)
+          else
+            SizedBox(
+              height: 92.h,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: filteredProducts.length,
+                separatorBuilder: (_, __) => SizedBox(width: 10.w),
+                itemBuilder: (context, index) {
+                  final product = filteredProducts[index];
+                  final isSelected = product.id == _activeProductId;
+                  return _buildSelectableProductCard(
+                    product: product,
+                    isSelected: isSelected,
+                    onTap: () {
+                      setState(() {
+                        _selectedProductId = product.id;
+                        _resetCartState();
+                      });
+                      _persistLastMarketSelection();
+                    },
+                  );
+                },
+              ),
+            ),
+          if (selectedProduct != null) ...[
+            SizedBox(height: 10.h),
+            _buildSelectedProductSummary(selectedProduct),
+          ],
+          SizedBox(height: 14.h),
+          Row(
+            children: [
+              Text(
+                'Hedef Depo',
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11.sp,
+                ),
+              ),
+              const Spacer(),
+              if (selectedWarehouse != null)
+                Text(
+                  selectedWarehouse.cityName ?? '-',
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.gold,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          if (sortedCityNames.isNotEmpty)
+            SizedBox(
+              height: 38.h,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: sortedCityNames.length + 1,
+                separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                itemBuilder: (context, index) {
+                  final isAll = index == 0;
+                  final cityName = isAll ? 'Tum Sehirler' : sortedCityNames[index - 1];
+                  final cityId = isAll ? '' : cityGroups[cityName]!.first.cityId;
+                  final isSelected = _warehouseCityFilter == cityId;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _warehouseCityFilter = cityId;
+                      });
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.gold.withValues(alpha: 0.14)
+                            : AppColors.cardBgLight.withValues(alpha: 0.28),
+                        borderRadius: BorderRadius.circular(999.r),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.gold
+                              : AppColors.border.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      child: Text(
+                        cityName,
+                        style: TextStyle(
+                          color: isSelected ? AppColors.gold : Colors.white,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          if (sortedCityNames.isNotEmpty) SizedBox(height: 10.h),
+          if (activeWarehouses.isNotEmpty)
+            ...visibleCityNames.expand((cityName) {
+              final warehousesInCity = cityGroups[cityName]!
+                ..sort((a, b) => a.name.compareTo(b.name));
+              return [
+                Padding(
+                  padding: EdgeInsets.only(bottom: 8.h, top: 2.h),
+                  child: Text(
+                    cityName,
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.gold,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ...warehousesInCity.map(
+                  (warehouse) => Padding(
+                    padding: EdgeInsets.only(bottom: 10.h),
+                    child: _buildSelectableWarehouseCard(
+                      warehouse: warehouse,
+                      isSelected: warehouse.id == _activeWarehouseId,
+                      onTap: () {
+                        setState(() {
+                          _selectedWarehouseId = warehouse.id;
+                          _selectedCityId = warehouse.cityId;
+                          _warehouseCityFilter = warehouse.cityId;
+                          _resetCartState();
+                        });
+                        _persistLastMarketSelection();
+                      },
+                    ),
+                  ),
+                ),
+              ];
+            }),
+          if (activeWarehouses.isEmpty) ...[
+            SizedBox(height: 12.h),
+            _buildInfoBox(
+              'Pazara alim yapabilmek icin once aktif bir normal depo gerekli.',
+              AppColors.red,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectableProductCard({
+    required ProductModel product,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 108.w,
+        padding: EdgeInsets.all(10.w),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.gold.withValues(alpha: 0.14)
+              : AppColors.cardBgLight.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.gold
+                : AppColors.border.withValues(alpha: 0.7),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 42.w,
+              height: 42.w,
+              padding: EdgeInsets.all(6.w),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: CachedAssetImage(fileName: product.urunIconu),
+            ),
+            SizedBox(height: 8.h),
+            Expanded(
+              child: Text(
+                product.urunAdi,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isSelected ? AppColors.gold : Colors.white,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedProductSummary(ProductModel product) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40.w,
+            height: 40.w,
+            padding: EdgeInsets.all(6.w),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: CachedAssetImage(fileName: product.urunIconu),
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Secili Urun',
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 10.sp,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  product.urunAdi,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${product.bazSatisFiyati.toStringAsFixed(1)} TL',
+            style: TextStyle(
+              color: AppColors.gold,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectableWarehouseCard({
+    required WarehouseModel warehouse,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final availableCapacity =
+        (warehouse.capacity - warehouse.reservedCapacity).clamp(0, double.infinity);
+    final capacityColor = availableCapacity <= 0
+        ? AppColors.red
+        : availableCapacity <= 25
+        ? AppColors.gold
+        : AppColors.textMuted;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: double.infinity,
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.blue.withValues(alpha: 0.12)
+              : AppColors.cardBgLight.withValues(alpha: 0.28),
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.blue
+                : AppColors.border.withValues(alpha: 0.7),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42.w,
+              height: 42.w,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              child: Icon(
+                Icons.warehouse_outlined,
+                color: isSelected ? AppColors.blue : AppColors.gold,
+                size: 20.sp,
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    warehouse.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '${warehouse.cityName ?? 'Bilinmeyen Sehir'} • ${availableCapacity.toStringAsFixed(0)} bos',
+                    style: TextStyle(
+                      color: capacityColor,
+                      fontSize: 10.sp,
+                      fontWeight: availableCapacity <= 0
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle, color: AppColors.blue, size: 20.sp),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final productAsync = ref.watch(marketProductProvider(widget.productId));
-    final listingsAsync = _isLockedToCityCatalog
+    final productsAsync = ref.watch(allProductsProvider);
+    final warehousesAsync = ref.watch(warehouseListProvider);
+    final productAsync = _activeProductId.isNotEmpty
+        ? ref.watch(marketProductProvider(_activeProductId))
+        : const AsyncValue<ProductModel?>.data(null);
+    final listingsAsync = _activeProductId.isEmpty
+        ? const AsyncValue<List<MarketListingModel>>.data([])
+        : _isLockedToCityCatalog
         ? ref.watch(marketCityListingsProvider(_lockedSourceCityId!))
-        : ref.watch(marketListingsProvider(widget.productId));
-    final fallbackCityAsync = widget.cityId.isNotEmpty
-        ? ref.watch(marketCityProvider(widget.cityId))
+        : ref.watch(marketListingsProvider(_activeProductId));
+    final fallbackCityAsync = _activeCityId.isNotEmpty
+        ? ref.watch(marketCityProvider(_activeCityId))
         : const AsyncValue<Map<String, dynamic>?>.data(null);
     final buyerWarehouseAsync = _isStoreTarget
         ? AsyncValue<MarketBuyerWarehouseModel?>.data(null)
-        : ref.watch(marketBuyerWarehouseProvider(widget.warehouseId));
+        : _activeWarehouseId.isNotEmpty
+        ? ref.watch(marketBuyerWarehouseProvider(_activeWarehouseId))
+        : const AsyncValue<MarketBuyerWarehouseModel?>.data(null);
     final buyerStoreAsync = _isStoreTarget && widget.storeId.isNotEmpty
         ? ref.watch(storeDetailPageProvider(widget.storeId)).whenData(
             (page) => page.store,
@@ -565,13 +1214,29 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         : null;
     final capacityAsync = _isStoreTarget
         ? AsyncValue<WarehouseCapacityStatusModel?>.data(null)
-        : ref.watch(warehouseCapacityStatusProvider(widget.warehouseId));
+        : _activeWarehouseId.isNotEmpty
+        ? ref.watch(warehouseCapacityStatusProvider(_activeWarehouseId))
+        : const AsyncValue<WarehouseCapacityStatusModel?>.data(null);
+    final previewListings = listingsAsync.value ?? const <MarketListingModel>[];
+    final capacityBannerMessage = _buildCapacityBannerMessage(
+      product: productAsync.value,
+      capacity: capacityAsync.value,
+      buyerStoreSlot: buyerStoreSlot,
+      listings: previewListings,
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      bottomNavigationBar: _hasCart
-          ? _buildCartSummaryBar()
-          : null,
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_hasCart) _buildCartSummaryBar(),
+          AppBottomNav(
+            selectedIndex: 3,
+            onItemSelected: _onNavSelected,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -588,7 +1253,27 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 32.h),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
-                          if (!_cityCatalogEnabled) ...[
+                          if (_requiresInitialSelection) ...[
+                            productsAsync.when(
+                              data: (products) => warehousesAsync.when(
+                                data: (warehouses) =>
+                                    _buildInitialSelectionCard(products, warehouses),
+                                loading: _buildLoadingCard,
+                                error: (e, s) =>
+                                    _buildErrorCard('Depo listesi alinamadi.'),
+                              ),
+                              loading: _buildLoadingCard,
+                              error: (e, s) =>
+                                  _buildErrorCard('Urun listesi alinamadi.'),
+                            ),
+                            SizedBox(height: 12.h),
+                            _buildInfoBox(
+                              'Secim yapildiktan sonra pazar ilanlari burada listelenecek.',
+                              AppColors.blue,
+                            ),
+                            SizedBox(height: 12.h),
+                          ],
+                          if (_activeProductId.isNotEmpty && !_cityCatalogEnabled) ...[
                             productAsync.when(
                               data: (product) => _buildProductHeader(
                                 product,
@@ -601,12 +1286,22 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             ),
                             SizedBox(height: 12.h),
                           ],
-                          _buildTargetSummaryCard(
-                            product: productAsync.value,
-                            buyerWarehouse: buyerWarehouseAsync.value,
-                            buyerStoreSlot: buyerStoreSlot,
-                            capacity: capacityAsync.value,
-                          ),
+                          if (!_requiresInitialSelection)
+                            _buildTargetSummaryCard(
+                              product: productAsync.value,
+                              buyerWarehouse: buyerWarehouseAsync.value,
+                              buyerStoreSlot: buyerStoreSlot,
+                              capacity: capacityAsync.value,
+                            ),
+                          if (capacityBannerMessage != null) ...[
+                            SizedBox(height: 12.h),
+                            _buildInfoBox(
+                              capacityBannerMessage,
+                              capacityBannerMessage.contains('Dikkat')
+                                  ? AppColors.gold
+                                  : AppColors.red,
+                            ),
+                          ],
                           if (_lockedSourceCityId != null) ...[
                             SizedBox(height: 12.h),
                             _buildInfoBox(
@@ -775,6 +1470,23 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     Map<String, dynamic>? fallbackCity,
     ProductModel? product,
   ) {
+    final capacityStatus = !_isStoreTarget && _activeWarehouseId.isNotEmpty
+        ? ref.read(warehouseCapacityStatusProvider(_activeWarehouseId)).value
+        : null;
+    final canAddToCart = _canAddListingToCart(
+      listing: listing,
+      product: product,
+      capacity: capacityStatus,
+      buyerStoreSlot: buyerStoreSlot,
+    );
+    final addDisabledReason = canAddToCart
+        ? null
+        : _listingCapacityWarning(
+            listing: listing,
+            product: product,
+            capacity: capacityStatus,
+            buyerStoreSlot: buyerStoreSlot,
+          );
     final targetCityX = _resolveCoordinate(
       buyerStoreSlot?.cityX ?? buyer?.cityX,
       fallbackCity?['map_position_x'],
@@ -798,7 +1510,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         ? AppColors.green
         : (distanceKm < 750 ? AppColors.gold : AppColors.red);
     final isInstantDelivery =
-        widget.cityId.isNotEmpty && widget.cityId == listing.cityId;
+        _activeCityId.isNotEmpty && _activeCityId == listing.cityId;
     final priceDeltaPercent = _resolvePriceDeltaPercent(product, listing.price);
     final priceDeltaBadge = _buildPriceDeltaBadge(priceDeltaPercent);
 
@@ -1022,11 +1734,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           SizedBox(
                             height: 28.h,
                             child: ElevatedButton(
-                              onPressed: () => _openAddToCartSheet(
-                                listing,
-                                product,
-                                buyerStoreSlot,
-                              ),
+                              onPressed: canAddToCart
+                                  ? () => _openAddToCartSheet(
+                                        listing,
+                                        product,
+                                        buyerStoreSlot,
+                                      )
+                                  : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.gold,
                                 padding: EdgeInsets.symmetric(horizontal: 12.w),
@@ -1044,6 +1758,21 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                               ),
                             ),
                           ),
+                          if (addDisabledReason != null) ...[
+                            SizedBox(height: 6.h),
+                            SizedBox(
+                              width: 110.w,
+                              child: Text(
+                                'Kapasite yetersiz',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(
+                                  color: AppColors.red,
+                                  fontSize: 9.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ],
@@ -1285,7 +2014,81 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
   double _degreesToRadians(double degrees) => degrees * (math.pi / 180);
 
+  double _currentTargetAvailableCapacity() {
+    if (_isStoreTarget) {
+      return 0;
+    }
+    if (_activeWarehouseId.isEmpty) return 0;
+    return ref
+            .read(warehouseCapacityStatusProvider(_activeWarehouseId))
+            .value
+            ?.availableCapacity ??
+        0;
+  }
+
+  bool get _cartFitsCurrentCapacity =>
+      _isStoreTarget || _cartTotalVolume <= _currentTargetAvailableCapacity();
+
+  _MarketCartItem? get _largestCartItemByVolume {
+    if (_cartItems.isEmpty) return null;
+    _MarketCartItem? largest;
+    for (final item in _cartItems) {
+      if (largest == null || item.totalVolume > largest.totalVolume) {
+        largest = item;
+      }
+    }
+    return largest;
+  }
+
+  Widget _buildCartIconsRow() {
+    final previewItems = _cartItems.take(4).toList();
+    return Row(
+      children: [
+        ...previewItems.map(
+          (item) => Container(
+            width: 28.w,
+            height: 28.w,
+            margin: EdgeInsets.only(right: 6.w),
+            padding: EdgeInsets.all(4.w),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(
+                color: AppColors.borderGold.withValues(alpha: 0.25),
+              ),
+            ),
+            child: CachedAssetImage(fileName: item.listing.productIcon),
+          ),
+        ),
+        if (_cartItems.length > previewItems.length)
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+            decoration: BoxDecoration(
+              color: AppColors.cardBgLight.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Text(
+              '+${_cartItems.length - previewItems.length}',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildCartSummaryBar() {
+    final currentAvailableCapacity = _currentTargetAvailableCapacity();
+    final remainingAfterCart =
+        (currentAvailableCapacity - _cartTotalVolume).clamp(-999999, 999999);
+    final capacityOk = _cartFitsCurrentCapacity;
+    final capacityColor = capacityOk ? AppColors.green : AppColors.red;
+    final largestItem = _largestCartItemByVolume;
+
     return SafeArea(
       top: false,
       child: Container(
@@ -1300,13 +2103,21 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Sepet: ${_cartItems.length} kalem - $_cartTotalQuantity adet - ${_cartTotalProductCost.toStringAsFixed(1)}',
-              style: AppTextStyles.body.copyWith(
-                color: Colors.white,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Sepet • $_cartTotalQuantity adet • ${_cartTotalProductCost.toStringAsFixed(1)} TL',
+                    style: AppTextStyles.body.copyWith(
+                      color: Colors.white,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                _buildCartIconsRow(),
+              ],
             ),
             SizedBox(height: 4.h),
             Text(
@@ -1314,6 +2125,43 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               style: AppTextStyles.body.copyWith(
                 color: AppColors.textMuted,
                 fontSize: 10.sp,
+              ),
+            ),
+            if (largestItem != null) ...[
+              SizedBox(height: 4.h),
+              Text(
+                'En cok yer kaplayan: ${largestItem.listing.productName} • ${largestItem.totalVolume.toStringAsFixed(1)} m3',
+                style: AppTextStyles.body.copyWith(
+                  color: AppColors.gold,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            if (!_isStoreTarget) ...[
+              SizedBox(height: 6.h),
+              Text(
+                capacityOk
+                    ? 'Hedef kapasite uygun • Kalan: ${remainingAfterCart.toStringAsFixed(1)} m3'
+                    : 'Kapasite asildi • Eksik: ${(-remainingAfterCart).toStringAsFixed(1)} m3',
+                style: AppTextStyles.body.copyWith(
+                  color: capacityColor,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+            SizedBox(height: 10.h),
+            SizedBox(
+              height: 56.h,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _cartItems.length,
+                separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                itemBuilder: (context, index) {
+                  final item = _cartItems[index];
+                  return _buildCartItemPill(item);
+                },
               ),
             ),
             SizedBox(height: 10.h),
@@ -1334,7 +2182,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 SizedBox(width: 10.w),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _openCartCheckout,
+                    onPressed: capacityOk ? _openCartCheckout : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.gold,
                       foregroundColor: Colors.black,
@@ -1350,8 +2198,109 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
+  Widget _buildCartItemPill(_MarketCartItem item) {
+    return Container(
+      width: 190.w,
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34.w,
+            height: 34.w,
+            padding: EdgeInsets.all(5.w),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: CachedAssetImage(fileName: item.listing.productIcon),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  item.listing.productName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  '${item.quantity} adet • ${item.totalVolume.toStringAsFixed(1)} m3',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 9.sp,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: () => _decrementCartItem(item),
+                child: Container(
+                  width: 22.w,
+                  height: 22.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Icon(
+                    Icons.remove,
+                    size: 14.sp,
+                    color: AppColors.gold,
+                  ),
+                ),
+              ),
+              SizedBox(height: 4.h),
+              GestureDetector(
+                onTap: () => _removeCartItem(item),
+                child: Container(
+                  width: 22.w,
+                  height: 22.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.red.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Icon(
+                    Icons.close,
+                    size: 13.sp,
+                    color: AppColors.red,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openCartCheckout() async {
     if (_cartItems.isEmpty || _lockedSourceCityId == null) return;
+    if (!_cartFitsCurrentCapacity) {
+      AppSnackbar.show(
+        context,
+        title: 'Kapasite Yetersiz',
+        message:
+            'Sepet hacmi hedef depo kapasitesini asiyor. Sepeti kucultmeden alim tamamlanamaz.',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
     if (_isStoreTarget) {
       AppSnackbar.show(
         context,
@@ -1363,7 +2312,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       return;
     }
 
-    if (_lockedSourceCityId == widget.cityId) {
+    if (_lockedSourceCityId == _activeCityId) {
       await _submitMultiMarketTransfer();
       return;
     }
@@ -1389,7 +2338,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
     final cities = await ref.read(activeCitiesProvider.future);
     final sourceCity = _findCityById(cities, _lockedSourceCityId!);
-    final targetCity = _findCityById(cities, widget.cityId);
+    final targetCity = _findCityById(cities, _activeCityId);
 
     if (sourceCity == null || targetCity == null) {
       if (!mounted) return;
@@ -1464,7 +2413,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
     npcRentalOption = await ref.read(marketActionProvider).getNpcRentalVehicleOption(
           sourceCityId: _lockedSourceCityId!,
-          targetCityId: widget.cityId,
+          targetCityId: _activeCityId,
           distanceKm: distanceKm,
         );
     if (npcRentalOption != null) {
@@ -1597,7 +2546,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         .toList();
 
     final result = await ref.read(marketActionProvider).startMultiMarketTransfer(
-          buyerWarehouseId: widget.warehouseId,
+          buyerWarehouseId: _activeWarehouseId,
           sourceCityId: _lockedSourceCityId!,
           items: items,
           vehicleId: vehicleId,
@@ -2197,7 +3146,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       return;
     }
 
-    if (_lockedSourceCityId == widget.cityId) {
+    if (_lockedSourceCityId == _activeCityId) {
       await _submitMultiMarketTransfer();
       return;
     }
@@ -2222,7 +3171,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
 
     final cities = await ref.read(activeCitiesProvider.future);
     final sourceCity = _findCityById(cities, _lockedSourceCityId!);
-    final targetCity = _findCityById(cities, widget.cityId);
+    final targetCity = _findCityById(cities, _activeCityId);
 
     if (sourceCity == null || targetCity == null) {
       if (!mounted) return;
@@ -2387,7 +3336,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
         .toList();
 
     final result = await ref.read(marketActionProvider).startMultiMarketTransfer(
-          buyerWarehouseId: widget.warehouseId,
+          buyerWarehouseId: _activeWarehouseId,
           sourceCityId: _lockedSourceCityId!,
           items: items,
           vehicleId: vehicleId,

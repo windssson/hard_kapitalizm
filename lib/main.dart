@@ -247,6 +247,26 @@ final _router = GoRouter(
       builder: (context, state) => const LogisticsSetupScreen(),
     ),
     GoRoute(
+      path: '/market',
+      builder: (context, state) {
+        final warehouseId = state.uri.queryParameters['warehouseId'] ?? '';
+        final playerId = state.uri.queryParameters['playerId'] ?? '';
+        final cityId = state.uri.queryParameters['cityId'] ?? '';
+        final targetType = state.uri.queryParameters['targetType'] ?? 'warehouse';
+        final storeId = state.uri.queryParameters['storeId'] ?? '';
+        final storeSlotId = state.uri.queryParameters['storeSlotId'] ?? '';
+
+        return MarketScreen(
+          warehouseId: warehouseId,
+          playerId: playerId,
+          cityId: cityId,
+          targetType: targetType,
+          storeId: storeId,
+          storeSlotId: storeSlotId,
+        );
+      },
+    ),
+    GoRoute(
       path: '/market/:productId',
       builder: (context, state) {
         final productId = state.pathParameters['productId']!;

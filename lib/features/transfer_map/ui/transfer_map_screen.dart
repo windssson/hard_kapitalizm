@@ -140,6 +140,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       case 2:
         context.go('/transfer-map');
         break;
+      case 3:
+        context.go('/market');
+        break;
       case 4:
         context.go('/profile');
         break;
@@ -413,6 +416,18 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                               'Miktar',
                               '${transfer.displayQuantity} adet',
                             ),
+                            if (!transfer.isMultiItem) ...[
+                              _buildDialogDetailRow(
+                                'Kalite',
+                                'Kalite ${transfer.qualityLevel}',
+                              ),
+                              _buildDialogDetailRow(
+                                'Brand',
+                                transfer.hasBrand
+                                    ? 'Brandli Urun'
+                                    : 'Standart Brand',
+                              ),
+                            ],
                             if (transfer.isMultiItem)
                               _buildDialogDetailRow(
                                 'Kalem Sayisi',
@@ -2030,6 +2045,29 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               ),
             ],
           ),
+          SizedBox(height: 8.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: [
+              _buildInlineMetaChip(
+                '${transfer.sellerKindLabel} -> ${transfer.buyerKindLabel}',
+                AppColors.gold,
+              ),
+              if (!transfer.isMultiItem)
+                _buildInlineMetaChip(
+                  _buildQualityBrandSummary(
+                    qualityLevel: transfer.qualityLevel,
+                    hasBrand: transfer.hasBrand,
+                  ),
+                  Colors.white,
+                ),
+              _buildInlineMetaChip(
+                '${routeDistanceKm.toStringAsFixed(0)} km',
+                sameCity ? AppColors.green : AppColors.blue,
+              ),
+            ],
+          ),
           SizedBox(height: 10.h),
           Container(
             width: double.infinity,
@@ -2050,18 +2088,27 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           _buildCompactMetaRow(
             leftIcon: Icons.inventory_2_outlined,
             leftText: '${transfer.displayQuantity} adet',
-            rightIcon: Icons.straighten,
-            rightText: '${routeDistanceKm.toStringAsFixed(0)} km',
+            rightIcon: Icons.payments_outlined,
+            rightText: _formatCurrency(transfer.totalPrice),
           ),
           SizedBox(height: 6.h),
           _buildCompactMetaRow(
-            leftIcon: Icons.payments_outlined,
-            leftText: _formatCurrency(totalCost),
+            leftIcon: Icons.local_shipping_outlined,
+            leftText: _formatCurrency(transfer.transportCost + transfer.rentalCost),
             rightIcon: transfer.isRental
                 ? Icons.local_shipping_outlined
                 : Icons.directions_car_outlined,
             rightText: logisticsLabel,
           ),
+          if (transfer.isMultiItem) ...[
+            SizedBox(height: 6.h),
+            _buildCompactMetaRow(
+              leftIcon: Icons.payments_outlined,
+              leftText: _formatCurrency(totalCost),
+              rightIcon: Icons.list_alt_outlined,
+              rightText: '${transfer.itemCount} kalem',
+            ),
+          ],
           SizedBox(height: 10.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(4.r),
@@ -2076,7 +2123,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             children: [
               Expanded(
                 child: Text(
-                  '${transfer.sellerWarehouse.city.name} - ${transfer.buyerWarehouse.city.name}',
+                  '${transfer.sellerWarehouse.name} -> ${transfer.buyerWarehouse.name}',
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 10.sp,
@@ -2372,17 +2419,37 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               _buildTransferChip(_statusLabel(item.status), statusColor),
             ],
           ),
+          SizedBox(height: 8.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: [
+              _buildInlineMetaChip(
+                '${item.sellerKind} -> ${item.buyerKind}',
+                AppColors.gold,
+              ),
+              if (!item.isMultiItem)
+                _buildInlineMetaChip(
+                  _buildQualityBrandSummary(
+                    qualityLevel: item.qualityLevel,
+                    hasBrand: item.hasBrand,
+                  ),
+                  Colors.white,
+                ),
+              _buildInlineMetaChip('${totalMinutes} dk', statusColor),
+            ],
+          ),
           SizedBox(height: 12.h),
           _buildCompactMetaRow(
             leftIcon: Icons.inventory_2_outlined,
             leftText: '${item.displayQuantity} adet',
-            rightIcon: Icons.timelapse_outlined,
-            rightText: '${totalMinutes} dk',
+            rightIcon: Icons.payments_outlined,
+            rightText: _formatCurrency(item.totalPrice),
           ),
           SizedBox(height: 6.h),
           _buildCompactMetaRow(
-            leftIcon: Icons.payments_outlined,
-            leftText: _formatCurrency(totalCost),
+            leftIcon: Icons.local_shipping_outlined,
+            leftText: _formatCurrency(item.transportCost + item.rentalCost),
             rightIcon: item.isRental
                 ? Icons.local_shipping_outlined
                 : Icons.directions_car_outlined,
@@ -2390,6 +2457,15 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ? '${_formatCurrency(unitLogisticsCost)} / adet'
                 : 'Ozmal transfer',
           ),
+          if (item.isMultiItem) ...[
+            SizedBox(height: 6.h),
+            _buildCompactMetaRow(
+              leftIcon: Icons.payments_outlined,
+              leftText: _formatCurrency(totalCost),
+              rightIcon: Icons.list_alt_outlined,
+              rightText: '${item.itemCount} kalem',
+            ),
+          ],
           SizedBox(height: 6.h),
           _buildMetaLine(Icons.event_outlined, completedText),
         ],
@@ -2452,6 +2528,34 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   String _formatCurrency(double value) {
     return '${value.toStringAsFixed(1)} TL';
   }
+
+  String _buildQualityBrandSummary({
+    required int qualityLevel,
+    required bool hasBrand,
+  }) {
+    final brandLabel = hasBrand ? 'Brandli' : 'Standart';
+    return 'Q$qualityLevel | $brandLabel';
+  }
+
+  Widget _buildInlineMetaChip(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
 }
 
 class _TransferLiveMeta extends ConsumerWidget {
@@ -2496,6 +2600,7 @@ class _TransferLiveMeta extends ConsumerWidget {
       ],
     );
   }
+
 }
 
 class _TransferProgressBar extends ConsumerWidget {

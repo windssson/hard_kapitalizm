@@ -13,6 +13,8 @@ returns table (
   product_id text,
   product_name text,
   product_icon text,
+  quality_level integer,
+  brand_id uuid,
   quantity integer,
   total_price numeric,
   transport_cost numeric,
@@ -70,6 +72,11 @@ begin
     tr.product_id,
     coalesce(p.urun_adi, 'Urun')::text as product_name,
     coalesce(p.urun_iconu, 'default.webp')::text as product_icon,
+    greatest(coalesce(tr.quality_level, 1), 1)::integer as quality_level,
+    coalesce(
+      tr.brand_id,
+      '00000000-0000-0000-0000-000000000000'::uuid
+    ) as brand_id,
     coalesce(tr.quantity, 0)::integer as quantity,
     coalesce(tr.total_price, 0) as total_price,
     coalesce(tr.transport_cost, 0) as transport_cost,

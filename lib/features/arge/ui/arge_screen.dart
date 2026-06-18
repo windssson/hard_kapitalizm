@@ -60,6 +60,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       case 2:
         context.go('/transfer-map');
         break;
+      case 3:
+        context.go('/market');
+        break;
       case 4:
         context.go('/profile');
         break;

@@ -391,6 +391,11 @@ class _WarehouseHistoryScreenState
                 '${item.sourceCityName} -> ${item.targetCityName}',
                 AppColors.gold,
               ),
+              _buildStatusChip('Kalite ${item.qualityLevel}', Colors.white),
+              _buildStatusChip(
+                item.hasBrand ? 'Brandli' : 'Standart Brand',
+                item.hasBrand ? AppColors.gold : AppColors.textMuted,
+              ),
             ],
           ),
           SizedBox(height: 10.h),

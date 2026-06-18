@@ -29,7 +29,7 @@ class AppBottomNav extends StatelessWidget {
             _buildNavItem(0, Icons.home, 'Ana Sayfa'),
             _buildNavItem(1, Icons.business, 'İşletmeler'),
             _buildNavItem(2, Icons.map, 'Harita'),
-            _buildNavItem(3, Icons.bar_chart, 'Raporlar'),
+            _buildNavItem(3, Icons.storefront, 'Pazar'),
             _buildNavItem(4, Icons.person, 'Profil'),
           ],
         ),

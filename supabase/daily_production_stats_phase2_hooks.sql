@@ -10,6 +10,7 @@ security definer
 set search_path to 'public'
 as $function$
 declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
   v_now timestamptz := timezone('utc'::text, now());
   v_processed_count integer := 0;
   v_produced_count integer := 0;
@@ -51,6 +52,7 @@ begin
       f.id as factory_id,
       f.product_id,
       f.quality_level,
+      f.brand_id,
       f.output_capacity,
       f.last_production_at,
       p.uretim_adedi,
@@ -73,6 +75,7 @@ begin
      and out_pi.inventory_type = 'output'
      and out_pi.product_id = f.product_id
      and out_pi.quality_level = f.quality_level
+     and out_pi.brand_id = coalesce(f.brand_id, v_default_brand)
     where f.player_id = p_player_id
       and (p_factory_id is null or f.id = p_factory_id)
       and f.is_active = true
@@ -302,6 +305,7 @@ security definer
 set search_path to 'public'
 as $function$
 declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
   v_now timestamptz := timezone('utc'::text, now());
   v_processed_count integer := 0;
   v_produced_count integer := 0;
@@ -349,6 +353,7 @@ begin
       ps.slot_index,
       ps.product_id,
       ps.quality_level,
+      ps.brand_id,
       ps.last_production_at,
       case
         when ps.owner_kind = 'field' then f.output_capacity
@@ -375,6 +380,7 @@ begin
      and out_pi.inventory_type = 'output'
      and out_pi.product_id = ps.product_id
      and out_pi.quality_level = ps.quality_level
+     and out_pi.brand_id = coalesce(ps.brand_id, v_default_brand)
     where ps.is_active = true
       and ps.owner_kind in ('field', 'farm')
       and ps.product_id is not null
@@ -610,6 +616,7 @@ security definer
 set search_path to 'public'
 as $function$
 declare
+  v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
   v_now timestamptz := timezone('utc'::text, now());
   v_processed_count integer := 0;
   v_produced_count integer := 0;
@@ -638,6 +645,7 @@ begin
     select
       m.id as mine_id,
       m.product_id,
+      m.brand_id,
       m.output_capacity,
       m.last_production_at,
       p.uretim_adedi,
@@ -652,6 +660,7 @@ begin
      and out_pi.inventory_type = 'output'
      and out_pi.product_id = m.product_id
      and out_pi.quality_level = m.quality_level
+     and out_pi.brand_id = coalesce(m.brand_id, v_default_brand)
     where m.player_id = p_player_id
       and (p_mine_id is null or m.id = p_mine_id)
       and m.is_active = true

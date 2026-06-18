@@ -1,4 +1,6 @@
 class WarehouseHistoryItemModel {
+  static const String defaultBrandId = '00000000-0000-0000-0000-000000000000';
+
   final String id;
   final String direction;
   final String transferType;
@@ -10,6 +12,8 @@ class WarehouseHistoryItemModel {
   final String productId;
   final String productName;
   final String productIcon;
+  final int qualityLevel;
+  final String brandId;
   final int quantity;
   final double totalPrice;
   final double transportCost;
@@ -34,6 +38,8 @@ class WarehouseHistoryItemModel {
     required this.productId,
     required this.productName,
     required this.productIcon,
+    required this.qualityLevel,
+    required this.brandId,
     required this.quantity,
     required this.totalPrice,
     required this.transportCost,
@@ -49,6 +55,7 @@ class WarehouseHistoryItemModel {
 
   bool get isIncoming => direction == 'incoming';
   bool get isOutgoing => direction == 'outgoing';
+  bool get hasBrand => brandId != defaultBrandId;
   bool get isSale =>
       isOutgoing &&
       (transferType.toLowerCase().contains('market') || totalPrice > 0);
@@ -75,6 +82,8 @@ class WarehouseHistoryItemModel {
       productId: (json['product_id'] ?? '').toString(),
       productName: (json['product_name'] ?? 'Urun').toString(),
       productIcon: (json['product_icon'] ?? 'default.webp').toString(),
+      qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
+      brandId: (json['brand_id'] ?? defaultBrandId).toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
       transportCost: (json['transport_cost'] as num?)?.toDouble() ?? 0,

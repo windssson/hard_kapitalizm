@@ -71,10 +71,14 @@ class TransferHistoryEndpointModel {
 }
 
 class TransferHistoryItemModel {
+  static const String defaultBrandId = '00000000-0000-0000-0000-000000000000';
+
   final String id;
   final int quantity;
   final int itemCount;
   final int totalQuantity;
+  final int qualityLevel;
+  final String brandId;
   final String status;
   final String transferType;
   final bool isRental;
@@ -95,6 +99,8 @@ class TransferHistoryItemModel {
     required this.quantity,
     required this.itemCount,
     required this.totalQuantity,
+    required this.qualityLevel,
+    required this.brandId,
     required this.status,
     required this.transferType,
     required this.isRental,
@@ -114,6 +120,7 @@ class TransferHistoryItemModel {
   TransferHistoryEndpointModel get sellerWarehouse => sellerEndpoint;
   TransferHistoryEndpointModel get buyerWarehouse => buyerEndpoint;
   bool get isMultiItem => itemCount > 1;
+  bool get hasBrand => brandId != defaultBrandId;
   int get displayQuantity => totalQuantity > 0 ? totalQuantity : quantity;
   String get displayTitle =>
       isMultiItem ? 'Coklu Transfer ($itemCount kalem)' : product.name;
@@ -140,6 +147,8 @@ class TransferHistoryItemModel {
           (json['total_quantity'] as num?)?.toInt() ??
           (json['quantity'] as num?)?.toInt() ??
           0,
+      qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
+      brandId: (json['brand_id'] ?? defaultBrandId).toString(),
       status: (json['status'] ?? 'completed').toString(),
       transferType: (json['transfer_type'] ?? 'market_transfer').toString(),
       isRental: (json['is_rental'] as bool? ?? false) || rentalCost > 0,

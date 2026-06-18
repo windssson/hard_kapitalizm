@@ -13,6 +13,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
+import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
@@ -1300,93 +1301,30 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     }
 
     if (!context.mounted) return;
+    final options = products.map((selectableProduct) {
+      final product = selectableProduct.product;
+      return ProductSelectionOption(
+        id: product.id,
+        title: product.urunAdi,
+        subtitle: 'Saatlik uretim: ${product.uretimAdedi}',
+        badgeText: 'Maks Kalite: ${selectableProduct.maxQualityLevel}',
+        iconPath: product.urunIconu,
+        onTap: () async {
+          Navigator.pop(context);
+          await _selectMineProduct(
+            context,
+            ref,
+            detail,
+            selectableProduct,
+          );
+        },
+      );
+    }).toList();
 
-    showModalBottomSheet(
+    await ProductSelectionSheet.show(
       context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Kaynak Sec',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Expanded(
-              child: products.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Bu maden turu icin uygun kaynak bulunamadi.',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12.sp,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: products.length,
-                      separatorBuilder: (_, __) => SizedBox(height: 8.h),
-                      itemBuilder: (_, index) {
-                        final selectableProduct = products[index];
-                        final product = selectableProduct.product;
-                        return ListTile(
-                          tileColor: Colors.white.withValues(alpha: 0.04),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          leading: SizedBox(
-                            width: 40.w,
-                            height: 40.w,
-                            child: CachedAssetImage(
-                              fileName: product.urunIconu,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                          title: Text(
-                            product.urunAdi,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          subtitle: Text(
-                            'Kalite: ${selectableProduct.maxQualityLevel} | Saatlik uretim: ${product.uretimAdedi}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11.sp,
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            color: AppColors.gold,
-                          ),
-                          onTap: () async {
-                            Navigator.pop(sheetContext);
-                            await _selectMineProduct(
-                              context,
-                              ref,
-                              detail,
-                              selectableProduct,
-                            );
-                          },
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
+      title: 'Kaynak Sec',
+      options: options,
     );
   }
 
@@ -1500,6 +1438,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         title: warehouse.name,
         subtitle: warehouse.cityName,
         badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
+        infoText: 'Gonderilecek: ${inventory.quantity} adet | Urun',
         isHighlightBadge: sameCity,
         onTap: () {
           Navigator.pop(context);
@@ -1558,6 +1497,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     }).toList();
 
     if (!context.mounted) return;
+    options.sort((a, b) {
+      if (a.isHighlightBadge != b.isHighlightBadge) {
+        return a.isHighlightBadge ? -1 : 1;
+      }
+      return a.title.compareTo(b.title);
+    });
     await WarehouseSelectionSheet.show(
       context: context,
       title: 'Hedef Depo Seç',

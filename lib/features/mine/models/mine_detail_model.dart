@@ -58,6 +58,7 @@ class MineProductionInventoryModel {
   final String ownerId;
   final String inventoryType;
   final String productId;
+  final String brandId;
   final int qualityLevel;
   final int quantity;
   final double pendingQuantity;
@@ -70,6 +71,7 @@ class MineProductionInventoryModel {
     required this.ownerId,
     required this.inventoryType,
     required this.productId,
+    required this.brandId,
     required this.qualityLevel,
     required this.quantity,
     required this.pendingQuantity,
@@ -86,6 +88,9 @@ class MineProductionInventoryModel {
       ownerId: (json['owner_id'] ?? '').toString(),
       inventoryType: (json['inventory_type'] ?? '').toString(),
       productId: (json['product_id'] ?? '').toString(),
+      brandId:
+          (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+              .toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       pendingQuantity: (json['pending_quantity'] as num?)?.toDouble() ?? 0,
@@ -121,7 +126,8 @@ class MineDetailModel {
                 e.isOutput &&
                 product != null &&
                 e.productId == product!.id &&
-                e.qualityLevel == mine.qualityLevel,
+                e.qualityLevel == mine.qualityLevel &&
+                e.brandId == mine.brandId,
           )
           .toList()
         ..sort((a, b) => b.quantity.compareTo(a.quantity));

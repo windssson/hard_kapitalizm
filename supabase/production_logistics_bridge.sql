@@ -64,10 +64,6 @@ begin
     raise exception 'Kaynak slotta yeterli stok yok.';
   end if;
 
-  if coalesce(v_source_slot.brand_id, v_default_brand) <> v_default_brand then
-    raise exception 'Brandli stoklar henuz production transferinde desteklenmiyor.';
-  end if;
-
   select
     pi.*,
     case
@@ -269,7 +265,7 @@ begin
     'production_inventory',
     1,
     p_quantity,
-    v_default_brand,
+    coalesce(v_source_slot.brand_id, v_default_brand),
     v_now,
     v_now
   )
@@ -299,7 +295,7 @@ begin
     null,
     v_source_slot.product_id,
     v_source_slot.quality_level,
-    v_default_brand,
+    coalesce(v_source_slot.brand_id, v_default_brand),
     p_quantity,
     coalesce(v_source_slot.cost, 0),
     0,
@@ -604,7 +600,7 @@ begin
     'warehouse',
     1,
     p_quantity,
-    v_default_brand,
+    coalesce(v_source_inventory.brand_id, v_default_brand),
     v_now,
     v_now
   )
@@ -634,7 +630,7 @@ begin
     null,
     v_source_inventory.product_id,
     v_source_inventory.quality_level,
-    v_default_brand,
+    coalesce(v_source_inventory.brand_id, v_default_brand),
     p_quantity,
     coalesce(v_source_inventory.cost, 0),
     0,
@@ -668,7 +664,7 @@ begin
       v_target_warehouse.id,
       v_source_inventory.product_id,
       v_source_inventory.quality_level,
-      v_default_brand,
+      coalesce(v_source_inventory.brand_id, v_default_brand),
       p_quantity,
       coalesce(v_source_inventory.cost, 0),
       0,
@@ -899,6 +895,11 @@ begin
 
       if coalesce(v_target_inventory.quality_level, 0) <> coalesce(v_item.quality_level, 0) then
         raise exception 'Transfer kalitesi ile hedef production envanteri uyusmuyor.';
+      end if;
+
+      if coalesce(v_target_inventory.inventory_type, '') <> 'input'
+         and coalesce(v_target_inventory.brand_id, v_default_brand) <> coalesce(v_item.brand_id, v_default_brand) then
+        raise exception 'Transfer brandi ile hedef production envanteri uyusmuyor.';
       end if;
 
       v_total_existing_cost := coalesce(v_target_inventory.quantity, 0) * coalesce(v_target_inventory.cost, 0);

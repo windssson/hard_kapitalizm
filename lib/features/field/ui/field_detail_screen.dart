@@ -1444,14 +1444,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     final product = slot.product;
     if (slot.isEmpty || product == null) return const [];
 
-    final productIds = <String>{
-      if ((product.hammadde1Id ?? '').isNotEmpty) product.hammadde1Id!,
-      if ((product.hammadde2Id ?? '').isNotEmpty) product.hammadde2Id!,
-      if ((product.hammadde3Id ?? '').isNotEmpty) product.hammadde3Id!,
-    };
-
     final inventories = detail.inputInventories
-        .where((inventory) => productIds.contains(inventory.productId))
+        .where((inventory) => product.inputProductIds.contains(inventory.productId))
         .toList();
 
     inventories.sort((a, b) => a.productId.compareTo(b.productId));
@@ -1466,7 +1460,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     for (final inventory in detail.outputInventories) {
       if (inventory.productId == slot.productId &&
-          inventory.qualityLevel == slot.qualityLevel) {
+          inventory.qualityLevel == slot.qualityLevel &&
+          inventory.brandId == slot.brandId) {
         return inventory;
       }
     }
@@ -2019,6 +2014,12 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     }
 
     if (!context.mounted) return;
+    options.sort((a, b) {
+      if (a.isHighlightBadge != b.isHighlightBadge) {
+        return a.isHighlightBadge ? -1 : 1;
+      }
+      return a.title.compareTo(b.title);
+    });
     await WarehouseSelectionSheet.show(
       context: context,
       title: 'Kaynak Depo Seç',
@@ -2070,6 +2071,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         title: warehouse.name,
         subtitle: warehouse.cityName,
         badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
+        infoText:
+            'Gonderilecek: ${inventory.quantity} adet | ${inventory.isInput ? 'Hammadde' : 'Urun'}',
         isHighlightBadge: sameCity,
         onTap: () {
           Navigator.pop(context);

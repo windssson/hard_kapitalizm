@@ -2004,6 +2004,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     }
 
     if (!context.mounted) return;
+    options.sort((a, b) {
+      if (a.isHighlightBadge != b.isHighlightBadge) {
+        return a.isHighlightBadge ? -1 : 1;
+      }
+      return a.title.compareTo(b.title);
+    });
     await WarehouseSelectionSheet.show(
       context: context,
       title: 'Kaynak Depo Seç',
@@ -2043,6 +2049,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         title: warehouse.name,
         subtitle: warehouse.cityName,
         badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
+        infoText:
+            'Gonderilecek: ${inventory.quantity} adet | ${inventory.isInput ? 'Hammadde' : 'Urun'}',
         isHighlightBadge: sameCity,
         onTap: () {
           Navigator.pop(context);
