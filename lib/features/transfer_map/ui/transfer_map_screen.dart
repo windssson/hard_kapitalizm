@@ -9,6 +9,7 @@ import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -1988,7 +1989,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(color: accentColor.withValues(alpha: 0.3)),
                 ),
-                child: CachedAssetImage(fileName: transfer.product.icon),
+                child: BrandedProductImage(
+                  fileName: transfer.product.icon,
+                  brandName: transfer.brandName,
+                  fit: BoxFit.contain,
+                  showFrame: false,
+                ),
               ),
               SizedBox(width: 14.w),
               Expanded(
@@ -2397,7 +2403,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   color: Colors.black.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: CachedAssetImage(fileName: item.product.icon),
+                child: BrandedProductImage(
+                  fileName: item.product.icon,
+                  brandName: item.brandName,
+                  fit: BoxFit.contain,
+                  showFrame: false,
+                ),
               ),
               SizedBox(width: 14.w),
               Expanded(

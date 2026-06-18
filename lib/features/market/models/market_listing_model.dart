@@ -5,6 +5,7 @@ class MarketListingModel {
   final String productName;
   final String productIcon;
   final String brandId;
+  final String? brandName;
   final double unitVolume;
   final String warehouseId;
   final String warehouseName;
@@ -30,6 +31,7 @@ class MarketListingModel {
     required this.productName,
     required this.productIcon,
     required this.brandId,
+    required this.brandName,
     required this.unitVolume,
     required this.warehouseId,
     required this.warehouseName,
@@ -51,6 +53,9 @@ class MarketListingModel {
 
   factory MarketListingModel.npc({
     required String productId,
+    required String productName,
+    required String productIcon,
+    required double unitVolume,
     required double price,
     required String cityId,
     required String cityName,
@@ -61,10 +66,11 @@ class MarketListingModel {
       listingId: 'npc:$productId',
       slotId: 'npc:$productId',
       productId: productId,
-      productName: 'NPC Urunu',
-      productIcon: 'default.webp',
+      productName: productName,
+      productIcon: productIcon,
       brandId: '00000000-0000-0000-0000-000000000000',
-      unitVolume: 0,
+      brandName: null,
+      unitVolume: unitVolume,
       warehouseId: 'npc',
       warehouseName: 'Toptan Depo',
       warehouseIcon: 'market.webp',
@@ -111,6 +117,7 @@ class MarketListingModel {
       brandId:
           (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
               .toString(),
+      brandName: json['brand_name']?.toString(),
       unitVolume: parseNum(
         json['unit_volume'] ?? productJson['birim_hacim'],
       ),

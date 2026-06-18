@@ -593,6 +593,26 @@ class WarehouseActionNotifier {
     );
   }
 
+  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
+  getIntercityRouteVehicleOptions({
+    required String sourceCityId,
+    required String targetCityId,
+    required double totalVolume,
+  }) async {
+    final response = await _vehicleOptionsService.getRouteOptions(
+      RouteTransferVehicleOptionsRequest(
+        sourceCityId: sourceCityId,
+        targetCityId: targetCityId,
+        totalVolume: totalVolume,
+      ),
+    );
+
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: MarketTransferVehicleOptionModel.fromJson,
+    );
+  }
+
   Future<Map<String, dynamic>> startWarehouseToWarehouseTransfer({
     required String sourceWarehouseId,
     required String buyerWarehouseId,

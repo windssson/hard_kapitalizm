@@ -11,6 +11,7 @@ as $$
 declare
   v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
   v_player_id uuid := auth.uid();
+  v_npc_logistics_player_id uuid;
   v_now timestamptz := timezone('utc', now());
   v_source_slot record;
   v_target_inventory record;
@@ -22,6 +23,7 @@ declare
   v_fuel_used numeric := 0;
   v_condition_loss numeric := 0;
   v_transport_cost numeric := 0;
+  v_rental_cost numeric := 0;
   v_duration_seconds integer := 0;
   v_finish_at timestamptz := v_now;
   v_item_volume numeric := 0;
@@ -29,6 +31,7 @@ declare
   v_new_cost numeric := 0;
   v_total_existing_cost numeric := 0;
   v_total_incoming_cost numeric := 0;
+  v_is_rental boolean := false;
 begin
   if v_player_id is null then
     raise exception 'Oturum acilmamis.';
@@ -150,13 +153,28 @@ begin
     if p_vehicle_id is null then
       raise exception 'Sehirler arasi transfer icin arac secilmelidir.';
     end if;
+    v_npc_logistics_player_id := public.get_npc_logistics_player_id();
 
     select *
     into v_vehicle
     from public.logistics_vehicles
     where id = p_vehicle_id
-      and player_id = v_player_id
       and status = 'idle'
+      and (
+        player_id = v_player_id
+        or (
+          coalesce(is_available_for_rent, false) = true
+          and (
+            player_id = v_npc_logistics_player_id
+            or public.logistics_vehicle_matches_route(
+              route_city_a_id,
+              route_city_b_id,
+              v_source_slot.city_id,
+              v_target_inventory.owner_city_id
+            )
+          )
+        )
+      )
     for update;
 
     if not found then
@@ -191,7 +209,12 @@ begin
     v_finish_at := v_now + make_interval(secs => v_duration_seconds);
     v_fuel_used := round(v_distance_km * coalesce(v_vehicle.fuel_rate, 0), 2);
     v_condition_loss := greatest(1, ceil(v_distance_km / 25.0));
-    v_transport_cost := round(v_fuel_used * coalesce(v_vehicle.fuel_cost, 0), 2);
+    v_is_rental := v_vehicle.player_id <> v_player_id;
+    v_transport_cost := case
+      when v_is_rental then round(v_distance_km * coalesce(v_vehicle.rental_price, 0), 2)
+      else round(v_fuel_used * coalesce(v_vehicle.fuel_cost, 0), 2)
+    end;
+    v_rental_cost := case when v_is_rental then v_transport_cost else 0 end;
 
     if coalesce(v_vehicle.current_fuel, 0) < ceil(v_fuel_used) then
       raise exception 'Aracta yeterli yakit yok.';
@@ -242,12 +265,12 @@ begin
     p_warehouse_slot_id,
     v_target_inventory.id,
     case when v_same_city then null else p_vehicle_id end,
-    case when v_same_city then null else v_player_id end,
-    false,
+    case when v_same_city then null else v_vehicle.player_id end,
+    case when v_same_city then false else v_is_rental end,
     v_source_slot.product_id,
     v_source_slot.quality_level,
     p_quantity,
-    0,
+    case when v_same_city then 0 else v_rental_cost end,
     0,
     greatest(v_item_volume, 0.0001),
     0,
@@ -375,6 +398,7 @@ as $$
 declare
   v_default_brand uuid := '00000000-0000-0000-0000-000000000000'::uuid;
   v_player_id uuid := auth.uid();
+  v_npc_logistics_player_id uuid;
   v_now timestamptz := timezone('utc', now());
   v_source_inventory record;
   v_target_warehouse record;
@@ -386,10 +410,12 @@ declare
   v_fuel_used numeric := 0;
   v_condition_loss numeric := 0;
   v_transport_cost numeric := 0;
+  v_rental_cost numeric := 0;
   v_duration_seconds integer := 0;
   v_finish_at timestamptz := v_now;
   v_item_volume numeric := 0;
   v_target_used_capacity numeric := 0;
+  v_is_rental boolean := false;
 begin
   if v_player_id is null then
     raise exception 'Oturum acilmamis.';
@@ -487,13 +513,28 @@ begin
     if p_vehicle_id is null then
       raise exception 'Sehirler arasi transfer icin arac secilmelidir.';
     end if;
+    v_npc_logistics_player_id := public.get_npc_logistics_player_id();
 
     select *
     into v_vehicle
     from public.logistics_vehicles
     where id = p_vehicle_id
-      and player_id = v_player_id
       and status = 'idle'
+      and (
+        player_id = v_player_id
+        or (
+          coalesce(is_available_for_rent, false) = true
+          and (
+            player_id = v_npc_logistics_player_id
+            or public.logistics_vehicle_matches_route(
+              route_city_a_id,
+              route_city_b_id,
+              v_source_inventory.owner_city_id,
+              v_target_warehouse.city_id
+            )
+          )
+        )
+      )
     for update;
 
     if not found then
@@ -528,7 +569,12 @@ begin
     v_finish_at := v_now + make_interval(secs => v_duration_seconds);
     v_fuel_used := round(v_distance_km * coalesce(v_vehicle.fuel_rate, 0), 2);
     v_condition_loss := greatest(1, ceil(v_distance_km / 25.0));
-    v_transport_cost := round(v_fuel_used * coalesce(v_vehicle.fuel_cost, 0), 2);
+    v_is_rental := v_vehicle.player_id <> v_player_id;
+    v_transport_cost := case
+      when v_is_rental then round(v_distance_km * coalesce(v_vehicle.rental_price, 0), 2)
+      else round(v_fuel_used * coalesce(v_vehicle.fuel_cost, 0), 2)
+    end;
+    v_rental_cost := case when v_is_rental then v_transport_cost else 0 end;
 
     if coalesce(v_vehicle.current_fuel, 0) < ceil(v_fuel_used) then
       raise exception 'Aracta yeterli yakit yok.';
@@ -577,12 +623,12 @@ begin
     v_target_warehouse.id,
     p_production_inventory_id,
     case when v_same_city then null else p_vehicle_id end,
-    case when v_same_city then null else v_player_id end,
-    false,
+    case when v_same_city then null else v_vehicle.player_id end,
+    case when v_same_city then false else v_is_rental end,
     v_source_inventory.product_id,
     v_source_inventory.quality_level,
     p_quantity,
-    0,
+    case when v_same_city then 0 else v_rental_cost end,
     0,
     greatest(v_item_volume, 0.0001),
     case when v_same_city then 0 else v_item_volume end,

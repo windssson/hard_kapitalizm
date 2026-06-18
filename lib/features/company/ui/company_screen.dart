@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
-import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
@@ -137,7 +137,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Sirket'),
+            const SecondaryTopBar(title: 'Marka'),
             Expanded(
               child: companyAsync.when(
                 loading: () => const Center(
@@ -189,7 +189,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Marka Sirketi Kur',
+                'Marka Olustur',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18.sp,
@@ -198,7 +198,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               ),
               SizedBox(height: 8.h),
               Text(
-                'Kendi markani olustur. Sonrasinda kalite 5 urunleri bu marka altinda patentiyle uretebileceksin.',
+                'Oyuncu yapin zaten aktif. Burada kendi markani olusturursun. Sonrasinda kalite 5 urunleri bu marka altinda patentleyip uretebilirsin.',
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12.sp,
@@ -232,7 +232,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                   ),
                   child: Text(
-                    _isSubmitting ? 'Kuruluyor...' : 'Sirketi Kur',
+                    _isSubmitting ? 'Olusturuluyor...' : 'Markayi Olustur',
                   ),
                 ),
               ),
@@ -316,7 +316,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sirket Ozeti',
+                  'Marka Ozeti',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 14.sp,
@@ -341,14 +341,20 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
           if (availableProducts.isEmpty)
             _buildEmptyCard('Kalite 5 seviyesinde patentlenebilir yeni urun yok.')
           else
-            ...availableProducts.map(_buildPatentCard),
+            ...availableProducts.map((item) => _buildPatentCard(item)),
           SizedBox(height: 16.h),
           _buildSectionTitle('Markali Urunler'),
           SizedBox(height: 8.h),
           if (brandedProducts.isEmpty)
             _buildEmptyCard('Bu marka altinda henuz aktif urun yok.')
           else
-            ...brandedProducts.map((item) => _buildPatentCard(item, readOnly: true)),
+            ...brandedProducts.map(
+              (item) => _buildPatentCard(
+                item,
+                readOnly: true,
+                brandName: company.brandName,
+              ),
+            ),
         ],
       ),
     );
@@ -413,6 +419,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
   Widget _buildPatentCard(
     BrandCompanyProductModel item, {
     bool readOnly = false,
+    String? brandName,
   }) {
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
@@ -428,9 +435,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               color: Colors.black.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(12.r),
             ),
-            child: CachedAssetImage(
+            child: BrandedProductImage(
               fileName: item.productIcon,
               fit: BoxFit.contain,
+              brandName: readOnly ? brandName : null,
             ),
           ),
           SizedBox(width: 12.w),

@@ -13,6 +13,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
@@ -22,6 +23,7 @@ import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/auth/models/experience_gain_model.dart';
+import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_detail_page_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
@@ -40,6 +42,7 @@ class StoreDetailScreen extends ConsumerStatefulWidget {
 
 class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     with WidgetsBindingObserver {
+  static const String _defaultBrandId = '00000000-0000-0000-0000-000000000000';
   String? _lastShownSalesResultKey;
   Timer? _salesRefreshTimer;
   bool _isAutoRefreshingStoreSales = false;
@@ -638,9 +641,11 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             color: AppColors.blue.withValues(alpha: 0.18),
                           ),
                         ),
-                        child: CachedAssetImage(
+                        child: BrandedProductImage(
                           fileName: slot.productIcon ?? 'default.webp',
+                          brandName: _warehouseSlotBrandName(slot),
                           fit: BoxFit.contain,
+                          showFrame: false,
                         ),
                       );
                     },
@@ -988,6 +993,17 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   String? _productIconFromMap(Map<String, dynamic> product) {
     return (product['icon'] ?? product['urun_iconu'])?.toString();
   }
+
+  String? _slotBrandName(StoreSlotModel slot) {
+    if (slot.brandId == _defaultBrandId) return null;
+    return ref.watch(playerBrandCompanyProvider).value?.brandName;
+  }
+
+  String? _warehouseSlotBrandName(StoreWarehouseSlotSummaryModel slot) {
+    if (slot.brandId == _defaultBrandId) return null;
+    return ref.watch(playerBrandCompanyProvider).value?.brandName;
+  }
+
   String _formatCountdown(Duration remaining) {
     if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
     final hours = remaining.inHours;
@@ -1511,7 +1527,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                           borderRadius: BorderRadius.circular(12.r),
                           border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
                         ),
-                        child: CachedAssetImage(fileName: slot.productIcon ?? 'default', fit: BoxFit.contain),
+                        child: BrandedProductImage(
+                          fileName: slot.productIcon ?? 'default',
+                          brandName: _slotBrandName(slot),
+                          fit: BoxFit.contain,
+                          showFrame: false,
+                        ),
                       ),
                       SizedBox(width: 14.w),
                       Expanded(
@@ -2913,10 +2934,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 ref,
                 store,
                 slot,
+                warehouse['id'].toString(),
                 productSlot['id'].toString(),
                 availableQty,
                 qualityLevel,
                 sourceCityId,
+                (productSlot['product_id'] ?? '').toString(),
+                (productSlot['brand_id'] ??
+                        '00000000-0000-0000-0000-000000000000')
+                    .toString(),
               );
             },
           ),
@@ -2961,10 +2987,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
+    String sourceWarehouseId,
     String warehouseSlotId,
     int availableQty,
     int selectedQualityLevel,
     String sourceCityId,
+    String sourceProductId,
+    String sourceBrandId,
   ) {
     final controller = TextEditingController(text: '1');
     final maxCanTake = slot.capacity - slot.quantity - slot.pendingQuantity;
@@ -3106,10 +3135,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             ref,
                             store,
                             slot,
+                            sourceWarehouseId,
                             warehouseSlotId,
                             qty,
                             selectedQualityLevel,
                             sourceCityId,
+                            sourceProductId,
+                            sourceBrandId,
                           );
                         },
                         child: Text(
@@ -3136,10 +3168,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
+    String sourceWarehouseId,
     String warehouseSlotId,
     int quantity,
     int selectedQualityLevel,
     String sourceCityId,
+    String sourceProductId,
+    String sourceBrandId,
   ) async {
     final isSameCity =
         (store.cityId ?? '').isNotEmpty &&
@@ -3151,10 +3186,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         ref,
         store,
         slot,
+        sourceWarehouseId,
         warehouseSlotId,
         quantity,
         selectedQualityLevel,
         null,
+        sourceProductId,
+        sourceBrandId,
       );
       return;
     }
@@ -3167,6 +3205,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       ),
     );
 
+    final totalVolume = _resolveStoreSlotUnitVolume(slot, ref) * quantity;
     TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>
     vehicleResult = const TransferVehicleOptionsResult(
       options: [],
@@ -3176,9 +3215,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       vehicleResult = await ref
           .read(storeActionProvider)
           .getStoreTransferVehicleOptions(
-            storeSlotId: slot.id,
-            warehouseSlotId: warehouseSlotId,
-            quantity: quantity,
+            sourceCityId: sourceCityId,
+            targetCityId: store.cityId ?? '',
+            totalVolume: totalVolume,
           );
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
@@ -3260,10 +3299,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         ref,
                         store,
                         slot,
+                        sourceWarehouseId,
                         warehouseSlotId,
                         quantity,
                         selectedQualityLevel,
                         option.vehicleId,
+                        sourceProductId,
+                        sourceBrandId,
                       );
                     },
                   );
@@ -3289,17 +3331,19 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
+    String sourceWarehouseId,
     String warehouseSlotId,
     int quantity,
     int selectedQualityLevel,
     String? vehicleId,
+    String sourceProductId,
+    String sourceBrandId,
   ) async {
-    final productId = slot.productId;
     final needsSlotSetup =
         !_shouldLockStoreSlotQualityV2(slot) &&
-        productId != null &&
-        productId.isNotEmpty &&
-        (slot.productId == null || slot.qualityLevel != selectedQualityLevel);
+        (slot.productId != sourceProductId ||
+            slot.qualityLevel != selectedQualityLevel ||
+            slot.brandId != sourceBrandId);
 
     if (needsSlotSetup) {
       final setupResult = await ref.read(storeActionProvider).setStoreSlotProduct(
@@ -3315,7 +3359,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     }
 
     final result = await ref.read(storeActionProvider).startWarehouseToStoreTransfer(
-          storeSlotId: slot.id,
+          sourceWarehouseId: sourceWarehouseId,
+          storeId: store.id,
           warehouseSlotId: warehouseSlotId,
           quantity: quantity,
           vehicleId: vehicleId,
@@ -3329,13 +3374,30 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         historyDirty: true,
         performanceDirty: true,
       );
-      if (!context.mounted) return;
       final isInstant = result['mode']?.toString() == 'instant';
+      if (isInstant) {
+        await _moveStoreWarehouseStockToSlotAfterInbound(
+          ref: ref,
+          store: store,
+          slot: slot,
+          quantity: quantity,
+          qualityLevel: selectedQualityLevel,
+          productId: sourceProductId,
+          brandId: sourceBrandId,
+        );
+        await _refreshStorePageAndSync(
+          store.id,
+          refreshPlayer: true,
+          historyDirty: true,
+          performanceDirty: true,
+        );
+      }
+      if (!context.mounted) return;
       _showSuccess(
         context,
         isInstant
-            ? 'Ayni sehir transferi tamamlandi.'
-            : 'Lojistik transfer baslatildi. Arac yola cikti.',
+            ? 'Urun magaza deposuna ulasti ve slota aktarildi.'
+            : 'Lojistik transfer baslatildi. Urun once magaza deposuna ulasacak.',
       );
     } else {
       if (!context.mounted) return;
@@ -3669,6 +3731,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       return;
     }
 
+    final totalVolume = _resolveStoreSlotUnitVolume(slot, ref) * quantity;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -3686,9 +3749,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       vehicleResult = await ref
           .read(storeActionProvider)
           .getStoreToWarehouseVehicleOptions(
-            storeSlotId: slot.id,
-            warehouseId: warehouse['id'].toString(),
-            quantity: quantity,
+            sourceCityId: store.cityId ?? '',
+            targetCityId: warehouse['city_id']?.toString() ?? '',
+            totalVolume: totalVolume,
           );
     } catch (e) {
       if (context.mounted) Navigator.pop(context);
@@ -3794,8 +3857,47 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     int quantity,
     String? vehicleId,
   ) async {
-    final result = await ref.read(storeActionProvider).startStoreToWarehouseTransfer(
+    final returnResult = await ref
+        .read(storeActionProvider)
+        .returnStoreSlotStockToStoreWarehouse(
           storeSlotId: slot.id,
+          quantity: quantity,
+        );
+
+    if (!context.mounted) return;
+    if (returnResult['success'] != true) {
+      _showError(context, 'Hata: ${returnResult['message']}');
+      return;
+    }
+
+    await _refreshStorePageAndSync(
+      store.id,
+      refreshPlayer: true,
+      historyDirty: true,
+      performanceDirty: true,
+    );
+
+    final sourceWarehouseSlotId = _findStoreWarehouseSlotIdForTransfer(
+      ref: ref,
+      storeId: store.id,
+      productId: slot.productId ?? '',
+      qualityLevel: slot.qualityLevel,
+      brandId: slot.brandId,
+      minimumQuantity: quantity,
+    );
+
+    if (sourceWarehouseSlotId == null) {
+      if (!context.mounted) return;
+      _showError(
+        context,
+        'Urun magaza deposuna alindi fakat transfer icin kaynak depo slotu bulunamadi.',
+      );
+      return;
+    }
+
+    final result = await ref.read(storeActionProvider).startStoreToWarehouseTransfer(
+          storeId: store.id,
+          sourceWarehouseSlotId: sourceWarehouseSlotId,
           warehouseId: warehouseId,
           quantity: quantity,
           vehicleId: vehicleId,
@@ -3815,8 +3917,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       _showSuccess(
         context,
         isInstant
-            ? 'Ayni sehir gonderimi tamamlandi.'
-            : 'Lojistik transfer baslatildi. Arac yola cikti.',
+            ? 'Urun magaza deposundan hedef depoya aktarildi.'
+            : 'Lojistik transfer baslatildi. Urun magaza deposundan yola cikti.',
       );
       return;
     }
@@ -4048,6 +4150,92 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     }
 
     _showError(context, 'Hata: ${result['message']}');
+  }
+
+  double _resolveStoreSlotUnitVolume(StoreSlotModel slot, WidgetRef ref) {
+    final fromSlot = slot.product?.birimHacim ?? 0;
+    if (fromSlot > 0) return fromSlot;
+
+    final productId = slot.productId;
+    if (productId == null || productId.isEmpty) return 1;
+
+    final catalogs = ref.read(staticCatalogsProvider).value;
+    final products = catalogs?.products ?? const [];
+    for (final product in products) {
+      if (product.id == productId) {
+        return product.birimHacim > 0 ? product.birimHacim : 1;
+      }
+    }
+
+    return 1;
+  }
+
+  String? _findStoreWarehouseSlotIdForTransfer({
+    required WidgetRef ref,
+    required String storeId,
+    required String productId,
+    required int qualityLevel,
+    required String brandId,
+    required int minimumQuantity,
+  }) {
+    final page = ref.read(storeDetailPageProvider(storeId)).value;
+    final storeWarehouse = page?.storeWarehouse;
+    if (storeWarehouse == null) return null;
+
+    for (final warehouseSlot in storeWarehouse.slots) {
+      if (warehouseSlot.productId == productId &&
+          warehouseSlot.qualityLevel == qualityLevel &&
+          warehouseSlot.brandId == brandId &&
+          warehouseSlot.quantity >= minimumQuantity) {
+        return warehouseSlot.id;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _moveStoreWarehouseStockToSlotAfterInbound({
+    required WidgetRef ref,
+    required StoreModel store,
+    required StoreSlotModel slot,
+    required int quantity,
+    required int qualityLevel,
+    required String productId,
+    required String brandId,
+  }) async {
+    final sourceWarehouseSlotId = _findStoreWarehouseSlotIdForTransfer(
+      ref: ref,
+      storeId: store.id,
+      productId: productId,
+      qualityLevel: qualityLevel,
+      brandId: brandId,
+      minimumQuantity: quantity,
+    );
+
+    if (sourceWarehouseSlotId == null) {
+      return;
+    }
+
+    final setupNeeded =
+        !_shouldLockStoreSlotQualityV2(slot) &&
+        (slot.productId != productId ||
+            slot.qualityLevel != qualityLevel ||
+            slot.brandId != brandId);
+    if (setupNeeded) {
+      final setupResult = await ref.read(storeActionProvider).setStoreSlotProduct(
+            slotId: slot.id,
+            sourceWarehouseSlotId: sourceWarehouseSlotId,
+          );
+      if (setupResult['success'] != true) {
+        return;
+      }
+    }
+
+    await ref.read(storeActionProvider).transferStoreWarehouseStockToSlot(
+          storeSlotId: slot.id,
+          warehouseSlotId: sourceWarehouseSlotId,
+          quantity: quantity,
+        );
   }
 }
 

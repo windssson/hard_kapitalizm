@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_warehouse_model.dart';
@@ -104,6 +105,8 @@ final warehouseCapacityStatusProvider =
 
 class MarketActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final TransferVehicleOptionsService _vehicleOptionsService =
+      TransferVehicleOptionsService();
 
   Future<Map<String, dynamic>> startMultiMarketTransfer({
     required String buyerWarehouseId,
@@ -133,34 +136,24 @@ class MarketActionNotifier {
     }
   }
 
-  Future<MarketTransferVehicleOptionModel?> getNpcRentalVehicleOption({
+  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
+  getIntercityVehicleOptions({
     required String sourceCityId,
     required String targetCityId,
-    required double distanceKm,
+    required double totalVolume,
   }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return null;
+    final response = await _vehicleOptionsService.getRouteOptions(
+      RouteTransferVehicleOptionsRequest(
+        sourceCityId: sourceCityId,
+        targetCityId: targetCityId,
+        totalVolume: totalVolume,
+      ),
+    );
 
-    try {
-      final response = await _supabase.rpc(
-        'get_npc_rental_vehicle_option',
-        params: {
-          'p_from_city_id': sourceCityId,
-          'p_to_city_id': targetCityId,
-          'p_distance_km': distanceKm,
-        },
-      );
-
-      if (response is! List || response.isEmpty) return null;
-      final row = Map<String, dynamic>.from(response.first as Map);
-      return MarketTransferVehicleOptionModel.fromJson({
-        ...row,
-        'fuel_cost': 0,
-        'total_price': row['rental_cost'],
-      });
-    } catch (_) {
-      return null;
-    }
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: MarketTransferVehicleOptionModel.fromJson,
+    );
   }
 }
 

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_detail_page_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
@@ -16,6 +18,7 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pageAsync = ref.watch(storeDetailPageProvider(storeId));
+    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -64,7 +67,10 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
                             ...warehouse.slots.map(
                               (slot) => Padding(
                                 padding: EdgeInsets.only(bottom: 10.h),
-                                child: _StoreWarehouseSlotCard(slot: slot),
+                                child: _StoreWarehouseSlotCard(
+                                  slot: slot,
+                                  currentBrandName: currentBrandName,
+                                ),
                               ),
                             ),
                         ],
@@ -246,8 +252,12 @@ class _StoreWarehouseHeaderCard extends StatelessWidget {
 
 class _StoreWarehouseSlotCard extends StatelessWidget {
   final StoreWarehouseSlotSummaryModel slot;
+  final String? currentBrandName;
 
-  const _StoreWarehouseSlotCard({required this.slot});
+  const _StoreWarehouseSlotCard({
+    required this.slot,
+    required this.currentBrandName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -268,9 +278,14 @@ class _StoreWarehouseSlotCard extends StatelessWidget {
               color: Colors.black.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12.r),
             ),
-            child: CachedAssetImage(
+            child: BrandedProductImage(
               fileName: slot.productIcon ?? '',
+              brandName:
+                  slot.brandId == '00000000-0000-0000-0000-000000000000'
+                  ? null
+                  : currentBrandName,
               fit: BoxFit.contain,
+              showFrame: false,
               errorWidget: Icon(
                 Icons.inventory_2_outlined,
                 color: AppColors.textMuted,

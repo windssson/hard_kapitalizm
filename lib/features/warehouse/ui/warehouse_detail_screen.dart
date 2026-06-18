@@ -8,18 +8,20 @@ import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
-import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
     show warehouseCapacityStatusProvider;
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
+import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
@@ -36,8 +38,11 @@ class WarehouseDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
+  static const String _defaultBrandId = '00000000-0000-0000-0000-000000000000';
+
   @override
   Widget build(BuildContext context) {
+    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
     final warehouseAsync = ref.watch(
       warehouseDetailProvider(widget.warehouseId),
     );
@@ -103,6 +108,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           warehouse,
                           visibleActiveUpgrade,
                           hasAnotherActiveUpgrade,
+                          currentBrandName,
                         ),
                         if (visibleActiveUpgrade != null) ...[
                           SizedBox(height: 12.h),
@@ -117,7 +123,12 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           ),
                         ],
                         SizedBox(height: 18.h),
-                        _buildSlotList(context, ref, warehouse),
+                        _buildSlotList(
+                          context,
+                          ref,
+                          warehouse,
+                          currentBrandName,
+                        ),
                       ],
                     ),
                   ),
@@ -315,6 +326,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     WarehouseModel warehouse,
     BuildingUpgradeModel? activeUpgrade,
     bool hasAnotherActiveUpgrade,
+    String? currentBrandName,
   ) {
     final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
     final listedSlots = filledSlots
@@ -815,6 +827,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     BuildContext context,
     WidgetRef ref,
     WarehouseModel warehouse,
+    String? currentBrandName,
   ) {
     final sortedSlots = _sortedSlots(warehouse.slots);
 
@@ -1054,6 +1067,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     WarehouseModel warehouse,
     WarehouseSlotModel slot,
   ) {
+    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
     if (slot.isEmpty) {
       return Container(
         margin: EdgeInsets.only(bottom: 12.h),
@@ -1155,9 +1169,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                         : Colors.white10,
                   ),
                 ),
-                child: CachedAssetImage(
+                child: BrandedProductImage(
                   fileName: slot.productIcon ?? 'default.webp',
+                  brandName: _brandNameForSlot(slot, currentBrandName),
                   fit: BoxFit.contain,
+                  showFrame: false,
                 ),
               ),
               SizedBox(width: 12.w),
@@ -1307,6 +1323,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     WidgetRef ref,
     WarehouseSlotModel slot,
   ) async {
+    final currentBrandName = ref.read(playerBrandCompanyProvider).value?.brandName;
     String priceShortcut(double value) {
       if (value <= 0) return '';
       return value.toStringAsFixed(1);
@@ -1368,9 +1385,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           color: AppColors.gold.withValues(alpha: 0.25),
                         ),
                       ),
-                      child: CachedAssetImage(
+                      child: BrandedProductImage(
                         fileName: slot.productIcon ?? 'default.webp',
+                        brandName: _brandNameForSlot(slot, currentBrandName),
                         fit: BoxFit.contain,
+                        showFrame: false,
                       ),
                     ),
                     SizedBox(width: 12.w),
@@ -1911,6 +1930,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     Map<String, dynamic> targetWarehouse,
     WarehouseCapacityStatusModel? capacityStatus,
   ) async {
+    final currentBrandName = ref.read(playerBrandCompanyProvider).value?.brandName;
     final availableCapacity = capacityStatus?.availableCapacity ?? 0.0;
     final initialFits =
         initialSlot.unitVolume <= 0 || initialSlot.unitVolume <= availableCapacity;
@@ -2200,9 +2220,14 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                         color: AppColors.gold,
                                         size: 22.sp,
                                       )
-                                    : CachedAssetImage(
+                                    : BrandedProductImage(
                                         fileName: slot.productIcon!,
+                                        brandName: _brandNameForSlot(
+                                          slot,
+                                          currentBrandName,
+                                        ),
                                         fit: BoxFit.contain,
+                                        showFrame: false,
                                       ),
                               ),
                               SizedBox(width: 12.w),
@@ -2846,20 +2871,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       return;
     }
 
-    List<LogisticsVehicleModel> vehicles = const [];
-    try {
-      vehicles = await ref.read(logisticsVehicleListProvider.future);
-    } catch (e) {
-      if (!context.mounted) return;
-      AppSnackbar.show(
-        context,
-        title: 'Araclar Alinamadi',
-        message: e.toString(),
-        type: SnackbarType.error,
-      );
-      return;
-    }
-
     final cities = await ref.read(activeCitiesProvider.future);
     final sourceCity = _findCityById(cities, sourceWarehouse.cityId);
     final targetCity = _findCityById(cities, targetCityId);
@@ -2879,72 +2890,35 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       0,
       (sum, item) => sum + (item.quantity * item.slot.unitVolume),
     );
-    final distanceKm = _calculateCityDistanceKm(
-      sourceCity.mapPositionX,
-      sourceCity.mapPositionY,
-      targetCity.mapPositionX,
-      targetCity.mapPositionY,
-    );
-
-    final options = vehicles
-        .where((vehicle) => vehicle.status == 'idle')
-        .map((vehicle) {
-          final fuelNeeded = _round2(distanceKm * vehicle.fuelRate);
-          final conditionNeeded = _calculateConditionLoss(distanceKm);
-          final transportCost = _round2(fuelNeeded * vehicle.fuelCost);
-          final durationSeconds = _calculateDurationSeconds(
-            distanceKm: distanceKm,
-            speedKmh: vehicle.speedKmh,
+    final TransferVehicleOptionsResult<MarketTransferVehicleOptionModel> vehicleResult;
+    try {
+      vehicleResult = await ref
+          .read(warehouseActionProvider)
+          .getIntercityRouteVehicleOptions(
+            sourceCityId: sourceWarehouse.cityId,
+            targetCityId: targetCityId,
+            totalVolume: totalVolume,
           );
-          final canSelect =
-              vehicle.capacity >= totalVolume.ceil() &&
-              vehicle.speedKmh > 0 &&
-              vehicle.currentFuel >= fuelNeeded.ceil() &&
-              vehicle.condition > 0;
-
-          String? disabledReason;
-          if (vehicle.capacity < totalVolume.ceil()) {
-            disabledReason = 'Kapasite yetersiz';
-          } else if (vehicle.speedKmh <= 0) {
-            disabledReason = 'Arac hizi gecersiz';
-          } else if (vehicle.currentFuel < fuelNeeded.ceil()) {
-            disabledReason = 'Yeterli yakit yok';
-          } else if (vehicle.condition <= 0) {
-            disabledReason = 'Bakim gerekli';
-          }
-
-          return MarketTransferVehicleOptionModel(
-            vehicleId: vehicle.id,
-            vehicleOwnerPlayerId: vehicle.playerId,
-            vehicleName:
-                'Arac ${vehicle.logisticsVehicleTypeId.length <= 4 ? vehicle.logisticsVehicleTypeId : vehicle.logisticsVehicleTypeId.substring(0, 4)}',
-            isRental: false,
-            capacity: vehicle.capacity,
-            speedKmh: vehicle.speedKmh,
-            currentFuel: vehicle.currentFuel,
-            fuelCapacity: vehicle.fuelCapacity,
-            fuelRate: vehicle.fuelRate,
-            condition: vehicle.condition,
-            rentalPrice: 0,
-            distanceKm: distanceKm,
-            fuelNeeded: fuelNeeded,
-            conditionNeeded: conditionNeeded.toDouble(),
-            rentalCost: 0,
-            fuelCost: transportCost,
-            transportCost: transportCost,
-            estimatedDurationSeconds: durationSeconds,
-            canSelect: canSelect,
-            disabledReason: disabledReason,
-          );
-        })
-        .toList();
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Arac Secim Hatasi',
+        message: 'Arac secenekleri alinamadi: ${e.toString()}',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+    final options = vehicleResult.options;
 
     if (options.isEmpty) {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Arac Yok',
-        message: 'Sehirler arasi transfer icin idle arac bulunamadi.',
+        message:
+            vehicleResult.unavailableReason ??
+            'Sehirler arasi transfer icin uygun arac bulunamadi.',
         type: SnackbarType.warning,
       );
       return;
@@ -3041,6 +3015,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final value = map[key];
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  String? _brandNameForSlot(WarehouseSlotModel slot, String? currentBrandName) {
+    if (slot.brandId == _defaultBrandId) return null;
+    return currentBrandName;
   }
 }
 

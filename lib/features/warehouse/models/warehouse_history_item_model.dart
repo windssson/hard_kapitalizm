@@ -14,6 +14,7 @@ class WarehouseHistoryItemModel {
   final String productIcon;
   final int qualityLevel;
   final String brandId;
+  final String? brandName;
   final int quantity;
   final double totalPrice;
   final double transportCost;
@@ -40,6 +41,7 @@ class WarehouseHistoryItemModel {
     required this.productIcon,
     required this.qualityLevel,
     required this.brandId,
+    required this.brandName,
     required this.quantity,
     required this.totalPrice,
     required this.transportCost,
@@ -84,6 +86,7 @@ class WarehouseHistoryItemModel {
       productIcon: (json['product_icon'] ?? 'default.webp').toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
       brandId: (json['brand_id'] ?? defaultBrandId).toString(),
+      brandName: json['brand_name']?.toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
       transportCost: (json['transport_cost'] as num?)?.toDouble() ?? 0,

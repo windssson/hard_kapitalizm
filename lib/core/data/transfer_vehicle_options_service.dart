@@ -16,6 +16,18 @@ class TransferVehicleOptionsRequest {
   });
 }
 
+class RouteTransferVehicleOptionsRequest {
+  final String sourceCityId;
+  final String targetCityId;
+  final double totalVolume;
+
+  const RouteTransferVehicleOptionsRequest({
+    required this.sourceCityId,
+    required this.targetCityId,
+    required this.totalVolume,
+  });
+}
+
 class TransferVehicleOptionsService {
   final SupabaseClient _supabase;
   static const _transferDisabledReason =
@@ -55,6 +67,45 @@ class TransferVehicleOptionsService {
     } catch (e) {
       final message = e.toString().toLowerCase();
       if (message.contains('get_transfer_vehicle_options') ||
+          message.contains('does not exist') ||
+          message.contains('not found')) {
+        return const [
+          {'disabled_reason': _transferDisabledReason},
+        ];
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getRouteOptions(
+    RouteTransferVehicleOptionsRequest request,
+  ) async {
+    try {
+      final response = await _supabase.rpc(
+        'get_route_transfer_vehicle_options',
+        params: {
+          'p_source_city_id': request.sourceCityId,
+          'p_target_city_id': request.targetCityId,
+          'p_total_volume': request.totalVolume,
+        },
+      );
+
+      return (response as List<dynamic>)
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
+    } on PostgrestException catch (e) {
+      final message = e.message.toLowerCase();
+      if (message.contains('get_route_transfer_vehicle_options') ||
+          message.contains('does not exist') ||
+          message.contains('not found')) {
+        return const [
+          {'disabled_reason': _transferDisabledReason},
+        ];
+      }
+      rethrow;
+    } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (message.contains('get_route_transfer_vehicle_options') ||
           message.contains('does not exist') ||
           message.contains('not found')) {
         return const [

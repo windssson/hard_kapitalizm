@@ -12,11 +12,13 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_error_message.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
+import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
@@ -39,6 +41,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     12: 6,
     24: 12,
   };
+
+  String? get _currentBrandName =>
+      ref.read(playerBrandCompanyProvider).value?.brandName;
 
   void _refreshFieldDetail() {
     ref.invalidate(fieldDetailProvider(widget.fieldId));
@@ -1502,9 +1507,16 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   border: Border.all(color: color.withValues(alpha: 0.24)),
                 ),
                 child: inventory.product?.urunIconu != null
-                    ? CachedAssetImage(
+                    ? BrandedProductImage(
                         fileName: inventory.product!.urunIconu,
                         fit: BoxFit.contain,
+                        brandName: !inventory.isInput &&
+                                inventory.brandId !=
+                                    SelectableProductionProductModel
+                                        .defaultBrandId
+                            ? _currentBrandName
+                            : null,
+                        showFrame: false,
                       )
                     : Icon(Icons.inventory_2, color: color, size: 18.sp),
               ),

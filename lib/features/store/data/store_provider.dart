@@ -884,17 +884,15 @@ class StoreActionNotifier {
 
   Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
       getStoreTransferVehicleOptions({
-    required String storeSlotId,
-    required String warehouseSlotId,
-    required int quantity,
+    required String sourceCityId,
+    required String targetCityId,
+    required double totalVolume,
   }) async {
-    final response = await _vehicleOptionsService.getOptions(
-      TransferVehicleOptionsRequest(
-        sourceKind: 'warehouse_slot',
-        sourceId: warehouseSlotId,
-        targetKind: 'store_slot',
-        targetId: storeSlotId,
-        quantity: quantity,
+    final response = await _vehicleOptionsService.getRouteOptions(
+      RouteTransferVehicleOptionsRequest(
+        sourceCityId: sourceCityId,
+        targetCityId: targetCityId,
+        totalVolume: totalVolume,
       ),
     );
 
@@ -920,7 +918,8 @@ class StoreActionNotifier {
   }
 
   Future<Map<String, dynamic>> startWarehouseToStoreTransfer({
-    required String storeSlotId,
+    required String sourceWarehouseId,
+    required String storeId,
     required String warehouseSlotId,
     required int quantity,
     String? vehicleId,
@@ -932,11 +931,18 @@ class StoreActionNotifier {
 
     try {
       final response = await _supabase.rpc(
-        'start_warehouse_to_store_transfer',
+        'start_multi_logistics_transfer',
         params: {
-          'p_store_slot_id': storeSlotId,
-          'p_warehouse_slot_id': warehouseSlotId,
-          'p_quantity': quantity,
+          'p_source_entity_kind': 'warehouse',
+          'p_source_entity_id': sourceWarehouseId,
+          'p_target_entity_kind': 'store',
+          'p_target_entity_id': storeId,
+          'p_items': [
+            {
+              'source_warehouse_slot_id': warehouseSlotId,
+              'quantity': quantity,
+            },
+          ],
           'p_vehicle_id': vehicleId,
         },
       );
@@ -948,17 +954,15 @@ class StoreActionNotifier {
 
   Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
       getStoreToWarehouseVehicleOptions({
-    required String storeSlotId,
-    required String warehouseId,
-    required int quantity,
+    required String sourceCityId,
+    required String targetCityId,
+    required double totalVolume,
   }) async {
-    final response = await _vehicleOptionsService.getOptions(
-      TransferVehicleOptionsRequest(
-        sourceKind: 'store_slot',
-        sourceId: storeSlotId,
-        targetKind: 'warehouse',
-        targetId: warehouseId,
-        quantity: quantity,
+    final response = await _vehicleOptionsService.getRouteOptions(
+      RouteTransferVehicleOptionsRequest(
+        sourceCityId: sourceCityId,
+        targetCityId: targetCityId,
+        totalVolume: totalVolume,
       ),
     );
 
@@ -969,7 +973,8 @@ class StoreActionNotifier {
   }
 
   Future<Map<String, dynamic>> startStoreToWarehouseTransfer({
-    required String storeSlotId,
+    required String storeId,
+    required String sourceWarehouseSlotId,
     required String warehouseId,
     required int quantity,
     String? vehicleId,
@@ -981,11 +986,18 @@ class StoreActionNotifier {
 
     try {
       final response = await _supabase.rpc(
-        'start_store_to_warehouse_transfer',
+        'start_multi_logistics_transfer',
         params: {
-          'p_store_slot_id': storeSlotId,
-          'p_buyer_warehouse_id': warehouseId,
-          'p_quantity': quantity,
+          'p_source_entity_kind': 'store',
+          'p_source_entity_id': storeId,
+          'p_target_entity_kind': 'warehouse',
+          'p_target_entity_id': warehouseId,
+          'p_items': [
+            {
+              'source_warehouse_slot_id': sourceWarehouseSlotId,
+              'quantity': quantity,
+            },
+          ],
           'p_vehicle_id': vehicleId,
         },
       );

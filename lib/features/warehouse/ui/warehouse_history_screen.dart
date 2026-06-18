@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -341,7 +342,12 @@ class _WarehouseHistoryScreenState
                   color: accentColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: CachedAssetImage(fileName: item.productIcon),
+                child: BrandedProductImage(
+                  fileName: item.productIcon,
+                  brandName: item.brandName,
+                  fit: BoxFit.contain,
+                  showFrame: false,
+                ),
               ),
               SizedBox(width: 12.w),
               Expanded(

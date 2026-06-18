@@ -7,9 +7,11 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 
@@ -21,6 +23,7 @@ class StoreScreen extends ConsumerStatefulWidget {
 }
 
 class _StoreScreenState extends ConsumerState<StoreScreen> {
+  static const String _defaultBrandId = '00000000-0000-0000-0000-000000000000';
   final int _selectedIndex = -1;
   String _selectedFilter = 'Tumu';
 
@@ -691,6 +694,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildSlotItem(StoreSlotModel slot) {
+    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
     final double fillRatio = slot.capacity > 0
         ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
         : 0.0;
@@ -754,9 +758,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     color: AppColors.textMuted.withValues(alpha: 0.3),
                     size: 18.sp,
                   )
-                : CachedAssetImage(
+                : BrandedProductImage(
                     fileName: slot.productIcon ?? 'default.webp',
+                    brandName: slot.brandId == _defaultBrandId
+                        ? null
+                        : currentBrandName,
                     fit: BoxFit.contain,
+                    showFrame: false,
                   ),
           ),
           // Pasif indicator

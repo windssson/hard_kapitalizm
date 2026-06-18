@@ -448,6 +448,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ...listings,
       MarketListingModel.npc(
         productId: product.id,
+        productName: product.urunAdi,
+        productIcon: product.urunIconu,
+        unitVolume: product.birimHacim,
         price: product.bazSatisFiyati * 1.25,
         cityId: cityId,
         cityName: cityName,
@@ -2518,21 +2521,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }
 
   Future<void> _showIntercityMarketVehiclePicker() async {
-    List<LogisticsVehicleModel> vehicles = const [];
-    MarketTransferVehicleOptionModel? npcRentalOption;
-    try {
-      vehicles = await ref.read(logisticsVehicleListProvider.future);
-    } catch (e) {
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        title: 'Araclar Alinamadi',
-        message: e.toString(),
-        type: SnackbarType.error,
-      );
-      return;
-    }
-
     final cities = await ref.read(activeCitiesProvider.future);
     final sourceCity = _findCityById(cities, _lockedSourceCityId!);
     final targetCity = _findCityById(cities, _activeCityId);
@@ -2548,114 +2536,41 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       return;
     }
 
-    final distanceKm = _calculateDistanceKm(
-      sourceCity.mapPositionX,
-      sourceCity.mapPositionY,
-      targetCity.mapPositionX,
-      targetCity.mapPositionY,
-    );
-
-    final options = vehicles
-        .where((vehicle) => vehicle.status == 'idle')
-        .map((vehicle) {
-          final fuelNeeded = _round2(distanceKm * vehicle.fuelRate);
-          final conditionNeeded = _calculateConditionLoss(distanceKm);
-          final transportCost = _round2(fuelNeeded * vehicle.fuelCost);
-          final durationSeconds = _calculateDurationSeconds(
-            distanceKm: distanceKm,
-            speedKmh: vehicle.speedKmh,
+    final TransferVehicleOptionsResult<MarketTransferVehicleOptionModel> vehicleResult;
+    try {
+      vehicleResult = await ref.read(marketActionProvider).getIntercityVehicleOptions(
+            sourceCityId: _lockedSourceCityId!,
+            targetCityId: _activeCityId,
+            totalVolume: _cartTotalVolume,
           );
-          final canSelect =
-              vehicle.capacity >= _cartTotalVolume.ceil() &&
-              vehicle.speedKmh > 0 &&
-              vehicle.currentFuel >= fuelNeeded.ceil() &&
-              vehicle.condition > 0;
-
-          String? disabledReason;
-          if (vehicle.capacity < _cartTotalVolume.ceil()) {
-            disabledReason = 'Kapasite yetersiz';
-          } else if (vehicle.speedKmh <= 0) {
-            disabledReason = 'Arac hizi gecersiz';
-          } else if (vehicle.currentFuel < fuelNeeded.ceil()) {
-            disabledReason = 'Yeterli yakit yok';
-          } else if (vehicle.condition <= 0) {
-            disabledReason = 'Bakim gerekli';
-          }
-
-          return MarketTransferVehicleOptionModel(
-            vehicleId: vehicle.id,
-            vehicleOwnerPlayerId: vehicle.playerId,
-            vehicleName:
-                'Arac ${vehicle.logisticsVehicleTypeId.length <= 4 ? vehicle.logisticsVehicleTypeId : vehicle.logisticsVehicleTypeId.substring(0, 4)}',
-            isRental: false,
-            capacity: vehicle.capacity,
-            speedKmh: vehicle.speedKmh,
-            currentFuel: vehicle.currentFuel,
-            fuelCapacity: vehicle.fuelCapacity,
-            fuelRate: vehicle.fuelRate,
-            condition: vehicle.condition,
-            rentalPrice: 0,
-            distanceKm: distanceKm,
-            fuelNeeded: fuelNeeded,
-            conditionNeeded: conditionNeeded.toDouble(),
-            rentalCost: 0,
-            fuelCost: transportCost,
-            transportCost: transportCost,
-            estimatedDurationSeconds: durationSeconds,
-            canSelect: canSelect,
-            disabledReason: disabledReason,
-          );
-        })
-        .toList();
-
-    npcRentalOption = await ref.read(marketActionProvider).getNpcRentalVehicleOption(
-          sourceCityId: _lockedSourceCityId!,
-          targetCityId: _activeCityId,
-          distanceKm: distanceKm,
-        );
-    if (npcRentalOption != null) {
-      final hasCapacity = npcRentalOption.capacity >= _cartTotalVolume.ceil();
-      options.add(
-        MarketTransferVehicleOptionModel(
-          vehicleId: npcRentalOption.vehicleId,
-          vehicleOwnerPlayerId: npcRentalOption.vehicleOwnerPlayerId,
-          vehicleName: npcRentalOption.vehicleName,
-          isRental: true,
-          capacity: npcRentalOption.capacity,
-          speedKmh: npcRentalOption.speedKmh,
-          currentFuel: npcRentalOption.currentFuel,
-          fuelCapacity: npcRentalOption.fuelCapacity,
-          fuelRate: npcRentalOption.fuelRate,
-          condition: npcRentalOption.condition,
-          rentalPrice: npcRentalOption.rentalPrice,
-          distanceKm: npcRentalOption.distanceKm,
-          fuelNeeded: npcRentalOption.fuelNeeded,
-          conditionNeeded: npcRentalOption.conditionNeeded,
-          rentalCost: npcRentalOption.rentalCost,
-          fuelCost: npcRentalOption.fuelCost,
-          transportCost: npcRentalOption.transportCost,
-          estimatedDurationSeconds: npcRentalOption.estimatedDurationSeconds,
-          canSelect: npcRentalOption.canSelect && hasCapacity,
-          disabledReason: hasCapacity
-              ? npcRentalOption.disabledReason
-              : 'Kapasite yetersiz',
-        ),
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Arac Secim Hatasi',
+        message: 'Arac secenekleri alinamadi: ${e.toString()}',
+        type: SnackbarType.error,
       );
+      return;
     }
+    final options = vehicleResult.options;
 
     if (options.isEmpty) {
       if (!mounted) return;
       AppSnackbar.show(
         context,
         title: 'Arac Yok',
-        message: 'Sehirler arasi alim icin idle arac bulunamadi.',
+        message:
+            vehicleResult.unavailableReason ??
+            'Sehirler arasi alim icin uygun arac bulunamadi.',
         type: SnackbarType.warning,
       );
       return;
     }
 
     if (!mounted) return;
-    await showModalBottomSheet<void>(
+
+    showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.background,
       isScrollControlled: true,
@@ -2729,7 +2644,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         .map(
           (item) => {
             'source_kind': item.listing.isNpc ? 'npc_market' : 'warehouse_slot',
-            'seller_slot_id': item.listing.slotId,
+            'seller_slot_id': item.listing.isNpc ? null : item.listing.slotId,
             'city_id': item.listing.cityId,
             'product_id': item.listing.productId,
             'quality_level': item.listing.qualityLevel,

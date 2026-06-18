@@ -7,10 +7,12 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 
@@ -49,6 +51,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   @override
   Widget build(BuildContext context) {
     final warehousesAsync = ref.watch(warehouseListProvider);
+    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -104,7 +107,10 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                                     final warehouse = filtered[index];
                                     return warehouse.isUnderConstruction
                                         ? _buildConstructionCard(warehouse)
-                                        : _buildWarehouseCard(warehouse);
+                                        : _buildWarehouseCard(
+                                            warehouse,
+                                            currentBrandName,
+                                          );
                                   },
                                 ),
                         ),
@@ -250,7 +256,10 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     );
   }
 
-  Widget _buildWarehouseCard(WarehouseModel warehouse) {
+  Widget _buildWarehouseCard(
+    WarehouseModel warehouse,
+    String? currentBrandName,
+  ) {
     final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
     final usedStockCapacity = filledSlots.fold<double>(
       0,
@@ -411,8 +420,10 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                             physics: const BouncingScrollPhysics(),
                             itemCount: filledSlots.length,
                             separatorBuilder: (_, __) => SizedBox(width: 8.w),
-                            itemBuilder: (context, index) =>
-                                _buildMiniSlot(filledSlots[index]),
+                            itemBuilder: (context, index) => _buildMiniSlot(
+                              filledSlots[index],
+                              currentBrandName,
+                            ),
                           ),
                         ),
                 ],
@@ -424,7 +435,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     );
   }
 
-  Widget _buildMiniSlot(WarehouseSlotModel slot) {
+  Widget _buildMiniSlot(WarehouseSlotModel slot, String? currentBrandName) {
     if (slot.isEmpty) return const SizedBox();
 
     return Container(
@@ -451,14 +462,21 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
               color: AppColors.cardBgLight.withValues(alpha: 0.45),
               shape: BoxShape.circle,
             ),
-            child: CachedAssetImage(
+            child: BrandedProductImage(
               fileName: slot.productIcon ?? 'default.webp',
+              brandName: _brandNameForSlot(slot, currentBrandName),
               fit: BoxFit.contain,
+              showFrame: false,
             ),
           ),
         ],
       ),
     );
+  }
+
+  String? _brandNameForSlot(WarehouseSlotModel slot, String? currentBrandName) {
+    if (slot.brandId == '00000000-0000-0000-0000-000000000000') return null;
+    return currentBrandName;
   }
 
   Widget _buildProgressBar(double ratio) {

@@ -79,6 +79,7 @@ class TransferHistoryItemModel {
   final int totalQuantity;
   final int qualityLevel;
   final String brandId;
+  final String? brandName;
   final String status;
   final String transferType;
   final bool isRental;
@@ -101,6 +102,7 @@ class TransferHistoryItemModel {
     required this.totalQuantity,
     required this.qualityLevel,
     required this.brandId,
+    required this.brandName,
     required this.status,
     required this.transferType,
     required this.isRental,
@@ -149,6 +151,7 @@ class TransferHistoryItemModel {
           0,
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
       brandId: (json['brand_id'] ?? defaultBrandId).toString(),
+      brandName: json['brand_name']?.toString(),
       status: (json['status'] ?? 'completed').toString(),
       transferType: (json['transfer_type'] ?? 'market_transfer').toString(),
       isRental: (json['is_rental'] as bool? ?? false) || rentalCost > 0,

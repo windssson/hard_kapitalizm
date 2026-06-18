@@ -8470,12 +8470,12 @@ declare
   v_npc_logistics_player_id uuid;
   v_now timestamptz := timezone('utc'::text, now());
   v_target_warehouse record;
-  v_source_city cities%rowtype;
-  v_vehicle logistics_vehicles%rowtype;
+  v_source_city public.cities;
+  v_vehicle public.logistics_vehicles;
   v_transfer_id uuid;
   v_header_item jsonb;
   v_header_slot record;
-  v_header_product products%rowtype;
+  v_header_product public.products;
   v_header_source_kind text;
   v_header_product_id text;
   v_header_quality_level integer;
@@ -8484,7 +8484,8 @@ declare
   v_header_seller_warehouse_id uuid;
   v_item jsonb;
   v_seller_slot record;
-  v_product products%rowtype;
+  v_seller_slot_id uuid;
+  v_product public.products;
   v_item_source_kind text;
   v_item_product_id text;
   v_item_quality_level integer := 1;
@@ -8693,6 +8694,7 @@ begin
   for v_item in
     select value from jsonb_array_elements(p_items)
   loop
+    v_seller_slot_id := null;
     v_item_quantity := greatest(coalesce((v_item ->> 'quantity')::integer, 0), 0);
     if v_item_quantity <= 0 then
       raise exception 'Transfer miktari 0 dan buyuk olmalidir.';
@@ -8743,6 +8745,8 @@ begin
         raise exception 'Satici slotu bulunamadi.';
       end if;
 
+      v_seller_slot_id := v_seller_slot.id;
+
       if v_seller_slot.seller_player_id = v_player_id then
         raise exception 'Kendi market ilaninizi satin alamazsiniz.';
       end if;
@@ -8790,12 +8794,12 @@ begin
       set
         quantity = quantity - v_item_quantity,
         updated_at = v_now
-      where id = v_seller_slot.id;
+      where id = v_seller_slot_id;
 
       if coalesce(v_seller_slot.quantity, 0) - v_item_quantity <= 0
          and coalesce(v_seller_slot.pending_quantity, 0) <= 0 then
         delete from public.warehouse_slots
-        where id = v_seller_slot.id;
+        where id = v_seller_slot_id;
       end if;
     end if;
 
@@ -8819,7 +8823,7 @@ begin
     )
     values (
       v_transfer_id,
-      case when v_item_source_kind = 'npc_market' then null else v_seller_slot.id end,
+      v_seller_slot_id,
       null,
       v_item_product_id,
       v_item_quality_level,
@@ -8955,7 +8959,12 @@ begin
     from jsonb_array_elements(p_items) v_item(value)
     left join public.warehouse_slots ws
       on coalesce(v_item.value ->> 'source_kind', 'warehouse_slot') <> 'npc_market'
-     and ws.id = nullif(v_item.value ->> 'seller_slot_id', '')::uuid
+     and ws.id = (
+       case
+         when coalesce(v_item.value ->> 'source_kind', 'warehouse_slot') = 'npc_market' then null
+         else nullif(v_item.value ->> 'seller_slot_id', '')::uuid
+       end
+     )
     left join public.warehouses w
       on w.id = ws.warehouse_id
     group by 1
