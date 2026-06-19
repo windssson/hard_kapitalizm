@@ -131,21 +131,58 @@ class ProductionLogisticsService {
     );
   }
 
-  Future<ProductionLogisticsStartResult> startWarehouseToProductionTransfer({
-    required String warehouseSlotId,
-    required String productionInventoryId,
-    required int quantity,
+  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
+  getRouteVehicleOptions({
+    required String sourceCityId,
+    required String targetCityId,
+    required double totalVolume,
+  }) async {
+    final response = await _vehicleOptionsService.getRouteOptions(
+      RouteTransferVehicleOptionsRequest(
+        sourceCityId: sourceCityId,
+        targetCityId: targetCityId,
+        totalVolume: totalVolume,
+      ),
+    );
+
+    return mapTransferVehicleOptions(
+      rows: response,
+      mapper: ProductionLogisticsVehicleOption.fromJson,
+    );
+  }
+
+  Future<ProductionLogisticsStartResult> startMultiWarehouseToProductionTransfer({
+    required String sourceWarehouseId,
+    String? productionInventoryId,
+    required List<Map<String, dynamic>> items,
     String? vehicleId,
   }) async {
     try {
+      String? resolvedProductionInventoryId = productionInventoryId;
+      if (resolvedProductionInventoryId == null ||
+          resolvedProductionInventoryId.isEmpty) {
+        final inventoryIds = items
+            .map((item) => item['production_inventory_id']?.toString() ?? '')
+            .where((id) => id.isNotEmpty)
+            .toSet();
+        if (inventoryIds.length == 1) {
+          resolvedProductionInventoryId = inventoryIds.first;
+        }
+      }
+
+      final params = <String, dynamic>{
+        'p_source_warehouse_id': sourceWarehouseId,
+        'p_items': items,
+        'p_vehicle_id': vehicleId,
+      };
+      if (resolvedProductionInventoryId != null &&
+          resolvedProductionInventoryId.isNotEmpty) {
+        params['p_production_inventory_id'] = resolvedProductionInventoryId;
+      }
+
       final response = await _supabase.rpc(
-        'start_warehouse_to_production_transfer',
-        params: {
-          'p_warehouse_slot_id': warehouseSlotId,
-          'p_production_inventory_id': productionInventoryId,
-          'p_quantity': quantity,
-          'p_vehicle_id': vehicleId,
-        },
+        'start_multi_warehouse_to_production_transfer',
+        params: params,
       );
 
       return ProductionLogisticsStartResult.fromJson(
@@ -159,19 +196,21 @@ class ProductionLogisticsService {
     }
   }
 
-  Future<ProductionLogisticsStartResult> startProductionToWarehouseTransfer({
-    required String productionInventoryId,
+  Future<ProductionLogisticsStartResult> startMultiProductionToWarehouseTransfer({
+    required String sourceOwnerKind,
+    required String sourceOwnerId,
     required String buyerWarehouseId,
-    required int quantity,
+    required List<Map<String, dynamic>> items,
     String? vehicleId,
   }) async {
     try {
       final response = await _supabase.rpc(
-        'start_production_to_warehouse_transfer',
+        'start_multi_production_to_warehouse_transfer',
         params: {
-          'p_production_inventory_id': productionInventoryId,
+          'p_source_owner_kind': sourceOwnerKind,
+          'p_source_owner_id': sourceOwnerId,
           'p_buyer_warehouse_id': buyerWarehouseId,
-          'p_quantity': quantity,
+          'p_items': items,
           'p_vehicle_id': vehicleId,
         },
       );

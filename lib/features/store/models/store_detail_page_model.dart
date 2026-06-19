@@ -141,18 +141,20 @@ class StoreDetailPageModel {
       throw Exception('Store detail page response missing store.');
     }
 
+    final storeMap = storeJson is Map<String, dynamic>
+        ? storeJson
+        : Map<String, dynamic>.from(storeJson as Map);
+
+    final rawWarehouse = json['store_warehouse'] ?? storeMap['store_warehouse'];
+
     return StoreDetailPageModel(
       success: json['success'] as bool? ?? false,
-      store: StoreModel.fromJson(
-        storeJson is Map<String, dynamic>
-            ? storeJson
-            : Map<String, dynamic>.from(storeJson as Map),
-      ),
-      storeWarehouse: json['store_warehouse'] is Map<String, dynamic>
-          ? StoreWarehouseSummaryModel.fromJson(json['store_warehouse'])
-          : json['store_warehouse'] is Map
+      store: StoreModel.fromJson(storeMap),
+      storeWarehouse: rawWarehouse is Map<String, dynamic>
+          ? StoreWarehouseSummaryModel.fromJson(rawWarehouse)
+          : rawWarehouse is Map
               ? StoreWarehouseSummaryModel.fromJson(
-                  Map<String, dynamic>.from(json['store_warehouse'] as Map),
+                  Map<String, dynamic>.from(rawWarehouse),
                 )
               : null,
       activeBoost: json['active_boost'] is Map<String, dynamic>

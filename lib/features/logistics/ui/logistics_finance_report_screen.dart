@@ -172,7 +172,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: 7,
-        separatorBuilder: (_, __) => SizedBox(width: 8.w),
+        separatorBuilder: (context, index) => SizedBox(width: 8.w),
         itemBuilder: (context, index) {
           final day = start.add(Duration(days: index));
           final dayEntries = entries

@@ -126,7 +126,7 @@ class MarketActionNotifier {
           'p_buyer_warehouse_id': buyerWarehouseId,
           'p_source_city_id': sourceCityId,
           'p_items': items,
-          if (vehicleId != null) 'p_vehicle_id': vehicleId,
+          'p_vehicle_id': ?vehicleId,
         },
       );
 

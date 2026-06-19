@@ -490,7 +490,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: player.featuredBadges.length,
-                        separatorBuilder: (_, __) => SizedBox(width: 10.w),
+                        separatorBuilder: (context, index) => SizedBox(width: 10.w),
                         itemBuilder: (_, index) =>
                             _buildBadgeChip(player.featuredBadges[index]),
                       ),
@@ -574,7 +574,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             onPressed: () async {
               await Supabase.instance.client.auth.signOut();
-              if (context.mounted) {
+              if (mounted) {
                 context.go('/');
               }
             },

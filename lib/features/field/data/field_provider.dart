@@ -623,60 +623,6 @@ class FieldActionNotifier {
         .toList();
   }
 
-  Future<Map<String, dynamic>> transferWarehouseToProductionInventory({
-    required String warehouseSlotId,
-    required String productionInventoryId,
-    required int quantity,
-    bool syncProviders = true,
-  }) async {
-    try {
-      final result = await _productionLogisticsService
-          .startWarehouseToProductionTransfer(
-            warehouseSlotId: warehouseSlotId,
-            productionInventoryId: productionInventoryId,
-            quantity: quantity,
-            vehicleId: null,
-          );
-      if (syncProviders) {
-        _ref.invalidate(fieldDetailProvider);
-      }
-      return {
-        'success': result.success,
-        'message': result.message,
-        'transfer_id': result.transferId,
-      };
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> transferProductionInventoryToWarehouse({
-    required String productionInventoryId,
-    required String warehouseId,
-    required int quantity,
-    bool syncProviders = true,
-  }) async {
-    try {
-      final result = await _productionLogisticsService
-          .startProductionToWarehouseTransfer(
-            productionInventoryId: productionInventoryId,
-            buyerWarehouseId: warehouseId,
-            quantity: quantity,
-            vehicleId: null,
-          );
-      if (syncProviders) {
-        _ref.invalidate(fieldDetailProvider);
-      }
-      return {
-        'success': result.success,
-        'message': result.message,
-        'transfer_id': result.transferId,
-      };
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<List<ProductionLogisticsWarehouseOption>>
   getWarehousesForProductionLogistics({
     required String productionCityId,
@@ -688,22 +634,20 @@ class FieldActionNotifier {
     );
   }
 
-  List<String> _parseAcceptedProductIds(dynamic rawValue) {
-    if (rawValue == null) return const [];
+  Future<List<Map<String, dynamic>>> getPlayerWarehousesRaw() {
+    return _productionLogisticsService.getPlayerWarehousesRaw();
+  }
 
-    final cleaned = rawValue
-        .toString()
-        .replaceAll('[', '')
-        .replaceAll(']', '')
-        .replaceAll('{', '')
-        .replaceAll('}', '')
-        .replaceAll('"', '')
-        .replaceAll("'", '');
+  Future<List<Map<String, dynamic>>> getPlayerWarehousesWithSlotsRaw() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Oturum acilmamis.');
 
-    return cleaned
-        .split(',')
-        .map((e) => e.trim().toUpperCase())
-        .where((e) => e.isNotEmpty)
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_with_slots',
+    );
+
+    return (response as List<dynamic>)
+        .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
   }
 
@@ -734,19 +678,33 @@ class FieldActionNotifier {
         );
   }
 
-  Future<ProductionLogisticsStartResult> startWarehouseToProductionTransfer({
-    required String warehouseSlotId,
-    required String productionInventoryId,
-    required int quantity,
+  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
+  getProductionRouteVehicleOptions({
+    required String sourceCityId,
+    required String targetCityId,
+    required double totalVolume,
+  }) {
+    return _productionLogisticsService.getRouteVehicleOptions(
+      sourceCityId: sourceCityId,
+      targetCityId: targetCityId,
+      totalVolume: totalVolume,
+    );
+  }
+
+  Future<ProductionLogisticsStartResult> startMultiWarehouseToProductionTransfer({
+    required String sourceWarehouseId,
+    String? productionInventoryId,
+    required List<Map<String, dynamic>> items,
     String? vehicleId,
     bool syncProviders = true,
   }) async {
-    final result = await _productionLogisticsService.startWarehouseToProductionTransfer(
-      warehouseSlotId: warehouseSlotId,
-      productionInventoryId: productionInventoryId,
-      quantity: quantity,
-      vehicleId: vehicleId,
-    );
+    final result = await _productionLogisticsService
+        .startMultiWarehouseToProductionTransfer(
+          sourceWarehouseId: sourceWarehouseId,
+          productionInventoryId: productionInventoryId,
+          items: items,
+          vehicleId: vehicleId,
+        );
     if (syncProviders) {
       _ref.invalidate(fieldDetailProvider);
       _ref.invalidate(playerProvider);
@@ -754,19 +712,22 @@ class FieldActionNotifier {
     return result;
   }
 
-  Future<ProductionLogisticsStartResult> startProductionToWarehouseTransfer({
-    required String productionInventoryId,
+  Future<ProductionLogisticsStartResult> startMultiProductionToWarehouseTransfer({
+    required String sourceOwnerKind,
+    required String sourceOwnerId,
     required String buyerWarehouseId,
-    required int quantity,
+    required List<Map<String, dynamic>> items,
     String? vehicleId,
     bool syncProviders = true,
   }) async {
-    final result = await _productionLogisticsService.startProductionToWarehouseTransfer(
-      productionInventoryId: productionInventoryId,
-      buyerWarehouseId: buyerWarehouseId,
-      quantity: quantity,
-      vehicleId: vehicleId,
-    );
+    final result = await _productionLogisticsService
+        .startMultiProductionToWarehouseTransfer(
+          sourceOwnerKind: sourceOwnerKind,
+          sourceOwnerId: sourceOwnerId,
+          buyerWarehouseId: buyerWarehouseId,
+          items: items,
+          vehicleId: vehicleId,
+        );
     if (syncProviders) {
       _ref.invalidate(fieldDetailProvider);
       _ref.invalidate(playerProvider);

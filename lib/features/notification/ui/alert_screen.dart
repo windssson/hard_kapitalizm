@@ -26,7 +26,7 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
 
   Future<void> _refresh() async {
     await ref.read(notificationActionProvider).refreshAttention();
-    await ref.refresh(playerNotificationDashboardProvider.future);
+    final _ = await ref.refresh(playerNotificationDashboardProvider.future);
   }
 
   Future<void> _markRead(PlayerNotificationModel notification) async {

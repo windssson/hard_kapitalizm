@@ -191,7 +191,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
-        separatorBuilder: (_, __) => SizedBox(width: 8.w),
+        separatorBuilder: (context, index) => SizedBox(width: 8.w),
         itemBuilder: (_, index) {
           final category = categories[index];
           final isSelected = category == selectedCategory;

@@ -10,9 +10,7 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
-import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
@@ -64,9 +62,12 @@ class TransferMapScreen extends ConsumerStatefulWidget {
 }
 
 class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
+  static const Duration _dueTransferRetryDelay = Duration(seconds: 10);
+
   final int _selectedIndex = 2;
   Timer? _dueTransferTimer;
   bool _isCompletingDueTransfers = false;
+  DateTime? _retryDueTransfersAfter;
   int _selectedTab = 0;
   _ActiveTransferFilter _activeFilter = _ActiveTransferFilter.all;
   _HistoryTransferFilter _historyFilter = _HistoryTransferFilter.all;
@@ -118,8 +119,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
     if (nextDueAt == null) return;
 
+    final retryAfter = _retryDueTransfersAfter;
     final delay = nextDueAt.isAfter(now)
         ? nextDueAt.difference(now)
+        : retryAfter != null && retryAfter.isAfter(now)
+        ? retryAfter.difference(now)
         : Duration.zero;
 
     _dueTransferTimer = Timer(delay, () async {
@@ -230,6 +234,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     _isCompletingDueTransfers = true;
     try {
       var completedCount = 0;
+      var failedCount = 0;
       final affectedWarehouseIds = <String>{};
       final affectedStoreIds = <String>{};
       final affectedFactoryIds = <String>{};
@@ -247,8 +252,14 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           affectedFarmIds.addAll(_affectedIds(result, 'farm_ids'));
           affectedFieldIds.addAll(_affectedIds(result, 'field_ids'));
           affectedMineIds.addAll(_affectedIds(result, 'mine_ids'));
+        } else {
+          failedCount += 1;
         }
       }
+
+      _retryDueTransfersAfter = failedCount > 0
+          ? DateTime.now().add(_dueTransferRetryDelay)
+          : null;
 
       ref.invalidate(buyerTransferMapProvider);
       ref.invalidate(buyerTransferHistoryProvider);
@@ -1066,7 +1077,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             ),
           );
         },
-        separatorBuilder: (_, __) => SizedBox(width: 8.w),
+        separatorBuilder: (context, index) => SizedBox(width: 8.w),
         itemCount: _ActiveTransferFilter.values.length,
       ),
     );
@@ -1118,7 +1129,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             ),
           );
         },
-        separatorBuilder: (_, __) => SizedBox(width: 8.w),
+        separatorBuilder: (context, index) => SizedBox(width: 8.w),
         itemCount: items.length,
       ),
     );
@@ -1252,7 +1263,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             ),
           );
         },
-        separatorBuilder: (_, __) => SizedBox(width: 8.w),
+        separatorBuilder: (context, index) => SizedBox(width: 8.w),
         itemCount: _HistoryTransferFilter.values.length,
       ),
     );
@@ -1264,7 +1275,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _HistorySortOption.values.length,
-        separatorBuilder: (_, __) => SizedBox(width: 8.w),
+        separatorBuilder: (context, index) => SizedBox(width: 8.w),
         itemBuilder: (context, index) {
           final option = _HistorySortOption.values[index];
           final isSelected = option == _historySort;
@@ -1483,6 +1494,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         transferType == 'store_to_warehouse' ||
         transferType == 'warehouse_to_production' ||
         transferType == 'production_to_warehouse' ||
+        transferType == 'warehouse_to_production_multi' ||
+        transferType == 'production_to_warehouse_multi' ||
         transferType == 'market_to_warehouse_multi' ||
         transferType == 'warehouse_to_warehouse_multi' ||
         transferType == 'warehouse_to_store_multi' ||
@@ -2457,7 +2470,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   ),
                   Colors.white,
                 ),
-              _buildInlineMetaChip('${totalMinutes} dk', statusColor),
+              _buildInlineMetaChip('$totalMinutes dk', statusColor),
             ],
           ),
           SizedBox(height: 12.h),

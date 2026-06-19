@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
-import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_history_item_model.dart';
@@ -86,7 +85,7 @@ class _WarehouseHistoryScreenState
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: EdgeInsets.all(16.w),
                             itemCount: filteredItems.length + 1,
-                            separatorBuilder: (_, __) => SizedBox(height: 12.h),
+                            separatorBuilder: (context, index) => SizedBox(height: 12.h),
                             itemBuilder: (_, index) {
                               if (index == 0) {
                                 return _buildSummaryHeader(filteredItems);
@@ -113,7 +112,7 @@ class _WarehouseHistoryScreenState
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
             scrollDirection: Axis.horizontal,
             itemCount: _WarehouseHistoryFilter.values.length,
-            separatorBuilder: (_, __) => SizedBox(width: 8.w),
+            separatorBuilder: (context, index) => SizedBox(width: 8.w),
             itemBuilder: (_, index) {
               final filter = _WarehouseHistoryFilter.values[index];
               final isSelected = filter == _selectedFilter;

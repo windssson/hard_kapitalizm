@@ -95,7 +95,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: EdgeInsets.all(16.w),
                             itemCount: filteredItems.length + 1,
-                            separatorBuilder: (_, __) => SizedBox(height: 12.h),
+                            separatorBuilder: (context, index) => SizedBox(height: 12.h),
                             itemBuilder: (_, index) {
                               if (index == 0) {
                                 return _buildSummaryHeader(filteredItems);
@@ -167,7 +167,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
                 ),
               );
             },
-            separatorBuilder: (_, __) => SizedBox(width: 8.w),
+            separatorBuilder: (context, index) => SizedBox(width: 8.w),
             itemCount: _StoreHistoryFilter.values.length,
           ),
         ),

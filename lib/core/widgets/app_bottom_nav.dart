@@ -52,7 +52,7 @@ class AppBottomNav extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [AppColors.gold.withOpacity(0.2), AppColors.navBg],
+                  colors: [AppColors.gold.withValues(alpha: 0.2), AppColors.navBg],
                 ),
               )
             : null,

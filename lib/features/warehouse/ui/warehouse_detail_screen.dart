@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -347,10 +345,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       0.0,
       capacity,
     );
-    final averageQuality = filledSlots.isEmpty
-        ? 0.0
-        : filledSlots.fold<int>(0, (sum, slot) => sum + slot.qualityLevel) /
-              filledSlots.length;
     final stockRatio = capacity > 0
         ? (usedCapacity / capacity).clamp(0.0, 1.0)
         : 0.0;
@@ -678,31 +672,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildEmptyCard(String message, {Widget? action}) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            message,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
-          ),
-          if (action != null) ...[
-            SizedBox(height: 12.h),
-            action,
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget _buildCapacityLegend(String label, String value, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -975,7 +944,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               fit: BoxFit.contain,
               child: Switch(
                 value: isActive,
-                activeColor: AppColors.green,
+                activeThumbColor: AppColors.green,
                 inactiveThumbColor: AppColors.textMuted,
                 inactiveTrackColor: Colors.black26,
                 onChanged: onChanged,
@@ -1744,6 +1713,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     }
 
     if (context.mounted) Navigator.of(context).pop();
+    if (!context.mounted) return;
 
     final initialProductId = initialSlot.productId?.trim().toUpperCase();
     if (initialProductId == null || initialProductId.isEmpty) {
@@ -2184,7 +2154,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   Expanded(
                     child: ListView.separated(
                       itemCount: slots.length,
-                      separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                      separatorBuilder: (context, index) => SizedBox(height: 10.h),
                       itemBuilder: (_, index) {
                         final slot = slots[index];
                         final selectedQuantity =
@@ -2437,6 +2407,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         if (completionResult['success'] != true) {
           await _refreshWarehouseEcosystem();
           ref.invalidate(warehouseDetailProvider(targetWarehouseId));
+          if (!context.mounted) return;
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
@@ -2452,6 +2423,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       ref.invalidate(warehouseDetailProvider(targetWarehouseId));
       await ref.read(warehouseDetailProvider(targetWarehouseId).future);
 
+      if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Transfer Basarili',
@@ -2580,35 +2552,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     return null;
   }
 
-  double _calculateCityDistanceKm(
-    double sourceX,
-    double sourceY,
-    double targetX,
-    double targetY,
-  ) {
-    return _round2(
-      sqrt(
-        pow(sourceX - targetX, 2) + pow(sourceY - targetY, 2),
-      ).toDouble(),
-    );
-  }
-
-  int _calculateDurationSeconds({
-    required double distanceKm,
-    required int speedKmh,
-  }) {
-    if (speedKmh <= 0) return 0;
-    return max(60, ((max(distanceKm, 1) / speedKmh) * 3600).ceil());
-  }
-
-  int _calculateConditionLoss(double distanceKm) {
-    return max(1, (distanceKm / 25.0).ceil());
-  }
-
-  double _round2(double value) {
-    return double.parse(value.toStringAsFixed(2));
-  }
-
   String _formatValue(double value) {
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
     if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
@@ -2621,25 +2564,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final minutes = duration.inMinutes % 60;
     if (hours > 0) return '${hours}s ${minutes}dk';
     return '${duration.inMinutes}dk';
-  }
-
-  Widget _buildStatusPill(String label, Color accentColor) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
-      decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: accentColor,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
   }
 
   int _calculateUpgradeStarCost(DateTime finishAt) {
@@ -2667,8 +2591,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
     ref.invalidate(anyActiveWarehouseUpgradeProvider);
     await Future<void>.delayed(Duration.zero);
-    final activeUpgrade =
-        await ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).future);
+    await ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).future);
     await ref.read(anyActiveWarehouseUpgradeProvider.future);
     final warehouseTypes = await ref.read(warehouseTypesProvider.future);
     final mergedTypeDetail = {
@@ -2762,7 +2685,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     ),
                     SizedBox(height: 6.h),
                     Text(
-                      'Sure: ${durationMinutes} dk',
+                      'Sure: $durationMinutes dk',
                       style: TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 12.sp,
@@ -2793,6 +2716,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
                           if (result['success'] == true) {
                             await _refreshWarehouseEcosystem();
+                            if (!context.mounted) return;
                             AppSnackbar.show(
                               context,
                               title: 'Basarili',
@@ -2835,6 +2759,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     if (result['success'] == true) {
       await _refreshWarehouseEcosystem();
+      if (!mounted) return;
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -2957,7 +2882,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             Expanded(
               child: ListView.separated(
                 itemCount: options.length,
-                separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                separatorBuilder: (context, index) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = options[index];
                   return TransferVehicleOptionCard(

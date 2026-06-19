@@ -305,7 +305,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _MissionFilter.values.length,
-        separatorBuilder: (_, __) => SizedBox(width: 8.w),
+        separatorBuilder: (context, index) => SizedBox(width: 8.w),
         itemBuilder: (_, index) {
           final filter = _MissionFilter.values[index];
           final isSelected = filter == _selectedFilter;

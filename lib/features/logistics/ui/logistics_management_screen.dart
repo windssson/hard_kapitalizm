@@ -875,7 +875,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
       children: [
         _buildMiniStat('Sefer', '${performance.totalTrips}', Icons.local_shipping),
         _buildMiniStat('Aktif', '${performance.activeTrips}', Icons.route),
-        _buildMiniStat('Gelir', '${performance.rentalRevenue.toStringAsFixed(0)}', Icons.payments),
+        _buildMiniStat('Gelir', performance.rentalRevenue.toStringAsFixed(0), Icons.payments),
       ],
     );
   }
@@ -1313,6 +1313,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     final result = await ref.read(logisticsActionProvider).refuelVehicle(
           vehicle.id,
         );
+    if (!context.mounted) return;
     _handleOpResult(context, ref, result, 'Yakit ikmali yapildi.');
   }
 
@@ -1399,7 +1400,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                               }
                               return ListView.separated(
                                 itemCount: sources.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (context, index) =>
                                     SizedBox(height: 10.h),
                                 itemBuilder: (context, index) {
                                   final source = sources[index];
@@ -1429,6 +1430,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                               maxQuantity: maxQty,
                                             );
                                             if (qty == null) return;
+                                            if (!context.mounted) return;
 
                                             final result = await ref
                                                 .read(logisticsActionProvider)
@@ -1486,7 +1488,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                               }
                               return ListView.separated(
                                 itemCount: listings.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (context, index) =>
                                     SizedBox(height: 10.h),
                                 itemBuilder: (context, index) {
                                   final listing = listings[index];
@@ -1511,6 +1513,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                               maxQuantity: maxQty,
                                             );
                                             if (qty == null) return;
+                                            if (!context.mounted) return;
 
                                             final totalCost = qty * listing.price;
                                             if (playerCash < totalCost) {
@@ -1860,6 +1863,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     final result = await ref.read(logisticsActionProvider).repairVehicle(
           vehicle.id,
         );
+    if (!context.mounted) return;
     _handleOpResult(
       context,
       ref,
@@ -1878,6 +1882,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
           vehicleId: vehicle.id,
           isActive: vehicle.status == 'inactive',
         );
+    if (!context.mounted) return;
     _handleOpResult(
       context,
       ref,
@@ -1938,6 +1943,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
             isAvailableForRent: false,
             rentalPrice: 0,
           );
+      if (!context.mounted) return;
       _handleOpResult(
         context,
         ref,
@@ -1988,6 +1994,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
       ),
     );
     controller.dispose();
+    if (!context.mounted) return;
 
     if (rentalPrice != null && rentalPrice > 0) {
       final result = await ref.read(logisticsActionProvider).setVehicleRental(
@@ -1995,6 +2002,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
             isAvailableForRent: true,
             rentalPrice: rentalPrice,
           );
+      if (!context.mounted) return;
       _handleOpResult(
         context,
         ref,
@@ -2021,6 +2029,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     final result = await ref
         .read(logisticsActionProvider)
         .completeConstruction(constructionId, syncProviders: false);
+    if (!context.mounted) return;
     if (result['success'] == true) {
       ref.invalidate(playerLogisticsCompanyProvider);
       ref.invalidate(playerLogisticsConstructionProvider);
@@ -2050,6 +2059,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     final result = await ref
         .read(logisticsActionProvider)
         .finishConstructionWithGold(constructionId, syncProviders: false);
+    if (!context.mounted) return;
     if (result['success'] == true) {
       ref.invalidate(playerLogisticsCompanyProvider);
       ref.invalidate(playerLogisticsConstructionProvider);
@@ -2164,21 +2174,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
         },
       ),
     );
-  }
-
-  String _buildRouteLabel(
-    LogisticsVehicleModel vehicle,
-    Map<String, CityModel> cityMap,
-  ) {
-    if (!vehicle.hasAssignedRoute) {
-      return 'Rota atanmadi';
-    }
-
-    final cityAName =
-        cityMap[vehicle.routeCityAId]?.name ?? 'Bilinmeyen sehir';
-    final cityBName =
-        cityMap[vehicle.routeCityBId]?.name ?? 'Bilinmeyen sehir';
-    return '$cityAName <-> $cityBName';
   }
 
 }

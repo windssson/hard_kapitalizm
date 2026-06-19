@@ -75,7 +75,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             Expanded(
               child: warehousesAsync.when(
                 data: (warehouses) {
-                  final filtered = warehouses.where((warehouse) {
+                  final nonStoreWarehouses = warehouses.where((w) => w.warehouseKind != 'store').toList();
+
+                  final filtered = nonStoreWarehouses.where((warehouse) {
                     if (_selectedFilter == 'Aktif') return warehouse.isActive;
                     if (_selectedFilter == 'Pasif') return !warehouse.isActive;
                     return true;
@@ -90,7 +92,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                         SliverPadding(
                           padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
                           sliver: SliverToBoxAdapter(
-                            child: _buildStatsHeader(warehouses),
+                            child: _buildStatsHeader(nonStoreWarehouses),
                           ),
                         ),
                         SliverPadding(
@@ -419,7 +421,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                             scrollDirection: Axis.horizontal,
                             physics: const BouncingScrollPhysics(),
                             itemCount: filledSlots.length,
-                            separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                            separatorBuilder: (context, index) => SizedBox(width: 8.w),
                             itemBuilder: (context, index) => _buildMiniSlot(
                               filledSlots[index],
                               currentBrandName,
@@ -438,7 +440,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   Widget _buildMiniSlot(WarehouseSlotModel slot, String? currentBrandName) {
     if (slot.isEmpty) return const SizedBox();
 
-    return Container(
+    return SizedBox(
       width: 50.w,
       height: 50.w,
       child: Stack(

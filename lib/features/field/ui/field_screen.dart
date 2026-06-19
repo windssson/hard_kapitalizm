@@ -511,16 +511,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
     );
   }
 
-  Widget _buildFieldList(List<FieldListItemModel> fields) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: fields.length,
-      itemBuilder: (context, index) {
-        return _buildAdvancedFieldCard(fields[index]);
-      },
-    );
-  }
+
 
   Widget _buildAdvancedFieldCard(FieldListItemModel item) {
     final field = item.field;

@@ -1286,28 +1286,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildNewsSection() {
-    final dashboard = ref.watch(homeDashboardProvider).value;
-    if (dashboard == null || !dashboard.success) {
-      return const SizedBox.shrink();
-    }
 
-    final items =
-        dashboard.notifications.where((item) => item.isEvent && item.isUnread).toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-    if (items.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return _buildHomeNotificationSection(
-      title: 'Bildirimler',
-      onHeaderTap: () => context.push('/notifications'),
-      trailingText: '${dashboard.unreadNotificationCount} Yeni',
-      trailingColor: AppColors.gold,
-      items: items.take(4).toList(),
-    );
-  }
 
   Widget _buildModuleAlertBadge() {
     return Container(
@@ -1342,39 +1321,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildAlertsSection() {
-    final dashboard = ref.watch(homeDashboardProvider).value;
-    if (dashboard == null || !dashboard.success) {
-      return const SizedBox.shrink();
-    }
 
-    final items =
-        dashboard.notifications
-            .where((item) => item.isActiveWarning || item.isActiveReminder)
-            .toList()
-          ..sort((a, b) {
-            final aPriority = _homeNotificationPriority(a);
-            final bPriority = _homeNotificationPriority(b);
-            if (aPriority != bPriority) {
-              return aPriority.compareTo(bPriority);
-            }
-            return b.createdAt.compareTo(a.createdAt);
-          });
-
-    if (items.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return _buildHomeNotificationSection(
-      title: 'Uyarilar',
-      onHeaderTap: () => context.push('/alerts'),
-      trailingText: '${dashboard.activeWarningCount} Sorun',
-      trailingColor: Colors.orange,
-      headerIcon: Icons.warning_amber_rounded,
-      headerIconColor: Colors.orange,
-      items: items.take(4).toList(),
-    );
-  }
 
   Widget _buildHomeNotificationSection({
     required String title,

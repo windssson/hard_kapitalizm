@@ -421,47 +421,73 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         borderRadius: BorderRadius.circular(18.r),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
-      child: Wrap(
-        spacing: 10.w,
-        runSpacing: 10.h,
+      child: Column(
         children: [
-          SizedBox(
-            width: 100.w,
-            child: _buildActionButton(
-              'Slot Ac',
-              Icons.add_box_outlined,
-              AppColors.gold,
-              () => _handleAddSlot(context, ref, detail),
-            ),
-          ),
-          SizedBox(
-            width: 100.w,
-            child: _buildActionButton(
-              'Boost',
-              Icons.flash_on_rounded,
-              AppColors.goldDark,
-              () => _showFarmBoostSheet(context, ref, detail, activeBoost),
-            ),
-          ),
-          SizedBox(
-            width: 100.w,
-            child: _buildActionButton(
-              'Yukselt',
-              Icons.upgrade_rounded,
-              AppColors.green,
-              () => _showFarmUpgradeSheet(context, ref, detail, activeUpgrade),
-            ),
-          ),
-          SizedBox(
-            width: 100.w,
-            child: _buildActionButton(
-              'Rapor',
-              Icons.query_stats_rounded,
-              AppColors.blue,
-              () => context.push(
-                '/production-report/farm/${detail.farm.id}?name=${Uri.encodeComponent(detail.farm.name)}',
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  'Urun Al',
+                  Icons.download_rounded,
+                  AppColors.gold,
+                  () => _startFarmReceiveFlow(context, ref, detail),
+                ),
               ),
-            ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: _buildActionButton(
+                  'Urun Gonder',
+                  Icons.local_shipping_rounded,
+                  AppColors.blue,
+                  () => _startFarmSendFlow(context, ref, detail),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Wrap(
+            spacing: 10.w,
+            runSpacing: 10.h,
+            children: [
+              SizedBox(
+                width: 100.w,
+                child: _buildActionButton(
+                  'Slot Ac',
+                  Icons.add_box_outlined,
+                  AppColors.gold,
+                  () => _handleAddSlot(context, ref, detail),
+                ),
+              ),
+              SizedBox(
+                width: 100.w,
+                child: _buildActionButton(
+                  'Boost',
+                  Icons.flash_on_rounded,
+                  AppColors.goldDark,
+                  () => _showFarmBoostSheet(context, ref, detail, activeBoost),
+                ),
+              ),
+              SizedBox(
+                width: 100.w,
+                child: _buildActionButton(
+                  'Yukselt',
+                  Icons.upgrade_rounded,
+                  AppColors.green,
+                  () => _showFarmUpgradeSheet(context, ref, detail, activeUpgrade),
+                ),
+              ),
+              SizedBox(
+                width: 100.w,
+                child: _buildActionButton(
+                  'Rapor',
+                  Icons.query_stats_rounded,
+                  AppColors.blue,
+                  () => context.push(
+                    '/production-report/farm/${detail.farm.id}?name=${Uri.encodeComponent(detail.farm.name)}',
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -899,6 +925,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
                       if (result['success'] == true) {
                         await _refreshFarmEcosystem();
+                        if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
                           title: 'Basarili',
@@ -1085,7 +1112,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    'Sure: ${durationMinutes} dk',
+                    'Sure: $durationMinutes dk',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12.sp,
@@ -1123,6 +1150,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   if (!context.mounted) return;
                   if (result['success'] == true) {
                     await _refreshFarmEcosystem();
+                    if (!context.mounted) return;
                     AppSnackbar.show(
                       context,
                       title: 'Basarili',
@@ -1157,6 +1185,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     if (!mounted) return;
     if (result['success'] == true) {
       await _refreshFarmEcosystem(includePlayer: false);
+      if (!mounted) return;
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1306,32 +1335,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               SizedBox(width: 6.w),
               _buildInlineMetaChip('Markali', AppColors.gold),
             ],
-            FilledButton.tonalIcon(
-              onPressed: () => _startInventoryToWarehouseFlow(
-                context,
-                ref,
-                detail,
-                inventory,
-              ),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.blue.withValues(alpha: 0.16),
-                foregroundColor: AppColors.blue,
-                padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999.r),
-                  side: BorderSide(
-                    color: AppColors.blue.withValues(alpha: 0.28),
-                  ),
-                ),
-              ),
-              icon: Icon(Icons.move_up_rounded, size: 14.sp),
-              label: Text(
-                'Urunu Depoya Gonder',
-                style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w700),
-              ),
-            ),
           ],
         ),
         SizedBox(height: 6.h),
@@ -1657,77 +1660,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               ),
             ],
           ),
-          SizedBox(height: 10.h),
-          if (inventory.isInput)
-            Wrap(
-              spacing: 8.w,
-              runSpacing: 8.h,
-              children: [
-                SizedBox(
-                  width: 132.w,
-                  child: _buildMiniAction(
-                    'Depodan Hammadde Ekle',
-                    AppColors.gold,
-                    () => _startWarehouseToInventoryFlow(
-                      context,
-                      ref,
-                      detail,
-                      inventory,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 132.w,
-                  child: _buildMiniAction(
-                    'Hammaddeyi Depoya Geri Gonder',
-                    AppColors.blue,
-                    () => _startInventoryToWarehouseFlow(
-                      context,
-                      ref,
-                      detail,
-                      inventory,
-                    ),
-                  ),
-                ),
-              ],
-            )
-          else
-            _buildMiniAction(
-              'Urunu Depoya Gonder',
-              AppColors.blue,
-              () => _startInventoryToWarehouseFlow(
-                context,
-                ref,
-                detail,
-                inventory,
-              ),
-            ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMiniAction(String label, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10.r),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 11.h),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: color.withValues(alpha: 0.45)),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: color,
-            fontSize: 11.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
     );
   }
@@ -1744,6 +1677,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     if (!context.mounted) return;
     if (result['success'] == true) {
       await _refreshFarmEcosystem(includePlayer: false);
+      if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1890,6 +1824,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     if (isSuccess && !hasErrorLikeMessage) {
       await _refreshFarmEcosystem();
+      if (!context.mounted) return;
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
       final cleanupNote = deletedObsoleteCount > 0
@@ -1916,34 +1851,19 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     );
   }
 
-  Future<void> _startWarehouseToInventoryFlow(
+  Future<void> _startFarmReceiveFlow(
     BuildContext context,
     WidgetRef ref,
     FarmDetailModel detail,
-    FarmProductionInventoryModel inventory,
   ) async {
-    List<Map<String, dynamic>> warehouses;
-    try {
-      warehouses = await ref
-          .read(farmActionProvider)
-          .getEligibleWarehouseSlotsForInventoryAllCities(inventory: inventory);
-    } catch (e) {
-      if (!context.mounted) return;
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: e.toString().replaceFirst('Exception: ', ''),
-        type: SnackbarType.error,
-      );
-      return;
-    }
-
-    if (!context.mounted) return;
-    if (warehouses.isEmpty) {
+    final targetInventories = detail.inputInventories
+        .where((inventory) => inventory.product != null)
+        .toList();
+    if (targetInventories.isEmpty) {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu hammadde icin uygun depo stogu bulunamadi.',
+        message: 'Bu tarlada aktif hammadde girdisi bulunamadi.',
         type: SnackbarType.info,
       );
       return;
@@ -1964,112 +1884,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       return;
     }
 
-    final options = <WarehouseSelectionOption>[];
-    for (final warehouse in warehouses) {
-      final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
-      for (final slotMap in slots) {
-        final slot = Map<String, dynamic>.from(slotMap as Map);
-        final qty = (slot['quantity'] as num?)?.toInt() ?? 0;
-        final transferableQuantity = qty.clamp(0, remainingInputCapacity);
-        if (transferableQuantity <= 0) continue;
-        final warehouseCityId = (warehouse['city_id'] ?? '').toString();
-        final isSame = _isSameCity(warehouseCityId, detail.farm.cityId);
-
-        options.add(
-          WarehouseSelectionOption(
-            id: slot['id'].toString(),
-            title: (warehouse['name'] ?? 'Depo').toString(),
-            subtitle: (warehouse['city']?['name'] ?? detail.cityName).toString(),
-            badgeText: isSame ? 'Aynı Şehir' : 'Farklı Şehir',
-            infoText:
-                'Stok: $qty adet | Bos kapasite: $remainingInputCapacity',
-            isHighlightBadge: isSame,
-            onTap: () {
-              Navigator.pop(context);
-              _showQuantityDialog(
-                context: context,
-                maxQuantity: transferableQuantity,
-                title: 'Miktar Girin',
-                subtitle: '${inventory.product?.urunAdi ?? inventory.productId} hammaddesi doldurulacak',
-                onConfirm: (quantity) async {
-                  if (isSame) {
-                    final result = await ref
-                        .read(farmActionProvider)
-                        .transferWarehouseToProductionInventory(
-                          warehouseSlotId: slot['id'].toString(),
-                          productionInventoryId: inventory.id,
-                          quantity: quantity,
-                          syncProviders: false,
-                        );
-                    if (!context.mounted) return;
-                    if (result['success'] == true) {
-                      await _refreshFarmEcosystem(
-                        includeTransfers: true,
-                        includeWarehouseList: true,
-                        includePlayer: false,
-                      );
-                      AppSnackbar.show(
-                        context,
-                        title: 'Basarili',
-                        message: 'Ayni sehir hammadde transferi tamamlandi.',
-                        type: SnackbarType.success,
-                      );
-                      return;
-                    }
-                    AppSnackbar.show(
-                      context,
-                      title: 'Hata',
-                      message: result['message'] ?? 'Transfer basarisiz oldu.',
-                      type: SnackbarType.error,
-                    );
-                    return;
-                  }
-
-                  await _startFarmLogisticsInputTransfer(
-                    context: context,
-                    ref: ref,
-                    detail: detail,
-                    inventory: inventory,
-                    warehouseSlotId: slot['id'].toString(),
-                    maxQuantity: transferableQuantity,
-                    quantity: quantity,
-                  );
-                },
-              );
-            },
-          ),
-        );
-      }
-    }
-
-    if (!context.mounted) return;
-    options.sort((a, b) {
-      if (a.isHighlightBadge != b.isHighlightBadge) {
-        return a.isHighlightBadge ? -1 : 1;
-      }
-      return a.title.compareTo(b.title);
-    });
-    await WarehouseSelectionSheet.show(
-      context: context,
-      title: 'Kaynak Depo Seç',
-      options: options,
-    );
-  }
-
-  Future<void> _startInventoryToWarehouseFlow(
-    BuildContext context,
-    WidgetRef ref,
-    FarmDetailModel detail,
-    FarmProductionInventoryModel inventory,
-  ) async {
-    List<ProductionLogisticsWarehouseOption> warehouses;
+    List<Map<String, dynamic>> warehouses;
     try {
-      warehouses = await ref
-          .read(farmActionProvider)
-          .getWarehousesForProductionLogistics(
-            productionCityId: detail.farm.cityId,
-            productId: inventory.productId,
-          );
+      warehouses = await ref.read(farmActionProvider).getPlayerWarehousesWithSlotsRaw();
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -2081,114 +1898,570 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       return;
     }
 
+    final targetByKey = <String, FarmProductionInventoryModel>{
+      for (final inventory in targetInventories)
+        _inventoryKey(inventory.productId, inventory.qualityLevel): inventory,
+    };
+    final warehouseChoices = <_FarmInboundWarehouseChoice>[];
+
+    for (final warehouse in warehouses) {
+      final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const [])
+          .map((slot) => Map<String, dynamic>.from(slot as Map))
+          .toList();
+      final eligibleSlots = <_FarmInboundWarehouseSlotOption>[];
+      for (final slot in slots) {
+        final quantity = (slot['quantity'] as num?)?.toInt() ?? 0;
+        if (quantity <= 0) continue;
+        final key = _inventoryKey(
+          slot['product_id']?.toString() ?? '',
+          (slot['quality_level'] as num?)?.toInt() ?? 0,
+        );
+        final targetInventory = targetByKey[key];
+        if (targetInventory == null) continue;
+        eligibleSlots.add(
+          _FarmInboundWarehouseSlotOption(
+            warehouseSlotId: slot['id']?.toString() ?? '',
+            productId: targetInventory.productId,
+            productName:
+                targetInventory.product?.urunAdi ??
+                slot['product_name']?.toString() ??
+                targetInventory.productId,
+            productIcon:
+                targetInventory.product?.urunIconu ??
+                (slot['product'] as Map?)?['urun_iconu']?.toString(),
+            qualityLevel: targetInventory.qualityLevel,
+            availableQuantity: quantity,
+            unitVolume: targetInventory.product?.birimHacim ?? 0,
+            targetInventory: targetInventory,
+          ),
+        );
+      }
+
+      if (eligibleSlots.isEmpty) continue;
+      final warehouseId = warehouse['id']?.toString() ?? '';
+      final cityId = warehouse['city_id']?.toString() ?? '';
+      final name = (warehouse['name'] ?? 'Depo').toString();
+      final cityName = (warehouse['city']?['name'] ?? detail.cityName).toString();
+      warehouseChoices.add(
+        _FarmInboundWarehouseChoice(
+          warehouseId: warehouseId,
+          warehouseName: name,
+          cityId: cityId,
+          cityName: cityName,
+          isSameCity: _isSameCity(cityId, detail.farm.cityId),
+          slots: eligibleSlots,
+        ),
+      );
+    }
+
     if (!context.mounted) return;
-    if (warehouses.isEmpty) {
+    if (warehouseChoices.isEmpty) {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu urunu kabul eden aktif depon yok.',
+        message: 'Bu tarlanin kullandigi hammaddeler icin uygun depo stogu bulunamadi.',
         type: SnackbarType.info,
       );
       return;
     }
 
-    final options = warehouses.map((warehouse) {
-      final warehouseId = warehouse.id;
-      final sameCity = warehouse.isSameCity;
-      return WarehouseSelectionOption(
-        id: warehouseId,
-        title: warehouse.name,
-        subtitle: warehouse.cityName,
-        badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
-        infoText:
-            'Gonderilecek: ${inventory.quantity} adet | ${inventory.isInput ? 'Hammadde' : 'Urun'}',
-        isHighlightBadge: sameCity,
-        onTap: () {
-          Navigator.pop(context);
-          _showQuantityDialog(
-            context: context,
-            maxQuantity: inventory.quantity,
-            title: 'Miktar Girin',
-            subtitle: '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarilacak',
-            onConfirm: (quantity) async {
-              if (sameCity) {
-                final result = await ref
-                    .read(farmActionProvider)
-                    .transferProductionInventoryToWarehouse(
-                      productionInventoryId: inventory.id,
-                      warehouseId: warehouseId,
-                      quantity: quantity,
-                      syncProviders: false,
-                    );
-                if (!context.mounted) return;
-                if (result['success'] == true) {
-                  await _refreshFarmEcosystem(
-                    warehouseId: warehouseId,
-                    includeTransfers: true,
-                    includePlayer: false,
-                  );
-                      AppSnackbar.show(
-                        context,
-                        title: 'Basarili',
-                        message: inventory.isInput
-                            ? 'Ayni sehir hammadde geri gonderimi tamamlandi.'
-                            : 'Ayni sehir uretilen urun transferi tamamlandi.',
-                        type: SnackbarType.success,
-                      );
-                      return;
-                }
-                AppSnackbar.show(
-                  context,
-                  title: 'Hata',
-                  message: result['message'] ?? 'Transfer basarisiz oldu.',
-                  type: SnackbarType.error,
-                );
-                return;
-              }
-
-              await _startFarmLogisticsOutputTransfer(
+    final options = warehouseChoices
+        .map(
+          (warehouse) => WarehouseSelectionOption(
+            id: warehouse.warehouseId,
+            title: warehouse.warehouseName,
+            subtitle: warehouse.cityName,
+            badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
+            infoText:
+                '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity',
+            isHighlightBadge: warehouse.isSameCity,
+            onTap: () {
+              Navigator.pop(context);
+              _showFarmInboundSelectionSheet(
                 context: context,
                 ref: ref,
                 detail: detail,
-                inventory: inventory,
-                warehouseId: warehouseId,
-                quantity: quantity,
+                warehouse: warehouse,
+                remainingInputCapacity: remainingInputCapacity,
               );
             },
-          );
-        },
-      );
-    }).toList();
+          ),
+        )
+        .toList()
+      ..sort((a, b) {
+        if (a.isHighlightBadge != b.isHighlightBadge) {
+          return a.isHighlightBadge ? -1 : 1;
+        }
+        return a.title.compareTo(b.title);
+      });
 
-    if (!context.mounted) return;
     await WarehouseSelectionSheet.show(
       context: context,
-      title: 'Hedef Depo Seç',
+      title: 'Kaynak Depo Sec',
       options: options,
     );
   }
 
-  Future<void> _startFarmLogisticsInputTransfer({
+  Future<void> _startFarmSendFlow(
+    BuildContext context,
+    WidgetRef ref,
+    FarmDetailModel detail,
+  ) async {
+    final sendableInventories = [
+      ...detail.inputInventories.where((item) => item.quantity > 0),
+      ...detail.orphanInputInventories.where((item) => item.quantity > 0),
+      ...detail.outputInventories.where((item) => item.quantity > 0),
+    ];
+    if (sendableInventories.isEmpty) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message: 'Depoya gonderilebilecek stok bulunamadi.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
+    List<Map<String, dynamic>> warehouses;
+    try {
+      warehouses = await ref.read(farmActionProvider).getPlayerWarehousesRaw();
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: e.toString().replaceFirst('Exception: ', ''),
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    final options = <WarehouseSelectionOption>[];
+    for (final warehouse in warehouses) {
+      final acceptedProductIds = _parseAcceptedProductIds(
+        (warehouse['warehouse_type'] as Map?)?['accepted_product_ids'],
+      );
+      final eligibleInventories = sendableInventories
+          .where((inventory) => acceptedProductIds.contains(inventory.productId))
+          .toList();
+      if (eligibleInventories.isEmpty) continue;
+
+      final warehouseOption = ProductionLogisticsWarehouseOption.fromJson(
+        warehouse,
+        productionCityId: detail.farm.cityId,
+      );
+      options.add(
+        WarehouseSelectionOption(
+          id: warehouseOption.id,
+          title: warehouseOption.name,
+          subtitle: warehouseOption.cityName,
+          badgeText:
+              warehouseOption.isSameCity ? 'Anlik Transfer' : 'Lojistik Transfer',
+          infoText: '${eligibleInventories.length} uygun stok secilebilir',
+          isHighlightBadge: warehouseOption.isSameCity,
+          onTap: () {
+            Navigator.pop(context);
+            _showFarmOutboundSelectionSheet(
+              context: context,
+              ref: ref,
+              detail: detail,
+              targetWarehouse: warehouseOption,
+              inventories: eligibleInventories,
+            );
+          },
+        ),
+      );
+    }
+
+    if (!context.mounted) return;
+    if (options.isEmpty) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message: 'Bu stoklari kabul eden aktif depon yok.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
+    options.sort((a, b) {
+      if (a.isHighlightBadge != b.isHighlightBadge) {
+        return a.isHighlightBadge ? -1 : 1;
+      }
+      return a.title.compareTo(b.title);
+    });
+    await WarehouseSelectionSheet.show(
+      context: context,
+      title: 'Hedef Depo Sec',
+      options: options,
+    );
+  }
+
+  Future<void> _showFarmInboundSelectionSheet({
     required BuildContext context,
     required WidgetRef ref,
     required FarmDetailModel detail,
-    required FarmProductionInventoryModel inventory,
-    required String warehouseSlotId,
-    required int maxQuantity,
-    required int quantity,
+    required _FarmInboundWarehouseChoice warehouse,
+    required int remainingInputCapacity,
+  }) async {
+    final selectedQuantities = <String, int>{};
+
+    int maxSelectableForSlot(_FarmInboundWarehouseSlotOption slot) {
+      final selectedQuantity = warehouse.slots.fold<int>(0, (sum, current) {
+        final selectedQty = selectedQuantities[current.warehouseSlotId] ?? 0;
+        return sum + selectedQty;
+      });
+      final currentSelectedQty = selectedQuantities[slot.warehouseSlotId] ?? 0;
+      final availableQuantity =
+          remainingInputCapacity - selectedQuantity + currentSelectedQty;
+      return availableQuantity.clamp(0, slot.availableQuantity);
+    }
+
+    Future<void> openQuantityEditor(
+      BuildContext sheetContext,
+      StateSetter modalSetState,
+      _FarmInboundWarehouseSlotOption slot,
+    ) async {
+      final maxQuantity = maxSelectableForSlot(slot);
+      final controller = TextEditingController(
+        text: ((selectedQuantities[slot.warehouseSlotId] ?? maxQuantity).clamp(
+          0,
+          maxQuantity,
+        )).toString(),
+      );
+      final result = await showDialog<int>(
+        context: sheetContext,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: AppColors.background,
+          title: Text(
+            slot.productName,
+            style: TextStyle(color: Colors.white, fontSize: 18.sp),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kalite ${slot.qualityLevel} | Stok: ${slot.availableQuantity}',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+              ),
+              SizedBox(height: 12.h),
+              TextField(
+                controller: controller,
+                readOnly: true,
+                showCursor: true,
+                enableInteractiveSelection: false,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Miktar (Maks: $maxQuantity)',
+                  labelStyle: const TextStyle(color: AppColors.gold),
+                  enabledBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white24),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+              SizedBox(height: 12.h),
+              NumericKeyboard(
+                controller: controller,
+                shortcuts: [
+                  NumericKeyboardShortcut(
+                    label: '1/4',
+                    value: (maxQuantity / 4).floor().clamp(1, maxQuantity).toString(),
+                  ),
+                  NumericKeyboardShortcut(
+                    label: 'Yari',
+                    value: (maxQuantity / 2).floor().clamp(1, maxQuantity).toString(),
+                  ),
+                  NumericKeyboardShortcut(
+                    label: 'Tamami',
+                    value: maxQuantity.toString(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Iptal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+              onPressed: () {
+                final quantity = int.tryParse(controller.text) ?? 0;
+                if (quantity <= 0 || quantity > maxQuantity) {
+                  AppSnackbar.show(
+                    sheetContext,
+                    title: 'Hata',
+                    message: 'Gecersiz miktar!',
+                    type: SnackbarType.error,
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, quantity);
+              },
+              child: const Text('Kaydet', style: TextStyle(color: Colors.black)),
+            ),
+          ],
+        ),
+      );
+
+      if (result == null) return;
+      modalSetState(() {
+        selectedQuantities[slot.warehouseSlotId] = result;
+      });
+    }
+
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, modalSetState) {
+          final selectedItems = warehouse.slots
+              .where((slot) => (selectedQuantities[slot.warehouseSlotId] ?? 0) > 0)
+              .map(
+                (slot) => _SelectedFarmInboundTransferItem(
+                  slot: slot,
+                  quantity: selectedQuantities[slot.warehouseSlotId] ?? 0,
+                ),
+              )
+              .toList();
+          final totalQuantity = selectedItems.fold<int>(
+            0,
+            (sum, item) => sum + item.quantity,
+          );
+          final totalVolume = selectedItems.fold<double>(
+            0,
+            (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+          );
+
+          return SafeArea(
+            top: false,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Alinacak Hammaddeleri Sec',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    '${warehouse.warehouseName} | ${warehouse.cityName}',
+                    style: TextStyle(color: AppColors.goldLight, fontSize: 12.sp),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                  ),
+                  SizedBox(height: 16.h),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: warehouse.slots.length,
+                      separatorBuilder: (context, index) => SizedBox(height: 10.h),
+                      itemBuilder: (_, index) {
+                        final slot = warehouse.slots[index];
+                        final selectedQuantity =
+                            selectedQuantities[slot.warehouseSlotId] ?? 0;
+                        final isSelected = selectedQuantity > 0;
+                        final maxQuantity = maxSelectableForSlot(slot);
+                        return Container(
+                          padding: EdgeInsets.all(12.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(14.r),
+                            border: Border.all(
+                              color: (isSelected ? AppColors.green : AppColors.borderGoldLight)
+                                  .withValues(alpha: isSelected ? 0.35 : 0.15),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      slot.productName,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Text(
+                                      'Kalite ${slot.qualityLevel} | Stok ${slot.availableQuantity} | Hedef kapasite: ${slot.targetInventory.quantity}',
+                                      style: TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11.sp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              OutlinedButton(
+                                onPressed: maxQuantity <= 0
+                                    ? null
+                                    : () => openQuantityEditor(
+                                          sheetContext,
+                                          modalSetState,
+                                          slot,
+                                        ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: isSelected
+                                      ? AppColors.green
+                                      : AppColors.goldLight,
+                                ),
+                                child: Text(
+                                  isSelected ? 'Adet: $selectedQuantity' : 'Ekle',
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: Colors.black,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                      ),
+                      onPressed: selectedItems.isEmpty
+                          ? null
+                          : () async {
+                              Navigator.pop(sheetContext);
+                              await _submitFarmInboundSelection(
+                                context: context,
+                                ref: ref,
+                                detail: detail,
+                                warehouse: warehouse,
+                                items: selectedItems,
+                              );
+                            },
+                      icon: const Icon(Icons.download_rounded),
+                      label: const Text('Transferi Baslat'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _submitFarmInboundSelection({
+    required BuildContext context,
+    required WidgetRef ref,
+    required FarmDetailModel detail,
+    required _FarmInboundWarehouseChoice warehouse,
+    required List<_SelectedFarmInboundTransferItem> items,
+  }) async {
+    final transferItems = items
+        .map(
+          (item) => {
+            'warehouse_slot_id': item.slot.warehouseSlotId,
+            'production_inventory_id': item.slot.targetInventory.id,
+            'quantity': item.quantity,
+          },
+        )
+        .toList();
+
+    if (warehouse.isSameCity) {
+      final result = await ref
+          .read(farmActionProvider)
+          .startMultiWarehouseToProductionTransfer(
+            sourceWarehouseId: warehouse.warehouseId,
+            items: transferItems,
+            syncProviders: false,
+          );
+      if (!context.mounted) return;
+      if (!result.success) {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: result.message.isNotEmpty
+              ? result.message
+              : 'Transfer basarisiz oldu.',
+          type: SnackbarType.error,
+        );
+        return;
+      }
+
+      await _refreshFarmEcosystem(
+        includeTransfers: true,
+        includeWarehouseList: true,
+        includePlayer: false,
+      );
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Basarili',
+        message: 'Secilen hammaddeler tarlaya aktarildi.',
+        type: SnackbarType.success,
+      );
+      return;
+    }
+
+    await _startFarmGroupedLogisticsInputTransfer(
+      context: context,
+      ref: ref,
+      detail: detail,
+      warehouse: warehouse,
+      items: items,
+    );
+  }
+
+  Future<void> _startFarmGroupedLogisticsInputTransfer({
+    required BuildContext context,
+    required WidgetRef ref,
+    required FarmDetailModel detail,
+    required _FarmInboundWarehouseChoice warehouse,
+    required List<_SelectedFarmInboundTransferItem> items,
   }) async {
     TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>
     vehicleResult = const TransferVehicleOptionsResult(
       options: [],
       unavailableReason: null,
     );
+    final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalVolume = items.fold<double>(
+      0,
+      (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+    );
+
     try {
       vehicleResult = await ref
           .read(farmActionProvider)
-          .getProductionInputTransferVehicleOptions(
-            warehouseSlotId: warehouseSlotId,
-            productionInventoryId: inventory.id,
-            quantity: quantity,
+          .getProductionRouteVehicleOptions(
+            sourceCityId: warehouse.cityId,
+            targetCityId: detail.farm.cityId,
+            totalVolume: totalVolume,
           );
     } catch (e) {
       if (!context.mounted) return;
@@ -2217,15 +2490,22 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     _showProductionVehicleOptionsSheet(
       context: context,
       title: 'Hammadde Lojistigi',
-      subtitle: '$quantity / $maxQuantity adet hammadde icin uygun araci secin',
+      subtitle: '$totalQuantity adet hammadde icin uygun araci secin',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
             .read(farmActionProvider)
-            .startWarehouseToProductionTransfer(
-              warehouseSlotId: warehouseSlotId,
-              productionInventoryId: inventory.id,
-              quantity: quantity,
+            .startMultiWarehouseToProductionTransfer(
+              sourceWarehouseId: warehouse.warehouseId,
+              items: items
+                  .map(
+                    (item) => {
+                      'warehouse_slot_id': item.slot.warehouseSlotId,
+                      'production_inventory_id': item.slot.targetInventory.id,
+                      'quantity': item.quantity,
+                    },
+                  )
+                  .toList(),
               vehicleId: vehicleId,
               syncProviders: false,
             );
@@ -2236,10 +2516,11 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             includeWarehouseList: true,
             includePlayer: false,
           );
+          if (!context.mounted) return;
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
-            message: 'Hammadde transferi icin arac yola cikti.',
+            message: 'Secilen hammadde transferi icin arac yola cikti.',
             type: SnackbarType.success,
           );
           return;
@@ -2256,27 +2537,352 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     );
   }
 
+  Future<void> _showFarmOutboundSelectionSheet({
+    required BuildContext context,
+    required WidgetRef ref,
+    required FarmDetailModel detail,
+    required ProductionLogisticsWarehouseOption targetWarehouse,
+    required List<FarmProductionInventoryModel> inventories,
+  }) async {
+    final sortedInventories = [...inventories]
+      ..sort((a, b) {
+        if (a.isInput != b.isInput) return a.isInput ? -1 : 1;
+        return (a.product?.urunAdi ?? a.productId).compareTo(
+          b.product?.urunAdi ?? b.productId,
+        );
+      });
+    final selectedQuantities = <String, int>{};
+
+    Future<void> openQuantityEditor(
+      BuildContext sheetContext,
+      StateSetter modalSetState,
+      FarmProductionInventoryModel item,
+    ) async {
+      final controller = TextEditingController(
+        text: ((selectedQuantities[item.id] ?? item.quantity).clamp(
+          0,
+          item.quantity,
+        )).toString(),
+      );
+      final result = await showDialog<int>(
+        context: sheetContext,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: AppColors.background,
+          title: Text(
+            item.product?.urunAdi ?? item.productId,
+            style: TextStyle(color: Colors.white, fontSize: 18.sp),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${item.isInput ? 'Hammadde' : 'Urun'} | Kalite ${item.qualityLevel} | Stok: ${item.quantity}',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+              ),
+              SizedBox(height: 12.h),
+              TextField(
+                controller: controller,
+                readOnly: true,
+                showCursor: true,
+                enableInteractiveSelection: false,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Miktar (Maks: ${item.quantity})',
+                  labelStyle: const TextStyle(color: AppColors.gold),
+                  enabledBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white24),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+              SizedBox(height: 12.h),
+              NumericKeyboard(
+                controller: controller,
+                shortcuts: [
+                  NumericKeyboardShortcut(
+                    label: '1/4',
+                    value: (item.quantity / 4).floor().clamp(1, item.quantity).toString(),
+                  ),
+                  NumericKeyboardShortcut(
+                    label: 'Yari',
+                    value: (item.quantity / 2).floor().clamp(1, item.quantity).toString(),
+                  ),
+                  NumericKeyboardShortcut(
+                    label: 'Tamami',
+                    value: item.quantity.toString(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Iptal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+              onPressed: () {
+                final quantity = int.tryParse(controller.text) ?? 0;
+                if (quantity <= 0 || quantity > item.quantity) {
+                  AppSnackbar.show(
+                    sheetContext,
+                    title: 'Hata',
+                    message: 'Gecersiz miktar!',
+                    type: SnackbarType.error,
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, quantity);
+              },
+              child: const Text('Kaydet', style: TextStyle(color: Colors.black)),
+            ),
+          ],
+        ),
+      );
+
+      if (result == null) return;
+      modalSetState(() {
+        selectedQuantities[item.id] = result;
+      });
+    }
+
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, modalSetState) {
+          final selectedItems = sortedInventories
+              .where((item) => (selectedQuantities[item.id] ?? 0) > 0)
+              .map(
+                (item) => _SelectedFarmProductionTransferItem(
+                  inventory: item,
+                  quantity: selectedQuantities[item.id] ?? 0,
+                ),
+              )
+              .toList();
+          final totalQuantity = selectedItems.fold<int>(
+            0,
+            (sum, item) => sum + item.quantity,
+          );
+
+          return SafeArea(
+            top: false,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Depoya Gonderilecek Stoklari Sec',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    '${targetWarehouse.name} | ${targetWarehouse.cityName}',
+                    style: TextStyle(color: AppColors.goldLight, fontSize: 12.sp),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '${selectedItems.length} stok | $totalQuantity adet secildi',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                  ),
+                  SizedBox(height: 16.h),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: sortedInventories.length,
+                      separatorBuilder: (context, index) => SizedBox(height: 10.h),
+                      itemBuilder: (_, index) {
+                        final item = sortedInventories[index];
+                        final selectedQuantity = selectedQuantities[item.id] ?? 0;
+                        final isSelected = selectedQuantity > 0;
+                        return Container(
+                          padding: EdgeInsets.all(12.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(14.r),
+                            border: Border.all(
+                              color: (isSelected ? AppColors.green : AppColors.borderGoldLight)
+                                  .withValues(alpha: isSelected ? 0.35 : 0.15),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.product?.urunAdi ?? item.productId,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Text(
+                                      '${item.isInput ? 'Hammadde' : 'Urun'} | Kalite ${item.qualityLevel} | Stok ${item.quantity}',
+                                      style: TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11.sp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              OutlinedButton(
+                                onPressed: () => openQuantityEditor(
+                                  sheetContext,
+                                  modalSetState,
+                                  item,
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: isSelected
+                                      ? AppColors.green
+                                      : AppColors.goldLight,
+                                ),
+                                child: Text(
+                                  isSelected ? 'Adet: $selectedQuantity' : 'Ekle',
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: Colors.black,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                      ),
+                      onPressed: selectedItems.isEmpty
+                          ? null
+                          : () async {
+                              Navigator.pop(sheetContext);
+                              if (targetWarehouse.isSameCity) {
+                                final result = await ref
+                                    .read(farmActionProvider)
+                                    .startMultiProductionToWarehouseTransfer(
+                                      sourceOwnerKind: 'farm',
+                                      sourceOwnerId: widget.farmId,
+                                      buyerWarehouseId: targetWarehouse.id,
+                                      items: selectedItems
+                                          .map(
+                                            (item) => {
+                                              'production_inventory_id': item.inventory.id,
+                                              'quantity': item.quantity,
+                                            },
+                                          )
+                                          .toList(),
+                                      syncProviders: false,
+                                    );
+                                if (!context.mounted) return;
+                                if (result.success) {
+                                  await _refreshFarmEcosystem(
+                                    warehouseId: targetWarehouse.id,
+                                    includeTransfers: true,
+                                    includePlayer: false,
+                                  );
+                                  if (!context.mounted) return;
+                                  AppSnackbar.show(
+                                    context,
+                                    title: 'Basarili',
+                                    message: 'Secilen stoklar depoya gonderildi.',
+                                    type: SnackbarType.success,
+                                  );
+                                  return;
+                                }
+                                AppSnackbar.show(
+                                  context,
+                                  title: 'Hata',
+                                  message: result.message.isNotEmpty
+                                      ? result.message
+                                      : 'Transfer basarisiz oldu.',
+                                  type: SnackbarType.error,
+                                );
+                                return;
+                              }
+
+                              await _startFarmLogisticsOutputTransfer(
+                                context: context,
+                                ref: ref,
+                                detail: detail,
+                                targetWarehouse: targetWarehouse,
+                                items: selectedItems,
+                              );
+                            },
+                      icon: const Icon(Icons.local_shipping_rounded),
+                      label: const Text('Transferi Baslat'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _startFarmLogisticsOutputTransfer({
     required BuildContext context,
     required WidgetRef ref,
     required FarmDetailModel detail,
-    required FarmProductionInventoryModel inventory,
-    required String warehouseId,
-    required int quantity,
+    required ProductionLogisticsWarehouseOption targetWarehouse,
+    required List<_SelectedFarmProductionTransferItem> items,
   }) async {
     TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>
     vehicleResult = const TransferVehicleOptionsResult(
       options: [],
       unavailableReason: null,
     );
+    final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalVolume = items.fold<double>(
+      0,
+      (sum, item) =>
+          sum + ((item.inventory.product?.birimHacim ?? 0) * item.quantity),
+    );
     try {
-      vehicleResult = await ref
-          .read(farmActionProvider)
-          .getProductionOutputTransferVehicleOptions(
-            productionInventoryId: inventory.id,
-            buyerWarehouseId: warehouseId,
-            quantity: quantity,
-          );
+      if (items.length == 1) {
+        final item = items.first;
+        vehicleResult = await ref
+            .read(farmActionProvider)
+            .getProductionOutputTransferVehicleOptions(
+              productionInventoryId: item.inventory.id,
+              buyerWarehouseId: targetWarehouse.id,
+              quantity: item.quantity,
+            );
+      } else {
+        vehicleResult = await ref
+            .read(farmActionProvider)
+            .getProductionRouteVehicleOptions(
+              sourceCityId: detail.farm.cityId,
+              targetCityId: targetWarehouse.cityId,
+              totalVolume: totalVolume,
+            );
+      }
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -2303,34 +2909,43 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     _showProductionVehicleOptionsSheet(
       context: context,
-      title: inventory.isInput
+      title: items.first.inventory.isInput
           ? 'Hammadde Geri Gonderim Lojistigi'
           : 'Uretilen Urun Lojistigi',
-      subtitle: inventory.isInput
-          ? '$quantity adet hammaddeyi depoya geri gondermek icin uygun araci secin'
-          : '$quantity adet uretilen urunu depoya gondermek icin uygun araci secin',
+      subtitle: items.first.inventory.isInput
+          ? '$totalQuantity adet hammaddeyi depoya geri gondermek icin uygun araci secin'
+          : '$totalQuantity adet uretilen urunu depoya gondermek icin uygun araci secin',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
             .read(farmActionProvider)
-            .startProductionToWarehouseTransfer(
-              productionInventoryId: inventory.id,
-              buyerWarehouseId: warehouseId,
-              quantity: quantity,
+            .startMultiProductionToWarehouseTransfer(
+              sourceOwnerKind: 'farm',
+              sourceOwnerId: widget.farmId,
+              buyerWarehouseId: targetWarehouse.id,
+              items: items
+                  .map(
+                    (item) => {
+                      'production_inventory_id': item.inventory.id,
+                      'quantity': item.quantity,
+                    },
+                  )
+                  .toList(),
               vehicleId: vehicleId,
               syncProviders: false,
             );
         if (!context.mounted) return;
         if (result.success) {
           await _refreshFarmEcosystem(
-            warehouseId: warehouseId,
+            warehouseId: targetWarehouse.id,
             includeTransfers: true,
             includePlayer: false,
           );
+          if (!context.mounted) return;
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
-            message: inventory.isInput
+            message: items.first.inventory.isInput
                 ? 'Hammaddeyi depoya geri goturen arac yola cikti.'
                 : 'Uretilen urunu depoya goturen arac yola cikti.',
             type: SnackbarType.success,
@@ -2388,7 +3003,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             Expanded(
               child: ListView.separated(
                 itemCount: options.length,
-                separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                separatorBuilder: (context, index) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = options[index];
                   return TransferVehicleOptionCard(
@@ -2433,96 +3048,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     final minutes = duration.inMinutes % 60;
     if (hours > 0) return '${hours}s ${minutes}dk';
     return '${duration.inMinutes}dk';
-  }
-
-  Future<void> _showQuantityDialog({
-    required BuildContext context,
-    required int maxQuantity,
-    required String title,
-    required String subtitle,
-    required Future<void> Function(int quantity) onConfirm,
-  }) async {
-    final controller = TextEditingController(text: '1');
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.background,
-        title: Text(
-          title,
-          style: TextStyle(color: Colors.white, fontSize: 18.sp),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              subtitle,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
-            ),
-            SizedBox(height: 12.h),
-            TextField(
-              controller: controller,
-              readOnly: true,
-              showCursor: true,
-              enableInteractiveSelection: false,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Miktar (Maks: $maxQuantity)',
-                labelStyle: const TextStyle(color: AppColors.gold),
-                enabledBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white24),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.gold),
-                ),
-              ),
-            ),
-            SizedBox(height: 12.h),
-            NumericKeyboard(
-              controller: controller,
-              shortcuts: [
-                NumericKeyboardShortcut(
-                  label: '1/4',
-                  value: (maxQuantity / 4).floor().toString(),
-                ),
-                NumericKeyboardShortcut(
-                  label: 'Yari',
-                  value: (maxQuantity / 2).floor().toString(),
-                ),
-                NumericKeyboardShortcut(
-                  label: 'Tamami',
-                  value: maxQuantity.toString(),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Iptal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            onPressed: () async {
-              final quantity = int.tryParse(controller.text) ?? 0;
-              if (quantity <= 0 || quantity > maxQuantity) {
-                AppSnackbar.show(
-                  context,
-                  title: 'Hata',
-                  message: 'Gecersiz miktar!',
-                  type: SnackbarType.error,
-                );
-                return;
-              }
-              Navigator.pop(dialogContext);
-              await onConfirm(quantity);
-            },
-            child: const Text('Onayla', style: TextStyle(color: Colors.black)),
-          ),
-        ],
-      ),
-    );
   }
 
   int _calculateUsedCapacity(List<FarmProductionInventoryModel> inventories) {
@@ -2606,6 +3131,86 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       }),
     );
   }
+}
+
+class _SelectedFarmProductionTransferItem {
+  final FarmProductionInventoryModel inventory;
+  final int quantity;
+
+  const _SelectedFarmProductionTransferItem({
+    required this.inventory,
+    required this.quantity,
+  });
+}
+
+class _FarmInboundWarehouseChoice {
+  final String warehouseId;
+  final String warehouseName;
+  final String cityId;
+  final String cityName;
+  final bool isSameCity;
+  final List<_FarmInboundWarehouseSlotOption> slots;
+
+  const _FarmInboundWarehouseChoice({
+    required this.warehouseId,
+    required this.warehouseName,
+    required this.cityId,
+    required this.cityName,
+    required this.isSameCity,
+    required this.slots,
+  });
+}
+
+class _FarmInboundWarehouseSlotOption {
+  final String warehouseSlotId;
+  final String productId;
+  final String productName;
+  final String? productIcon;
+  final int qualityLevel;
+  final int availableQuantity;
+  final double unitVolume;
+  final FarmProductionInventoryModel targetInventory;
+
+  const _FarmInboundWarehouseSlotOption({
+    required this.warehouseSlotId,
+    required this.productId,
+    required this.productName,
+    required this.productIcon,
+    required this.qualityLevel,
+    required this.availableQuantity,
+    required this.unitVolume,
+    required this.targetInventory,
+  });
+}
+
+class _SelectedFarmInboundTransferItem {
+  final _FarmInboundWarehouseSlotOption slot;
+  final int quantity;
+
+  const _SelectedFarmInboundTransferItem({
+    required this.slot,
+    required this.quantity,
+  });
+}
+
+String _inventoryKey(String productId, int qualityLevel) {
+  return '$productId::$qualityLevel';
+}
+
+Set<String> _parseAcceptedProductIds(dynamic rawValue) {
+  if (rawValue == null) return const <String>{};
+  return rawValue
+      .toString()
+      .replaceAll('[', '')
+      .replaceAll(']', '')
+      .replaceAll('{', '')
+      .replaceAll('}', '')
+      .replaceAll('"', '')
+      .replaceAll("'", '')
+      .split(',')
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toSet();
 }
 
 class _ActiveFarmBoostCard extends ConsumerWidget {

@@ -316,6 +316,7 @@ class _WarehouseTypeSelectionScreenState
       if (result['success'] == true) {
         if (!mounted) return;
         await ref.read(warehouseListProvider.notifier).refresh();
+        if (!mounted) return;
         ref.invalidate(playerProvider);
         AppSnackbar.show(
           context,

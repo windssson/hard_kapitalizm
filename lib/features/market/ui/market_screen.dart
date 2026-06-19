@@ -22,7 +22,6 @@ import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_o
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
-import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
@@ -84,7 +83,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   bool get _isStoreTarget =>
       widget.targetType == 'store' && widget.storeSlotId.isNotEmpty;
 
-  String get _targetTypeLabel => _isStoreTarget ? 'Magaza Rafina' : 'Depoya';
   bool get _hasCart => _cartItems.isNotEmpty;
   int get _cartTotalQuantity =>
       _cartItems.fold(0, (sum, item) => sum + item.quantity);
@@ -143,13 +141,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       if (_activeWarehouseId.isNotEmpty) {
         ref.invalidate(warehouseDetailProvider(_activeWarehouseId));
       }
-    }
-  }
-
-  Future<void> _refreshAfterPreparedStoreSlotRollback() async {
-    if (!_isStoreTarget) return;
-    if (widget.storeId.isNotEmpty) {
-      ref.invalidate(storeDetailPageProvider(widget.storeId));
     }
   }
 
@@ -463,174 +454,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         .toList();
   }
 
-  Widget _buildTargetSummaryCard({
-    required ProductModel? product,
-    required MarketBuyerWarehouseModel? buyerWarehouse,
-    required MarketBuyerStoreSlotModel? buyerStoreSlot,
-    required WarehouseCapacityStatusModel? capacity,
-  }) {
-    final bool isStore = _isStoreTarget;
-    final String targetName = isStore
-        ? (buyerStoreSlot?.storeName ?? 'Magaza')
-        : (buyerWarehouse?.warehouseName ?? 'Merkez Depo');
-    final String cityName = isStore
-        ? (buyerStoreSlot?.cityName ?? 'Sehir bekleniyor...')
-        : (buyerWarehouse?.cityName ?? 'Sehir bekleniyor...');
-    final bool isActive = isStore
-        ? (buyerStoreSlot?.isActive ?? false)
-        : (buyerWarehouse?.isActive ?? false);
-    final String productText = product?.urunAdi ?? 'Urun';
-
-    // Capacity & Progress Bar Calculations
-    double fillRatio = 0.0;
-    String totalText = '';
-    String availableText = '';
-    if (isStore) {
-      final used = (buyerStoreSlot?.quantity ?? 0) + (buyerStoreSlot?.pendingQuantity ?? 0);
-      final total = (buyerStoreSlot?.capacity ?? 0) <= 0 ? 1 : buyerStoreSlot!.capacity;
-      fillRatio = (used / total).clamp(0.0, 1.0);
-      totalText = '$total';
-      availableText = '${buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'} bos alan';
-    } else {
-      final available = capacity?.availableCapacity ?? 0.0;
-      final totalCandidate = capacity?.totalCapacity ?? 1.0;
-      final total = totalCandidate <= 0 ? 1.0 : totalCandidate;
-      fillRatio = (1.0 - (available / total)).clamp(0.0, 1.0);
-      totalText = '${capacity?.totalCapacity.toStringAsFixed(1) ?? '0'} m3';
-      availableText = '${available.toStringAsFixed(1)} m3 bos kapasite';
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.gold.withValues(alpha: 0.10),
-            AppColors.blue.withValues(alpha: 0.08),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(
-                  isStore
-                      ? Icons.storefront_outlined
-                      : Icons.warehouse_outlined,
-                  color: AppColors.gold,
-                  size: 18.sp,
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Alim Hedefi: $productText',
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.textMuted,
-                              fontSize: 10.sp,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        TextButton(
-                          onPressed: _resetWarehouseSelection,
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.gold,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8.w,
-                              vertical: 4.h,
-                            ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            'Depo Degistir',
-                            style: TextStyle(
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      targetName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
-                    ),
-                  ],
-                ),
-              ),
-              _buildStatusBadge(isActive),
-              SizedBox(width: 6.w),
-              _buildTypeBadge(_targetTypeLabel, AppColors.gold),
-            ],
-          ),
-          SizedBox(height: 12.h),
-
-          // Progress bar & Capacity Info
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Doluluk: %${(fillRatio * 100).toInt()}',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.gold,
-                ),
-              ),
-              Text(
-                isStore
-                  ? 'Bos: ${buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'} / Toplam: $totalText'
-                  : 'Bos: ${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m3 / Toplam: $totalText',
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 10.sp,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 6.h),
-          _buildPremiumProgressBar(fillRatio, AppColors.gold),
-
-          SizedBox(height: 12.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: [
-              _buildInlineStat('Sehir', cityName),
-              _buildInlineStat('Kapasite Durumu', availableText),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   bool _canAddListingToCart({
     required MarketListingModel listing,
     required ProductModel? product,
@@ -928,7 +751,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: sortedCityNames.length + 1,
-                separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                separatorBuilder: (context, index) => SizedBox(width: 8.w),
                 itemBuilder: (context, index) {
                   final isAll = index == 0;
                   final cityName = isAll ? 'Tum Sehirler' : sortedCityNames[index - 1];
@@ -1066,7 +889,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: filteredProducts.length,
-                  separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                  separatorBuilder: (context, index) => SizedBox(width: 8.w),
                   itemBuilder: (context, index) {
                     final product = filteredProducts[index];
                     final isSelected = product.id == _activeProductId;
@@ -1457,93 +1280,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildProductHeader(
-    ProductModel? product,
-    WarehouseCapacityStatusModel? capacity,
-    MarketBuyerStoreSlotModel? storeSlot,
-  ) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48.w,
-            height: 48.w,
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: AppColors.background.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
-            ),
-            child: CachedAssetImage(fileName: product?.urunIconu ?? 'default.webp'),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        product?.urunAdi ?? 'Yukleniyor...',
-                        style: AppTextStyles.h1.copyWith(
-                          fontSize: 16.sp,
-                          color: AppColors.goldLight,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    TextButton(
-                      onPressed: _resetProductSelection,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.gold,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 8.w,
-                          vertical: 4.h,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: Text(
-                        'Urun Degistir',
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 4.h),
-                Row(
-                  children: [
-                    Icon(Icons.straighten, color: AppColors.gold, size: 12.sp),
-                    SizedBox(width: 4.w),
-                    Text('${product?.birimHacim.toStringAsFixed(1) ?? '0'} m3', style: AppTextStyles.body.copyWith(fontSize: 10.sp)),
-                    SizedBox(width: 12.w),
-                    Icon(_isStoreTarget ? Icons.storefront_outlined : Icons.warehouse_outlined, color: AppColors.gold, size: 12.sp),
-                    SizedBox(width: 4.w),
-                    Text(_isStoreTarget
-                          ? 'Slot Bos: ${storeSlot?.availableCapacity.toStringAsFixed(0) ?? '0'}'
-                          : 'Bos: ${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m3', style: AppTextStyles.body.copyWith(fontSize: 10.sp, color: AppColors.gold)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1990,62 +1726,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ],
     );
   }
-
-
-
-  Widget _buildStatusBadge(bool active) {
-    final color = active ? AppColors.green : AppColors.red;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 5.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: color, width: 0.5),
-      ),
-      child: Text(
-        active ? 'AKTIF' : 'PASIF',
-        style: TextStyle(
-          color: color,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-
-
-
-
-  Widget _buildPremiumProgressBar(double ratio, Color color) {
-    return Stack(
-      children: [
-        Container(
-          height: 8.h,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.cardBgLight,
-            borderRadius: BorderRadius.circular(4.r),
-          ),
-        ),
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          height: 8.h,
-          width: 320.w * ratio,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [color.withValues(alpha: 0.7), color],
-            ),
-            borderRadius: BorderRadius.circular(4.r),
-            boxShadow: [
-              BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 4),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildEmptyState() {
     return Container(
       width: double.infinity,
@@ -2207,7 +1887,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _buildCartSummaryBar(),
+      builder: (sheetContext) => _buildCartSummaryBar(sheetContext: sheetContext),
     );
   }
 
@@ -2263,7 +1943,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
-  Widget _buildCartSummaryBar() {
+  Widget _buildCartSummaryBar({required BuildContext sheetContext}) {
     final currentAvailableCapacity = _currentTargetAvailableCapacity();
     final remainingAfterCart =
         (currentAvailableCapacity - _cartTotalVolume).clamp(-999999, 999999);
@@ -2339,7 +2019,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _cartItems.length,
-                separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                separatorBuilder: (context, index) => SizedBox(width: 8.w),
                 itemBuilder: (context, index) {
                   final item = _cartItems[index];
                   return _buildCartItemPill(item);
@@ -2364,7 +2044,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 SizedBox(width: 10.w),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: capacityOk ? _openCartCheckout : null,
+                    onPressed: capacityOk
+                        ? () {
+                            Navigator.of(sheetContext).pop();
+                            _openCartCheckout();
+                          }
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.gold,
                       foregroundColor: Colors.black,
@@ -2562,7 +2247,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             Expanded(
               child: ListView.separated(
                 itemCount: options.length,
-                separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                separatorBuilder: (context, index) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = options[index];
                   return TransferVehicleOptionCard(
@@ -2674,22 +2359,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       if (city.id == cityId) return city;
     }
     return null;
-  }
-
-  int _calculateDurationSeconds({
-    required double distanceKm,
-    required int speedKmh,
-  }) {
-    if (speedKmh <= 0) return 60;
-    return math.max(60, ((math.max(distanceKm, 1) / speedKmh) * 3600).ceil());
-  }
-
-  int _calculateConditionLoss(double distanceKm) {
-    return math.max(1, (distanceKm / 25.0).ceil());
-  }
-
-  double _round2(double value) {
-    return double.parse(value.toStringAsFixed(2));
   }
 
   String _formatTransferDuration(int seconds) {
@@ -3360,7 +3029,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
             Expanded(
               child: ListView.separated(
                 itemCount: options.length,
-                separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                separatorBuilder: (context, index) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = options[index];
                   return TransferVehicleOptionCard(
@@ -3490,91 +3159,6 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
     return '${duration.inMinutes}dk';
   }
   */
-
-  Widget _buildInlineStat(String label, String value) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 10.sp,
-              ),
-            ),
-            TextSpan(
-              text: value,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeBadge(String label, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoBox(String message, Color color) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-      ),
-      child: Text(
-        message,
-        style: TextStyle(color: color, fontSize: 12.sp),
-      ),
-    );
-  }
-
-  Widget _buildCostRow(String label, String value, {bool highlight = false}) {
-    final color = highlight ? AppColors.gold : Colors.white;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: AppTextStyles.body),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 13.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 double _resolvePriceDeltaPercent(ProductModel? product, double listingPrice) {

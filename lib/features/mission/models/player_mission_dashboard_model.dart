@@ -26,7 +26,7 @@ class PlayerMissionDashboardModel {
   bool get hasAnyMission =>
       mainMission != null || dailyMissions.isNotEmpty || sideMissions.isNotEmpty;
   List<PlayerMissionModel> get allMissions => [
-    if (mainMission != null) mainMission!,
+    ?mainMission,
     ...dailyMissions,
     ...sideMissions,
   ];

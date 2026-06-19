@@ -259,6 +259,7 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       if (option.badgeText != null)
                                         Container(
@@ -284,12 +285,19 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                         ),
                                       if (option.infoText != null) ...[
                                         if (option.badgeText != null) SizedBox(height: 6.h),
-                                        Text(
-                                          option.infoText!,
-                                          style: TextStyle(
-                                            color: AppColors.goldLight,
-                                            fontSize: 11.sp,
-                                            fontWeight: FontWeight.w700,
+                                        ConstrainedBox(
+                                          constraints: BoxConstraints(maxWidth: 120.w),
+                                          child: Text(
+                                            option.infoText!,
+                                            textAlign: TextAlign.end,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w700,
+                                              height: 1.15,
+                                            ),
                                           ),
                                         ),
                                       ],

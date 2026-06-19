@@ -396,81 +396,102 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         borderRadius: BorderRadius.circular(18.r),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
-      child: Wrap(
-        spacing: 10.w,
-        runSpacing: 10.h,
+      child: Column(
         children: [
-          SizedBox(
-            width: 100.w,
-            child: _buildActionButton(
-              detail.mine.isActive ? 'Durdur' : 'Baslat',
-              detail.mine.isActive
-                  ? Icons.stop_circle_outlined
-                  : Icons.play_circle_outline,
-              detail.mine.isActive ? AppColors.red : AppColors.green,
-              hasProduct
-                  ? () => _toggleMineActive(context, ref, detail)
-                  : () {
-                      AppSnackbar.show(
-                        context,
-                        title: 'Bilgi',
-                        message:
-                            'Uretimi baslatmadan once madene bir kaynak atamalisin.',
-                        type: SnackbarType.info,
-                      );
-                    },
-            ),
-          ),
-          SizedBox(
-            width: 100.w,
-            child: _buildActionButton(
-              'Boost',
-              Icons.flash_on_rounded,
-              canBoost ? AppColors.goldDark : AppColors.textMuted,
-              canBoost
-                  ? () => _showMineBoostSheet(context, ref, detail, activeBoost)
-                  : () {
-                      AppSnackbar.show(
-                        context,
-                        title: 'Bilgi',
-                        message: hasProduct
-                            ? 'Boost baslatmak icin madenin aktif olmasi gerekir.'
-                            : 'Boost baslatmadan once madene bir kaynak atamalisin.',
-                        type: SnackbarType.info,
-                      );
-                    },
-            ),
-          ),
-          SizedBox(
-            width: 100.w,
-            child: _buildActionButton(
-              'Yukselt',
-              Icons.upgrade_rounded,
-              canUpgrade ? AppColors.green : AppColors.textMuted,
-              canUpgrade
-                  ? () =>
-                      _showMineUpgradeSheet(context, ref, detail, activeUpgrade)
-                  : () {
-                      AppSnackbar.show(
-                        context,
-                        title: 'Bilgi',
-                        message:
-                            'Yukseltme baslatmak icin madenin aktif olmasi gerekir.',
-                        type: SnackbarType.info,
-                      );
-                    },
-            ),
-          ),
-          SizedBox(
-            width: 100.w,
-            child: _buildActionButton(
-              'Rapor',
-              Icons.query_stats_rounded,
-              AppColors.blue,
-              () => context.push(
-                '/production-report/mine/${detail.mine.id}?name=${Uri.encodeComponent(detail.mine.name)}',
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  'Urun Gonder',
+                  Icons.local_shipping_rounded,
+                  AppColors.blue,
+                  () => _startMineSendFlow(context, ref, detail),
+                ),
               ),
-            ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Wrap(
+            spacing: 10.w,
+            runSpacing: 10.h,
+            children: [
+              SizedBox(
+                width: 100.w,
+                child: _buildActionButton(
+                  detail.mine.isActive ? 'Durdur' : 'Baslat',
+                  detail.mine.isActive
+                      ? Icons.stop_circle_outlined
+                      : Icons.play_circle_outline,
+                  detail.mine.isActive ? AppColors.red : AppColors.green,
+                  hasProduct
+                      ? () => _toggleMineActive(context, ref, detail)
+                      : () {
+                          AppSnackbar.show(
+                            context,
+                            title: 'Bilgi',
+                            message:
+                                'Uretimi baslatmadan once madene bir kaynak atamalisin.',
+                            type: SnackbarType.info,
+                          );
+                        },
+                ),
+              ),
+              SizedBox(
+                width: 100.w,
+                child: _buildActionButton(
+                  'Boost',
+                  Icons.flash_on_rounded,
+                  canBoost ? AppColors.goldDark : AppColors.textMuted,
+                  canBoost
+                      ? () => _showMineBoostSheet(context, ref, detail, activeBoost)
+                      : () {
+                          AppSnackbar.show(
+                            context,
+                            title: 'Bilgi',
+                            message: hasProduct
+                                ? 'Boost baslatmak icin madenin aktif olmasi gerekir.'
+                                : 'Boost baslatmadan once madene bir kaynak atamalisin.',
+                            type: SnackbarType.info,
+                          );
+                        },
+                ),
+              ),
+              SizedBox(
+                width: 100.w,
+                child: _buildActionButton(
+                  'Yukselt',
+                  Icons.upgrade_rounded,
+                  canUpgrade ? AppColors.green : AppColors.textMuted,
+                  canUpgrade
+                      ? () => _showMineUpgradeSheet(
+                            context,
+                            ref,
+                            detail,
+                            activeUpgrade,
+                          )
+                      : () {
+                          AppSnackbar.show(
+                            context,
+                            title: 'Bilgi',
+                            message:
+                                'Yukseltme baslatmak icin madenin aktif olmasi gerekir.',
+                            type: SnackbarType.info,
+                          );
+                        },
+                ),
+              ),
+              SizedBox(
+                width: 100.w,
+                child: _buildActionButton(
+                  'Rapor',
+                  Icons.query_stats_rounded,
+                  AppColors.blue,
+                  () => context.push(
+                    '/production-report/mine/${detail.mine.id}?name=${Uri.encodeComponent(detail.mine.name)}',
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -828,40 +849,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         ),
                       ),
                     ),
-                    FilledButton.icon(
-                      onPressed: outputInventory != null && quantity > 0
-                          ? () => _startInventoryToWarehouseFlow(
-                                context,
-                                ref,
-                                detail,
-                                outputInventory,
-                              )
-                          : null,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.blue.withValues(alpha: 0.16),
-                        foregroundColor: AppColors.blue,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 6.h,
-                        ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999.r),
-                          side: BorderSide(
-                            color: AppColors.blue.withValues(alpha: 0.28),
-                          ),
-                        ),
-                      ),
-                      icon: Icon(Icons.move_up_rounded, size: 14.sp),
-                      label: Text(
-                        'Urunu Depoya Gonder',
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 SizedBox(height: 6.h),
@@ -1026,6 +1013,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       if (!context.mounted) return;
                       if (result['success'] == true) {
                         await _refreshMineEcosystem();
+                        if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
                           title: 'Basarili',
@@ -1033,6 +1021,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           type: SnackbarType.success,
                         );
                       } else {
+                        if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
                           title: 'Hata',
@@ -1199,7 +1188,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       ),
                       SizedBox(height: 6.h),
                       Text(
-                        'Sure: ${durationMinutes} dk',
+                        'Sure: $durationMinutes dk',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 12.sp,
@@ -1226,16 +1215,18 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   syncProviders: false,
                                 );
                             if (!context.mounted) return;
-                            if (result['success'] == true) {
-                              await _refreshMineEcosystem();
-                              AppSnackbar.show(
-                                context,
-                                title: 'Basarili',
-                                message: 'Maden yukseltmesi baslatildi.',
-                                type: SnackbarType.success,
-                              );
-                            } else {
-                              AppSnackbar.show(
+                             if (result['success'] == true) {
+                               await _refreshMineEcosystem();
+                               if (!context.mounted) return;
+                               AppSnackbar.show(
+                                 context,
+                                 title: 'Basarili',
+                                 message: 'Maden yukseltmesi baslatildi.',
+                                 type: SnackbarType.success,
+                               );
+                             } else {
+                               if (!context.mounted) return;
+                               AppSnackbar.show(
                                 context,
                                 title: 'Hata',
                                 message:
@@ -1270,10 +1261,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         .read(mineActionProvider)
         .finishMineUpgradeWithGold(upgrade.id, syncProviders: false);
 
-    if (!mounted) return;
-
     if (result['success'] == true) {
       await _refreshMineEcosystem();
+      if (!mounted) return;
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1284,6 +1274,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       return;
     }
 
+    if (!mounted) return;
     AppSnackbar.show(
       context,
       title: 'Hata',
@@ -1322,7 +1313,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         subtitle: 'Saatlik uretim: ${product.uretimAdedi}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
-            '${selectableProduct.hasPreferredBrand ? ' • Marka Hazir' : ''}',
+            '${selectableProduct.hasPreferredBrand ? ' ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Marka Hazir' : ''}',
         iconPath: product.urunIconu,
         onTap: () async {
           Navigator.pop(context);
@@ -1359,6 +1350,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     if (!context.mounted) return;
     if (result['success'] == true) {
       await _refreshMineEcosystem(includePlayer: false);
+      if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1390,6 +1382,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     if (!context.mounted) return;
     if (result['success'] == true) {
       await _refreshMineEcosystem();
+      if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -1409,20 +1402,26 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
   }
 
-  Future<void> _startInventoryToWarehouseFlow(
+  Future<void> _startMineSendFlow(
     BuildContext context,
     WidgetRef ref,
     MineDetailModel detail,
-    MineProductionInventoryModel inventory,
   ) async {
-    List<ProductionLogisticsWarehouseOption> warehouses;
+    final sendableInventories =
+        detail.outputInventories.where((item) => item.quantity > 0).toList();
+    if (sendableInventories.isEmpty) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message: 'Depoya gonderilebilecek stok bulunamadi.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
+    List<Map<String, dynamic>> warehouses;
     try {
-      warehouses = await ref
-          .read(mineActionProvider)
-          .getWarehousesForProductionLogistics(
-            productionCityId: detail.mine.cityId,
-            productId: inventory.productId,
-          );
+      warehouses = await ref.read(mineActionProvider).getPlayerWarehousesRaw();
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -1434,84 +1433,54 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       return;
     }
 
+    final options = <WarehouseSelectionOption>[];
+    for (final warehouse in warehouses) {
+      final acceptedProductIds = _parseMineAcceptedProductIds(
+        (warehouse['warehouse_type'] as Map?)?['accepted_product_ids'],
+      );
+      final eligibleInventories = sendableInventories
+          .where((inventory) => acceptedProductIds.contains(inventory.productId))
+          .toList();
+      if (eligibleInventories.isEmpty) continue;
+
+      final warehouseOption = ProductionLogisticsWarehouseOption.fromJson(
+        warehouse,
+        productionCityId: detail.mine.cityId,
+      );
+      options.add(
+        WarehouseSelectionOption(
+          id: warehouseOption.id,
+          title: warehouseOption.name,
+          subtitle: warehouseOption.cityName,
+          badgeText:
+              warehouseOption.isSameCity ? 'Anlik Transfer' : 'Lojistik Transfer',
+          infoText: '${eligibleInventories.length} uygun stok secilebilir',
+          isHighlightBadge: warehouseOption.isSameCity,
+          onTap: () {
+            Navigator.pop(context);
+            _showMineOutboundSelectionSheet(
+              context: context,
+              ref: ref,
+              detail: detail,
+              targetWarehouse: warehouseOption,
+              inventories: eligibleInventories,
+            );
+          },
+        ),
+      );
+    }
+
     if (!context.mounted) return;
-    if (warehouses.isEmpty) {
+    if (options.isEmpty) {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu urunu kabul eden aktif depon yok.',
+        message: 'Bu stoklari kabul eden aktif depon yok.',
         type: SnackbarType.info,
       );
       return;
     }
 
-    final options = warehouses.map((warehouse) {
-      final warehouseId = warehouse.id;
-      final sameCity = warehouse.isSameCity;
-      return WarehouseSelectionOption(
-        id: warehouseId,
-        title: warehouse.name,
-        subtitle: warehouse.cityName,
-        badgeText: sameCity ? 'Anlık Transfer' : 'Lojistik Transfer',
-        infoText: 'Gonderilecek: ${inventory.quantity} adet | Urun',
-        isHighlightBadge: sameCity,
-        onTap: () {
-          Navigator.pop(context);
-          _showQuantityDialog(
-            context: context,
-            maxQuantity: inventory.quantity,
-            title: 'Miktar Girin',
-            subtitle:
-                '${inventory.product?.urunAdi ?? inventory.productId} depoya aktarılacak',
-            onConfirm: (quantity) async {
-              if (sameCity) {
-                final result = await ref
-                    .read(mineActionProvider)
-                    .transferProductionInventoryToWarehouse(
-                      productionInventoryId: inventory.id,
-                      warehouseId: warehouseId,
-                      quantity: quantity,
-                      syncProviders: false,
-                    );
-                if (!context.mounted) return;
-                if (result['success'] == true) {
-                  await _refreshMineEcosystem(
-                    warehouseId: warehouseId,
-                    includePlayer: false,
-                  );
-                  AppSnackbar.show(
-                    context,
-                    title: 'Başarılı',
-                    message: 'Transfer tamamlandı.',
-                    type: SnackbarType.success,
-                  );
-                  return;
-                }
-                AppSnackbar.show(
-                  context,
-                  title: 'Hata',
-                  message:
-                      result['message'] ?? 'Transfer başarısız oldu.',
-                  type: SnackbarType.error,
-                );
-                return;
-              }
-
-              await _startMineLogisticsOutputTransfer(
-                context: context,
-                ref: ref,
-                detail: detail,
-                inventory: inventory,
-                warehouseId: warehouseId,
-                quantity: quantity,
-              );
-            },
-          );
-        },
-      );
-    }).toList();
-
-    if (!context.mounted) return;
     options.sort((a, b) {
       if (a.isHighlightBadge != b.isHighlightBadge) {
         return a.isHighlightBadge ? -1 : 1;
@@ -1520,32 +1489,367 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     });
     await WarehouseSelectionSheet.show(
       context: context,
-      title: 'Hedef Depo Seç',
+      title: 'Hedef Depo Sec',
       options: options,
     );
   }
 
-  Future<void> _startMineLogisticsOutputTransfer({
+  Future<void> _showMineOutboundSelectionSheet({
     required BuildContext context,
     required WidgetRef ref,
     required MineDetailModel detail,
-    required MineProductionInventoryModel inventory,
-    required String warehouseId,
-    required int quantity,
+    required ProductionLogisticsWarehouseOption targetWarehouse,
+    required List<MineProductionInventoryModel> inventories,
+  }) async {
+    final selectedQuantities = <String, int>{};
+    final sortedInventories = [...inventories]
+      ..sort((a, b) => (a.product?.urunAdi ?? a.productId).compareTo(
+            b.product?.urunAdi ?? b.productId,
+          ));
+
+    Future<void> openQuantityEditor(
+      BuildContext sheetContext,
+      StateSetter modalSetState,
+      MineProductionInventoryModel item,
+    ) async {
+      final controller = TextEditingController(
+        text: ((selectedQuantities[item.id] ?? item.quantity).clamp(
+          0,
+          item.quantity,
+        )).toString(),
+      );
+      final result = await showDialog<int>(
+        context: sheetContext,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: AppColors.background,
+          title: Text(
+            item.product?.urunAdi ?? item.productId,
+            style: TextStyle(color: Colors.white, fontSize: 18.sp),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kalite ${item.qualityLevel} | Stok: ${item.quantity}',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+              ),
+              SizedBox(height: 12.h),
+              TextField(
+                controller: controller,
+                readOnly: true,
+                showCursor: true,
+                enableInteractiveSelection: false,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Miktar (Maks: ${item.quantity})',
+                  labelStyle: const TextStyle(color: AppColors.gold),
+                  enabledBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white24),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.gold),
+                  ),
+                ),
+              ),
+              SizedBox(height: 12.h),
+              NumericKeyboard(
+                controller: controller,
+                shortcuts: [
+                  NumericKeyboardShortcut(
+                    label: '1/4',
+                    value: (item.quantity / 4)
+                        .floor()
+                        .clamp(1, item.quantity)
+                        .toString(),
+                  ),
+                  NumericKeyboardShortcut(
+                    label: 'Yari',
+                    value: (item.quantity / 2)
+                        .floor()
+                        .clamp(1, item.quantity)
+                        .toString(),
+                  ),
+                  NumericKeyboardShortcut(
+                    label: 'Tamami',
+                    value: item.quantity.toString(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Iptal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+              onPressed: () {
+                final quantity = int.tryParse(controller.text) ?? 0;
+                if (quantity <= 0 || quantity > item.quantity) {
+                  AppSnackbar.show(
+                    sheetContext,
+                    title: 'Hata',
+                    message: 'Gecersiz miktar!',
+                    type: SnackbarType.error,
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, quantity);
+              },
+              child: const Text('Kaydet', style: TextStyle(color: Colors.black)),
+            ),
+          ],
+        ),
+      );
+
+      if (result == null) return;
+      modalSetState(() {
+        selectedQuantities[item.id] = result;
+      });
+    }
+
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.background,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, modalSetState) {
+          final selectedItems = sortedInventories
+              .where((item) => (selectedQuantities[item.id] ?? 0) > 0)
+              .map(
+                (item) => _SelectedMineProductionTransferItem(
+                  inventory: item,
+                  quantity: selectedQuantities[item.id] ?? 0,
+                ),
+              )
+              .toList();
+          final totalQuantity = selectedItems.fold<int>(
+            0,
+            (sum, item) => sum + item.quantity,
+          );
+
+          return SafeArea(
+            top: false,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(sheetContext).size.height * 0.85,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Depoya Gonderilecek Stoklari Sec',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    '${targetWarehouse.name} | ${targetWarehouse.cityName}',
+                    style: TextStyle(color: AppColors.goldLight, fontSize: 12.sp),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '${selectedItems.length} stok | $totalQuantity adet secildi',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                  ),
+                  SizedBox(height: 16.h),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: sortedInventories.length,
+                      separatorBuilder: (context, index) =>
+                          SizedBox(height: 10.h),
+                      itemBuilder: (_, index) {
+                        final item = sortedInventories[index];
+                        final selectedQuantity = selectedQuantities[item.id] ?? 0;
+                        final isSelected = selectedQuantity > 0;
+                        return Container(
+                          padding: EdgeInsets.all(12.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(14.r),
+                            border: Border.all(
+                              color:
+                                  (isSelected
+                                          ? AppColors.green
+                                          : AppColors.borderGoldLight)
+                                      .withValues(
+                                        alpha: isSelected ? 0.35 : 0.15,
+                                      ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.product?.urunAdi ?? item.productId,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Text(
+                                      'Kalite ${item.qualityLevel} | Stok ${item.quantity}',
+                                      style: TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11.sp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              OutlinedButton(
+                                onPressed: () => openQuantityEditor(
+                                  sheetContext,
+                                  modalSetState,
+                                  item,
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: isSelected
+                                      ? AppColors.green
+                                      : AppColors.goldLight,
+                                ),
+                                child: Text(
+                                  isSelected ? 'Adet: $selectedQuantity' : 'Ekle',
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: Colors.black,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                      ),
+                      onPressed: selectedItems.isEmpty
+                          ? null
+                          : () async {
+                              Navigator.pop(sheetContext);
+                              if (targetWarehouse.isSameCity) {
+                                final result = await ref
+                                    .read(mineActionProvider)
+                                    .startMultiProductionToWarehouseTransfer(
+                                      sourceOwnerKind: 'mine',
+                                      sourceOwnerId: widget.mineId,
+                                      buyerWarehouseId: targetWarehouse.id,
+                                      items: selectedItems
+                                          .map(
+                                            (item) => {
+                                              'production_inventory_id':
+                                                  item.inventory.id,
+                                              'quantity': item.quantity,
+                                            },
+                                          )
+                                          .toList(),
+                                      syncProviders: false,
+                                    );
+                                if (!context.mounted) return;
+                                if (result.success) {
+                                  await _refreshMineEcosystem(
+                                    warehouseId: targetWarehouse.id,
+                                    includeTransfers: true,
+                                    includePlayer: false,
+                                  );
+                                  if (!context.mounted) return;
+                                  AppSnackbar.show(
+                                    context,
+                                    title: 'Basarili',
+                                    message: 'Secilen stoklar depoya gonderildi.',
+                                    type: SnackbarType.success,
+                                  );
+                                  return;
+                                }
+                                AppSnackbar.show(
+                                  context,
+                                  title: 'Hata',
+                                  message: result.message.isNotEmpty
+                                      ? result.message
+                                      : 'Transfer basarisiz oldu.',
+                                  type: SnackbarType.error,
+                                );
+                                return;
+                              }
+
+                              await _startMineMultiLogisticsOutputTransfer(
+                                context: context,
+                                ref: ref,
+                                detail: detail,
+                                targetWarehouse: targetWarehouse,
+                                items: selectedItems,
+                              );
+                            },
+                      icon: const Icon(Icons.local_shipping_rounded),
+                      label: const Text('Transferi Baslat'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _startMineMultiLogisticsOutputTransfer({
+    required BuildContext context,
+    required WidgetRef ref,
+    required MineDetailModel detail,
+    required ProductionLogisticsWarehouseOption targetWarehouse,
+    required List<_SelectedMineProductionTransferItem> items,
   }) async {
     TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>
     vehicleResult = const TransferVehicleOptionsResult(
       options: [],
       unavailableReason: null,
     );
+    final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalVolume = items.fold<double>(
+      0,
+      (sum, item) =>
+          sum + ((item.inventory.product?.birimHacim ?? 0) * item.quantity),
+    );
     try {
-      vehicleResult = await ref
-          .read(mineActionProvider)
-          .getProductionOutputTransferVehicleOptions(
-            productionInventoryId: inventory.id,
-            buyerWarehouseId: warehouseId,
-            quantity: quantity,
-          );
+      if (items.length == 1) {
+        final item = items.first;
+        vehicleResult = await ref
+            .read(mineActionProvider)
+            .getProductionOutputTransferVehicleOptions(
+              productionInventoryId: item.inventory.id,
+              buyerWarehouseId: targetWarehouse.id,
+              quantity: item.quantity,
+            );
+      } else {
+        vehicleResult = await ref
+            .read(mineActionProvider)
+            .getProductionRouteVehicleOptions(
+              sourceCityId: detail.mine.cityId,
+              targetCityId: targetWarehouse.cityId,
+              totalVolume: totalVolume,
+            );
+      }
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -1573,28 +1877,38 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     _showProductionVehicleOptionsSheet(
       context: context,
       title: 'Maden Lojistigi',
-      subtitle: '$quantity adet urun icin uygun araci secin',
+      subtitle: '$totalQuantity adet urun icin uygun araci secin',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
             .read(mineActionProvider)
-            .startProductionToWarehouseTransfer(
-              productionInventoryId: inventory.id,
-              buyerWarehouseId: warehouseId,
-              quantity: quantity,
+            .startMultiProductionToWarehouseTransfer(
+              sourceOwnerKind: 'mine',
+              sourceOwnerId: widget.mineId,
+              buyerWarehouseId: targetWarehouse.id,
+              items: items
+                  .map(
+                    (item) => {
+                      'production_inventory_id': item.inventory.id,
+                      'quantity': item.quantity,
+                    },
+                  )
+                  .toList(),
               vehicleId: vehicleId,
               syncProviders: false,
             );
         if (!context.mounted) return;
         if (result.success) {
           await _refreshMineEcosystem(
-            warehouseId: warehouseId,
+            warehouseId: targetWarehouse.id,
             includeTransfers: true,
+            includePlayer: false,
           );
+          if (!context.mounted) return;
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
-            message: 'Maden urunu transferi icin arac yola cikti.',
+            message: 'Maden urunleri icin arac yola cikti.',
             type: SnackbarType.success,
           );
           return;
@@ -1616,7 +1930,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     required String title,
     required String subtitle,
     required List<ProductionLogisticsVehicleOption> options,
-    required Future<void> Function(String? vehicleId) onSelected,
+    required Future<void> Function(String vehicleId) onSelected,
   }) {
     showModalBottomSheet(
       context: context,
@@ -1650,7 +1964,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             Expanded(
               child: ListView.separated(
                 itemCount: options.length,
-                separatorBuilder: (_, __) => SizedBox(height: 10.h),
+                separatorBuilder: (context, index) => SizedBox(height: 10.h),
                 itemBuilder: (_, index) {
                   final option = options[index];
                   return TransferVehicleOptionCard(
@@ -1691,98 +2005,32 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     return '${duration.inMinutes}dk';
   }
 
-  Future<void> _showQuantityDialog({
-    required BuildContext context,
-    required int maxQuantity,
-    required String title,
-    required String subtitle,
-    required Future<void> Function(int quantity) onConfirm,
-  }) async {
-    final controller = TextEditingController(text: '1');
+}
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.background,
-        title: Text(
-          title,
-          style: TextStyle(color: Colors.white, fontSize: 18.sp),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              subtitle,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
-            ),
-            SizedBox(height: 12.h),
-            TextField(
-              controller: controller,
-              readOnly: true,
-              showCursor: true,
-              enableInteractiveSelection: false,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Miktar (Maks: $maxQuantity)',
-                labelStyle: const TextStyle(color: AppColors.gold),
-                enabledBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white24),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.gold),
-                ),
-              ),
-            ),
-            SizedBox(height: 12.h),
-            NumericKeyboard(
-              controller: controller,
-              shortcuts: [
-                NumericKeyboardShortcut(
-                  label: '1/4',
-                  value: (maxQuantity / 4).floor().toString(),
-                ),
-                NumericKeyboardShortcut(
-                  label: 'Yari',
-                  value: (maxQuantity / 2).floor().toString(),
-                ),
-                NumericKeyboardShortcut(
-                  label: 'Tamami',
-                  value: maxQuantity.toString(),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Iptal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            onPressed: () async {
-              final quantity = int.tryParse(controller.text) ?? 0;
-              if (quantity <= 0 || quantity > maxQuantity) {
-                AppSnackbar.show(
-                  context,
-                  title: 'Hata',
-                  message: 'Gecersiz miktar!',
-                  type: SnackbarType.error,
-                );
-                return;
-              }
-              Navigator.pop(dialogContext);
-              await onConfirm(quantity);
-            },
-            child: const Text(
-              'Onayla',
-              style: TextStyle(color: Colors.black),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _SelectedMineProductionTransferItem {
+  final MineProductionInventoryModel inventory;
+  final int quantity;
+
+  const _SelectedMineProductionTransferItem({
+    required this.inventory,
+    required this.quantity,
+  });
+}
+
+Set<String> _parseMineAcceptedProductIds(dynamic rawValue) {
+  if (rawValue == null) return const <String>{};
+  return rawValue
+      .toString()
+      .replaceAll('[', '')
+      .replaceAll(']', '')
+      .replaceAll('{', '')
+      .replaceAll('}', '')
+      .replaceAll('"', '')
+      .replaceAll("'", '')
+      .split(',')
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toSet();
 }
 
 class _ActiveMineBoostCard extends ConsumerWidget {
@@ -2001,3 +2249,4 @@ String _formatCountdownLabel(Duration remaining) {
   }
   return '${remaining.inMinutes}dk';
 }
+
