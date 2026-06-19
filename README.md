@@ -1,29 +1,33 @@
 # Hard Kapitalizm
 
-Hard Kapitalizm, Flutter ve Supabase ile geliştirilen mobil odaklı bir tycoon / ekonomi simülasyonu oyunudur. Oyuncu; üretim tesisleri, depolar, mağazalar, lojistik araçları, pazar, ar-ge, görevler ve başarımlar üzerinden kendi şirket ekonomisini büyütür.
+Hard Kapitalizm, Flutter ve Supabase ile geliştirilen mobil odaklı bir tycoon / ekonomi simülasyonu oyunudur. Oyuncu; marka şirketi, üretim tesisleri, depolar, mağazalar, lojistik araçları, pazar, ar-ge, görevler ve başarımlar üzerinden kendi şirket ekonomisini büyütür.
 
 Bu README, aktif `redesign` branch'inin güncel mimarisini ve geliştirme durumunu özetler.
 
 ## Oyun Döngüsü
 
 ```text
-Oyuncu şirketini kurar
+Oyuncu marka şirketini kurar
+→ ürünleri kendi markası altında patentler ve geliştirir
 → üretim tesisi / depo / mağaza / lojistik altyapısı kurar
 → ürün veya hammadde üretir
 → ürünleri depoya ve mağazaya taşır
-→ mağaza satışıyla gelir elde eder
-→ kalite, tesis, depo, lojistik ve şirket sistemlerini geliştirir
+→ mağaza satışıyla gelir ve marka değeri elde eder
+→ kalite, marka, tesis, depo, lojistik ve şirket sistemlerini geliştirir
 ```
 
 ## Güncel Ana Sistemler
 
-- **Oyuncu ve şirket sistemi:** Supabase Auth, oyuncu profili, şirket bilgileri, para, altın, seviye, XP, avatar ve marka/şirket verileri.
+- **Marka şirketi sistemi:** oyunun ana ilerleme omurgasıdır. Oyuncu kendi markasını kurar, logo/tema seçer, marka seviyesi ve marka XP kazanır, ürünleri marka portföyüne alır ve pazarlama kampanyalarıyla marka gücünü büyütür.
+- **Oyuncu ve şirket sistemi:** Supabase Auth, oyuncu profili, para, altın, seviye, XP, avatar ve şirket ilerlemesi.
+- **Ürün patentleme sistemi:** oyuncunun ürünleri kendi marka şirketi adına patentlemesi, ürün kalite seviyesiyle marka portföyünün ilişkilendirilmesi ve markalı ürünlerin üretim/satış zincirine taşınması.
+- **Pazarlama kampanyaları:** marka görünürlüğünü artırmak için kampanya başlatma ve aktif kampanya takibi.
 - **İnşaat sistemi:** mağaza, depo, tarla, çiftlik, fabrika, maden ve lojistik şirketi için zaman bazlı kurulum akışı.
 - **Yükseltme ve boost sistemi:** üretim, mağaza, depo ve ilgili yapıların yükseltme/boost akışları.
 - **Mağaza sistemi:** mağaza liste/detay ekranı, slot yönetimi, ürün atama, fiyatlandırma, aktif/pasif kontrol, mağaza deposu, satış geçmişi ve performans raporu.
 - **Satış sistemi:** mağaza detayına girildiğinde çalışan pull-based satış işleme, satış sonucu bildirimi, günlük performans ve geçmiş kayıtları.
 - **Depo sistemi:** depo listesi/detayı, stok slotları, kalite/maliyet takibi, kapasite ve rezerve kapasite mantığı, satışa açılabilir depo stoğu.
-- **Üretim sistemi:** tarla, çiftlik, fabrika ve maden modülleri; üretim slotları, input/output envanteri, ürün seçimi, kalite seviyesi ve üretim raporu.
+- **Üretim sistemi:** tarla, çiftlik, fabrika ve maden modülleri; üretim slotları, input/output envanteri, ürün seçimi, kalite seviyesi, marka tercihi ve üretim raporu.
 - **Maden sistemi:** maden tipi seçimi, ürün seçimi, üretim envanteri ve depoya transfer akışı.
 - **Lojistik sistemi:** lojistik şirketi, araçlar, kapasite, hız, yakıt, kondisyon, kiralık/özmal araç seçimi, finans raporu ve transfer yönetimi.
 - **Multi transfer sistemi:** tek parent transfer kaydı altında birden fazla transfer item'ı taşıyabilen yapı. Depo, mağaza, üretim ve pazar akışları multi transfer mantığına bağlanır.
@@ -168,13 +172,49 @@ Ana route'lar `lib/main.dart` içindeki GoRouter yapılandırmasında tutulur.
 
 ## Ana Modüller
 
+### Marka Şirketi
+
+Marka şirketi, Hard Kapitalizm'in ana kimlik ve ilerleme sistemidir. Oyuncu yalnızca tesis kurup ürün taşımaz; kendi markasını kurar, marka seviyesini yükseltir, ürünleri marka adına patentler ve markalı ürünleri üretim, pazar, lojistik ve satış zincirine bağlar.
+
+Marka sisteminin güncel parçaları:
+
+- marka şirketi oluşturma,
+- marka adı, logo ve tema rengi seçimi,
+- marka seviyesi ve marka XP takibi,
+- oyuncunun markalı/patentli ürün portföyü,
+- ürün bazında maksimum kalite seviyesi bilgisi,
+- ürün patentleme akışı,
+- aktif pazarlama kampanyaları,
+- üretim, market, depo, transfer geçmişi ve satış verilerinde marka/kalite bilgisinin korunması.
+
+İlgili Flutter tarafı:
+
+```text
+lib/features/company/
+  data/company_provider.dart
+  models/brand_company_model.dart
+  models/brand_company_product_model.dart
+  ui/company_screen.dart
+```
+
+Öne çıkan RPC / veri akışları:
+
+```text
+get_player_brand_company
+get_player_brand_company_products
+create_brand_company
+patent_brand_company_product
+start_marketing_campaign
+brand_marketing_campaigns
+```
+
 ### Store
 
-Mağaza tarafında slot açma, ürün atama, fiyat belirleme, aktif/pasif yönetimi, mağazaya bağlı depo, mağaza deposundan slota ürün aktarma, slot stoğunu mağaza deposuna geri alma, satış işleme, satış geçmişi ve günlük performans raporu bulunur.
+Mağaza tarafında slot açma, ürün atama, fiyat belirleme, aktif/pasif yönetimi, mağazaya bağlı depo, mağaza deposundan slota ürün aktarma, slot stoğunu mağaza deposuna geri alma, satış işleme, satış geçmişi ve günlük performans raporu bulunur. Markalı ürünlerin satış zincirindeki görünürlüğü ve kalite bilgisi korunmalıdır.
 
 ### Warehouse
 
-Depo sistemi ürün stoklarını, kalite seviyelerini, maliyet bilgisini, satışa açılma durumunu, kapasite kullanımını ve transfer rezervasyonlarını yönetir. Depolar arası transferlerde multi item payload ve rota bazlı araç seçimi hedeflenir.
+Depo sistemi ürün stoklarını, kalite seviyelerini, maliyet bilgisini, marka bilgisini, satışa açılma durumunu, kapasite kullanımını ve transfer rezervasyonlarını yönetir. Depolar arası transferlerde multi item payload ve rota bazlı araç seçimi hedeflenir.
 
 ### Field / Farm / Factory / Mine
 
@@ -183,6 +223,7 @@ Depo sistemi ürün stoklarını, kalite seviyelerini, maliyet bilgisini, satı�
 - Tarla ve çiftlik üretim slotlarıyla çalışır.
 - Fabrika input/output envanteri, ürün seçimi ve üretim lojistiğiyle çalışır.
 - Maden modülü ürün seçimi ve üretim output akışına bağlıdır.
+- Üretim tarafında kalite ve marka tercihi, ürünün sonraki depo/market/mağaza zincirine doğru taşınmalıdır.
 - Üretim raporu ekranı, ilgili üretim biriminin üretim/stok performansını izlemek için kullanılır.
 
 ### Logistics ve Transfer Map
@@ -196,19 +237,19 @@ logistics_transfers          → parent transfer kaydı
 logistics_transfer_items     → transferde taşınan ürün kalemleri
 ```
 
-Aynı şehir transferleri anlık tamamlanabilir. Farklı şehir transferleri araç, rota, süre, yakıt ve kondisyon hesaplarıyla lojistik transfer olarak ilerler.
+Aynı şehir transferleri anlık tamamlanabilir. Farklı şehir transferleri araç, rota, süre, yakıt ve kondisyon hesaplarıyla lojistik transfer olarak ilerler. Transfer item'larında ürün, kalite, maliyet ve marka bilgisi korunmalıdır.
 
 ### Market
 
-Pazar sistemi ürün bazlı satış noktalarını listeler. Oyuncu hedef depo veya mağaza slotuna göre market alımı yapabilir. Uygun transfer senaryosunda pazar alımı da lojistik/multi transfer akışına bağlanır.
+Pazar sistemi ürün bazlı satış noktalarını listeler. Oyuncu hedef depo veya mağaza slotuna göre market alımı yapabilir. Markalı ürünler, kalite seviyesi ve satıcı/marka bilgisi pazar kararlarında önemli veri olarak korunur. Uygun transfer senaryosunda pazar alımı da lojistik/multi transfer akışına bağlanır.
 
 ### Ar-Ge
 
-Ar-Ge modülü ürünlerin kalite seviyelerini geliştirmek için kullanılır. Oyuncu ürün araştırması başlatabilir, araştırma sürecini takip edebilir ve altın kullanarak araştırmayı hızlandırabilir.
+Ar-Ge modülü ürünlerin kalite seviyelerini geliştirmek için kullanılır. Oyuncu ürün araştırması başlatabilir, araştırma sürecini takip edebilir ve altın kullanarak araştırmayı hızlandırabilir. Marka sistemiyle birlikte düşünüldüğünde kalite seviyesi, markalı ürün değerinin temel bileşenlerinden biridir.
 
 ### Görev, Bildirim ve Başarımlar
 
-Görev, bildirim, uyarı ve başarım ekranları oyuncunun ilerlemesini takip etmek ve önemli olayları görünür yapmak için kullanılır.
+Görev, bildirim, uyarı ve başarım ekranları oyuncunun ilerlemesini takip etmek ve önemli olayları görünür yapmak için kullanılır. Marka oluşturma, ürün patentleme, kampanya başlatma, kalite yükseltme ve satış başarıları bu sistemlere bağlanabilir.
 
 ### Cash Flow
 
@@ -221,6 +262,8 @@ Projede veritabanı şeması ve migration denemeleri `database_schema.sql`, `doc
 Başlıca tablo aileleri:
 
 - `players`
+- marka şirketi ve marka ürün portföyü tabloları
+- `brand_marketing_campaigns`
 - `products`
 - `cities`
 - `stores`, `store_slots`, store warehouse ilişkili tablolar
@@ -243,16 +286,29 @@ Başlıca tablo aileleri:
 
 Öne çıkan RPC aileleri:
 
-- oyuncu, şirket, profil ve marka fonksiyonları
+- oyuncu, profil ve şirket fonksiyonları
+- marka şirketi oluşturma, marka ürün portföyü, ürün patentleme ve pazarlama kampanyası fonksiyonları
 - yapı kurulum, tamamlama, yükseltme ve boost fonksiyonları
 - mağaza liste/detay/satış/geçmiş/rapor fonksiyonları
 - depo stok, kapasite ve transfer fonksiyonları
-- üretim slot, üretim envanteri ve üretim raporu fonksiyonları
+- üretim slot, üretim envanteri, marka tercihi ve üretim raporu fonksiyonları
 - multi lojistik transfer başlatma ve tamamlama fonksiyonları
 - rota/toplam hacim bazlı araç seçimi fonksiyonları
 - market satın alma ve transfer fonksiyonları
 - ar-ge kalite geliştirme fonksiyonları
 - görev, bildirim, başarım ve nakit akışı fonksiyonları
+
+## Marka Sistemi Notları
+
+Marka sistemi, oyunun sadece görsel şirket ismi değil; kalite, üretim, market, satış ve uzun vadeli ilerleme tarafını birbirine bağlayan ana sistemdir.
+
+Geliştirme sırasında korunması gereken kurallar:
+
+- Ürün kalite seviyesi ve marka bilgisi envanter, transfer, market ve satış zincirinde kaybolmamalıdır.
+- Markalı ürünler ile markasız/default ürünler veri tarafında ayrıştırılabilmelidir.
+- Ürün patentleme, oyuncunun marka portföyünü genişletmelidir.
+- Pazarlama kampanyaları marka şirketi ilerlemesine bağlı ele alınmalıdır.
+- Üretim tercihlerinde marka/kalite seçimi, sonraki depo ve mağaza akışına taşınmalıdır.
 
 ## Transfer Sistemi Notları
 
@@ -331,7 +387,8 @@ flutter pub run flutter_launcher_icons
 - UI, model ve data/provider dosyaları modül bazlı ayrılır.
 - Supabase bağlantı değerleri `.env` üzerinden okunur.
 - Büyük işlemler mümkün olduğunca Supabase RPC tarafında yapılır.
-- Üretim, mağaza, depo ve lojistik işlemlerinde kalite seviyesi, maliyet bilgisi ve kapasite hesapları korunmalıdır.
+- Marka sistemi; üretim, kalite, market, satış ve oyuncu ilerlemesinin ana omurgası olarak korunmalıdır.
+- Üretim, mağaza, depo ve lojistik işlemlerinde marka, kalite seviyesi, maliyet bilgisi ve kapasite hesapları korunmalıdır.
 - Multi transferlerde tek parent transfer ve birden fazla item satırı mantığı korunmalıdır.
 - Aynı şehir transferleri anlık, farklı şehir transferleri araçlı lojistik transfer olarak ilerleyecek şekilde tasarlanmıştır.
 - Transfer araç seçimi, multi transferlerde toplam hacim ve rota mantığıyla yapılmalıdır.
@@ -341,6 +398,8 @@ flutter pub run flutter_launcher_icons
 
 `redesign` branch'inin güncel odağı:
 
+- marka şirketi sistemini ürün, kalite, üretim, market ve satış zincirinin merkezine yerleştirmek,
+- ürün patentleme ve pazarlama kampanyası akışlarını oyun döngüsüne bağlamak,
 - multi transfer sistemini tüm transfer akışlarında standart hale getirmek,
 - araç seçimini toplam hacim ve rota bazlı hale getirmek,
 - üretim, depo, mağaza ve lojistik zincirini uçtan uca stabil hale getirmek,
@@ -354,14 +413,17 @@ MVP doğrulaması için şu uçtan uca zincir test edilmelidir:
 ```text
 Yeni oyuncu
 → şirket/profil oluştur
+→ marka şirketini kur
+→ ürün patentle
 → depo kur
 → üretim tesisi kur
-→ ürün seç
+→ ürün ve kalite/marka tercihini seç
 → üretim input/output kontrolü
 → üretimi depoya aktar
 → depodan mağazaya aktar
 → mağazaya girince satış işle
 → para artışı, cash-flow, satış geçmişi ve rapor kontrolü
+→ marka ürün portföyü, marka XP/seviye ve kampanya etkilerini kontrol et
 → görev/bildirim/başarım tetiklerini kontrol et
 → transfer haritasında aktif/geçmiş transferleri doğrula
 ```
