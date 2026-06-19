@@ -48,6 +48,7 @@ import 'package:hard_kapitalizm/features/production_report/ui/production_report_
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/navigation/app_route_observer.dart';
+import 'package:hard_kapitalizm/core/widgets/timed_task_runtime.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -360,20 +361,22 @@ class HardKapitalizmApp extends StatelessWidget {
             useMaterial3: true,
           ),
           builder: (context, materialChild) {
-            return Stack(
-              children: [
-                Container(color: AppColors.background),
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: 0.06,
-                    child: Image.asset(
-                      'assets/back.png',
-                      fit: BoxFit.cover,
+            return TimedTaskRuntime(
+              child: Stack(
+                children: [
+                  Container(color: AppColors.background),
+                  Positioned.fill(
+                    child: Opacity(
+                      opacity: 0.06,
+                      child: Image.asset(
+                        'assets/back.png',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-                ),
-                materialChild!,
-              ],
+                  materialChild!,
+                ],
+              ),
             );
           },
           routerConfig: _router,

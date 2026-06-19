@@ -5,6 +5,7 @@ class ArgeProductModel {
   final double bazSatisFiyati;
   final String uretimBirimi;
   final int currentQualityLevel;
+  final bool isProduced;
 
   const ArgeProductModel({
     required this.id,
@@ -13,6 +14,7 @@ class ArgeProductModel {
     required this.bazSatisFiyati,
     required this.uretimBirimi,
     required this.currentQualityLevel,
+    required this.isProduced,
   });
 
   factory ArgeProductModel.fromJson(
@@ -27,6 +29,7 @@ class ArgeProductModel {
           double.tryParse(product['baz_satis_fiyati']?.toString() ?? '0') ?? 0,
       uretimBirimi: product['uretim_birimi']?.toString() ?? 'FABRIKA',
       currentQualityLevel: qualityLevel,
+      isProduced: product['is_produced'] == true,
     );
   }
 

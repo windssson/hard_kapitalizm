@@ -12,21 +12,6 @@ class ProductionLogisticsService {
         supabase: supabase,
       );
 
-  Future<List<Map<String, dynamic>>> getPlayerWarehouses() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      throw Exception('Oturum acilmamis.');
-    }
-
-    final response = await _supabase.rpc(
-      'get_player_active_warehouses_basic',
-    );
-
-    return (response as List<dynamic>)
-        .map((row) => Map<String, dynamic>.from(row as Map))
-        .toList();
-  }
-
   Future<List<Map<String, dynamic>>> getPlayerWarehousesRaw() async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -85,50 +70,6 @@ class ProductionLogisticsService {
         .map((value) => value.trim())
         .where((value) => value.isNotEmpty)
         .toList();
-  }
-
-  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
-  getProductionInputTransferVehicleOptions({
-    required String warehouseSlotId,
-    required String productionInventoryId,
-    required int quantity,
-  }) async {
-    final response = await _vehicleOptionsService.getOptions(
-      TransferVehicleOptionsRequest(
-        sourceKind: 'warehouse_slot',
-        sourceId: warehouseSlotId,
-        targetKind: 'production_inventory',
-        targetId: productionInventoryId,
-        quantity: quantity,
-      ),
-    );
-
-    return mapTransferVehicleOptions(
-      rows: response,
-      mapper: ProductionLogisticsVehicleOption.fromJson,
-    );
-  }
-
-  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
-  getProductionOutputTransferVehicleOptions({
-    required String productionInventoryId,
-    required String buyerWarehouseId,
-    required int quantity,
-  }) async {
-    final response = await _vehicleOptionsService.getOptions(
-      TransferVehicleOptionsRequest(
-        sourceKind: 'production_inventory',
-        sourceId: productionInventoryId,
-        targetKind: 'warehouse',
-        targetId: buyerWarehouseId,
-        quantity: quantity,
-      ),
-    );
-
-    return mapTransferVehicleOptions(
-      rows: response,
-      mapper: ProductionLogisticsVehicleOption.fromJson,
-    );
   }
 
   Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>

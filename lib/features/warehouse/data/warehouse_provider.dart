@@ -572,28 +572,6 @@ class WarehouseActionNotifier {
   }
 
   Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
-      getWarehouseToWarehouseVehicleOptions({
-    required String warehouseSlotId,
-    required String buyerWarehouseId,
-    required int quantity,
-  }) async {
-    final response = await _vehicleOptionsService.getOptions(
-      TransferVehicleOptionsRequest(
-        sourceKind: 'warehouse_slot',
-        sourceId: warehouseSlotId,
-        targetKind: 'warehouse',
-        targetId: buyerWarehouseId,
-        quantity: quantity,
-      ),
-    );
-
-    return mapTransferVehicleOptions(
-      rows: response,
-      mapper: MarketTransferVehicleOptionModel.fromJson,
-    );
-  }
-
-  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
   getIntercityRouteVehicleOptions({
     required String sourceCityId,
     required String targetCityId,

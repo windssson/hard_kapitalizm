@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -62,12 +61,7 @@ class TransferMapScreen extends ConsumerStatefulWidget {
 }
 
 class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
-  static const Duration _dueTransferRetryDelay = Duration(seconds: 10);
-
   final int _selectedIndex = 2;
-  Timer? _dueTransferTimer;
-  bool _isCompletingDueTransfers = false;
-  DateTime? _retryDueTransfersAfter;
   int _selectedTab = 0;
   _ActiveTransferFilter _activeFilter = _ActiveTransferFilter.all;
   _HistoryTransferFilter _historyFilter = _HistoryTransferFilter.all;
@@ -78,62 +72,10 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   final Map<String, GlobalKey> _transferCardKeys = {};
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final transfers = ref.read(buyerTransferMapProvider).value;
-      if (transfers != null) {
-        _scheduleDueTransferCheckForTransfers(transfers);
-      }
-    });
-  }
-
-  @override
   void dispose() {
-    _dueTransferTimer?.cancel();
     _activeScrollController.dispose();
     _historyScrollController.dispose();
     super.dispose();
-  }
-
-  void _scheduleDueTransferCheckForTransfers(
-    List<TransferMapItemModel> transfers,
-  ) {
-    _dueTransferTimer?.cancel();
-
-    if (!mounted || transfers.isEmpty) return;
-
-    final now = DateTime.now();
-    final pendingTransfers = transfers
-        .where((transfer) => transfer.status == 'in_transit')
-        .toList();
-
-    if (pendingTransfers.isEmpty) return;
-
-    DateTime? nextDueAt;
-    for (final transfer in pendingTransfers) {
-      if (nextDueAt == null || transfer.finishAt.isBefore(nextDueAt)) {
-        nextDueAt = transfer.finishAt;
-      }
-    }
-
-    if (nextDueAt == null) return;
-
-    final retryAfter = _retryDueTransfersAfter;
-    final delay = nextDueAt.isAfter(now)
-        ? nextDueAt.difference(now)
-        : retryAfter != null && retryAfter.isAfter(now)
-        ? retryAfter.difference(now)
-        : Duration.zero;
-
-    _dueTransferTimer = Timer(delay, () async {
-      if (!mounted) return;
-      await _checkDueTransfers();
-      final refreshedTransfers = ref.read(buyerTransferMapProvider).value;
-      if (refreshedTransfers != null) {
-        _scheduleDueTransferCheckForTransfers(refreshedTransfers);
-      }
-    });
   }
 
   void _onNavSelected(int index) {
@@ -219,96 +161,91 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     }
   }
 
-  Future<void> _checkDueTransfers() async {
-    if (_isCompletingDueTransfers) return;
-
-    final transfers = ref.read(buyerTransferMapProvider).value;
-    if (transfers == null || transfers.isEmpty) return;
-    final now = DateTime.now();
-    final dueTransfers = transfers
-        .where((transfer) => !transfer.finishAt.isAfter(now))
-        .toList();
-
-    if (dueTransfers.isEmpty) return;
-
-    _isCompletingDueTransfers = true;
-    try {
-      var completedCount = 0;
-      var failedCount = 0;
-      final affectedWarehouseIds = <String>{};
-      final affectedStoreIds = <String>{};
-      final affectedFactoryIds = <String>{};
-      final affectedFarmIds = <String>{};
-      final affectedFieldIds = <String>{};
-      final affectedMineIds = <String>{};
-
-      for (final transfer in dueTransfers) {
-        final result = await _completeTransfer(ref, transfer);
-        if (result['success'] == true) {
-          completedCount += 1;
-          affectedWarehouseIds.addAll(_affectedIds(result, 'warehouse_ids'));
-          affectedStoreIds.addAll(_affectedIds(result, 'store_ids'));
-          affectedFactoryIds.addAll(_affectedIds(result, 'factory_ids'));
-          affectedFarmIds.addAll(_affectedIds(result, 'farm_ids'));
-          affectedFieldIds.addAll(_affectedIds(result, 'field_ids'));
-          affectedMineIds.addAll(_affectedIds(result, 'mine_ids'));
-        } else {
-          failedCount += 1;
-        }
-      }
-
-      _retryDueTransfersAfter = failedCount > 0
-          ? DateTime.now().add(_dueTransferRetryDelay)
-          : null;
-
-      ref.invalidate(buyerTransferMapProvider);
-      ref.invalidate(buyerTransferHistoryProvider);
-      _invalidateAffectedTransferTargets({
-        'affected': {
-          'warehouse_ids': affectedWarehouseIds.toList(),
-          'store_ids': affectedStoreIds.toList(),
-          'factory_ids': affectedFactoryIds.toList(),
-          'farm_ids': affectedFarmIds.toList(),
-          'field_ids': affectedFieldIds.toList(),
-          'mine_ids': affectedMineIds.toList(),
-        },
-      });
-      if (!mounted) return;
-
-      if (completedCount > 0) {
-        AppSnackbar.show(
-          context,
-          title: 'Teslimat Tamamlandi',
-          message: _buildDeliveryCompletionMessage(
-            dueTransfers,
-            completedCount,
-          ),
-          type: SnackbarType.success,
-        );
-      }
-    } finally {
-      _isCompletingDueTransfers = false;
-      final refreshedTransfers = ref.read(buyerTransferMapProvider).value;
-      if (refreshedTransfers != null) {
-        _scheduleDueTransferCheckForTransfers(refreshedTransfers);
-      }
-    }
+  String _transferTitle({
+    required bool isMultiItem,
+    required String productName,
+    required int itemCount,
+  }) {
+    if (!isMultiItem) return productName;
+    return 'Coklu Sevkiyat ($itemCount kalem)';
   }
 
-  Future<Map<String, dynamic>> _completeTransfer(
-    WidgetRef ref,
-    TransferMapItemModel transfer,
-  ) {
-    if (_isLogisticsTransferType(transfer.transferType)) {
-      return ref
-          .read(warehouseActionProvider)
-          .completeLogisticsTransfer(transfer.id);
-    }
-    return Future.value({
-      'success': false,
-      'message':
-          'Eski market transfer akisi kapatildi. Bu kayit yeni sistem disinda kalmis.',
-    });
+  String _transferQuantitySummary({
+    required int quantity,
+    required bool isMultiItem,
+    required int itemCount,
+  }) {
+    if (!isMultiItem) return '$quantity adet';
+    return '$quantity adet | $itemCount kalem';
+  }
+
+  String _transferRouteSummary({
+    required String sourceName,
+    required String sourceKind,
+    required String targetName,
+    required String targetKind,
+  }) {
+    return '$sourceKind: $sourceName -> $targetKind: $targetName';
+  }
+
+  Widget _buildTransferAvatar({
+    required bool isMultiItem,
+    required String productIcon,
+    required String? brandName,
+    required int itemCount,
+    required Color accentColor,
+  }) {
+    return Container(
+      width: 48.w,
+      height: 48.w,
+      padding: EdgeInsets.all(8.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+      ),
+      child: isMultiItem
+          ? Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Center(
+                  child: Icon(
+                    Icons.inventory_2_outlined,
+                    color: accentColor,
+                    size: 22.sp,
+                  ),
+                ),
+                Positioned(
+                  right: -4.w,
+                  top: -4.h,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 5.w,
+                      vertical: 2.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(999.r),
+                    ),
+                    child: Text(
+                      '$itemCount',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 9.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : BrandedProductImage(
+              fileName: productIcon,
+              brandName: brandName,
+              fit: BoxFit.contain,
+              showFrame: false,
+            ),
+    );
   }
 
   Future<void> _showTransferInfo(TransferMapItemModel transfer) async {
@@ -366,7 +303,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                transfer.displayTitle,
+                                _transferTitle(
+                                  isMultiItem: transfer.isMultiItem,
+                                  productName: transfer.product.name,
+                                  itemCount: transfer.itemCount,
+                                ),
                                 style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
                               ),
                               SizedBox(height: 4.h),
@@ -429,7 +370,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                             SizedBox(height: 14.h),
                             _buildDialogDetailRow(
                               'Miktar',
-                              '${transfer.displayQuantity} adet',
+                              _transferQuantitySummary(
+                                quantity: transfer.displayQuantity,
+                                isMultiItem: transfer.isMultiItem,
+                                itemCount: transfer.itemCount,
+                              ),
                             ),
                             if (!transfer.isMultiItem) ...[
                               _buildDialogDetailRow(
@@ -720,13 +665,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   Widget build(BuildContext context) {
     final transfersAsync = ref.watch(buyerTransferMapProvider);
     final historyAsync = ref.watch(buyerTransferHistoryProvider);
-    ref.listen<AsyncValue<List<TransferMapItemModel>>>(
-      buyerTransferMapProvider,
-      (_, next) {
-        next.whenData(_scheduleDueTransferCheckForTransfers);
-      },
-    );
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       bottomNavigationBar: AppBottomNav(
@@ -767,8 +705,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
                         return RefreshIndicator(
                           onRefresh: () async {
-                            await _checkDueTransfers();
                             ref.invalidate(buyerTransferMapProvider);
+                            ref.invalidate(buyerTransferHistoryProvider);
                           },
                           child: filteredTransfers.isEmpty
                               ? ListView(
@@ -1487,48 +1425,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     return transfer.sellerWarehouse.city.id == transfer.buyerWarehouse.city.id;
   }
 
-  bool _isLogisticsTransferType(String transferType) {
-    return transferType == 'warehouse_to_warehouse' ||
-        transferType == 'market_to_warehouse' ||
-        transferType == 'warehouse_to_store' ||
-        transferType == 'store_to_warehouse' ||
-        transferType == 'warehouse_to_production' ||
-        transferType == 'production_to_warehouse' ||
-        transferType == 'warehouse_to_production_multi' ||
-        transferType == 'production_to_warehouse_multi' ||
-        transferType == 'market_to_warehouse_multi' ||
-        transferType == 'warehouse_to_warehouse_multi' ||
-        transferType == 'warehouse_to_store_multi' ||
-        transferType == 'store_to_warehouse_multi' ||
-        transferType == 'internal_transfer';
-  }
-
-  String _buildDeliveryCompletionMessage(
-    List<TransferMapItemModel> dueTransfers,
-    int completedCount,
-  ) {
-    final buyerKinds = dueTransfers
-        .take(completedCount <= 0 ? dueTransfers.length : completedCount)
-        .map((transfer) => transfer.buyerEndpoint.kind)
-        .toSet();
-
-    if (buyerKinds.length == 1) {
-      final kind = buyerKinds.first;
-      switch (kind) {
-        case 'store':
-        case 'store_slot':
-          return '$completedCount transfer magazaya ulasti.';
-        case 'production':
-        case 'production_inventory':
-          return '$completedCount transfer uretim hattina ulasti.';
-        default:
-          return '$completedCount transfer depoya ulasti.';
-      }
-    }
-
-    return '$completedCount transfer hedeflerine ulasti.';
-  }
-
   void _focusTransferCard(
     List<TransferMapItemModel> transfers,
     String transferId,
@@ -1746,7 +1642,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                       ),
                       const Spacer(),
                       Text(
-                        '${transfers.length} hat',
+                        '${transfers.length} sevkiyat',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 10.sp,
@@ -1993,21 +1889,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           children: [
           Row(
             children: [
-              Container(
-                width: 48.w,
-                height: 48.w,
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: accentColor.withValues(alpha: 0.3)),
-                ),
-                child: BrandedProductImage(
-                  fileName: transfer.product.icon,
-                  brandName: transfer.brandName,
-                  fit: BoxFit.contain,
-                  showFrame: false,
-                ),
+              _buildTransferAvatar(
+                isMultiItem: transfer.isMultiItem,
+                productIcon: transfer.product.icon,
+                brandName: transfer.brandName,
+                itemCount: transfer.itemCount,
+                accentColor: accentColor,
               ),
               SizedBox(width: 14.w),
               Expanded(
@@ -2017,7 +1904,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     Row(
                       children: [
                         Text(
-                          transfer.displayTitle,
+                          _transferTitle(
+                            isMultiItem: transfer.isMultiItem,
+                            productName: transfer.product.name,
+                            itemCount: transfer.itemCount,
+                          ),
                           style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -2063,11 +1954,18 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                       ),
                     ),
                     Text(
-                      '${transfer.sellerWarehouse.name} -> ${transfer.buyerWarehouse.name}',
+                      _transferRouteSummary(
+                        sourceName: transfer.sellerWarehouse.name,
+                        sourceKind: transfer.sellerKindLabel,
+                        targetName: transfer.buyerWarehouse.name,
+                        targetKind: transfer.buyerKindLabel,
+                      ),
                       style: TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 11.sp,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -2116,7 +2014,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           SizedBox(height: 12.h),
           _buildCompactMetaRow(
             leftIcon: Icons.inventory_2_outlined,
-            leftText: '${transfer.displayQuantity} adet',
+            leftText: _transferQuantitySummary(
+              quantity: transfer.displayQuantity,
+              isMultiItem: transfer.isMultiItem,
+              itemCount: transfer.itemCount,
+            ),
             rightIcon: Icons.payments_outlined,
             rightText: _formatCurrency(transfer.totalPrice),
           ),
@@ -2152,7 +2054,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             children: [
               Expanded(
                 child: Text(
-                  '${transfer.sellerWarehouse.name} -> ${transfer.buyerWarehouse.name}',
+                  _transferRouteSummary(
+                    sourceName: transfer.sellerWarehouse.name,
+                    sourceKind: transfer.sellerKindLabel,
+                    targetName: transfer.buyerWarehouse.name,
+                    targetKind: transfer.buyerKindLabel,
+                  ),
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 10.sp,
@@ -2408,20 +2315,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         children: [
           Row(
             children: [
-              Container(
-                width: 48.w,
-                height: 48.w,
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: BrandedProductImage(
-                  fileName: item.product.icon,
-                  brandName: item.brandName,
-                  fit: BoxFit.contain,
-                  showFrame: false,
-                ),
+              _buildTransferAvatar(
+                isMultiItem: item.isMultiItem,
+                productIcon: item.product.icon,
+                brandName: item.brandName,
+                itemCount: item.itemCount,
+                accentColor: statusColor,
               ),
               SizedBox(width: 14.w),
               Expanded(
@@ -2429,7 +2328,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.displayTitle,
+                      _transferTitle(
+                        isMultiItem: item.isMultiItem,
+                        productName: item.product.name,
+                        itemCount: item.itemCount,
+                      ),
                       style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
                     ),
                     Text(
@@ -2441,11 +2344,18 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      '${item.sellerWarehouse.name} -> ${item.buyerWarehouse.name}',
+                      _transferRouteSummary(
+                        sourceName: item.sellerWarehouse.name,
+                        sourceKind: item.sellerKind,
+                        targetName: item.buyerWarehouse.name,
+                        targetKind: item.buyerKind,
+                      ),
                       style: TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 11.sp,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -2476,7 +2386,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           SizedBox(height: 12.h),
           _buildCompactMetaRow(
             leftIcon: Icons.inventory_2_outlined,
-            leftText: '${item.displayQuantity} adet',
+            leftText: _transferQuantitySummary(
+              quantity: item.displayQuantity,
+              isMultiItem: item.isMultiItem,
+              itemCount: item.itemCount,
+            ),
             rightIcon: Icons.payments_outlined,
             rightText: _formatCurrency(item.totalPrice),
           ),
@@ -2713,10 +2627,40 @@ class _TransferMapMovingMarker extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(
-            transfer.isRental ? Icons.local_shipping : Icons.directions_car,
-            color: transfer.isRental ? Colors.orange : AppColors.gold,
-            size: 15.sp,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Center(
+                child: Icon(
+                  transfer.isRental ? Icons.local_shipping : Icons.directions_car,
+                  color: transfer.isRental ? Colors.orange : AppColors.gold,
+                  size: 15.sp,
+                ),
+              ),
+              if (transfer.isMultiItem)
+                Positioned(
+                  right: -4.w,
+                  top: -4.h,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 4.w,
+                      vertical: 1.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(999.r),
+                    ),
+                    child: Text(
+                      '${transfer.itemCount}',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 8.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),

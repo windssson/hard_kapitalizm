@@ -27,6 +27,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedUnit = 'TUMU';
+  String _selectedScope = 'TUMU';
   bool _isUpgrading = false;
   bool _isCenterSubmitting = false;
 
@@ -90,13 +91,32 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     }
   }
 
-  List<ArgeProductModel> _filter(List<ArgeProductModel> products) {
+  List<ArgeProductModel> _filter(
+    List<ArgeProductModel> products, {
+    required int playerLevel,
+    required double playerCash,
+    required int activeResearchCount,
+    required int maxConcurrentResearches,
+  }) {
+    final hasFreeSlot = activeResearchCount < maxConcurrentResearches;
     return products.where((product) {
       final matchesSearch = _searchQuery.isEmpty ||
           product.urunAdi.toLowerCase().contains(_searchQuery);
       final matchesUnit =
           _selectedUnit == 'TUMU' || product.uretimBirimi == _selectedUnit;
-      return matchesSearch && matchesUnit;
+
+      bool matchesScope = true;
+      if (_selectedScope == 'URETTIKLERIM') {
+        matchesScope = product.isProduced;
+      } else if (_selectedScope == 'ARASTIRILABILIR') {
+        matchesScope = !product.isMaxQuality &&
+            product.canUpgrade(
+              playerLevel: playerLevel,
+              playerCash: playerCash,
+            ) &&
+            hasFreeSlot;
+      }
+      return matchesSearch && matchesUnit && matchesScope;
     }).toList();
   }
 
@@ -220,7 +240,19 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                           SliverToBoxAdapter(
                             child: researchesAsync.when(
                               loading: () => const SizedBox.shrink(),
-                              error: (_, _) => const SizedBox.shrink(),
+                              error: (e, s) => Container(
+                                padding: EdgeInsets.all(10.w),
+                                margin: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                                decoration: BoxDecoration(
+                                  color: AppColors.red.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+                                ),
+                                child: Text(
+                                  'Araştırmalar yüklenirken hata oluştu: $e',
+                                  style: TextStyle(color: AppColors.red, fontSize: 11.sp),
+                                ),
+                              ),
                               data: (researches) => researches.isEmpty
                                   ? const SizedBox.shrink()
                                   : Padding(
@@ -255,11 +287,23 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                               child: _buildUnitFilters(),
                             ),
                           ),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 0),
+                              child: _buildScopeFilters(),
+                            ),
+                          ),
                           SliverPadding(
                             padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 24.h),
-                            sliver: _buildProductGrid(
+                            sliver: _buildProductList(
                               context,
-                              _filter(products),
+                              _filter(
+                                products,
+                                playerLevel: player?.level ?? 1,
+                                playerCash: (player?.cash ?? 0).toDouble(),
+                                activeResearchCount: researchesAsync.value?.length ?? 0,
+                                maxConcurrentResearches: center.maxConcurrentResearches,
+                              ),
                               player?.level ?? 1,
                               (player?.cash ?? 0).toDouble(),
                               researchesAsync.value?.length ?? 0,
@@ -524,7 +568,53 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     );
   }
 
-  Widget _buildProductGrid(
+  static const _scopeFilters = [
+    ('TUMU', 'Tüm Ürünler'),
+    ('URETTIKLERIM', 'Sadece Ürettiklerim'),
+    ('ARASTIRILABILIR', 'Araştırılabilirler'),
+  ];
+
+  Widget _buildScopeFilters() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _scopeFilters.map((filter) {
+          final isSelected = _selectedScope == filter.$1;
+          return Padding(
+            padding: EdgeInsets.only(right: 8.w),
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedScope = filter.$1),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.blue.withValues(alpha: 0.14)
+                      : AppColors.cardBg.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(999.r),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.blue
+                        : AppColors.border.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Text(
+                  filter.$2,
+                  style: TextStyle(
+                    color: isSelected ? AppColors.blue : AppColors.textSecondary,
+                    fontSize: 11.sp,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildProductList(
     BuildContext context,
     List<ArgeProductModel> products,
     int playerLevel,
@@ -536,34 +626,24 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       return SliverToBoxAdapter(child: _buildEmptyState());
     }
 
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final cardAspectRatio = screenWidth < 380
-        ? 0.52
-        : screenWidth < 430
-            ? 0.56
-            : 0.60;
-
-    return SliverGrid(
+    return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, index) => _buildProductCard(
-          products[index],
-          playerLevel: playerLevel,
-          playerCash: playerCash,
-          activeResearchCount: activeResearchCount,
-          maxConcurrentResearches: maxConcurrentResearches,
+        (context, index) => Padding(
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+          child: _buildProductListItem(
+            products[index],
+            playerLevel: playerLevel,
+            playerCash: playerCash,
+            activeResearchCount: activeResearchCount,
+            maxConcurrentResearches: maxConcurrentResearches,
+          ),
         ),
         childCount: products.length,
-      ),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 10.w,
-        mainAxisSpacing: 10.h,
-        childAspectRatio: cardAspectRatio,
       ),
     );
   }
 
-  Widget _buildProductCard(
+  Widget _buildProductListItem(
     ArgeProductModel product, {
     required int playerLevel,
     required double playerCash,
@@ -580,7 +660,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
         hasFreeResearchSlot;
 
     return Container(
-      padding: EdgeInsets.all(10.w),
+      padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(16.r),
@@ -598,137 +678,173 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           ],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Center(
-            child: Container(
-              width: 64.w,
-              height: 64.w,
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.22),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.gold.withValues(alpha: 0.3),
-                ),
+          Container(
+            width: 54.w,
+            height: 54.w,
+            padding: EdgeInsets.all(6.w),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.22),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.gold.withValues(alpha: 0.3),
               ),
-              child: CachedAssetImage(
-                fileName: product.urunIconu,
-                fit: BoxFit.contain,
-                errorWidget: Icon(
-                  Icons.science,
-                  color: AppColors.gold,
-                  size: 28.sp,
-                ),
+            ),
+            child: CachedAssetImage(
+              fileName: product.urunIconu,
+              fit: BoxFit.contain,
+              errorWidget: Icon(
+                Icons.science,
+                color: AppColors.gold,
+                size: 24.sp,
               ),
             ),
           ),
-          SizedBox(height: 8.h),
-          Text(
-            product.urunAdi,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Row(
-            children: List.generate(ArgeProductModel.maxQualityLevel, (index) {
-              final filled = index < product.currentQualityLevel;
-              return Padding(
-                padding: EdgeInsets.only(right: 2.w),
-                child: Icon(
-                  filled ? Icons.star : Icons.star_border,
-                  color: filled ? AppColors.gold : AppColors.textMuted,
-                  size: 14.sp,
-                ),
-              );
-            }),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            'Kalite ${product.currentQualityLevel} -> ${product.targetQuality}',
-            style: TextStyle(color: AppColors.blue, fontSize: 10.sp),
-          ),
-          SizedBox(height: 6.h),
-          _buildRequirementChip(
-            Icons.account_balance_wallet_outlined,
-            _formatMoney(product.upgradeCost),
-            hasCash ? AppColors.gold : AppColors.red,
-          ),
-          SizedBox(height: 5.h),
-          _buildRequirementChip(
-            Icons.workspace_premium_outlined,
-            'Seviye ${product.requiredPlayerLevel}',
-            hasLevel ? AppColors.green : AppColors.red,
-          ),
-          SizedBox(height: 5.h),
-          _buildRequirementChip(
-            Icons.schedule,
-            '${product.upgradeDurationHours} saat',
-            AppColors.textSecondary,
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: product.isMaxQuality
-                  ? null
-                  : () => _showUpgradeSheet(
-                        product,
-                        playerLevel: playerLevel,
-                        playerCash: playerCash,
-                        hasAvailableResearchSlot: hasFreeResearchSlot,
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        product.urunAdi,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-              style: FilledButton.styleFrom(
-                backgroundColor:
-                    canUpgrade ? AppColors.gold : AppColors.cardBgLight,
-                foregroundColor: canUpgrade ? Colors.black : AppColors.textMuted,
-                disabledBackgroundColor: AppColors.cardBgLight,
-                disabledForegroundColor: AppColors.textMuted,
-                padding: EdgeInsets.symmetric(vertical: 9.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    if (product.isProduced) ...[
+                      SizedBox(width: 6.w),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.green.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4.r),
+                          border: Border.all(color: AppColors.green.withValues(alpha: 0.35)),
+                        ),
+                        child: Text(
+                          'ÜRETİLİYOR',
+                          style: TextStyle(
+                            color: AppColors.green,
+                            fontSize: 8.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-              child: Text(
-                product.isMaxQuality ? 'MAX' : 'Gelistir',
-                style: TextStyle(
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.bold,
+                SizedBox(height: 4.h),
+                Row(
+                  children: List.generate(ArgeProductModel.maxQualityLevel, (index) {
+                    final filled = index < product.currentQualityLevel;
+                    return Padding(
+                      padding: EdgeInsets.only(right: 1.w),
+                      child: Icon(
+                        filled ? Icons.star : Icons.star_border,
+                        color: filled ? AppColors.gold : AppColors.textMuted,
+                        size: 13.sp,
+                      ),
+                    );
+                  }),
                 ),
-              ),
+                SizedBox(height: 2.h),
+                Text(
+                  'Kalite ${product.currentQualityLevel} -> ${product.targetQuality}',
+                  style: TextStyle(color: AppColors.blue, fontSize: 10.sp),
+                ),
+              ],
             ),
+          ),
+          SizedBox(width: 8.w),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildMiniReqBadge(
+                    Icons.account_balance_wallet_outlined,
+                    _formatMoney(product.upgradeCost),
+                    hasCash ? AppColors.gold : AppColors.red,
+                  ),
+                  SizedBox(width: 4.w),
+                  _buildMiniReqBadge(
+                    Icons.workspace_premium_outlined,
+                    'Lv.${product.requiredPlayerLevel}',
+                    hasLevel ? AppColors.green : AppColors.red,
+                  ),
+                  SizedBox(width: 4.w),
+                  _buildMiniReqBadge(
+                    Icons.schedule,
+                    '${product.upgradeDurationHours}s',
+                    AppColors.textSecondary,
+                  ),
+                ],
+              ),
+              SizedBox(height: 8.h),
+              SizedBox(
+                width: 90.w,
+                height: 28.h,
+                child: FilledButton(
+                  onPressed: product.isMaxQuality
+                      ? null
+                      : () => _showUpgradeSheet(
+                            product,
+                            playerLevel: playerLevel,
+                            playerCash: playerCash,
+                            hasAvailableResearchSlot: hasFreeResearchSlot,
+                          ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor:
+                        canUpgrade ? AppColors.gold : AppColors.cardBgLight,
+                    foregroundColor: canUpgrade ? Colors.black : AppColors.textMuted,
+                    disabledBackgroundColor: AppColors.cardBgLight,
+                    disabledForegroundColor: AppColors.textMuted,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  child: Text(
+                    product.isMaxQuality ? 'MAKS' : 'Araştır',
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRequirementChip(IconData icon, String text, Color color) {
+  Widget _buildMiniReqBadge(IconData icon, String text, Color color) {
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 4.w),
+      padding: EdgeInsets.symmetric(vertical: 3.h, horizontal: 5.w),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8.r),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 11.sp),
-          SizedBox(width: 4.w),
-          Flexible(
-            child: Text(
-              text,
-              style: TextStyle(color: color, fontSize: 9.sp),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
+          Icon(icon, color: color, size: 10.sp),
+          SizedBox(width: 2.w),
+          Text(
+            text,
+            style: TextStyle(color: color, fontSize: 9.sp, fontWeight: FontWeight.w600),
           ),
         ],
       ),

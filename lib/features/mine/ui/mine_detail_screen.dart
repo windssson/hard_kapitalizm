@@ -408,15 +408,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   () => _startMineSendFlow(context, ref, detail),
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          Wrap(
-            spacing: 10.w,
-            runSpacing: 10.h,
-            children: [
-              SizedBox(
-                width: 100.w,
+              SizedBox(width: 8.w),
+              Expanded(
                 child: _buildActionButton(
                   detail.mine.isActive ? 'Durdur' : 'Baslat',
                   detail.mine.isActive
@@ -436,8 +429,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         },
                 ),
               ),
-              SizedBox(
-                width: 100.w,
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            children: [
+              Expanded(
                 child: _buildActionButton(
                   'Boost',
                   Icons.flash_on_rounded,
@@ -456,8 +453,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         },
                 ),
               ),
-              SizedBox(
-                width: 100.w,
+              SizedBox(width: 8.w),
+              Expanded(
                 child: _buildActionButton(
                   'Yukselt',
                   Icons.upgrade_rounded,
@@ -480,8 +477,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         },
                 ),
               ),
-              SizedBox(
-                width: 100.w,
+              SizedBox(width: 8.w),
+              Expanded(
                 child: _buildActionButton(
                   'Rapor',
                   Icons.query_stats_rounded,
@@ -650,11 +647,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         : null;
     final isBranded =
         detail.mine.brandId != SelectableProductionProductModel.defaultBrandId;
-    final quantity = detail.totalOutputQuantity;
-    final progress = _safeProgress(
-      quantity.toDouble(),
-      detail.mine.outputCapacity.toDouble(),
-    );
 
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -668,13 +660,14 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Left side: Large Icon Container
               Container(
-                width: 58.w,
-                height: 58.w,
-                padding: EdgeInsets.all(9.w),
+                width: 70.w,
+                height: 70.w,
+                padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(14.r),
                   border: Border.all(
                     color: AppColors.green.withValues(alpha: 0.3),
                   ),
@@ -686,212 +679,132 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   showFrame: false,
                 ),
               ),
-              SizedBox(width: 14.w),
+              SizedBox(width: 12.w),
+              // Right side: Title & Stats Row
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.urunAdi,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              SizedBox(height: 4.h),
-                              _buildQualityStars(detail.mine.qualityLevel),
-                              SizedBox(height: 4.h),
-                              Text(
-                                'Maliyet: ${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11.sp,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            product.urunAdi,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        SizedBox(width: 10.w),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (isBranded) ...[
-                              _buildTag('MARKALI', AppColors.gold),
-                              SizedBox(width: 6.w),
-                            ],
-                            _buildTag(
-                              detail.mine.isActive ? 'AKTIF' : 'PASIF',
-                              detail.mine.isActive
-                                  ? AppColors.green
-                                  : AppColors.red,
+                        SizedBox(width: 6.w),
+                        if (isBranded) ...[
+                          _buildTag('MARKALI', AppColors.gold),
+                          SizedBox(width: 6.w),
+                        ],
+                        _buildTag(
+                          detail.mine.isActive ? 'AKTIF' : 'PASIF',
+                          detail.mine.isActive
+                              ? AppColors.green
+                              : AppColors.red,
+                        ),
+                        SizedBox(width: 6.w),
+                        PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          offset: const Offset(0, 40),
+                          color: AppColors.cardBgLight,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            side: BorderSide(
+                              color: AppColors.border.withValues(alpha: 0.3),
                             ),
-                            SizedBox(width: 6.w),
-                            PopupMenuButton<String>(
-                              padding: EdgeInsets.zero,
-                              offset: const Offset(0, 40),
-                              color: AppColors.cardBgLight,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.r),
-                                side: BorderSide(
-                                  color: AppColors.border.withValues(alpha: 0.3),
-                                ),
+                          ),
+                          child: Container(
+                            padding: EdgeInsets.all(5.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(8.r),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.06),
                               ),
-                              child: Container(
-                                padding: EdgeInsets.all(6.w),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(10.r),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.06),
+                            ),
+                            child: Icon(
+                              Icons.more_vert,
+                              color: AppColors.textMuted,
+                              size: 16.sp,
+                            ),
+                          ),
+                          onSelected: (value) {
+                            if (value == 'product') {
+                              _showProductDialog(context, ref, detail);
+                            } else if (value == 'toggle') {
+                              _toggleMineActive(context, ref, detail);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'product',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.category,
+                                    color: AppColors.gold,
+                                    size: 18.sp,
                                   ),
-                                ),
-                                child: Icon(
-                                  Icons.more_vert,
-                                  color: AppColors.textMuted,
-                                  size: 18.sp,
-                                ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Kaynak Degistir',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13.sp,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              onSelected: (value) {
-                                if (value == 'product') {
-                                  _showProductDialog(context, ref, detail);
-                                } else if (value == 'toggle') {
-                                  _toggleMineActive(context, ref, detail);
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  value: 'product',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.category,
-                                        color: AppColors.gold,
-                                        size: 18.sp,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        'Kaynak Degistir',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.sp,
-                                        ),
-                                      ),
-                                    ],
+                            ),
+                            PopupMenuItem(
+                              value: 'toggle',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    detail.mine.isActive
+                                        ? Icons.stop_circle
+                                        : Icons.play_circle,
+                                    color: detail.mine.isActive
+                                        ? AppColors.red
+                                        : AppColors.green,
+                                    size: 18.sp,
                                   ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'toggle',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        detail.mine.isActive
-                                            ? Icons.stop_circle
-                                            : Icons.play_circle,
-                                        color: detail.mine.isActive
-                                            ? AppColors.red
-                                            : AppColors.green,
-                                        size: 18.sp,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        detail.mine.isActive
-                                            ? 'Uretimi Durdur'
-                                            : 'Uretime Basla',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.sp,
-                                        ),
-                                      ),
-                                    ],
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    detail.mine.isActive
+                                        ? 'Uretimi Durdur'
+                                        : 'Uretime Basla',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13.sp,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
+                    SizedBox(height: 8.h),
+                    _buildMineStatsRow(detail, outputInventory, activeBoost),
                   ],
                 ),
               ),
             ],
-          ),
-          SizedBox(height: 12.h),
-          Container(
-            padding: EdgeInsets.all(10.w),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
-              borderRadius: BorderRadius.circular(14.r),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Cevher stogu',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 6.h),
-                Text(
-                  '$quantity / ${detail.mine.outputCapacity}',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999.r),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 6.h,
-                    backgroundColor: Colors.white.withValues(alpha: 0.15),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.green,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
           SizedBox(height: 10.h),
-          Row(
-            children: [
-              Icon(Icons.schedule, color: AppColors.textMuted, size: 14.sp),
-              SizedBox(width: 6.w),
-                Expanded(
-                  child: Text(
-                  'Tahmini saatlik uretim: ${_estimateProductionPerHour(detail, activeBoost)}',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _buildOutputSummaryRow(context, ref, detail, outputInventory),
         ],
       ),
     );
@@ -921,6 +834,177 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           ),
         );
       }),
+    );
+  }
+
+  Widget _buildMineStatsRow(
+    MineDetailModel detail,
+    MineProductionInventoryModel? outputInventory,
+    BuildingBoostModel? activeBoost,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kalite',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+              ),
+              SizedBox(height: 2.h),
+              _buildQualityStars(detail.mine.qualityLevel),
+            ],
+          ),
+          Container(width: 1.w, height: 18.h, color: Colors.white10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Birim Maliyet',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+              ),
+              SizedBox(height: 2.h),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.payments_outlined,
+                    color: AppColors.gold,
+                    size: 11.sp,
+                  ),
+                  SizedBox(width: 3.w),
+                  Text(
+                    '${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Container(width: 1.w, height: 18.h, color: Colors.white10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Üretim / Saat',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+              ),
+              SizedBox(height: 2.h),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.schedule, color: AppColors.green, size: 11.sp),
+                  SizedBox(width: 3.w),
+                  Text(
+                    _estimateProductionPerHour(detail, activeBoost),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOutputSummaryRow(
+    BuildContext context,
+    WidgetRef ref,
+    MineDetailModel detail,
+    MineProductionInventoryModel? inventory,
+  ) {
+    final quantity = inventory?.quantity ?? 0;
+    final isBranded =
+        (inventory?.brandId ?? detail.mine.brandId) !=
+        SelectableProductionProductModel.defaultBrandId;
+    final progress = _safeProgress(
+      quantity.toDouble(),
+      detail.mine.outputCapacity.toDouble(),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              color: AppColors.green,
+              size: 14.sp,
+            ),
+            SizedBox(width: 6.w),
+            Expanded(
+              child: Text(
+                'Cevher stogu $quantity/${detail.mine.outputCapacity}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (isBranded) ...[
+              SizedBox(width: 6.w),
+              _buildInlineMetaChip('Markali', AppColors.gold),
+            ],
+          ],
+        ),
+        SizedBox(height: 6.h),
+        Container(
+          width: double.infinity,
+          height: 7.h,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(999.r),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: progress.clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.green,
+                borderRadius: BorderRadius.circular(999.r),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInlineMetaChip(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 
@@ -1832,24 +1916,13 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           sum + ((item.inventory.product?.birimHacim ?? 0) * item.quantity),
     );
     try {
-      if (items.length == 1) {
-        final item = items.first;
-        vehicleResult = await ref
-            .read(mineActionProvider)
-            .getProductionOutputTransferVehicleOptions(
-              productionInventoryId: item.inventory.id,
-              buyerWarehouseId: targetWarehouse.id,
-              quantity: item.quantity,
-            );
-      } else {
-        vehicleResult = await ref
-            .read(mineActionProvider)
-            .getProductionRouteVehicleOptions(
-              sourceCityId: detail.mine.cityId,
-              targetCityId: targetWarehouse.cityId,
-              totalVolume: totalVolume,
-            );
-      }
+      vehicleResult = await ref
+          .read(mineActionProvider)
+          .getProductionRouteVehicleOptions(
+            sourceCityId: detail.mine.cityId,
+            targetCityId: targetWarehouse.cityId,
+            totalVolume: totalVolume,
+          );
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(

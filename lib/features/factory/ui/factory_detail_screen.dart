@@ -441,7 +441,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   () => _startFactoryReceiveFlow(context, ref, detail),
                 ),
               ),
-              SizedBox(width: 10.w),
+              SizedBox(width: 8.w),
               Expanded(
                 child: _buildActionButton(
                   'Urun Gonder',
@@ -450,15 +450,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   () => _startFactorySendFlow(context, ref, detail),
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          Wrap(
-            spacing: 10.w,
-            runSpacing: 10.h,
-            children: [
-              SizedBox(
-                width: 100.w,
+              SizedBox(width: 8.w),
+              Expanded(
                 child: _buildActionButton(
                   detail.factory.isActive ? 'Durdur' : 'Baslat',
                   detail.factory.isActive
@@ -471,26 +464,24 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           AppSnackbar.show(
                             context,
                             title: 'Bilgi',
-                            message:
-                                'Uretimi baslatmadan once fabrikaya bir urun atamalisin.',
+                            message: 'Uretimi baslatmadan once fabrikaya bir urun atamalisin.',
                             type: SnackbarType.info,
                           );
                         },
                 ),
               ),
-              SizedBox(
-                width: 100.w,
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            children: [
+              Expanded(
                 child: _buildActionButton(
                   'Boost',
                   Icons.flash_on_rounded,
                   canBoost ? AppColors.goldDark : AppColors.textMuted,
                   canBoost
-                      ? () => _showFactoryBoostSheet(
-                            context,
-                            ref,
-                            detail,
-                            activeBoost,
-                          )
+                      ? () => _showFactoryBoostSheet(context, ref, detail, activeBoost)
                       : () {
                           AppSnackbar.show(
                             context,
@@ -503,32 +494,26 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         },
                 ),
               ),
-              SizedBox(
-                width: 100.w,
+              SizedBox(width: 8.w),
+              Expanded(
                 child: _buildActionButton(
                   'Yukselt',
                   Icons.upgrade_rounded,
                   canUpgrade ? AppColors.green : AppColors.textMuted,
                   canUpgrade
-                      ? () => _showFactoryUpgradeSheet(
-                            context,
-                            ref,
-                            detail,
-                            activeUpgrade,
-                          )
+                      ? () => _showFactoryUpgradeSheet(context, ref, detail, activeUpgrade)
                       : () {
                           AppSnackbar.show(
                             context,
                             title: 'Bilgi',
-                            message:
-                                'Yukseltme baslatmak icin fabrikanin aktif olmasi gerekir.',
+                            message: 'Yukseltme baslatmak icin fabrikanin aktif olmasi gerekir.',
                             type: SnackbarType.info,
                           );
                         },
                 ),
               ),
-              SizedBox(
-                width: 100.w,
+              SizedBox(width: 8.w),
+              Expanded(
                 child: _buildActionButton(
                   'Rapor',
                   Icons.query_stats_rounded,
@@ -708,13 +693,14 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Left side: Large Icon Container
               Container(
-                width: 58.w,
-                height: 58.w,
-                padding: EdgeInsets.all(9.w),
+                width: 70.w,
+                height: 70.w,
+                padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(14.r),
                   border: Border.all(
                     color: AppColors.green.withValues(alpha: 0.3),
                   ),
@@ -724,201 +710,236 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-              SizedBox(width: 14.w),
+              SizedBox(width: 12.w),
+              // Right side: Title & Stats Row
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.urunAdi,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              SizedBox(height: 4.h),
-                              _buildQualityStars(detail.factory.qualityLevel),
-                              SizedBox(height: 4.h),
-                              Text(
-                                'Maliyet: ${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11.sp,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            product.urunAdi,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        SizedBox(width: 10.w),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildTag(
-                              detail.factory.isActive ? 'AKTIF' : 'PASIF',
-                              detail.factory.isActive
-                                  ? AppColors.green
-                                  : AppColors.red,
+                        SizedBox(width: 6.w),
+                        _buildTag(
+                          detail.factory.isActive ? 'AKTIF' : 'PASIF',
+                          detail.factory.isActive
+                              ? AppColors.green
+                              : AppColors.red,
+                        ),
+                        SizedBox(width: 6.w),
+                        PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          offset: const Offset(0, 40),
+                          color: AppColors.cardBgLight,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            side: BorderSide(
+                              color: AppColors.border.withValues(alpha: 0.3),
                             ),
-                            SizedBox(width: 6.w),
-                            PopupMenuButton<String>(
-                              padding: EdgeInsets.zero,
-                              offset: const Offset(0, 40),
-                              color: AppColors.cardBgLight,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.r),
-                                side: BorderSide(
-                                  color: AppColors.border.withValues(alpha: 0.3),
-                                ),
+                          ),
+                          child: Container(
+                            padding: EdgeInsets.all(5.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(8.r),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.06),
                               ),
-                              child: Container(
-                                padding: EdgeInsets.all(6.w),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(10.r),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.06),
+                            ),
+                            child: Icon(
+                              Icons.more_vert,
+                              color: AppColors.textMuted,
+                              size: 16.sp,
+                            ),
+                          ),
+                          onSelected: (value) {
+                            if (value == 'product') {
+                              _showProductDialog(context, ref, detail);
+                            } else if (value == 'toggle') {
+                              _toggleFactoryActive(context, ref, detail);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'product',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.category,
+                                    color: AppColors.gold,
+                                    size: 18.sp,
                                   ),
-                                ),
-                                child: Icon(
-                                  Icons.more_vert,
-                                  color: AppColors.textMuted,
-                                  size: 18.sp,
-                                ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Urun Degistir',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13.sp,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              onSelected: (value) {
-                                if (value == 'product') {
-                                  _showProductDialog(context, ref, detail);
-                                } else if (value == 'toggle') {
-                                  _toggleFactoryActive(context, ref, detail);
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  value: 'product',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.category,
-                                        color: AppColors.gold,
-                                        size: 18.sp,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        'Urun Degistir',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.sp,
-                                        ),
-                                      ),
-                                    ],
+                            ),
+                            PopupMenuItem(
+                              value: 'toggle',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    detail.factory.isActive
+                                        ? Icons.stop_circle
+                                        : Icons.play_circle,
+                                    color: detail.factory.isActive
+                                        ? AppColors.red
+                                        : AppColors.green,
+                                    size: 18.sp,
                                   ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'toggle',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        detail.factory.isActive
-                                            ? Icons.stop_circle
-                                            : Icons.play_circle,
-                                        color: detail.factory.isActive
-                                            ? AppColors.red
-                                            : AppColors.green,
-                                        size: 18.sp,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        detail.factory.isActive
-                                            ? 'Uretimi Durdur'
-                                            : 'Uretime Basla',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.sp,
-                                        ),
-                                      ),
-                                    ],
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    detail.factory.isActive
+                                        ? 'Uretimi Durdur'
+                                        : 'Uretime Basla',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13.sp,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
+                    SizedBox(height: 8.h),
+                    _buildFactoryStatsRow(detail, outputInventory, activeBoost),
                   ],
                 ),
               ),
             ],
           ),
-          SizedBox(height: 12.h),
-          _buildOutputSummaryRow(context, ref, detail, outputInventory),
-          SizedBox(height: 10.h),
-          Row(
-            children: [
-              Icon(Icons.schedule, color: AppColors.textMuted, size: 14.sp),
-              SizedBox(width: 6.w),
-                Expanded(
-                  child: Text(
-                  'Tahmini saatlik uretim: ${_estimateProductionPerHour(detail, activeBoost)}',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 14.h),
-          Row(
-            children: [
-              Icon(
-                Icons.inventory_2_outlined,
-                color: AppColors.blue,
-                size: 16.sp,
-              ),
-              SizedBox(width: 8.w),
-              Text(
-                'Hammadde',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          if (detail.inputInventories.isEmpty)
-            Text(
-              'Bu urun icin hammadde stogu bulunmuyor.',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
-              ),
-            )
-          else ...[
-            _buildSharedInputCapacityBar(detail),
+          if (outputInventory != null) ...[
             SizedBox(height: 10.h),
-            ...detail.inputInventories.map(
-              (inventory) => _buildInputInventoryCard(
-                context,
-                ref,
-                detail,
-                inventory,
-              ),
-            ),
+            _buildOutputSummaryRow(context, ref, detail, outputInventory),
           ],
+          SizedBox(height: 10.h),
+          _buildFlowSection(
+            title: 'Hammadde',
+            color: AppColors.blue,
+            child: detail.inputInventories.isEmpty
+                ? _buildInlineEmptyState(
+                    'Bu urun icin bagli hammadde stogu bulunmuyor.',
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSharedInputCapacityBar(detail),
+                      SizedBox(height: 8.h),
+                      ...detail.inputInventories.map(
+                        (inventory) => _buildCompactInventoryRow(inventory),
+                      ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFactoryStatsRow(
+    FactoryDetailModel detail,
+    FactoryProductionInventoryModel? outputInventory,
+    BuildingBoostModel? activeBoost,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kalite',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+              ),
+              SizedBox(height: 2.h),
+              _buildQualityStars(detail.factory.qualityLevel),
+            ],
+          ),
+          Container(width: 1.w, height: 18.h, color: Colors.white10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Birim Maliyet',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+              ),
+              SizedBox(height: 2.h),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.payments_outlined,
+                    color: AppColors.gold,
+                    size: 11.sp,
+                  ),
+                  SizedBox(width: 3.w),
+                  Text(
+                    '${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Container(width: 1.w, height: 18.h, color: Colors.white10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Üretim / Saat',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+              ),
+              SizedBox(height: 2.h),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.schedule, color: AppColors.green, size: 11.sp),
+                  SizedBox(width: 3.w),
+                  Text(
+                    _estimateProductionPerHour(detail, activeBoost).toString(),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -946,7 +967,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$totalStock stok Ã¢â‚¬Â¢ ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
+            '$totalStock stok | ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11.sp,
@@ -1073,6 +1094,140 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
   }
 
+  Widget _buildCompactInventoryRow(FactoryProductionInventoryModel inventory) {
+    final title = inventory.product?.urunAdi.isNotEmpty == true
+        ? inventory.product!.urunAdi
+        : inventory.productId;
+    final color = AppColors.blue;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 28.w,
+            height: 28.w,
+            padding: EdgeInsets.all(4.w),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(color: color.withValues(alpha: 0.15)),
+            ),
+            child: inventory.product?.urunIconu != null
+                ? CachedAssetImage(
+                    fileName: inventory.product!.urunIconu,
+                    fit: BoxFit.contain,
+                  )
+                : Icon(Icons.inventory_2, color: color, size: 14.sp),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 1.h),
+                Text(
+                  'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL${inventory.pendingQuantity > 0 ? " | Yolda: ${inventory.pendingQuantity.toStringAsFixed(0)}" : ""}',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6.r),
+            ),
+            child: Text(
+              '${inventory.quantity}',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFlowSection({
+    required String title,
+    required Color color,
+    required Widget child,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildMiniFlowHeader(title, color),
+        SizedBox(height: 8.h),
+        child,
+      ],
+    );
+  }
+
+  Widget _buildMiniFlowHeader(String title, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 22.w,
+          height: 22.w,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(7.r),
+          ),
+          child: Icon(
+            color == AppColors.blue
+                ? Icons.science_outlined
+                : Icons.agriculture_outlined,
+            color: color,
+            size: 13.sp,
+          ),
+        ),
+        SizedBox(width: 7.w),
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInlineEmptyState(String message) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 4.h),
+      child: Text(
+        message,
+        style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+      ),
+    );
+  }
+
   Widget _buildOutputSummaryRow(
     BuildContext context,
     WidgetRef ref,
@@ -1088,63 +1243,53 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       detail.factory.outputCapacity.toDouble(),
     );
 
-    return Container(
-      padding: EdgeInsets.all(10.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'Uretilen urun stogu',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    if (isBranded) ...[
-                      SizedBox(width: 8.w),
-                      _buildInlineMetaChip('Markali', AppColors.gold),
-                    ],
-                  ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.agriculture_outlined,
+              color: AppColors.green,
+              size: 14.sp,
+            ),
+            SizedBox(width: 6.w),
+            Expanded(
+              child: Text(
+                'Uretilen urun stogu $quantity/${detail.factory.outputCapacity}',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 6.h),
-          Text(
-            '$quantity / ${detail.factory.outputCapacity}',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w600,
             ),
-          ),
-          SizedBox(height: 8.h),
-          ClipRRect(
+            if (isBranded) ...[
+              SizedBox(width: 6.w),
+              _buildInlineMetaChip('Markali', AppColors.gold),
+            ],
+          ],
+        ),
+        SizedBox(height: 6.h),
+        Container(
+          width: double.infinity,
+          height: 7.h,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 6.h,
-              backgroundColor: Colors.white.withValues(alpha: 0.15),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.green,
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: progress.clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.green,
+                borderRadius: BorderRadius.circular(999.r),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1155,41 +1300,38 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     FactoryProductionInventoryModel inventory, {
     bool isOrphan = false,
   }) {
-    final requiredAmount = isOrphan
-        ? 0.0
-        : _requiredAmountForInventory(detail, inventory.productId);
-    final quantity = inventory.quantity;
-    final pending = inventory.pendingQuantity;
+    final title = inventory.product?.urunAdi.isNotEmpty == true
+        ? inventory.product!.urunAdi
+        : inventory.productId;
+    final color = inventory.isInput ? AppColors.blue : AppColors.green;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
-      padding: EdgeInsets.all(10.w),
+      margin: EdgeInsets.only(bottom: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: Colors.black.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 42.w,
                 height: 42.w,
                 padding: EdgeInsets.all(7.w),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.22),
+                  color: Colors.black.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.28),
+                    width: 1,
+                  ),
                 ),
-                child: inventory.product?.urunIconu == null
-                    ? Icon(
-                        Icons.inventory_2_outlined,
-                        color: AppColors.textMuted,
-                        size: 18.sp,
-                      )
-                    : BrandedProductImage(
+                child: inventory.product?.urunIconu != null
+                    ? BrandedProductImage(
                         fileName: inventory.product!.urunIconu,
                         fit: BoxFit.contain,
                         brandName: !inventory.isInput &&
@@ -1199,142 +1341,133 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             ? _currentBrandName
                             : null,
                         showFrame: false,
-                      ),
+                      )
+                    : Icon(Icons.inventory_2, color: color, size: 20.sp),
               ),
-              SizedBox(width: 10.w),
+              SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      inventory.product?.urunAdi ?? inventory.productId,
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 4.h),
-                    _buildQualityStars(inventory.qualityLevel),
-                    if (!inventory.isInput) ...[
-                      SizedBox(height: 4.h),
-                      _buildInlineMetaChip(
-                        inventory.brandId !=
-                                SelectableProductionProductModel.defaultBrandId
-                            ? 'Markali'
-                            : 'Brandsiz',
-                        inventory.brandId !=
-                                SelectableProductionProductModel.defaultBrandId
-                            ? AppColors.gold
-                            : AppColors.textMuted,
-                      ),
-                    ],
-                    SizedBox(height: 4.h),
-                    Text(
-                      'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    SizedBox(height: 3.h),
+                    Row(
+                      children: [
+                        _buildQualityStars(inventory.qualityLevel),
+                        if (!inventory.isInput) ...[
+                          SizedBox(width: 6.w),
+                          _buildInlineMetaChip(
+                            inventory.brandId !=
+                                    SelectableProductionProductModel
+                                        .defaultBrandId
+                                ? 'Markali'
+                                : 'Brandsiz',
+                            inventory.brandId !=
+                                    SelectableProductionProductModel
+                                        .defaultBrandId
+                                ? AppColors.gold
+                                : AppColors.textMuted,
+                          ),
+                        ],
+                      ],
                     ),
-                    if (isOrphan) ...[
-                      SizedBox(height: 4.h),
-                      Text(
-                        'Depoya geri gonderebilecegin bagimsiz hammadde',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 10.sp,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
-              if (!isOrphan) ...[
-                SizedBox(width: 10.w),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10.r),
-                    border: Border.all(color: AppColors.blue.withValues(alpha: 0.25)),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Gereken',
-                        style: TextStyle(
-                          color: AppColors.blue,
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        requiredAmount.toStringAsFixed(requiredAmount % 1 == 0 ? 0 : 1),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(color: color.withValues(alpha: 0.35)),
+                ),
+                child: Text(
+                  '${inventory.quantity}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              ],
+              ),
             ],
           ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 8.h),
+          Divider(color: Colors.white.withValues(alpha: 0.04), height: 1),
+          SizedBox(height: 8.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Stok: $quantity',
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.payments_outlined,
+                    color: AppColors.textMuted,
+                    size: 12.sp,
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 10.sp,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                'Yolda: ${pending.toStringAsFixed(pending % 1 == 0 ? 0 : 1)}',
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.local_shipping_outlined,
+                    color: inventory.pendingQuantity > 0
+                        ? AppColors.gold
+                        : AppColors.textMuted,
+                    size: 12.sp,
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    inventory.pendingQuantity > 0
+                        ? 'Yolda: ${inventory.pendingQuantity.toStringAsFixed(0)}'
+                        : 'Yolda yok',
+                    style: TextStyle(
+                      color: inventory.pendingQuantity > 0
+                          ? AppColors.goldLight
+                          : AppColors.textMuted,
+                      fontSize: 10.sp,
+                      fontWeight: inventory.pendingQuantity > 0
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          SizedBox(height: 10.h),
-          if (isOrphan)
+          if (isOrphan) ...[
+            SizedBox(height: 8.h),
             Text(
               'Bu stok Urun Gonder akisi ile depoya geri yollanabilir.',
               style: TextStyle(
                 color: AppColors.textMuted,
                 fontSize: 10.sp,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
+          ],
         ],
       ),
     );
   }
 
-  double _requiredAmountForInventory(
-    FactoryDetailModel detail,
-    String productId,
-  ) {
-    final product = detail.product;
-    if (product == null) return 0;
-    if (product.hammadde1Id == productId) return product.hammadde1Miktar ?? 0;
-    if (product.hammadde2Id == productId) return product.hammadde2Miktar ?? 0;
-    if (product.hammadde3Id == productId) return product.hammadde3Miktar ?? 0;
-    return 0;
-  }
 
   double _safeProgress(double current, double max) {
     if (max <= 0) return 0;
@@ -2480,24 +2613,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       (sum, item) => sum + (item.quantity * item.slot.unitVolume),
     );
     try {
-      if (items.length == 1) {
-        final item = items.first;
-        vehicleResult = await ref
-            .read(factoryActionProvider)
-            .getProductionInputTransferVehicleOptions(
-              warehouseSlotId: item.slot.warehouseSlotId,
-              productionInventoryId: item.slot.targetInventory.id,
-              quantity: item.quantity,
-            );
-      } else {
-        vehicleResult = await ref
-            .read(factoryActionProvider)
-            .getProductionRouteVehicleOptions(
-              sourceCityId: warehouse.cityId,
-              targetCityId: detail.factory.cityId,
-              totalVolume: totalVolume,
-            );
-      }
+      vehicleResult = await ref
+          .read(factoryActionProvider)
+          .getProductionRouteVehicleOptions(
+            sourceCityId: warehouse.cityId,
+            targetCityId: detail.factory.cityId,
+            totalVolume: totalVolume,
+          );
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -2916,24 +3038,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           sum + ((item.inventory.product?.birimHacim ?? 0) * item.quantity),
     );
     try {
-      if (items.length == 1) {
-        final item = items.first;
-        vehicleResult = await ref
-            .read(factoryActionProvider)
-            .getProductionOutputTransferVehicleOptions(
-              productionInventoryId: item.inventory.id,
-              buyerWarehouseId: targetWarehouse.id,
-              quantity: item.quantity,
-            );
-      } else {
-        vehicleResult = await ref
-            .read(factoryActionProvider)
-            .getProductionRouteVehicleOptions(
-              sourceCityId: detail.factory.cityId,
-              targetCityId: targetWarehouse.cityId,
-              totalVolume: totalVolume,
-            );
-      }
+      vehicleResult = await ref
+          .read(factoryActionProvider)
+          .getProductionRouteVehicleOptions(
+            sourceCityId: detail.factory.cityId,
+            targetCityId: targetWarehouse.cityId,
+            totalVolume: totalVolume,
+          );
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(

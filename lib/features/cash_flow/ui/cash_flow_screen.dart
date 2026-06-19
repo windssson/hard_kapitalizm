@@ -18,7 +18,7 @@ class CashFlowScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Cash Hareketleri'),
+            const SecondaryTopBar(title: 'Para Hareketleri'),
             Expanded(
               child: entriesAsync.when(
                 loading: () => const Center(
@@ -106,7 +106,7 @@ class _CashFlowSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Tum Cash Akisi',
+            'Tüm Para Akisi',
             style: TextStyle(
               color: Colors.white,
               fontSize: 17.sp,
@@ -116,10 +116,7 @@ class _CashFlowSummaryCard extends StatelessWidget {
           SizedBox(height: 4.h),
           Text(
             '$totalCount kayit listeleniyor',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 11.sp,
-            ),
+            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
           ),
           SizedBox(height: 14.h),
           Row(
@@ -187,10 +184,7 @@ class _MetricCard extends StatelessWidget {
           SizedBox(height: 6.h),
           Text(
             label,
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 10.sp,
-            ),
+            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
           ),
           SizedBox(height: 2.h),
           Text(
@@ -217,7 +211,9 @@ class _CashFlowEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accentColor = entry.isIncome ? AppColors.green : AppColors.red;
-    final icon = entry.isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded;
+    final icon = entry.isIncome
+        ? Icons.arrow_downward_rounded
+        : Icons.arrow_upward_rounded;
     final amountPrefix = entry.isIncome ? '+' : '-';
 
     return Container(
@@ -287,11 +283,6 @@ class _CashFlowEntryCard extends StatelessWidget {
             spacing: 8.w,
             runSpacing: 8.h,
             children: [
-              _InfoChip(
-                label: 'Tip',
-                value: entry.isIncome ? 'Giris' : 'Cikis',
-                color: accentColor,
-              ),
               if ((entry.category ?? '').trim().isNotEmpty)
                 _InfoChip(
                   label: 'Kategori',
@@ -372,7 +363,7 @@ class _CashFlowEmpty extends StatelessWidget {
               ),
               SizedBox(height: 14.h),
               Text(
-                'Henuz cash hareketi yok.',
+                'Henuz para hareketi yok.',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16.sp,
@@ -398,10 +389,7 @@ class _CashFlowEmpty extends StatelessWidget {
 }
 
 class _CashFlowError extends StatelessWidget {
-  const _CashFlowError({
-    required this.message,
-    required this.onRetry,
-  });
+  const _CashFlowError({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -420,7 +408,7 @@ class _CashFlowError extends StatelessWidget {
               Icon(Icons.error_outline, color: AppColors.red, size: 42.sp),
               SizedBox(height: 12.h),
               Text(
-                'Cash hareketleri yuklenemedi.',
+                'Para hareketleri yuklenemedi.',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15.sp,
@@ -439,10 +427,7 @@ class _CashFlowError extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 14.h),
-              TextButton(
-                onPressed: onRetry,
-                child: const Text('Tekrar Dene'),
-              ),
+              TextButton(onPressed: onRetry, child: const Text('Tekrar Dene')),
             ],
           ),
         ),
@@ -480,6 +465,8 @@ String _formatLabel(String value) {
       .replaceAll('_', ' ')
       .split(' ')
       .where((part) => part.trim().isNotEmpty)
-      .map((part) => '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}')
+      .map(
+        (part) => '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}',
+      )
       .join(' ');
 }

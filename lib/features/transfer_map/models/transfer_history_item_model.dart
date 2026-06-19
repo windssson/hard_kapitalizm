@@ -125,7 +125,7 @@ class TransferHistoryItemModel {
   bool get hasBrand => brandId != defaultBrandId;
   int get displayQuantity => totalQuantity > 0 ? totalQuantity : quantity;
   String get displayTitle =>
-      isMultiItem ? 'Coklu Transfer ($itemCount kalem)' : product.name;
+      isMultiItem ? 'Coklu Sevkiyat ($itemCount kalem)' : product.name;
 
   factory TransferHistoryItemModel.fromJson(Map<String, dynamic> json) {
     final rentalCost = (json['rental_cost'] as num?)?.toDouble() ?? 0;

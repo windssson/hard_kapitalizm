@@ -587,20 +587,6 @@ class FarmActionNotifier {
   }
 
   Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
-  getProductionOutputTransferVehicleOptions({
-    required String productionInventoryId,
-    required String buyerWarehouseId,
-    required int quantity,
-  }) {
-    return _productionLogisticsService
-        .getProductionOutputTransferVehicleOptions(
-          productionInventoryId: productionInventoryId,
-          buyerWarehouseId: buyerWarehouseId,
-          quantity: quantity,
-        );
-  }
-
-  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
   getProductionRouteVehicleOptions({
     required String sourceCityId,
     required String targetCityId,
