@@ -10,13 +10,12 @@ import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_dashboard_model.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_model.dart';
 
-enum _MissionFilter {
-  all('Tum Gorevler'),
-  claimable('Odul Hazir'),
-  progress('Devam Eden'),
-  completed('Tamamlanan');
+enum _MissionTab {
+  main('Ana Görev'),
+  daily('Günlük'),
+  achievements('Başarılar');
 
-  const _MissionFilter(this.label);
+  const _MissionTab(this.label);
   final String label;
 }
 
@@ -28,8 +27,12 @@ class MissionScreen extends ConsumerStatefulWidget {
 }
 
 class _MissionScreenState extends ConsumerState<MissionScreen> {
-  _MissionFilter _selectedFilter = _MissionFilter.all;
+  _MissionTab? _selectedTab;
   final Set<String> _claimingMissionIds = <String>{};
+
+  bool _mainClaimedExpanded = false;
+  bool _dailyClaimedExpanded = false;
+  bool _achievementsClaimedExpanded = false;
 
   Future<void> _refresh() async {
     ref.invalidate(playerMissionDashboardProvider);
@@ -52,7 +55,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         AppSnackbar.show(
           context,
           title: 'Hata',
-          message: (result['message'] ?? 'Gorev odulu alinamadi.').toString(),
+          message: (result['message'] ?? 'Görev ödülü alınamadı.').toString(),
           type: SnackbarType.error,
         );
         return;
@@ -72,14 +75,14 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       final rewardParts = <String>[];
 
       if (cash > 0) rewardParts.add('+${_formatMoney(cash)} Nakit');
-      if (gold > 0) rewardParts.add('+$gold Altin');
+      if (gold > 0) rewardParts.add('+$gold Altın');
       if (xp > 0) rewardParts.add('+$xp XP');
 
       AppSnackbar.show(
         context,
-        title: 'Gorev Tamamlandi',
+        title: 'Görev Tamamlandı',
         message: rewardParts.isEmpty
-            ? 'Odul basariyla alindi.'
+            ? 'Ödül başarıyla alındı.'
             : rewardParts.join(' | '),
         type: SnackbarType.success,
       );
@@ -99,7 +102,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Gorevler'),
+            const SecondaryTopBar(title: 'Görevler'),
             Expanded(
               child: dashboardAsync.when(
                 loading: () => const Center(
@@ -111,61 +114,26 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                     return _buildEmptyState();
                   }
 
-                  final filtered = _applyFilter(dashboard.allMissions);
+                  if (_selectedTab == null) {
+                    final hasActiveMain = dashboard.mainMission != null &&
+                        !dashboard.mainMission!.isClaimed;
+                    _selectedTab =
+                        hasActiveMain ? _MissionTab.main : _MissionTab.daily;
+                  }
+
                   return RefreshIndicator(
                     onRefresh: _refresh,
+                    color: AppColors.gold,
+                    backgroundColor: AppColors.cardBg,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
                       children: [
-                        _buildOverviewCard(dashboard),
+                        _buildHeader(dashboard),
                         SizedBox(height: 14.h),
-                        _buildFilterBar(),
+                        _buildCustomTabBar(dashboard),
                         SizedBox(height: 14.h),
-                        if (dashboard.mainMission != null &&
-                            _selectedFilter == _MissionFilter.all) ...[
-                          _buildSectionTitle(
-                            'Ana Gorev',
-                            'Oyunun sonraki hedefi burada.',
-                          ),
-                          SizedBox(height: 8.h),
-                          _buildMissionCard(
-                            dashboard.mainMission!,
-                            featured: true,
-                          ),
-                          SizedBox(height: 14.h),
-                        ],
-                        if (dashboard.dailyMissions.isNotEmpty &&
-                            _selectedFilter == _MissionFilter.all) ...[
-                          _buildSectionTitle(
-                            'Gunluk Gorevler',
-                            dashboard.dailyClaimableCount > 0
-                                ? '${dashboard.dailyClaimableCount} odul hazir'
-                                : '${dashboard.dailyCompletedCount}/${dashboard.dailyMissions.length} tamamlandi',
-                          ),
-                          SizedBox(height: 8.h),
-                          ...dashboard.dailyMissions.map(
-                            (mission) => Padding(
-                              padding: EdgeInsets.only(bottom: 10.h),
-                              child: _buildMissionCard(mission),
-                            ),
-                          ),
-                          SizedBox(height: 6.h),
-                        ],
-                        _buildSectionTitle(
-                          _sectionTitleForFilter(filtered.length),
-                          '${filtered.length} gorev goruntuleniyor',
-                        ),
-                        SizedBox(height: 8.h),
-                        if (filtered.isEmpty)
-                          _buildFilterEmptyState()
-                        else
-                          ...filtered.map(
-                            (mission) => Padding(
-                              padding: EdgeInsets.only(bottom: 10.h),
-                              child: _buildMissionCard(mission),
-                            ),
-                          ),
+                        ..._buildTabContent(dashboard),
                       ],
                     ),
                   );
@@ -178,230 +146,329 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     );
   }
 
-  Widget _buildOverviewCard(PlayerMissionDashboardModel dashboard) {
+  Widget _buildHeader(PlayerMissionDashboardModel dashboard) {
+    final completed = dashboard.completedCount;
+    final total = dashboard.totalCount;
+    final ratio = dashboard.completionRatio;
+
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.55)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.cardBg,
+            AppColors.cardBgLight.withValues(alpha: 0.7),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
+          Stack(
+            alignment: Alignment.center,
             children: [
-              Icon(Icons.flag_rounded, color: AppColors.gold, size: 18.sp),
-              SizedBox(width: 8.w),
-              Text(
-                'Gorev Merkezi',
-                style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+              SizedBox(
+                width: 44.w,
+                height: 44.w,
+                child: CircularProgressIndicator(
+                  value: ratio,
+                  strokeWidth: 4.w,
+                  backgroundColor: Colors.black.withValues(alpha: 0.3),
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                ),
               ),
-              const Spacer(),
-              _buildOverviewBadge(
+              Icon(
                 dashboard.claimableCount > 0
-                    ? '${dashboard.claimableCount} Hazir'
-                    : '${dashboard.completedCount}/${dashboard.totalCount}',
-                dashboard.claimableCount > 0
+                    ? Icons.card_giftcard_rounded
+                    : Icons.emoji_events_rounded,
+                color: dashboard.claimableCount > 0
                     ? AppColors.green
-                    : AppColors.blue,
+                    : AppColors.gold,
+                size: 20.sp,
               ),
             ],
           ),
-          SizedBox(height: 10.h),
-          Text(
-            'Ana gorevler seni oyunda yonlendirir. Yan gorevler ve basarilar ise ilerleme hizini destekler.',
-            style: AppTextStyles.body.copyWith(fontSize: 11.sp),
-          ),
-          SizedBox(height: 12.h),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
-              value: dashboard.completionRatio,
-              minHeight: 10.h,
-              backgroundColor: AppColors.cardBgLight,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Görev İlerlemesi',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 3.h),
+                Text(
+                  'Toplam $completed / $total görev tamamlandı',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10.sp,
+                  ),
+                ),
+              ],
             ),
           ),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              _buildMiniStat(
-                'Hazir',
-                '${dashboard.claimableCount}',
-                AppColors.green,
+          if (dashboard.claimableCount > 0)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: AppColors.green.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20.r),
+                border: Border.all(color: AppColors.green.withValues(alpha: 0.35)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.green.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                  ),
+                ],
               ),
-              SizedBox(width: 8.w),
-              _buildMiniStat(
-                'Gunluk',
-                '${dashboard.dailyClaimableCount}',
-                Colors.orange,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded,
+                      color: AppColors.green, size: 12.sp),
+                  SizedBox(width: 4.w),
+                  Text(
+                    '${dashboard.claimableCount} Ödül',
+                    style: TextStyle(
+                      color: AppColors.green,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: 8.w),
-              _buildMiniStat(
-                'Devam Eden',
-                '${dashboard.inProgressCount}',
-                AppColors.blue,
-              ),
-            ],
-          ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildMiniStat(String label, String value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 2.h),
-            Text(
-              label,
-              style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildCustomTabBar(PlayerMissionDashboardModel dashboard) {
+    final mainBadge = (dashboard.mainMission?.claimable == true) ? 1 : 0;
+    final dailyBadge = dashboard.dailyClaimableCount;
+    final achievementBadge =
+        dashboard.sideMissions.where((m) => m.claimable).length;
 
-  Widget _buildOverviewBadge(String text, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      height: 42.h,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 11.sp,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
+      padding: EdgeInsets.all(3.w),
+      child: Row(
+        children: _MissionTab.values.map((tab) {
+          final isSelected = tab == _selectedTab;
 
-  Widget _buildFilterBar() {
-    return SizedBox(
-      height: 44.h,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _MissionFilter.values.length,
-        separatorBuilder: (context, index) => SizedBox(width: 8.w),
-        itemBuilder: (_, index) {
-          final filter = _MissionFilter.values[index];
-          final isSelected = filter == _selectedFilter;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedFilter = filter),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.gold.withValues(alpha: 0.14)
-                    : AppColors.cardBg,
-                borderRadius: BorderRadius.circular(14.r),
-                border: Border.all(
-                  color: isSelected ? AppColors.gold : AppColors.border,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  filter.label,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.gold : Colors.white,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
+          int badgeCount = 0;
+          if (tab == _MissionTab.main) badgeCount = mainBadge;
+          if (tab == _MissionTab.daily) badgeCount = dailyBadge;
+          if (tab == _MissionTab.achievements) badgeCount = achievementBadge;
+
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedTab = tab;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.gold.withValues(alpha: 0.15)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.gold.withValues(alpha: 0.4)
+                        : Colors.transparent,
                   ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      tab.label,
+                      style: TextStyle(
+                        color: isSelected ? AppColors.gold : AppColors.textSecondary,
+                        fontSize: 11.sp,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    if (badgeCount > 0) ...[
+                      SizedBox(width: 5.w),
+                      Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.green,
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        child: Text(
+                          '$badgeCount',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 8.sp,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
           );
-        },
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, String subtitle) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: AppTextStyles.h2.copyWith(fontSize: 15.sp),
-              ),
-              SizedBox(height: 2.h),
-              Text(
-                subtitle,
-                style: AppTextStyles.body.copyWith(
-                  fontSize: 10.sp,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
+  List<Widget> _buildTabContent(PlayerMissionDashboardModel dashboard) {
+    if (_selectedTab == null) return const [];
+
+    switch (_selectedTab!) {
+      case _MissionTab.main:
+        final main = dashboard.mainMission;
+        if (main == null) {
+          return [_buildMainMissionEmptyState()];
+        }
+
+        final active = !main.isClaimed ? main : null;
+        final claimed = main.isClaimed ? [main] : <PlayerMissionModel>[];
+
+        return [
+          if (active != null)
+            _buildMissionCard(active, featured: true)
+          else
+            _buildMainMissionEmptyState(),
+          _buildCollapsibleCompletedSection(
+            claimed,
+            _mainClaimedExpanded,
+            () => setState(() => _mainClaimedExpanded = !_mainClaimedExpanded),
           ),
-        ),
-      ],
-    );
+        ];
+
+      case _MissionTab.daily:
+        final active = dashboard.dailyMissions.where((m) => !m.isClaimed).toList();
+        final claimed = dashboard.dailyMissions.where((m) => m.isClaimed).toList();
+
+        return [
+          if (active.isEmpty)
+            _buildDailiesAllCompletedState(claimed.isNotEmpty)
+          else
+            ...active.map((m) => _buildMissionCard(m)),
+          _buildCollapsibleCompletedSection(
+            claimed,
+            _dailyClaimedExpanded,
+            () => setState(() => _dailyClaimedExpanded = !_dailyClaimedExpanded),
+          ),
+        ];
+
+      case _MissionTab.achievements:
+        final active = dashboard.sideMissions.where((m) => !m.isClaimed).toList();
+        final claimed = dashboard.sideMissions.where((m) => m.isClaimed).toList();
+
+        return [
+          if (active.isEmpty && claimed.isEmpty)
+            _buildEmptyState()
+          else if (active.isEmpty)
+            _buildAchievementsAllCompletedState()
+          else
+            ...active.map((m) => _buildMissionCard(m)),
+          _buildCollapsibleCompletedSection(
+            claimed,
+            _achievementsClaimedExpanded,
+            () => setState(
+                () => _achievementsClaimedExpanded = !_achievementsClaimedExpanded),
+          ),
+        ];
+    }
   }
 
   Widget _buildMissionCard(
     PlayerMissionModel mission, {
     bool featured = false,
   }) {
-    final missionTypeColor = _missionTypeColor(mission);
-    final isLoading = _claimingMissionIds.contains(mission.id);
-    final canClaim = mission.claimable && !isLoading;
     final accentColor = mission.claimable
         ? AppColors.green
         : mission.isClaimed
-            ? AppColors.blue
+            ? AppColors.textMuted
             : AppColors.gold;
 
-    return Container(
-      padding: EdgeInsets.all(featured ? 16.w : 14.w),
+    final borderAccent = mission.claimable
+        ? AppColors.green.withValues(alpha: 0.4)
+        : featured
+            ? AppColors.gold.withValues(alpha: 0.3)
+            : AppColors.border.withValues(alpha: 0.5);
+
+    final List<Widget> rewards = [];
+    if (mission.reward.xp > 0) {
+      rewards.add(_buildRewardItem(
+          Icons.star_border_rounded, '+${mission.reward.xp} XP', AppColors.blue));
+    }
+    if (mission.reward.cash > 0) {
+      rewards.add(_buildRewardItem(Icons.payments_outlined,
+          '+${_formatMoney(mission.reward.cash)} TL', AppColors.green));
+    }
+    if (mission.reward.gold > 0) {
+      rewards.add(_buildRewardItem(
+          Icons.star_rounded, '+${mission.reward.gold} Altın', AppColors.gold));
+    }
+
+    final isLoading = _claimingMissionIds.contains(mission.id);
+    final canClaim = mission.claimable && !isLoading;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(featured ? 18.r : 16.r),
-        border: Border.all(color: accentColor.withValues(alpha: 0.35)),
+        color: mission.isClaimed
+            ? AppColors.cardBg.withValues(alpha: 0.5)
+            : AppColors.cardBg,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(
+          color: borderAccent,
+          width: (mission.claimable || featured) ? 1.2 : 1,
+        ),
+        boxShadow: [
+          if (mission.claimable)
+            BoxShadow(
+              color: AppColors.green.withValues(alpha: 0.1),
+              blurRadius: 8,
+              spreadRadius: 1,
+            ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 42.w,
-                height: 42.h,
+                width: 32.w,
+                height: 32.w,
                 decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+                  color: accentColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: accentColor.withValues(alpha: 0.2)),
                 ),
                 child: Icon(
                   _iconForMission(mission.iconKey),
                   color: accentColor,
-                  size: 20.sp,
+                  size: 16.sp,
                 ),
               ),
               SizedBox(width: 10.w),
@@ -409,121 +476,113 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          margin: EdgeInsets.only(right: 8.w),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8.w,
-                            vertical: 4.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: missionTypeColor.withValues(alpha: 0.10),
-                            borderRadius: BorderRadius.circular(999.r),
-                            border: Border.all(
-                              color: missionTypeColor.withValues(alpha: 0.28),
-                            ),
-                          ),
-                          child: Text(
-                            mission.missionTypeLabel,
-                            style: TextStyle(
-                              color: missionTypeColor,
-                              fontSize: 9.sp,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            mission.title,
-                            style: AppTextStyles.body.copyWith(
-                              fontSize: featured ? 14.sp : 13.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 4.h),
                     Text(
-                      _eventHintLabel(mission.eventKey),
+                      mission.title,
                       style: TextStyle(
-                        color: accentColor,
+                        color: mission.isClaimed
+                            ? AppColors.textMuted
+                            : Colors.white,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      mission.description,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
                         fontSize: 10.sp,
-                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
               ),
-              _buildStatusPill(mission, isLoading),
+              if (mission.isClaimed)
+                Icon(Icons.check_circle_rounded,
+                    color: AppColors.textMuted, size: 16.sp)
+              else if (!mission.claimable)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Text(
+                    '${mission.progressCount}/${mission.targetCount}',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 9.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
             ],
           ),
-          SizedBox(height: 10.h),
-          Text(
-            mission.description,
-            style: AppTextStyles.body.copyWith(fontSize: 11.sp),
-          ),
-          SizedBox(height: 12.h),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
-              value: mission.progressRatio.clamp(0, 1),
-              minHeight: 8.h,
-              backgroundColor: AppColors.cardBgLight,
-              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+          if (!mission.isClaimed) ...[
+            SizedBox(height: 10.h),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3.r),
+              child: LinearProgressIndicator(
+                value: mission.progressRatio.clamp(0, 1),
+                minHeight: 4.h,
+                backgroundColor: Colors.black.withValues(alpha: 0.3),
+                valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+              ),
             ),
-          ),
-          SizedBox(height: 8.h),
+          ],
+          SizedBox(height: 10.h),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Wrap(
                   spacing: 6.w,
-                  runSpacing: 6.h,
-                  children: [
-                    _buildInfoChip(
-                      _missionProgressLabel(mission),
-                      AppColors.textMuted,
-                    ),
-                    _buildInfoChip(
-                      mission.compactRewardText,
-                      AppColors.goldLight,
-                    ),
-                  ],
+                  runSpacing: 4.h,
+                  children: rewards,
                 ),
               ),
               if (mission.claimable || isLoading)
                 SizedBox(
-                  height: 34.h,
+                  height: 26.h,
                   child: ElevatedButton(
-                    onPressed: canClaim ? () => _claimMissionReward(mission) : null,
+                    onPressed:
+                        canClaim ? () => _claimMissionReward(mission) : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.green,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Colors.black,
                       disabledBackgroundColor:
                           AppColors.green.withValues(alpha: 0.35),
                       padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.r),
+                        borderRadius: BorderRadius.circular(6.r),
                       ),
                     ),
                     child: isLoading
                         ? SizedBox(
-                            width: 14.w,
-                            height: 14.h,
+                            width: 10.w,
+                            height: 10.h,
                             child: const CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: Colors.black,
                             ),
                           )
                         : Text(
-                            'Odulu Al',
+                            'Ödülü Al',
                             style: TextStyle(
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                  ),
+                )
+              else if (mission.isClaimed)
+                Text(
+                  'Alındı',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
             ],
@@ -533,150 +592,221 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     );
   }
 
-  Widget _buildStatusPill(PlayerMissionModel mission, bool isLoading) {
-    final color = mission.claimable
-        ? AppColors.green
-        : mission.isClaimed
-            ? AppColors.blue
-            : AppColors.gold;
-    final text = isLoading
-        ? 'Aliniyor'
-        : mission.claimable
-            ? 'Hazir'
-            : mission.isClaimed
-                ? 'Tamam'
-                : '${mission.progressCount}/${mission.targetCount}';
+  Widget _buildCollapsibleCompletedSection(
+    List<PlayerMissionModel> claimedMissions,
+    bool isExpanded,
+    VoidCallback onToggle,
+  ) {
+    if (claimedMissions.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 10.sp,
-          fontWeight: FontWeight.w700,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(height: 8.h),
+        InkWell(
+          onTap: onToggle,
+          borderRadius: BorderRadius.circular(8.r),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Tamamlanan Görevler (${claimedMissions.length})',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: AppColors.textMuted,
+                  size: 16.sp,
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+        if (isExpanded) ...[
+          SizedBox(height: 4.h),
+          ...claimedMissions.map((m) => _buildMissionCard(m)),
+        ],
+      ],
     );
   }
 
-  Widget _buildInfoChip(String text, Color color) {
+  Widget _buildRewardItem(IconData icon, String value, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 9.sp,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 12.sp),
+          SizedBox(width: 4.w),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 9.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
-  }
-
-  String _missionProgressLabel(PlayerMissionModel mission) {
-    if (mission.claimable) return 'Odul Hazir';
-    if (mission.isClaimed) return 'Tamamlandi';
-    return '${mission.progressCount}/${mission.targetCount}';
   }
 
   Widget _buildEmptyState() => Center(
-    child: Padding(
-      padding: EdgeInsets.all(24.w),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.flag_outlined, color: AppColors.textMuted, size: 54.sp),
-          SizedBox(height: 14.h),
-          Text(
-            'Aktif gorev bulunamadi',
-            style: AppTextStyles.h2.copyWith(fontSize: 17.sp),
+        child: Padding(
+          padding: EdgeInsets.all(24.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.flag_outlined, color: AppColors.textMuted, size: 54.sp),
+              SizedBox(height: 14.h),
+              Text(
+                'Aktif Görev Bulunmadı',
+                style: AppTextStyles.h2.copyWith(fontSize: 17.sp),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                'Yeni görevler oluştukça burada ilerleme paneli açılacak.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.body.copyWith(fontSize: 12.sp),
+              ),
+            ],
           ),
-          SizedBox(height: 8.h),
-          Text(
-            'Yeni gorevler olustukca burada ilerleme paneli acilacak.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.body.copyWith(fontSize: 12.sp),
-          ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 
-  Widget _buildFilterEmptyState() => Container(
-    padding: EdgeInsets.all(18.w),
-    decoration: BoxDecoration(
-      color: AppColors.cardBg,
-      borderRadius: BorderRadius.circular(16.r),
-      border: Border.all(color: AppColors.border),
-    ),
-    child: Text(
-      'Bu filtre icin gorev bulunamadi.',
-      style: AppTextStyles.body.copyWith(fontSize: 12.sp),
-      textAlign: TextAlign.center,
-    ),
-  );
+  Widget _buildMainMissionEmptyState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 20.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 48.sp),
+            SizedBox(height: 12.h),
+            Text(
+              'Tebrikler!',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              'Mevcut tüm ana hedefleri tamamladın.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 11.sp,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDailiesAllCompletedState(bool hasClaimedMissions) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 20.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.task_alt_rounded, color: AppColors.green, size: 48.sp),
+            SizedBox(height: 12.h),
+            Text(
+              hasClaimedMissions ? 'Harika İş!' : 'Günlük Görev Yok',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              hasClaimedMissions
+                  ? 'Bugünün tüm günlük görevlerini tamamladın.\nYarın yeni görevler gelecek!'
+                  : 'Bugün için atanmış bir günlük görev bulunmuyor.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 11.sp,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementsAllCompletedState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 20.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 48.sp),
+            SizedBox(height: 12.h),
+            Text(
+              'Mükemmel!',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              'Tüm başarımları ve yan görevleri tamamladın.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 11.sp,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildErrorState(String message) => Center(
-    child: Padding(
-      padding: EdgeInsets.all(24.w),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, color: AppColors.red, size: 48.sp),
-          SizedBox(height: 12.h),
-          Text(
-            'Gorevler yuklenemedi',
-            style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+        child: Padding(
+          padding: EdgeInsets.all(24.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, color: AppColors.red, size: 48.sp),
+              SizedBox(height: 12.h),
+              Text(
+                'Görevler yüklenemedi',
+                style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                message,
+                style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-          SizedBox(height: 8.h),
-          Text(
-            message,
-            style: AppTextStyles.body.copyWith(fontSize: 11.sp),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    ),
-  );
-
-  List<PlayerMissionModel> _applyFilter(List<PlayerMissionModel> missions) {
-    switch (_selectedFilter) {
-      case _MissionFilter.all:
-        return missions;
-      case _MissionFilter.claimable:
-        return missions.where((mission) => mission.claimable).toList();
-      case _MissionFilter.progress:
-        return missions.where((mission) => mission.isInProgress).toList();
-      case _MissionFilter.completed:
-        return missions
-            .where((mission) => mission.isCompleted || mission.isClaimed)
-            .toList();
-    }
-  }
-
-  String _sectionTitleForFilter(int count) {
-    switch (_selectedFilter) {
-      case _MissionFilter.all:
-        return 'Tum Gorevler';
-      case _MissionFilter.claimable:
-        return 'Odulu Hazir Gorevler';
-      case _MissionFilter.progress:
-        return 'Devam Eden Gorevler';
-      case _MissionFilter.completed:
-        return 'Tamamlanan Gorevler';
-    }
-  }
+        ),
+      );
 
   IconData _iconForMission(String? iconKey) {
     switch (iconKey) {
@@ -697,29 +827,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       default:
         return Icons.flag_rounded;
     }
-  }
-
-  Color _missionTypeColor(PlayerMissionModel mission) {
-    switch (mission.missionType) {
-      case 'main':
-        return AppColors.gold;
-      case 'daily':
-        return Colors.orangeAccent;
-      case 'achievement':
-        return Colors.purpleAccent;
-      case 'side':
-      default:
-        return AppColors.blue;
-    }
-  }
-
-  String _eventHintLabel(String eventKey) {
-    if (eventKey.contains('construction')) return 'Insaat ilerlemesi';
-    if (eventKey.contains('upgrade')) return 'Yukseltme ilerlemesi';
-    if (eventKey.contains('sale')) return 'Satis ilerlemesi';
-    if (eventKey.contains('transfer')) return 'Transfer ilerlemesi';
-    if (eventKey.contains('research')) return 'Arastirma ilerlemesi';
-    return 'Genel ilerleme';
   }
 
   String _formatMoney(dynamic amount) {
