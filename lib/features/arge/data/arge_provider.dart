@@ -104,7 +104,7 @@ final activeArgeCenterUpgradeProvider =
         return null;
       }
 
-      return BuildingUpgradeModel.fromJson(
+      return BuildingUpgradeModel.fromJsonNullable(
         Map<String, dynamic>.from(response as Map),
       );
     });

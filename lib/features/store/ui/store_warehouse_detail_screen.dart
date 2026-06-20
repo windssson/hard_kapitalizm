@@ -298,7 +298,10 @@ class _StoreWarehouseSlotCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  slot.productName,
+                  slot.productName +
+                      (slot.brandId != '00000000-0000-0000-0000-000000000000'
+                          ? ' (${currentBrandName ?? 'Markali'})'
+                          : ''),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

@@ -83,6 +83,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(playerBrandCompanyProvider);
     final detailAsync = ref.watch(mineDetailProvider(widget.mineId));
     final activeBoost = ref.watch(activeMineBoostProvider(widget.mineId)).value;
     final activeUpgrade = ref.watch(activeMineUpgradeProvider(widget.mineId)).value;
@@ -691,7 +692,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            product.urunAdi,
+                            product.urunAdi +
+                                (isBranded
+                                    ? ' (${_currentBrandName ?? 'Markali'})'
+                                    : ''),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 14.sp,
@@ -1393,7 +1397,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       final product = selectableProduct.product;
       return ProductSelectionOption(
         id: product.id,
-        title: product.urunAdi,
+        title: product.urunAdi + (selectableProduct.hasPreferredBrand ? ' (${_currentBrandName ?? 'Markali'})' : ''),
         subtitle: 'Saatlik uretim: ${product.uretimAdedi}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
@@ -1607,7 +1611,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         builder: (dialogContext) => AlertDialog(
           backgroundColor: AppColors.background,
           title: Text(
-            item.product?.urunAdi ?? item.productId,
+            (item.product?.urunAdi ?? item.productId) +
+                (item.brandId != SelectableProductionProductModel.defaultBrandId
+                    ? ' (${_currentBrandName ?? 'Markali'})'
+                    : ''),
             style: TextStyle(color: Colors.white, fontSize: 18.sp),
           ),
           content: Column(
@@ -1778,7 +1785,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      item.product?.urunAdi ?? item.productId,
+                                      (item.product?.urunAdi ?? item.productId) +
+                                          (item.brandId !=
+                                                  SelectableProductionProductModel
+                                                      .defaultBrandId
+                                              ? ' (${_currentBrandName ?? 'Markali'})'
+                                              : ''),
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 13.sp,

@@ -19,20 +19,289 @@ import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_perf
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_type_model.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_route_selection_screen.dart';
 
-class LogisticsManagementScreen extends ConsumerWidget {
+class LogisticsManagementScreen extends ConsumerStatefulWidget {
   const LogisticsManagementScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LogisticsManagementScreen> createState() => _LogisticsManagementScreenState();
+}
+
+class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementScreen> {
+  String? _expandedVehicleId;
+
+  Future<void> _handleRefuelAction(
+    BuildContext context,
+    LogisticsVehicleModel vehicle,
+  ) async {
+    final result = await ref.read(logisticsActionProvider).refuelVehicle(
+          vehicle.id,
+        );
+    if (!context.mounted) return;
+    _handleOpResult(context, result, 'Yakıt ikmali yapıldı.');
+  }
+
+  Future<void> _handleRepairAction(
+    BuildContext context,
+    LogisticsVehicleModel vehicle,
+    LogisticsVehicleTypeModel? type,
+    double playerCash,
+  ) async {
+    final missingCondition = (100 - vehicle.condition).clamp(0, 100);
+    final purchasePrice = type?.purchasePrice ?? 0;
+    final missingConditionRatio = missingCondition / 100.0;
+    final repairCost = missingConditionRatio * (purchasePrice / 2);
+
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        title: Text('Bakım Onayı', style: AppTextStyles.h2),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              type?.name ?? 'Araç',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'Eksik kondisyon: $missingCondition (%${(missingConditionRatio * 100).toStringAsFixed(0)})',
+              style: AppTextStyles.body,
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Araç ücreti: ${purchasePrice.toStringAsFixed(0)} TL',
+              style: AppTextStyles.body,
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Bakım maliyeti: ${repairCost.toStringAsFixed(0)} TL',
+              style: TextStyle(
+                color: AppColors.gold,
+                fontSize: 13.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Mevcut nakit: ${playerCash.toStringAsFixed(0)} TL',
+              style: TextStyle(
+                color: playerCash >= repairCost
+                    ? AppColors.textMuted
+                    : AppColors.red,
+                fontSize: 11.sp,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+            child: const Text(
+              'Bakımı Yap',
+              style: TextStyle(color: Colors.black),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldProceed != true) {
+      return;
+    }
+
+    final result = await ref.read(logisticsActionProvider).repairVehicle(
+          vehicle.id,
+        );
+    if (!context.mounted) return;
+    _handleOpResult(
+      context,
+      result,
+      'Bakım tamamlandı.',
+      includeCompany: false,
+    );
+  }
+
+  Future<void> _handleActiveToggle(
+    BuildContext context,
+    LogisticsVehicleModel vehicle,
+  ) async {
+    final result = await ref.read(logisticsActionProvider).setVehicleActive(
+          vehicleId: vehicle.id,
+          isActive: vehicle.status == 'inactive',
+        );
+    if (!context.mounted) return;
+    _handleOpResult(
+      context,
+      result,
+      vehicle.status == 'inactive'
+          ? 'Araç aktif edildi.'
+          : 'Araç pasife alındı.',
+      includeCompany: false,
+      includePlayer: false,
+    );
+  }
+
+  Future<void> _handleRentalAction(
+    BuildContext context,
+    LogisticsVehicleModel vehicle,
+  ) async {
+    if (vehicle.isAvailableForRent) {
+      final result = await ref.read(logisticsActionProvider).setVehicleRental(
+            vehicleId: vehicle.id,
+            isAvailableForRent: false,
+            rentalPrice: 0,
+          );
+      if (!context.mounted) return;
+      _handleOpResult(
+        context,
+        result,
+        'Kiralama kapatıldı.',
+        includeCompany: false,
+        includePlayer: false,
+      );
+      return;
+    }
+
+    final controller = TextEditingController();
+    final rentalPrice = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        title: Text('Kira Fiyatı Belirle', style: AppTextStyles.h2),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              readOnly: true,
+              showCursor: true,
+              enableInteractiveSelection: false,
+              decoration: const InputDecoration(
+                hintText: 'Günlük kira bedeli',
+              ),
+            ),
+            SizedBox(height: 12.h),
+            NumericKeyboard(
+              controller: controller,
+              allowDecimal: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, double.tryParse(controller.text)),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!context.mounted) return;
+
+    if (rentalPrice != null && rentalPrice > 0) {
+      final result = await ref.read(logisticsActionProvider).setVehicleRental(
+            vehicleId: vehicle.id,
+            isAvailableForRent: true,
+            rentalPrice: rentalPrice,
+          );
+      if (!context.mounted) return;
+      _handleOpResult(
+        context,
+        result,
+        'Araç kiraya açıldı.',
+        includeCompany: false,
+        includePlayer: false,
+      );
+    } else if (rentalPrice != null) {
+      AppSnackbar.show(
+        context,
+        title: 'Geçersiz Fiyat',
+        message: 'Kira fiyatı sıfırdan büyük olmalı.',
+        type: SnackbarType.warning,
+      );
+    }
+  }
+
+  Future<void> _openRouteSelectionPage(
+    BuildContext context,
+    LogisticsVehicleModel vehicle,
+    List<CityModel> cities,
+  ) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => LogisticsRouteSelectionScreen(
+          vehicle: vehicle,
+          cities: cities,
+        ),
+      ),
+    );
+
+    if (saved == true) {
+      ref.invalidate(logisticsVehicleListProvider);
+    }
+  }
+
+  void _handleOpResult(
+    BuildContext context,
+    Map<String, dynamic> result,
+    String message, {
+    bool includeVehicleList = true,
+    bool includeCompany = true,
+    bool includePlayer = true,
+  }) {
+    if (result['success'] == true) {
+      if (includeVehicleList) {
+        ref.invalidate(logisticsVehicleListProvider);
+      }
+      if (includeCompany) {
+        ref.invalidate(playerLogisticsCompanyProvider);
+      }
+      if (includePlayer) {
+        ref.invalidate(playerProvider);
+      }
+      AppSnackbar.show(
+        context,
+        title: 'Başarılı',
+        message: message,
+        type: SnackbarType.success,
+      );
+    } else {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: result['message'] ?? 'İşlem başarısız.',
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final companyAsync = ref.watch(playerLogisticsCompanyProvider);
     final constructionAsync = ref.watch(playerLogisticsConstructionProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Lojistik Yonetimi'),
+            const SecondaryTopBar(title: 'Lojistik Yönetimi'),
             Expanded(
               child: companyAsync.when(
                 data: (company) => constructionAsync.when(
@@ -51,7 +320,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
                               data: (performanceByVehicle) => vehiclesAsync.when(
                                 data: (vehicles) => _buildContent(
                                   context: context,
-                                  ref: ref,
                                   company: company,
                                   construction: construction,
                                   vehicles: vehicles,
@@ -62,32 +330,32 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                 ),
                                 loading: _buildLoading,
                                 error: (error, stack) =>
-                                    _buildError('Araclar yuklenemedi.'),
+                                    _buildError('Araçlar yüklenemedi.'),
                               ),
                               loading: _buildLoading,
                               error: (error, stack) =>
-                                  _buildError('Performans verisi yuklenemedi.'),
+                                  _buildError('Performans verisi yüklenemedi.'),
                             ),
                             loading: _buildLoading,
                             error: (error, stack) =>
-                                _buildError('Sehirler yuklenemedi.'),
+                                _buildError('Şehirler yüklenemedi.'),
                           ),
                           loading: _buildLoading,
                           error: (error, stack) =>
-                              _buildError('Arac tipleri yuklenemedi.'),
+                              _buildError('Araç tipleri yüklenemedi.'),
                         ),
                         loading: _buildLoading,
                         error: (error, stack) =>
-                            _buildError('Oyuncu verisi yuklenemedi.'),
+                            _buildError('Oyuncu verisi yüklenemedi.'),
                       );
                     },
                   ),
                   loading: _buildLoading,
                   error: (error, stack) =>
-                      _buildError('Insaat durumu okunamadi.'),
+                      _buildError('İnşaat durumu okunamadı.'),
                 ),
                 loading: _buildLoading,
-                error: (error, stack) => _buildError('Firma verisi yuklenemedi.'),
+                error: (error, stack) => _buildError('Firma verisi yüklenemedi.'),
               ),
             ),
           ],
@@ -98,7 +366,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
 
   Widget _buildContent({
     required BuildContext context,
-    required WidgetRef ref,
     required LogisticsCompanyModel? company,
     required Map<String, dynamic>? construction,
     required List<LogisticsVehicleModel> vehicles,
@@ -127,22 +394,21 @@ class LogisticsManagementScreen extends ConsumerWidget {
         (constructionParams?['construction_time_minutes'] as num?)?.toInt() ?? 0;
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(5.w, 12.h, 5.w, 80.h),
+      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 80.h),
       children: [
         if (company != null) ...[
-          _buildCompanyCard(context, ref, company, playerCash),
-          SizedBox(height: 24.h),
-          _buildFleetOverview(ref, vehicles, performanceByVehicle),
-          SizedBox(height: 24.h),
-          _buildSectionHeader('FILO YONETIMI', '${vehicles.length} Arac'),
-          SizedBox(height: 12.h),
+          _buildCompanyCard(context, company, playerCash),
+          SizedBox(height: 16.h),
+          _buildFleetOverview(vehicles, performanceByVehicle),
+          SizedBox(height: 16.h),
+          _buildSectionHeader('FİLO YÖNETİMİ', '${vehicles.length} Araç'),
+          SizedBox(height: 8.h),
           if (vehicles.isEmpty)
             _buildEmptyFleetCard()
           else
             ...vehicles.map(
               (vehicle) => _buildVehicleCard(
                 context,
-                ref,
                 vehicle,
                 vehicleTypeMap[vehicle.logisticsVehicleTypeId],
                 performanceByVehicle[vehicle.id] ??
@@ -152,15 +418,14 @@ class LogisticsManagementScreen extends ConsumerWidget {
                 playerCash,
               ),
             ),
-          _buildPurchaseVehicleEntry(context, ref, company, playerCash),
+          _buildPurchaseVehicleEntry(context, company, playerCash),
         ],
         if (construction != null) ...[
-          if (company != null) SizedBox(height: 24.h),
-          _buildSectionHeader('KURULUM DEVAM EDIYOR', 'Insaat'),
-          SizedBox(height: 12.h),
+          if (company != null) SizedBox(height: 16.h),
+          _buildSectionHeader('KURULUM DEVAM EDİYOR', 'İnşaat'),
+          SizedBox(height: 8.h),
           _buildConstructionCard(
             context,
-            ref,
             construction,
             constructionParams,
             finishAt,
@@ -191,13 +456,13 @@ class LogisticsManagementScreen extends ConsumerWidget {
             ),
             SizedBox(height: 20.h),
             Text(
-              'Lojistik Aginizi Kurun',
+              'Lojistik Ağınızı Kurun',
               style: AppTextStyles.h2,
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 12.h),
             Text(
-              'Urunlerinizi tasimak ve kiralama geliri elde etmek icin bir lojistik firmasi kurmalisiniz.',
+              'Ürünlerinizi taşımak ve kiralama geliri elde etmek için bir lojistik firması kurmalısınız.',
               style: AppTextStyles.body.copyWith(height: 1.5),
               textAlign: TextAlign.center,
             ),
@@ -215,7 +480,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                 ),
               ),
               child: Text(
-                'FIRMAYI KUR',
+                'FİRMAYI KUR',
                 style: TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
@@ -231,7 +496,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
 
   Widget _buildCompanyCard(
     BuildContext context,
-    WidgetRef ref,
     LogisticsCompanyModel company,
     double playerCash,
   ) {
@@ -240,56 +504,87 @@ class LogisticsManagementScreen extends ConsumerWidget {
         : (company.currentFuel / company.fuelCapacity).clamp(0.0, 1.0);
 
     return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.gold.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.all(18.w),
+      decoration: AppDecorations.premiumCard(AppColors.gold, 24.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 56.w,
-                height: 56.w,
+                width: 52.w,
+                height: 52.w,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppColors.cardBgLight, AppColors.cardBg],
+                    colors: [
+                      AppColors.gold.withValues(alpha: 0.2),
+                      AppColors.cardBgLight,
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16.r),
                   border: Border.all(
-                    color: AppColors.borderGold.withValues(alpha: 0.4),
+                    color: AppColors.gold.withValues(alpha: 0.45),
+                    width: 1.5,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.15),
+                      blurRadius: 8,
+                    ),
+                  ],
                 ),
                 child: Icon(
-                  Icons.business_center,
+                  Icons.business_center_rounded,
                   color: AppColors.gold,
-                  size: 30.sp,
+                  size: 26.sp,
                 ),
               ),
-              SizedBox(width: 14.w),
+              SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       company.name,
-                      style: AppTextStyles.h1.copyWith(fontSize: 20.sp),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    Text(
-                      'Global lojistik merkezi - Seviye ${company.level}',
-                      style: AppTextStyles.body,
+                    SizedBox(height: 4.h),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6.r),
+                            border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            'SEVİYE ${company.level}',
+                            style: TextStyle(
+                              color: AppColors.gold,
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 6.w),
+                        Text(
+                          'Lojistik Genel Merkezi',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 10.sp,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -297,47 +592,59 @@ class LogisticsManagementScreen extends ConsumerWidget {
               _buildStatusChip(company.isActive),
             ],
           ),
-          SizedBox(height: 20.h),
+          SizedBox(height: 18.h),
           Row(
             children: [
               Expanded(
-                child: _buildStatTile(
-                  'FILO DURUMU',
-                  '${company.currentVehicleCount}/${company.maxVehicleCount}',
+                child: _buildPremiumStatTile(
+                  'FİLO DURUMU',
+                  '${company.currentVehicleCount} / ${company.maxVehicleCount}',
                   Icons.local_shipping_rounded,
+                  AppColors.blue,
                 ),
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: 10.w),
               Expanded(
-                child: _buildStatTile(
+                child: _buildPremiumStatTile(
                   'MERKEZ YAKIT',
-                  '${company.currentFuel}/${company.fuelCapacity} L',
+                  '${company.currentFuel} / ${company.fuelCapacity} L',
                   Icons.gas_meter_rounded,
+                  AppColors.gold,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 20.h),
+          SizedBox(height: 16.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'MERKEZ YAKIT REZERVI',
-                style: AppTextStyles.titleGold.copyWith(fontSize: 11.sp),
+              Row(
+                children: [
+                  Icon(Icons.bolt, color: AppColors.gold, size: 12.sp),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'MERKEZ YAKIT REZERVİ',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
               Text(
                 '%${(fuelRatio * 100).toInt()}',
                 style: TextStyle(
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12.sp,
+                  fontSize: 11.sp,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 6.h),
           _buildPremiumProgressBar(fuelRatio, AppColors.gold),
-          SizedBox(height: 14.h),
+          SizedBox(height: 16.h),
           Row(
             children: [
               Expanded(
@@ -346,28 +653,26 @@ class LogisticsManagementScreen extends ConsumerWidget {
                       ? null
                       : () => _showFuelSupplySheet(
                             context,
-                            ref,
                             company,
                             playerCash,
                           ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.cardBgLight,
-                    disabledBackgroundColor: AppColors.border,
-                    foregroundColor: AppColors.gold,
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: Colors.black,
+                    disabledBackgroundColor: AppColors.cardBgLight.withValues(alpha: 0.5),
+                    disabledForegroundColor: AppColors.textMuted,
+                    padding: EdgeInsets.symmetric(vertical: 11.h),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                      side: BorderSide(
-                        color: AppColors.gold.withValues(alpha: 0.35),
-                      ),
+                      borderRadius: BorderRadius.circular(10.r),
                     ),
                   ),
-                  icon: const Icon(Icons.local_gas_station_outlined),
+                  icon: Icon(Icons.local_gas_station_rounded, size: 14.sp),
                   label: Text(
-                    company.currentFuel >= company.fuelCapacity ? 'DOLU' : 'YAKIT',
+                    company.currentFuel >= company.fuelCapacity ? 'REZERV DOLU' : 'YAKIT AL',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 12.sp,
+                      fontSize: 11.sp,
                     ),
                   ),
                 ),
@@ -378,20 +683,21 @@ class LogisticsManagementScreen extends ConsumerWidget {
                   onPressed: () => context.go('/logistics/finance'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.gold,
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    padding: EdgeInsets.symmetric(vertical: 11.h),
                     side: BorderSide(
-                      color: AppColors.gold.withValues(alpha: 0.35),
+                      color: AppColors.gold.withValues(alpha: 0.4),
+                      width: 1.2,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
+                      borderRadius: BorderRadius.circular(10.r),
                     ),
                   ),
-                  icon: const Icon(Icons.analytics_outlined),
+                  icon: Icon(Icons.analytics_outlined, size: 14.sp),
                   label: Text(
-                    'RAPOR',
+                    'FİNANS RAPORU',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 12.sp,
+                      fontSize: 11.sp,
                     ),
                   ),
                 ),
@@ -403,12 +709,49 @@ class LogisticsManagementScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildPremiumStatTile(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color.withValues(alpha: 0.7), size: 13.sp),
+              SizedBox(width: 6.w),
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 9.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFleetOverview(
-    WidgetRef ref,
     List<LogisticsVehicleModel> vehicles,
     Map<String, LogisticsVehiclePerformanceModel> performanceByVehicle,
   ) {
-    final assignedRoutes = vehicles.where((vehicle) => vehicle.hasAssignedRoute).length;
     final onRouteCount = vehicles.where((vehicle) => vehicle.status == 'on_route').length;
     final totalTrips = performanceByVehicle.values.fold<int>(
       0,
@@ -426,109 +769,66 @@ class LogisticsManagementScreen extends ConsumerWidget {
     final dailyExpense = todayEntries
         .where((entry) => entry.isExpense)
         .fold<double>(0, (sum, entry) => sum + entry.amount);
+    final netDaily = dailyIncome - dailyExpense;
 
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildOverviewStat('Aktif Filo', '$onRouteCount / ${vehicles.length}', Icons.local_shipping_outlined, AppColors.blue),
+          _buildOverviewDivider(),
+          _buildOverviewStat('Toplam Sefer', '$totalTrips', Icons.route_outlined, AppColors.gold),
+          _buildOverviewDivider(),
+          _buildOverviewStat(
+            'Günlük Kâr', 
+            '${netDaily >= 0 ? '+' : ''}${_formatMoney(netDaily)} TL', 
+            Icons.payments_outlined, 
+            netDaily >= 0 ? AppColors.green : AppColors.red
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverviewStat(String label, String value, IconData icon, Color valueColor) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('OPERASYON OZETI', '$totalTrips Sefer'),
-        SizedBox(height: 12.h),
-        Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBgLight.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCompactStatItem(
-                      'AKTIF SEVKIYAT',
-                      '$onRouteCount',
-                      Icons.route,
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                  Expanded(
-                    child: _buildCompactStatItem(
-                      'ATANMIS ROTA',
-                      '$assignedRoutes/${vehicles.length}',
-                      Icons.alt_route,
-                    ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 12.h),
-                child: Divider(color: AppColors.borderGold.withValues(alpha: 0.2), height: 1),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCompactStatItem(
-                      'GUNLUK GELIR',
-                      '${dailyIncome.toStringAsFixed(0)} TL',
-                      Icons.payments_outlined,
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                  Expanded(
-                    child: _buildCompactStatItem(
-                      'GUNLUK GIDER',
-                      '${dailyExpense.toStringAsFixed(0)} TL',
-                      Icons.receipt_long_outlined,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppColors.textMuted, size: 12.sp),
+            SizedBox(width: 4.w),
+            Text(
+              label,
+              style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          value,
+          style: TextStyle(color: valueColor, fontSize: 13.sp, fontWeight: FontWeight.bold),
         ),
       ],
     );
   }
 
-  Widget _buildCompactStatItem(String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.gold, size: 20.sp),
-        SizedBox(width: 8.w),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
+  Widget _buildOverviewDivider() {
+    return Container(
+      height: 24.h,
+      width: 1,
+      color: AppColors.border.withValues(alpha: 0.5),
     );
   }
 
   Widget _buildVehicleCard(
     BuildContext context,
-    WidgetRef ref,
     LogisticsVehicleModel vehicle,
     LogisticsVehicleTypeModel? type,
     LogisticsVehiclePerformanceModel performance,
@@ -536,6 +836,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     Map<String, CityModel> cityMap,
     double playerCash,
   ) {
+    final isExpanded = _expandedVehicleId == vehicle.id;
     final fuelRatio = vehicle.fuelCapacity == 0
         ? 0.0
         : (vehicle.currentFuel / vehicle.fuelCapacity).clamp(0.0, 1.0);
@@ -546,135 +847,241 @@ class LogisticsManagementScreen extends ConsumerWidget {
         : vehicle.id.toUpperCase();
 
     return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
+      margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
         color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: isExpanded
+              ? AppColors.gold.withValues(alpha: 0.45)
+              : AppColors.borderGold.withValues(alpha: 0.15),
+          width: isExpanded ? 1.2 : 1,
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20.r),
-        child: Stack(
-          children: [
-            Positioned(
-              top: 0,
-              bottom: 0,
-              left: 0,
-              width: 6.w,
-              child: Container(
-                color: _getVehicleOperationColor(vehicle),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(left: 6.w),
-              child: Padding(
-                padding: EdgeInsets.all(16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(10.w),
-                            decoration: BoxDecoration(
-                              color: AppColors.cardBgLight,
-                              borderRadius: BorderRadius.circular(12.r),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Icon(
-                              _mapVehicleIcon(type?.icon),
-                              color: AppColors.gold,
-                              size: 22.sp,
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  type?.name ?? 'Bilinmeyen Arac',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                Text(
-                                  'ID: $vehicleShortId',
-                                  style: AppTextStyles.body.copyWith(
-                                    fontSize: 10.sp,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _buildVehicleStatusBadge(vehicle),
-                          SizedBox(width: 4.w),
-                          _buildVehicleActionMenu(
-                            context,
-                            ref,
-                            vehicle,
-                            type,
-                            cities,
-                            cityMap,
-                            fuelRatio,
-                            conditionRatio,
-                            playerCash,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16.h),
-                      Row(
-                        children: [
-                          _buildVehicleDetailItem(
-                            Icons.speed,
-                            '${vehicle.speedKmh} km/h',
-                            'Hiz',
-                          ),
-                          _buildVehicleDetailItem(
-                            Icons.inventory_2_outlined,
-                            '${vehicle.capacity} t',
-                            'Kapasite',
-                          ),
-                          _buildVehicleDetailItem(
-                            Icons.local_gas_station_outlined,
-                            '${vehicle.fuelRate} L/km',
-                            'Tuketim',
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 14.h),
-                      _buildRoutePanel(vehicle, cityMap),
-                      SizedBox(height: 16.h),
-                      _buildMiniProgress(
-                        'YAKIT',
-                        fuelRatio,
-                        fuelRatio < 0.2 ? AppColors.red : AppColors.gold,
-                        Icons.bolt,
-                      ),
-                      SizedBox(height: 10.h),
-                      _buildMiniProgress(
-                        'KONDISYON',
-                        conditionRatio,
-                        conditionRatio < 0.3 ? AppColors.red : AppColors.green,
-                        Icons.handyman_outlined,
-                      ),
-                      SizedBox(height: 14.h),
-                      _buildVehiclePerformancePanel(performance),
-                      // Aksiyon butonlari sag ust popup menuye tasindi.
-                      if (!hasRoute) ...[
-                        SizedBox(height: 10.h),
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _expandedVehicleId = isExpanded ? null : vehicle.id;
+          });
+        },
+        borderRadius: BorderRadius.circular(16.r),
+        child: Padding(
+          padding: EdgeInsets.all(12.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight,
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Icon(
+                      _mapVehicleIcon(type?.icon),
+                      color: isExpanded ? AppColors.gold : AppColors.textSecondary,
+                      size: 20.sp,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          'Not: Ayni sehir transferleri anliktir. Bu arac yalnizca sehirler arasi rotalarda kullanilir.',
-                          style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                          type?.name ?? 'Bilinmeyen Araç',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        if (hasRoute)
+                          Row(
+                            children: [
+                              Icon(Icons.place_outlined, color: AppColors.gold, size: 10.sp),
+                              SizedBox(width: 2.w),
+                              Text(
+                                '${cityMap[vehicle.routeCityAId]?.name ?? '?'} ➔ ${cityMap[vehicle.routeCityBId]?.name ?? '?'}',
+                                style: TextStyle(color: AppColors.textSecondary, fontSize: 10.sp),
+                              ),
+                            ],
+                          )
+                        else
+                          Text(
+                            'ID: $vehicleShortId • Rota Yok',
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildVehicleStatusBadge(vehicle),
+                      if (!isExpanded) ...[
+                        SizedBox(height: 4.h),
+                        Row(
+                          children: [
+                            Icon(Icons.bolt, color: fuelRatio < 0.2 ? AppColors.red : AppColors.gold, size: 10.sp),
+                            Text(
+                              ' %${(fuelRatio * 100).toInt()}',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+                            ),
+                            SizedBox(width: 6.w),
+                            Icon(Icons.handyman_outlined, color: conditionRatio < 0.3 ? AppColors.red : AppColors.green, size: 10.sp),
+                            Text(
+                              ' %${(conditionRatio * 100).toInt()}',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+                            ),
+                          ],
                         ),
                       ],
                     ],
+                  ),
+                ],
+              ),
+              if (isExpanded) ...[
+                Divider(color: Colors.white.withValues(alpha: 0.08), height: 16.h),
+                if (hasRoute) ...[
+                  _buildRoutePanel(vehicle, cityMap),
+                  SizedBox(height: 12.h),
+                ],
+                _buildMiniProgress(
+                  'YAKIT REZERVI',
+                  fuelRatio,
+                  fuelRatio < 0.2 ? AppColors.red : AppColors.gold,
+                  Icons.bolt,
+                  '${vehicle.currentFuel} / ${vehicle.fuelCapacity} L',
+                ),
+                SizedBox(height: 10.h),
+                _buildMiniProgress(
+                  'KONDİSYON',
+                  conditionRatio,
+                  conditionRatio < 0.3 ? AppColors.red : AppColors.green,
+                  Icons.handyman_outlined,
+                  '%${vehicle.condition}',
+                ),
+                SizedBox(height: 12.h),
+                Container(
+                  padding: EdgeInsets.symmetric(vertical: 8.h),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildVehicleDetailItem(Icons.speed, '${vehicle.speedKmh} km/h', 'Hız'),
+                      _buildVehicleDetailItem(Icons.inventory_2_outlined, '${vehicle.capacity} t', 'Kapasite'),
+                      _buildVehicleDetailItem(Icons.local_gas_station_outlined, '${vehicle.fuelRate} L/km', 'Tüketim'),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 10.h),
+                _buildVehiclePerformancePanel(performance),
+                SizedBox(height: 12.h),
+                _buildActionButtonsRow(context, vehicle, type, playerCash, fuelRatio, conditionRatio, cities),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtonsRow(
+    BuildContext context,
+    LogisticsVehicleModel vehicle,
+    LogisticsVehicleTypeModel? type,
+    double playerCash,
+    double fuelRatio,
+    double conditionRatio,
+    List<CityModel> cities,
+  ) {
+    final canRefuel = vehicle.currentFuel < vehicle.fuelCapacity;
+    final canRepair = vehicle.condition < 100;
+    final canChangeRoute = vehicle.status != 'on_route';
+    final canToggleActive = vehicle.status != 'on_route';
+
+    return Wrap(
+      spacing: 6.w,
+      runSpacing: 6.h,
+      alignment: WrapAlignment.start,
+      children: [
+        if (canRefuel)
+          _buildActionButton(
+            icon: Icons.local_gas_station,
+            label: 'Yakıt Al',
+            color: AppColors.gold,
+            onTap: () => _handleRefuelAction(context, vehicle),
+          ),
+        if (canRepair)
+          _buildActionButton(
+            icon: Icons.build,
+            label: 'Bakım',
+            color: AppColors.green,
+            onTap: () => _handleRepairAction(context, vehicle, type, playerCash),
+          ),
+        _buildActionButton(
+          icon: Icons.alt_route,
+          label: 'Rota Belirle',
+          color: canChangeRoute ? AppColors.blue : AppColors.textMuted,
+          onTap: canChangeRoute ? () => _openRouteSelectionPage(context, vehicle, cities) : null,
+        ),
+        _buildActionButton(
+          icon: vehicle.isAvailableForRent ? Icons.no_meeting_room : Icons.vpn_key,
+          label: vehicle.isAvailableForRent ? 'Kiralama Kapat' : 'Kiraya Ver',
+          color: Colors.orangeAccent,
+          onTap: () => _handleRentalAction(context, vehicle),
+        ),
+        if (canToggleActive)
+          _buildActionButton(
+            icon: vehicle.status == 'inactive' ? Icons.play_circle_fill : Icons.pause_circle_filled,
+            label: vehicle.status == 'inactive' ? 'Etkinleştir' : 'Pasife Al',
+            color: vehicle.status == 'inactive' ? AppColors.green : AppColors.red,
+            onTap: () => _handleActiveToggle(context, vehicle),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback? onTap,
+  }) {
+    final isDisabled = onTap == null;
+    return Opacity(
+      opacity: isDisabled ? 0.4 : 1.0,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8.r),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8.r),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 12.sp),
+              SizedBox(width: 4.w),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -685,123 +1092,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
         first.month == second.month &&
         first.day == second.day;
   }
-
-  Widget _buildVehicleActionMenu(
-    BuildContext context,
-    WidgetRef ref,
-    LogisticsVehicleModel vehicle,
-    LogisticsVehicleTypeModel? type,
-    List<CityModel> cities,
-    Map<String, CityModel> cityMap,
-    double fuelRatio,
-    double conditionRatio,
-    double playerCash,
-  ) {
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: AppColors.gold, size: 24.sp),
-      color: AppColors.cardBg,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
-        side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.2)),
-      ),
-      onSelected: (value) {
-        switch (value) {
-          case 'refuel':
-            _handleRefuelAction(context, ref, vehicle);
-            break;
-          case 'repair':
-            _handleRepairAction(context, ref, vehicle, type, playerCash);
-            break;
-          case 'route':
-            _openRouteSelectionPage(context, ref, vehicle, cities);
-            break;
-          case 'rent':
-            _handleRentalAction(context, ref, vehicle);
-            break;
-          case 'toggle_active':
-            _handleActiveToggle(context, ref, vehicle);
-            break;
-        }
-      },
-      itemBuilder: (context) => [
-        if (vehicle.currentFuel < vehicle.fuelCapacity)
-          PopupMenuItem(
-            value: 'refuel',
-            child: Row(
-              children: [
-                Icon(Icons.local_gas_station, color: AppColors.gold, size: 18.sp),
-                SizedBox(width: 10.w),
-                Text('Doldur', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
-              ],
-            ),
-          ),
-        if (vehicle.condition < 100)
-          PopupMenuItem(
-            value: 'repair',
-            child: Row(
-              children: [
-                Icon(Icons.build, color: AppColors.gold, size: 18.sp),
-                SizedBox(width: 10.w),
-                Text('Bakim Yap', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
-              ],
-            ),
-          ),
-        if (vehicle.status != 'on_route')
-          PopupMenuItem(
-            value: 'route',
-            child: Row(
-              children: [
-                Icon(Icons.alt_route, color: AppColors.gold, size: 18.sp),
-                SizedBox(width: 10.w),
-                Text('Rota Atamasi', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
-              ],
-            ),
-          ),
-        PopupMenuItem(
-          value: 'rent',
-          child: Row(
-            children: [
-              Icon(vehicle.isAvailableForRent ? Icons.no_meeting_room : Icons.vpn_key, color: AppColors.gold, size: 18.sp),
-              SizedBox(width: 10.w),
-              Text(vehicle.isAvailableForRent ? 'Kiralamayi Kapat' : 'Kiraya Ver', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
-            ],
-          ),
-        ),
-        if (vehicle.status != 'on_route')
-          PopupMenuItem(
-            value: 'toggle_active',
-            child: Row(
-              children: [
-                Icon(vehicle.status == 'inactive' ? Icons.play_circle_fill : Icons.pause_circle_filled, color: AppColors.gold, size: 18.sp),
-                SizedBox(width: 10.w),
-                Text(vehicle.status == 'inactive' ? 'Aktif Et' : 'Pasife Al', style: TextStyle(color: Colors.white, fontSize: 12.sp)),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Future<void> _openRouteSelectionPage(
-    BuildContext context,
-    WidgetRef ref,
-    LogisticsVehicleModel vehicle,
-    List<CityModel> cities,
-  ) async {
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => LogisticsRouteSelectionScreen(
-          vehicle: vehicle,
-          cities: cities,
-        ),
-      ),
-    );
-
-    if (saved == true) {
-      ref.invalidate(logisticsVehicleListProvider);
-    }
-  }
-
 
   Widget _buildRoutePanel(
     LogisticsVehicleModel vehicle,
@@ -821,7 +1111,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
           children: [
             Icon(Icons.alt_route, color: AppColors.textMuted, size: 14.sp),
             SizedBox(width: 8.w),
-            Text('Rota atanmadi', style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp, fontWeight: FontWeight.bold)),
+            Text('Rota atanmadı', style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp, fontWeight: FontWeight.bold)),
           ],
         ),
       );
@@ -875,7 +1165,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
       children: [
         _buildMiniStat('Sefer', '${performance.totalTrips}', Icons.local_shipping),
         _buildMiniStat('Aktif', '${performance.activeTrips}', Icons.route),
-        _buildMiniStat('Gelir', performance.rentalRevenue.toStringAsFixed(0), Icons.payments),
+        _buildMiniStat('Gelir', '${performance.rentalRevenue.toStringAsFixed(0)} TL', Icons.payments),
       ],
     );
   }
@@ -898,7 +1188,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
 
   Widget _buildPurchaseVehicleEntry(
     BuildContext context,
-    WidgetRef ref,
     LogisticsCompanyModel company,
     double playerCash,
   ) {
@@ -908,7 +1197,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
           ? null
           : () => _showPurchaseVehicleSheet(
                 context: context,
-                ref: ref,
                 company: company,
                 playerCash: playerCash,
               ),
@@ -952,7 +1240,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
 
   Widget _buildConstructionCard(
     BuildContext context,
-    WidgetRef ref,
     Map<String, dynamic> construction,
     Map<String, dynamic>? params,
     DateTime? finishAt,
@@ -978,7 +1265,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                   SizedBox(width: 12.w),
                   Expanded(
                     child: Text(
-                      params?['name'] ?? 'Lojistik Firmasi',
+                      params?['name'] ?? 'Lojistik Firması',
                       style: AppTextStyles.h2,
                     ),
                   ),
@@ -996,7 +1283,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
                   ),
                   onFinish: () => _handleConstructionFinished(
                     context,
-                    ref,
                     constructionId,
                   ),
                 ),
@@ -1008,7 +1294,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
           _ConstructionFinishButton(
             constructionId: constructionId,
             finishAt: finishAt,
-            onFinishWithGold: (id) => _handleFinishWithGold(context, ref, id),
+            onFinishWithGold: (id) => _handleFinishWithGold(context, id),
           ),
         ],
       ],
@@ -1037,51 +1323,13 @@ class LogisticsManagementScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Text(
-        'Henuz bir araciniz yok. Ilk aracinizi satin alarak baslayin.',
+        'Henüz bir aracınız yok. İlk aracınızı satın alarak başlayın.',
         style: AppTextStyles.body,
         textAlign: TextAlign.center,
       ),
     );
   }
 
-  Widget _buildStatTile(String label, String value, IconData icon) {
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: AppColors.gold, size: 14.sp),
-              SizedBox(width: 6.w),
-              Text(
-                label,
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildPremiumProgressBar(double ratio, Color color) {
     final clampedRatio = ratio.clamp(0.0, 1.0);
@@ -1124,30 +1372,36 @@ class LogisticsManagementScreen extends ConsumerWidget {
   Widget _buildStatusChip(bool isActive) {
     final color = isActive ? AppColors.green : AppColors.red;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: color, width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 6.w,
-            height: 6.w,
+            width: 5.w,
+            height: 5.w,
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: color, blurRadius: 4)],
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.4),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                )
+              ],
             ),
           ),
           SizedBox(width: 6.w),
           Text(
-            isActive ? 'AKTIF' : 'PASIF',
+            isActive ? 'AKTİF' : 'PASİF',
             style: TextStyle(
               color: color,
-              fontSize: 10.sp,
+              fontSize: 9.sp,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1169,7 +1423,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
         _getVehicleOperationLabel(vehicle),
         style: TextStyle(
           color: color,
-          fontSize: 10.sp,
+          fontSize: 9.sp,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -1205,19 +1459,19 @@ class LogisticsManagementScreen extends ConsumerWidget {
         : (vehicle.currentFuel / vehicle.fuelCapacity).clamp(0.0, 1.0);
 
     if (fuelRatio <= 0.15) {
-      return 'YAKIT KRITIK';
+      return 'YAKIT KRİTİK';
     }
     if (vehicle.condition <= 30) {
-      return 'BAKIM GEREKLI';
+      return 'BAKIM GEREKLİ';
     }
     if (vehicle.status != 'on_route' && !vehicle.hasAssignedRoute) {
-      return 'ROTA EKSIK';
+      return 'ROTA EKSİK';
     }
     if (vehicle.status == 'inactive') {
-      return 'PASIF ARAC';
+      return 'PASİF ARAÇ';
     }
     if (vehicle.status == 'on_route') {
-      return 'SEVKIYATTA';
+      return 'SEVKİYATTA';
     }
     return 'OPERASYONA HAZIR';
   }
@@ -1252,6 +1506,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
     double value,
     Color color,
     IconData icon,
+    String detailText,
   ) {
     return Column(
       children: [
@@ -1273,7 +1528,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
               ],
             ),
             Text(
-              '%${(value * 100).toInt()}',
+              detailText,
               style: TextStyle(
                 color: color,
                 fontSize: 10.sp,
@@ -1305,21 +1560,8 @@ class LogisticsManagementScreen extends ConsumerWidget {
   Widget _buildError(String message) =>
       Center(child: Text(message, style: TextStyle(color: AppColors.red)));
 
-  Future<void> _handleRefuelAction(
-    BuildContext context,
-    WidgetRef ref,
-    LogisticsVehicleModel vehicle,
-  ) async {
-    final result = await ref.read(logisticsActionProvider).refuelVehicle(
-          vehicle.id,
-        );
-    if (!context.mounted) return;
-    _handleOpResult(context, ref, result, 'Yakit ikmali yapildi.');
-  }
-
   Future<void> _showFuelSupplySheet(
     BuildContext context,
-    WidgetRef ref,
     LogisticsCompanyModel company,
     double playerCash,
   ) async {
@@ -1362,10 +1604,10 @@ class LogisticsManagementScreen extends ConsumerWidget {
                     ),
                   ),
                   SizedBox(height: 18.h),
-                  Text('Merkez Yakit Al', style: AppTextStyles.h2),
+                  Text('Merkez Yakıt Al', style: AppTextStyles.h2),
                   SizedBox(height: 6.h),
                   Text(
-                    'Bos kapasite: $remainingCapacity L',
+                    'Boş kapasite: $remainingCapacity L',
                     style: AppTextStyles.body,
                   ),
                   SizedBox(height: 14.h),
@@ -1395,7 +1637,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                             data: (sources) {
                               if (sources.isEmpty) {
                                 return _buildEmptyInfoCard(
-                                  'Depolarinizda kullanilabilir yakit bulunmuyor.',
+                                  'Depolarınızda kullanılabilir yakıt bulunmuyor.',
                                 );
                               }
                               return ListView.separated(
@@ -1415,7 +1657,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                         (source['warehouse_name'] ?? 'Depo')
                                             .toString(),
                                     subtitle:
-                                        '${source['city_name'] ?? 'Bilinmeyen Sehir'} / $quantity L',
+                                        '${source['city_name'] ?? 'Bilinmeyen Şehir'} / $quantity L',
                                     trailing:
                                         'Maliyet ${(source['cost'] as num?)?.toStringAsFixed(1) ?? '0'}',
                                     onTap: maxQty <= 0
@@ -1424,7 +1666,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                             final qty =
                                                 await _askFuelQuantity(
                                               context,
-                                              title: 'Depodan Yakit Aktar',
+                                              title: 'Depodan Yakıt Aktar',
                                               subtitle:
                                                   '${source['warehouse_name']} -> ${company.name}',
                                               maxQuantity: maxQty,
@@ -1455,9 +1697,9 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                               Navigator.pop(sheetContext);
                                               AppSnackbar.show(
                                                 context,
-                                                title: 'Basarili',
+                                                title: 'Başarılı',
                                                 message:
-                                                    '$qty L yakit merkeze aktarildi.',
+                                                    '$qty L yakıt merkeze aktarıldı.',
                                                 type: SnackbarType.success,
                                               );
                                             } else {
@@ -1466,7 +1708,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                                 title: 'Hata',
                                                 message:
                                                     result['message'] ??
-                                                    'Yakit aktarilamadi.',
+                                                    'Yakıt aktarılamadı.',
                                                 type: SnackbarType.error,
                                               );
                                             }
@@ -1477,13 +1719,13 @@ class LogisticsManagementScreen extends ConsumerWidget {
                             },
                             loading: _buildLoading,
                             error: (error, stack) =>
-                                _buildError('Depo yakitlari yuklenemedi.'),
+                                _buildError('Depo yakıtları yüklenemedi.'),
                           )
                         : marketAsync.when(
                             data: (listings) {
                               if (listings.isEmpty) {
                                 return _buildEmptyInfoCard(
-                                  'Pazarda satista yakit ilani bulunmuyor.',
+                                  'Pazarda satışta yakıt ilanı bulunmuyor.',
                                 );
                               }
                               return ListView.separated(
@@ -1507,7 +1749,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                             final qty =
                                                 await _askFuelQuantity(
                                               context,
-                                              title: 'Pazardan Yakit Al',
+                                              title: 'Pazardan Yakıt Al',
                                               subtitle:
                                                   '${listing.warehouseName} -> ${company.name}',
                                               maxQuantity: maxQty,
@@ -1546,9 +1788,9 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                               Navigator.pop(sheetContext);
                                               AppSnackbar.show(
                                                 context,
-                                                title: 'Basarili',
+                                                title: 'Başarılı',
                                                 message:
-                                                    '$qty L yakit pazardan alindi.',
+                                                    '$qty L yakıt pazardan alındı.',
                                                 type: SnackbarType.success,
                                               );
                                             } else {
@@ -1557,7 +1799,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                                                 title: 'Hata',
                                                 message:
                                                     result['message'] ??
-                                                    'Yakit satin alinamadi.',
+                                                    'Yakıt satın alınamadı.',
                                                 type: SnackbarType.error,
                                               );
                                             }
@@ -1568,7 +1810,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                             },
                             loading: _buildLoading,
                             error: (error, stack) =>
-                                _buildError('Pazar yakit ilanlari yuklenemedi.'),
+                                _buildError('Pazar yakıt ilanları yüklenemedi.'),
                           ),
                   ),
                 ],
@@ -1629,7 +1871,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                   color: AppColors.gold.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(Icons.local_gas_station, color: AppColors.gold),
+                child: const Icon(Icons.local_gas_station, color: AppColors.gold),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -1662,7 +1904,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                     ),
                   ),
                   SizedBox(height: 6.h),
-                  Icon(Icons.chevron_right, color: AppColors.textMuted),
+                  const Icon(Icons.chevron_right, color: AppColors.textMuted),
                 ],
               ),
             ],
@@ -1732,14 +1974,14 @@ class LogisticsManagementScreen extends ConsumerWidget {
                       .toString(),
                 ),
                 NumericKeyboardShortcut(
-                  label: 'Yari',
+                  label: 'Yarı',
                   value: (maxQuantity / 2)
                       .ceil()
                       .clamp(1, maxQuantity)
                       .toString(),
                 ),
                 NumericKeyboardShortcut(
-                  label: 'Tamami',
+                  label: 'Tamamı',
                   value: maxQuantity.toString(),
                 ),
               ],
@@ -1749,7 +1991,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Vazgec'),
+            child: const Text('Vazgeç'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1757,8 +1999,8 @@ class LogisticsManagementScreen extends ConsumerWidget {
               if (qty <= 0 || qty > maxQuantity) {
                 AppSnackbar.show(
                   context,
-                  title: 'Gecersiz Miktar',
-                  message: '1 ile $maxQuantity arasinda bir miktar girin.',
+                  title: 'Geçersiz Miktar',
+                  message: '1 ile $maxQuantity arasında bir miktar girin.',
                   type: SnackbarType.warning,
                 );
                 return;
@@ -1779,251 +2021,8 @@ class LogisticsManagementScreen extends ConsumerWidget {
     return result;
   }
 
-  Future<void> _handleRepairAction(
-    BuildContext context,
-    WidgetRef ref,
-    LogisticsVehicleModel vehicle,
-    LogisticsVehicleTypeModel? type,
-    double playerCash,
-  ) async {
-    final missingCondition = (100 - vehicle.condition).clamp(0, 100);
-    final purchasePrice = type?.purchasePrice ?? 0;
-    final missingConditionRatio = missingCondition / 100.0;
-    final repairCost = missingConditionRatio * (purchasePrice / 2);
-
-    final shouldProceed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.cardBg,
-        title: Text('Bakim Onayi', style: AppTextStyles.h2),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              type?.name ?? 'Arac',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              'Eksik kondisyon: $missingCondition (%${(missingConditionRatio * 100).toStringAsFixed(0)})',
-              style: AppTextStyles.body,
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              'Arac ucreti: ${purchasePrice.toStringAsFixed(0)} TL',
-              style: AppTextStyles.body,
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              'Bakim maliyeti: ${repairCost.toStringAsFixed(0)} TL',
-              style: TextStyle(
-                color: AppColors.gold,
-                fontSize: 13.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              'Mevcut nakit: ${playerCash.toStringAsFixed(0)} TL',
-              style: TextStyle(
-                color: playerCash >= repairCost
-                    ? AppColors.textMuted
-                    : AppColors.red,
-                fontSize: 11.sp,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Vazgec'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            child: const Text(
-              'Bakimi Yap',
-              style: TextStyle(color: Colors.black),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldProceed != true) {
-      return;
-    }
-
-    final result = await ref.read(logisticsActionProvider).repairVehicle(
-          vehicle.id,
-        );
-    if (!context.mounted) return;
-    _handleOpResult(
-      context,
-      ref,
-      result,
-      'Bakim tamamlandi.',
-      includeCompany: false,
-    );
-  }
-
-  Future<void> _handleActiveToggle(
-    BuildContext context,
-    WidgetRef ref,
-    LogisticsVehicleModel vehicle,
-  ) async {
-    final result = await ref.read(logisticsActionProvider).setVehicleActive(
-          vehicleId: vehicle.id,
-          isActive: vehicle.status == 'inactive',
-        );
-    if (!context.mounted) return;
-    _handleOpResult(
-      context,
-      ref,
-      result,
-      vehicle.status == 'inactive'
-          ? 'Arac aktif edildi.'
-          : 'Arac pasife alindi.',
-      includeCompany: false,
-      includePlayer: false,
-    );
-  }
-
-  void _handleOpResult(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, dynamic> result,
-    String message,
-    {
-    bool includeVehicleList = true,
-    bool includeCompany = true,
-    bool includePlayer = true,
-  }
-  ) {
-    if (result['success'] == true) {
-      if (includeVehicleList) {
-        ref.invalidate(logisticsVehicleListProvider);
-      }
-      if (includeCompany) {
-        ref.invalidate(playerLogisticsCompanyProvider);
-      }
-      if (includePlayer) {
-        ref.invalidate(playerProvider);
-      }
-      AppSnackbar.show(
-        context,
-        title: 'Basarili',
-        message: message,
-        type: SnackbarType.success,
-      );
-    } else {
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: result['message'] ?? 'Islem basarisiz.',
-        type: SnackbarType.error,
-      );
-    }
-  }
-
-  Future<void> _handleRentalAction(
-    BuildContext context,
-    WidgetRef ref,
-    LogisticsVehicleModel vehicle,
-  ) async {
-    if (vehicle.isAvailableForRent) {
-      final result = await ref.read(logisticsActionProvider).setVehicleRental(
-            vehicleId: vehicle.id,
-            isAvailableForRent: false,
-            rentalPrice: 0,
-          );
-      if (!context.mounted) return;
-      _handleOpResult(
-        context,
-        ref,
-        result,
-        'Kiralama kapatildi.',
-        includeCompany: false,
-        includePlayer: false,
-      );
-      return;
-    }
-
-    final controller = TextEditingController();
-    final rentalPrice = await showDialog<double>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.cardBg,
-        title: Text('Kira Fiyati Belirle', style: AppTextStyles.h2),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              readOnly: true,
-              showCursor: true,
-              enableInteractiveSelection: false,
-              decoration: const InputDecoration(
-                hintText: 'Gunluk kira bedeli',
-              ),
-            ),
-            SizedBox(height: 12.h),
-            NumericKeyboard(
-              controller: controller,
-              allowDecimal: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Vazgec'),
-          ),
-          ElevatedButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, double.tryParse(controller.text)),
-            child: const Text('Tamam'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (!context.mounted) return;
-
-    if (rentalPrice != null && rentalPrice > 0) {
-      final result = await ref.read(logisticsActionProvider).setVehicleRental(
-            vehicleId: vehicle.id,
-            isAvailableForRent: true,
-            rentalPrice: rentalPrice,
-          );
-      if (!context.mounted) return;
-      _handleOpResult(
-        context,
-        ref,
-        result,
-        'Arac kiraya acildi.',
-        includeCompany: false,
-        includePlayer: false,
-      );
-    } else if (rentalPrice != null) {
-      AppSnackbar.show(
-        context,
-        title: 'Gecersiz Fiyat',
-        message: 'Kira fiyati sifirdan buyuk olmali.',
-        type: SnackbarType.warning,
-      );
-    }
-  }
-
   Future<void> _handleConstructionFinished(
     BuildContext context,
-    WidgetRef ref,
     String constructionId,
   ) async {
     final result = await ref
@@ -2036,8 +2035,8 @@ class LogisticsManagementScreen extends ConsumerWidget {
       ref.invalidate(playerProvider);
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Lojistik merkezi tamamlandi.',
+        title: 'Başarılı',
+        message: 'Lojistik merkezi tamamlandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -2045,7 +2044,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: result['message'] ?? 'Insaat tamamlanamadi.',
+        message: result['message'] ?? 'İnşaat tamamlanamadı.',
         type: SnackbarType.error,
       );
     }
@@ -2053,7 +2052,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
 
   Future<void> _handleFinishWithGold(
     BuildContext context,
-    WidgetRef ref,
     String constructionId,
   ) async {
     final result = await ref
@@ -2066,8 +2064,8 @@ class LogisticsManagementScreen extends ConsumerWidget {
       ref.invalidate(playerProvider);
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Insaat tamamlandi!',
+        title: 'Başarılı',
+        message: 'İnşaat tamamlandı!',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -2076,7 +2074,6 @@ class LogisticsManagementScreen extends ConsumerWidget {
 
   Future<void> _showPurchaseVehicleSheet({
     required BuildContext context,
-    required WidgetRef ref,
     required LogisticsCompanyModel company,
     required double playerCash,
   }) async {
@@ -2111,7 +2108,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Arac Satin Al', style: AppTextStyles.h2),
+                    Text('Araç Satın Al', style: AppTextStyles.h2),
                     Text(
                       '${company.currentVehicleCount}/${company.maxVehicleCount}',
                       style: AppTextStyles.titleGold,
@@ -2144,9 +2141,9 @@ class LogisticsManagementScreen extends ConsumerWidget {
                               Navigator.pop(context);
                               AppSnackbar.show(
                                 context,
-                                title: 'Hayirli Olsun!',
+                                title: 'Hayırlı Olsun!',
                                 message:
-                                    '${types[index].name} filonuza katildi.',
+                                    '${types[index].name} filonuza katıldı.',
                                 type: SnackbarType.success,
                               );
                             }
@@ -2155,7 +2152,7 @@ class LogisticsManagementScreen extends ConsumerWidget {
                               context,
                               title: 'Hata',
                               message:
-                                  result['message'] ?? 'Arac satin alinamadi.',
+                                  result['message'] ?? 'Araç satın alınamadı.',
                               type: SnackbarType.error,
                             );
                           }
@@ -2176,6 +2173,11 @@ class LogisticsManagementScreen extends ConsumerWidget {
     );
   }
 
+  String _formatMoney(double amount) {
+    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M';
+    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(1)}K';
+    return amount.toStringAsFixed(0);
+  }
 }
 
 class _ConstructionCountdown extends ConsumerStatefulWidget {
@@ -2228,8 +2230,8 @@ class _ConstructionCountdownState
             Expanded(
               child: Text(
                 isDone
-                    ? 'Tamamlanmaya Hazir'
-                    : 'Kalan Sure: ${_formatDuration(remaining)}',
+                    ? 'Tamamlanmaya Hazır'
+                    : 'Kalan Süre: ${_formatDuration(remaining)}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -2323,7 +2325,7 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
                   color: AppColors.cardBgLight,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(Icons.local_shipping, color: AppColors.gold),
+                child: const Icon(Icons.local_shipping, color: AppColors.gold),
               ),
               SizedBox(width: 12.w),
               Expanded(

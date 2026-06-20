@@ -354,7 +354,7 @@ class _WarehouseHistoryScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.productName,
+                      item.productName + (item.hasBrand ? ' (${item.brandName ?? 'Markali'})' : ''),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14.sp,

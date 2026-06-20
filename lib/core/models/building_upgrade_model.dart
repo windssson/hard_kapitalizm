@@ -114,4 +114,11 @@ class BuildingUpgradeModel {
       params: params,
     );
   }
+
+  static BuildingUpgradeModel? fromJsonNullable(Map<String, dynamic>? json) {
+    if (json == null || json['id'] == null) {
+      return null;
+    }
+    return BuildingUpgradeModel.fromJson(json);
+  }
 }

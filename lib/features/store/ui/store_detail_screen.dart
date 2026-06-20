@@ -1541,7 +1541,19 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Expanded(
-                                  child: Text(slot.productName ?? '', style: TextStyle(color: AppColors.textPrimary, fontSize: 16.sp, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  child: Text(
+                                    (slot.productName ?? '') +
+                                        (slot.brandId != _defaultBrandId
+                                            ? ' (${ref.watch(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})'
+                                            : ''),
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                                 SizedBox(width: 8.w),
                                 Row(
@@ -1829,7 +1841,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           ),
         ),
         content: Text(
-          '${slot.productName ?? 'Bu urun'} secimini kaldirmak istiyor musun? Fiyat ve bekleyen kesirli satis verisi de sifirlanir.',
+          '${(slot.productName ?? 'Bu urun') + (slot.brandId != _defaultBrandId ? ' (${ref.read(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})' : '')} secimini kaldirmak istiyor musun? Fiyat ve bekleyen kesirli satis verisi de sifirlanir.',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 13.sp,
@@ -2087,7 +2099,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             ),
                             SizedBox(height: 2.h),
                             Text(
-                              slot.productName ?? 'Urun',
+                              (slot.productName ?? 'Urun') +
+                                  (slot.brandId != _defaultBrandId
+                                      ? ' (${ref.read(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})'
+                                      : ''),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -2474,7 +2489,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         id: warehouseSlot.id,
         title: storeWarehouse.name,
         subtitle:
-            '${warehouseSlot.productName} | Kalite ${warehouseSlot.qualityLevel}',
+            '${warehouseSlot.productName}${warehouseSlot.brandId != _defaultBrandId ? ' (${ref.read(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})' : ''} | Kalite ${warehouseSlot.qualityLevel}',
         badgeText: 'Magaza Deposu',
         infoText: '${warehouseSlot.quantity} Adet',
         isHighlightBadge: true,
@@ -2574,7 +2589,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     ),
                     SizedBox(height: 6.h),
                     Text(
-                      '${warehouseSlot.productName} | Kalite ${warehouseSlot.qualityLevel}',
+                      '${warehouseSlot.productName}${warehouseSlot.brandId != _defaultBrandId ? ' (${ref.read(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})' : ''} | Kalite ${warehouseSlot.qualityLevel}',
                       style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
                     ),
                     SizedBox(height: 16.h),
@@ -2894,7 +2909,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        slot.productName ?? 'Urun',
+                        (slot.productName ?? 'Urun') +
+                            (slot.brandId != _defaultBrandId
+                                ? ' (${ref.read(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})'
+                                : ''),
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 14.sp,

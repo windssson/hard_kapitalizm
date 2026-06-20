@@ -275,7 +275,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               ),
               SizedBox(height: 8.h),
               Text(
-                'Kendi markanı oluşturarak ürettiğin Kalite 5 ürünleri patentleyebilir, markalı mağaza satışlarında fiyat ve hız bonusları kazanabilirsin.',
+                'Kendi markanı oluşturarak ürettiğin Kalite 2 ürünleri patentleyebilir, markalı mağaza satışlarında fiyat ve hız bonusları kazanabilirsin.',
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12.sp,
@@ -923,7 +923,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             if (availableProducts.isEmpty)
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: _buildEmptyCard('Kalite 5 seviyesinde patentlenebilir yeni ürün yok.'),
+                child: _buildEmptyCard('Kalite 2 seviyesinde patentlenebilir yeni ürün yok.'),
               )
             else
               Padding(

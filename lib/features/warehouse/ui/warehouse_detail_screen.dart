@@ -1151,7 +1151,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      slot.productName ?? 'Urun',
+                      (slot.productName ?? 'Urun') +
+                          (slot.brandId != _defaultBrandId
+                              ? ' (${currentBrandName ?? 'Markali'})'
+                              : ''),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15.sp,
@@ -1376,7 +1379,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           ),
                           SizedBox(height: 4.h),
                           Text(
-                            slot.productName ?? 'Urun',
+                            (slot.productName ?? 'Urun') +
+                                (slot.brandId != _defaultBrandId
+                                    ? ' (${currentBrandName ?? 'Markali'})'
+                                    : ''),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1566,10 +1572,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             slotId: slot.id,
             price: nextPrice,
           );
+      final productName = (slot.productName ?? 'Urun') + (slot.brandId != _defaultBrandId ? ' (${currentBrandName ?? 'Markali'})' : '');
       AppSnackbar.show(
         context,
         title: 'Fiyat Guncellendi',
-        message: '${slot.productName ?? 'Urun'} icin satis fiyati kaydedildi.',
+        message: '$productName icin satis fiyati kaydedildi.',
         type: SnackbarType.success,
       );
     } else {
@@ -1969,7 +1976,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         builder: (dialogContext) => AlertDialog(
           backgroundColor: AppColors.cardBg,
           title: Text(
-            slot.productName ?? 'Urun',
+            (slot.productName ?? 'Urun') +
+                (slot.brandId != _defaultBrandId
+                    ? ' (${currentBrandName ?? 'Markali'})'
+                    : ''),
             style: TextStyle(color: Colors.white, fontSize: 16.sp),
           ),
           content: Column(
@@ -2206,7 +2216,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      slot.productName ?? 'Urun',
+                                      (slot.productName ?? 'Urun') +
+                                          (slot.brandId != _defaultBrandId
+                                              ? ' (${currentBrandName ?? 'Markali'})'
+                                              : ''),
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 13.sp,
@@ -2481,12 +2494,14 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             slotId: slot.id,
             isAvailableForSale: !slot.isAvailableForSale,
           );
+      final currentBrandName = ref.read(playerBrandCompanyProvider).value?.brandName;
+      final productName = (slot.productName ?? 'Urun') + (slot.brandId != _defaultBrandId ? ' (${currentBrandName ?? 'Markali'})' : '');
       AppSnackbar.show(
         context,
         title: slot.isAvailableForSale ? 'Satis Kapatildi' : 'Satisa Acildi',
         message: slot.isAvailableForSale
-            ? '${slot.productName ?? 'Urun'} marketten kaldirildi.'
-            : '${slot.productName ?? 'Urun'} markette listeleniyor.',
+            ? '$productName marketten kaldirildi.'
+            : '$productName markette listeleniyor.',
         type: SnackbarType.success,
       );
     } else {

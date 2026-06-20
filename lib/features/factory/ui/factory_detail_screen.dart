@@ -84,6 +84,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(playerBrandCompanyProvider);
     final detailAsync = ref.watch(factoryDetailProvider(widget.factoryId));
     final activeBoost = ref.watch(activeFactoryBoostProvider(widget.factoryId)).value;
     final activeUpgrade = ref.watch(
@@ -705,9 +706,14 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     color: AppColors.green.withValues(alpha: 0.3),
                   ),
                 ),
-                child: CachedAssetImage(
+                child: BrandedProductImage(
                   fileName: product.urunIconu,
                   fit: BoxFit.contain,
+                  brandName: detail.factory.brandId !=
+                          SelectableProductionProductModel.defaultBrandId
+                      ? _currentBrandName
+                      : null,
+                  showFrame: false,
                 ),
               ),
               SizedBox(width: 12.w),
@@ -722,7 +728,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            product.urunAdi,
+                            product.urunAdi +
+                                (detail.factory.brandId !=
+                                        SelectableProductionProductModel
+                                            .defaultBrandId
+                                    ? ' (${_currentBrandName ?? 'Markali'})'
+                                    : ''),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 14.sp,
@@ -1095,9 +1106,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   }
 
   Widget _buildCompactInventoryRow(FactoryProductionInventoryModel inventory) {
-    final title = inventory.product?.urunAdi.isNotEmpty == true
-        ? inventory.product!.urunAdi
-        : inventory.productId;
+    final isBranded = !inventory.isInput &&
+        inventory.brandId != SelectableProductionProductModel.defaultBrandId;
+    final title = (inventory.product?.urunAdi.isNotEmpty == true
+            ? inventory.product!.urunAdi
+            : inventory.productId) +
+        (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
     final color = AppColors.blue;
 
     return Container(
@@ -1120,9 +1134,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               border: Border.all(color: color.withValues(alpha: 0.15)),
             ),
             child: inventory.product?.urunIconu != null
-                ? CachedAssetImage(
+                ? BrandedProductImage(
                     fileName: inventory.product!.urunIconu,
                     fit: BoxFit.contain,
+                    brandName: isBranded ? _currentBrandName : null,
+                    showFrame: false,
                   )
                 : Icon(Icons.inventory_2, color: color, size: 14.sp),
           ),
@@ -1300,9 +1316,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     FactoryProductionInventoryModel inventory, {
     bool isOrphan = false,
   }) {
-    final title = inventory.product?.urunAdi.isNotEmpty == true
-        ? inventory.product!.urunAdi
-        : inventory.productId;
+    final isBranded = !inventory.isInput &&
+        inventory.brandId != SelectableProductionProductModel.defaultBrandId;
+    final title = (inventory.product?.urunAdi.isNotEmpty == true
+            ? inventory.product!.urunAdi
+            : inventory.productId) +
+        (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
     final color = inventory.isInput ? AppColors.blue : AppColors.green;
 
     return Container(
@@ -1891,7 +1910,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       final product = selectableProduct.product;
       return ProductSelectionOption(
         id: product.id,
-        title: product.urunAdi,
+        title: product.urunAdi + (selectableProduct.hasPreferredBrand ? ' (${_currentBrandName ?? 'Markali'})' : ''),
         subtitle: 'Saatlik ÃƒÂ¼retim: ${product.uretimAdedi}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
@@ -1941,11 +1960,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       final cleanupNote = deletedObsoleteCount > 0
           ? ' Eski bos kayitlardan $deletedObsoleteCount adet temizlendi.'
           : '';
+      final isBranded = selectableProduct.hasPreferredBrand;
+      final productName = product.urunAdi + (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
       AppSnackbar.show(
         context,
         title: 'Basarili',
         message:
-            '${product.urunAdi} otomatik kalite $qualityLevel ile ayarlandi.$cleanupNote',
+            '$productName otomatik kalite $qualityLevel ile ayarlandi.$cleanupNote',
         type: SnackbarType.success,
       );
       return;
@@ -2729,7 +2750,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         builder: (dialogContext) => AlertDialog(
           backgroundColor: AppColors.background,
           title: Text(
-            item.product?.urunAdi ?? item.productId,
+            (item.product?.urunAdi ?? item.productId) +
+                (!item.isInput &&
+                        item.brandId !=
+                            SelectableProductionProductModel.defaultBrandId
+                    ? ' (${_currentBrandName ?? 'Markali'})'
+                    : ''),
             style: TextStyle(color: Colors.white, fontSize: 18.sp),
           ),
           content: Column(
@@ -2900,7 +2926,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      item.product?.urunAdi ?? item.productId,
+                                      (item.product?.urunAdi ?? item.productId) +
+                                          (!item.isInput &&
+                                                  item.brandId !=
+                                                      SelectableProductionProductModel
+                                                          .defaultBrandId
+                                              ? ' (${_currentBrandName ?? 'Markali'})'
+                                              : ''),
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 13.sp,
