@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -1686,10 +1688,13 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   ) {
     final product = slot.product;
     if (slot.isEmpty || product == null) return const [];
+    final requiredInputQuality = max(1, slot.qualityLevel - 1);
 
     final inventories = detail.inputInventories
         .where(
-          (inventory) => product.inputProductIds.contains(inventory.productId),
+          (inventory) =>
+              product.inputProductIds.contains(inventory.productId) &&
+              inventory.qualityLevel == requiredInputQuality,
         )
         .toList();
 
