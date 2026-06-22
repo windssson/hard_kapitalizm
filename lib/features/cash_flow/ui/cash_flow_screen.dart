@@ -6,11 +6,92 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/cash_flow/data/cash_flow_provider.dart';
 import 'package:hard_kapitalizm/features/cash_flow/models/cash_movement_entry_model.dart';
 
-class CashFlowScreen extends ConsumerWidget {
+class _ChartDataPoint {
+  final DateTime date;
+  final double income;
+  final double expense;
+
+  _ChartDataPoint({
+    required this.date,
+    required this.income,
+    required this.expense,
+  });
+}
+
+List<_ChartDataPoint> _getDailyDataPoints(List<CashMovementEntryModel> entries) {
+  final Map<DateTime, (double income, double expense)> dailyMap = {};
+
+  for (final entry in entries) {
+    final date = DateTime(
+      entry.createdAt.year,
+      entry.createdAt.month,
+      entry.createdAt.day,
+    );
+    final current = dailyMap[date] ?? (0.0, 0.0);
+    if (entry.isIncome) {
+      dailyMap[date] = (current.$1 + entry.amount, current.$2);
+    } else {
+      dailyMap[date] = (current.$1, current.$2 + entry.amount.abs());
+    }
+  }
+
+  final sortedDates = dailyMap.keys.toList()..sort();
+  final List<_ChartDataPoint> points = [];
+
+  if (sortedDates.isEmpty) {
+    final today = DateTime.now();
+    for (int i = 6; i >= 0; i--) {
+      points.add(
+        _ChartDataPoint(
+          date: today.subtract(Duration(days: i)),
+          income: 0,
+          expense: 0,
+        ),
+      );
+    }
+    return points;
+  }
+
+  final displayDates =
+      sortedDates.length > 7
+          ? sortedDates.sublist(sortedDates.length - 7)
+          : sortedDates;
+
+  for (final date in displayDates) {
+    final val = dailyMap[date]!;
+    points.add(_ChartDataPoint(date: date, income: val.$1, expense: val.$2));
+  }
+
+  if (points.length < 5) {
+    final firstDate = points.first.date;
+    final needed = 5 - points.length;
+    for (int i = needed; i > 0; i--) {
+      points.insert(
+        0,
+        _ChartDataPoint(
+          date: firstDate.subtract(Duration(days: i)),
+          income: 0,
+          expense: 0,
+        ),
+      );
+    }
+  }
+
+  return points;
+}
+
+class CashFlowScreen extends ConsumerStatefulWidget {
   const CashFlowScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CashFlowScreen> createState() => _CashFlowScreenState();
+}
+
+class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
+  int _selectedTab = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final entriesAsync = ref.watch(cashMovementEntriesProvider);
 
     return Scaffold(
@@ -19,6 +100,7 @@ class CashFlowScreen extends ConsumerWidget {
         child: Column(
           children: [
             const SecondaryTopBar(title: 'Para Hareketleri'),
+            _buildTabSelector(),
             Expanded(
               child: entriesAsync.when(
                 loading: () => const Center(
@@ -28,19 +110,517 @@ class CashFlowScreen extends ConsumerWidget {
                   message: error.toString(),
                   onRetry: () => ref.invalidate(cashMovementEntriesProvider),
                 ),
-                data: (entries) => RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(cashMovementEntriesProvider);
-                    await ref.read(cashMovementEntriesProvider.future);
-                  },
-                  child: entries.isEmpty
-                      ? const _CashFlowEmpty()
-                      : _CashFlowList(entries: entries),
-                ),
+                data:
+                    (entries) => RefreshIndicator(
+                      onRefresh: () async {
+                        ref.invalidate(cashMovementEntriesProvider);
+                        await ref.read(cashMovementEntriesProvider.future);
+                      },
+                      child:
+                          entries.isEmpty
+                              ? const _CashFlowEmpty()
+                              : _selectedTab == 0
+                              ? _buildAnalysisView(entries)
+                              : _CashFlowList(entries: entries),
+                    ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTabSelector() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildTabButton(
+              0,
+              'Grafik & Analiz',
+              Icons.analytics_outlined,
+            ),
+          ),
+          Expanded(
+            child: _buildTabButton(1, 'İşlem Geçmişi', Icons.history_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton(int index, String label, IconData icon) {
+    final isSelected = _selectedTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: 10.h),
+        decoration: BoxDecoration(
+          color:
+              isSelected ? AppColors.gold.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color:
+                isSelected ? AppColors.gold.withValues(alpha: 0.4) : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 16.sp,
+              color: isSelected ? AppColors.gold : AppColors.textMuted,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppColors.textMuted,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalysisView(List<CashMovementEntryModel> entries) {
+    final income = entries
+        .where((entry) => entry.isIncome)
+        .fold<double>(0, (sum, entry) => sum + entry.amount);
+    final expense = entries
+        .where((entry) => !entry.isIncome)
+        .fold<double>(0, (sum, entry) => sum + entry.amount.abs());
+    final net = income - expense;
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(14.w, 8.h, 14.w, 28.h),
+      children: [
+        _CashFlowSummaryCard(
+          totalCount: entries.length,
+          income: income,
+          expense: expense,
+          net: net,
+        ),
+        SizedBox(height: 14.h),
+        _CashFlowLineChart(entries: entries),
+        SizedBox(height: 14.h),
+        _CashFlowCategoryBreakdown(entries: entries),
+      ],
+    );
+  }
+}
+
+class _CashFlowLineChart extends StatelessWidget {
+  final List<CashMovementEntryModel> entries;
+
+  const _CashFlowLineChart({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    final dailyData = _getDailyDataPoints(entries);
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: AppDecorations.premiumCard(null, 18.r),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Akış Trendi (Günlük)',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Row(
+                children: [
+                  const _LegendItem(color: AppColors.green, label: 'Gelir'),
+                  SizedBox(width: 10.w),
+                  const _LegendItem(color: AppColors.red, label: 'Gider'),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(height: 20.h),
+          SizedBox(
+            height: 180.h,
+            width: double.infinity,
+            child: CustomPaint(painter: _ChartPainter(points: dailyData)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendItem({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 8.w,
+          height: 8.w,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        SizedBox(width: 4.w),
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 10.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChartPainter extends CustomPainter {
+  final List<_ChartDataPoint> points;
+
+  _ChartPainter({required this.points});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.isEmpty) return;
+
+    final double paddingLeft = 40.w;
+    final double paddingRight = 8.w;
+    final double paddingTop = 12.h;
+    final double paddingBottom = 20.h;
+
+    final double chartWidth = size.width - paddingLeft - paddingRight;
+    final double chartHeight = size.height - paddingTop - paddingBottom;
+
+    double maxVal = 0.0;
+    for (final p in points) {
+      if (p.income > maxVal) maxVal = p.income;
+      if (p.expense > maxVal) maxVal = p.expense;
+    }
+    if (maxVal == 0) maxVal = 1000.0;
+    maxVal = maxVal * 1.15;
+
+    final int gridLinesCount = 3;
+    final gridPaint =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.05)
+          ..strokeWidth = 1
+          ..style = PaintingStyle.stroke;
+
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.right,
+    );
+
+    for (int i = 0; i <= gridLinesCount; i++) {
+      final double ratio = i / gridLinesCount;
+      final double y = paddingTop + chartHeight * (1 - ratio);
+
+      canvas.drawLine(
+        Offset(paddingLeft, y),
+        Offset(paddingLeft + chartWidth, y),
+        gridPaint,
+      );
+
+      final double val = maxVal * ratio;
+      textPainter.text = TextSpan(
+        text: _formatMoney(val),
+        style: TextStyle(
+          color: AppColors.textMuted,
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(
+          paddingLeft - textPainter.width - 6.w,
+          y - textPainter.height / 2,
+        ),
+      );
+    }
+
+    final datePaint =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.08)
+          ..strokeWidth = 1;
+
+    canvas.drawLine(
+      Offset(paddingLeft, paddingTop + chartHeight),
+      Offset(paddingLeft + chartWidth, paddingTop + chartHeight),
+      datePaint,
+    );
+
+    final double stepX = chartWidth / (points.length - 1);
+    for (int i = 0; i < points.length; i++) {
+      final double x = paddingLeft + i * stepX;
+
+      final dayStr =
+          '${points[i].date.day.toString().padLeft(2, '0')}.${points[i].date.month.toString().padLeft(2, '0')}';
+      textPainter.text = TextSpan(
+        text: dayStr,
+        style: TextStyle(
+          color: AppColors.textMuted,
+          fontSize: 8.5.sp,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(x - textPainter.width / 2, paddingTop + chartHeight + 6.h),
+      );
+    }
+
+    Path getPath(double Function(_ChartDataPoint) getValue) {
+      final path = Path();
+      for (int i = 0; i < points.length; i++) {
+        final double x = paddingLeft + i * stepX;
+        final double val = getValue(points[i]);
+        final double y = paddingTop + chartHeight * (1 - (val / maxVal));
+        if (i == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      return path;
+    }
+
+    void drawTrend(
+      double Function(_ChartDataPoint) getValue,
+      Color color,
+    ) {
+      final path = getPath(getValue);
+
+      final fillPath = Path.from(path);
+      fillPath.lineTo(paddingLeft + chartWidth, paddingTop + chartHeight);
+      fillPath.lineTo(paddingLeft, paddingTop + chartHeight);
+      fillPath.close();
+
+      final fillPaint =
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [color.withValues(alpha: 0.18), color.withValues(alpha: 0.01)],
+            ).createShader(
+              Rect.fromLTRB(
+                paddingLeft,
+                paddingTop,
+                paddingLeft + chartWidth,
+                paddingTop + chartHeight,
+              ),
+            )
+            ..style = PaintingStyle.fill;
+      canvas.drawPath(fillPath, fillPaint);
+
+      final linePaint =
+          Paint()
+            ..color = color
+            ..strokeWidth = 2.5
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(path, linePaint);
+
+      final dotPaint = Paint()..color = color;
+      final dotBgPaint = Paint()..color = AppColors.cardBg;
+      for (int i = 0; i < points.length; i++) {
+        final double x = paddingLeft + i * stepX;
+        final double val = getValue(points[i]);
+        final double y = paddingTop + chartHeight * (1 - (val / maxVal));
+
+        if (val > 0) {
+          canvas.drawCircle(Offset(x, y), 4.r, dotPaint);
+          canvas.drawCircle(Offset(x, y), 2.r, dotBgPaint);
+        }
+      }
+    }
+
+    drawTrend((p) => p.income, AppColors.green);
+    drawTrend((p) => p.expense, AppColors.red);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChartPainter oldDelegate) {
+    return oldDelegate.points != points;
+  }
+}
+
+class _CashFlowCategoryBreakdown extends StatelessWidget {
+  final List<CashMovementEntryModel> entries;
+
+  const _CashFlowCategoryBreakdown({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, double> incomeMap = {};
+    double totalIncome = 0;
+
+    final Map<String, double> expenseMap = {};
+    double totalExpense = 0;
+
+    for (final entry in entries) {
+      final category = entry.category ?? 'Diğer';
+      if (entry.isIncome) {
+        incomeMap[category] = (incomeMap[category] ?? 0) + entry.amount;
+        totalIncome += entry.amount;
+      } else {
+        expenseMap[category] = (expenseMap[category] ?? 0) + entry.amount.abs();
+        totalExpense += entry.amount.abs();
+      }
+    }
+
+    final sortedIncomes =
+        incomeMap.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+    final sortedExpenses =
+        expenseMap.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: AppDecorations.premiumCard(null, 18.r),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Kategori Dağılım Analizi',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 16.h),
+
+          Text(
+            'Gelir Kaynakları',
+            style: TextStyle(
+              color: AppColors.green,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          if (sortedIncomes.isEmpty)
+            Text(
+              'Gelir kaydı bulunmuyor.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+            )
+          else
+            ...sortedIncomes.map(
+              (e) => _buildBreakdownRow(
+                label: e.key,
+                amount: e.value,
+                total: totalIncome,
+                color: AppColors.green,
+              ),
+            ),
+
+          SizedBox(height: 20.h),
+
+          Text(
+            'Gider Kalemleri',
+            style: TextStyle(
+              color: AppColors.red,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          if (sortedExpenses.isEmpty)
+            Text(
+              'Gider kaydı bulunmuyor.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+            )
+          else
+            ...sortedExpenses.map(
+              (e) => _buildBreakdownRow(
+                label: e.key,
+                amount: e.value,
+                total: totalExpense,
+                color: AppColors.red,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreakdownRow({
+    required String label,
+    required double amount,
+    required double total,
+    required Color color,
+  }) {
+    final percent = total > 0 ? (amount / total) : 0.0;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 6.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _formatLabel(label),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 11.5.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                'TL ${_formatMoney(amount)} (%${(percent * 100).toStringAsFixed(1)})',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 5.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4.r),
+            child: SizedBox(
+              height: 6.h,
+              child: LinearProgressIndicator(
+                value: percent,
+                backgroundColor: color.withValues(alpha: 0.08),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -106,7 +686,7 @@ class _CashFlowSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Tüm Para Akisi',
+            'Tüm Para Akışı',
             style: TextStyle(
               color: Colors.white,
               fontSize: 17.sp,
@@ -115,7 +695,7 @@ class _CashFlowSummaryCard extends StatelessWidget {
           ),
           SizedBox(height: 4.h),
           Text(
-            '$totalCount kayit listeleniyor',
+            '$totalCount kayıt listeleniyor',
             style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
           ),
           SizedBox(height: 14.h),
@@ -132,7 +712,7 @@ class _CashFlowSummaryCard extends StatelessWidget {
               SizedBox(width: 8.w),
               Expanded(
                 child: _MetricCard(
-                  label: 'Cikan',
+                  label: 'Çıkan',
                   value: _formatMoney(expense),
                   color: AppColors.red,
                   icon: Icons.north_east_rounded,
@@ -211,9 +791,8 @@ class _CashFlowEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accentColor = entry.isIncome ? AppColors.green : AppColors.red;
-    final icon = entry.isIncome
-        ? Icons.arrow_downward_rounded
-        : Icons.arrow_upward_rounded;
+    final icon =
+        entry.isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded;
     final amountPrefix = entry.isIncome ? '+' : '-';
 
     return Container(
@@ -363,7 +942,7 @@ class _CashFlowEmpty extends StatelessWidget {
               ),
               SizedBox(height: 14.h),
               Text(
-                'Henuz para hareketi yok.',
+                'Henüz para hareketi yok.',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16.sp,
@@ -372,7 +951,7 @@ class _CashFlowEmpty extends StatelessWidget {
               ),
               SizedBox(height: 8.h),
               Text(
-                'Kazanc, satin alim, transfer veya diger bakiye degisiklikleri burada gorunecek.',
+                'Kazanç, satın alım, transfer veya diğer bakiye değişiklikleri burada görünecek.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textMuted,
@@ -408,11 +987,11 @@ class _CashFlowError extends StatelessWidget {
               Icon(Icons.error_outline, color: AppColors.red, size: 42.sp),
               SizedBox(height: 12.h),
               Text(
-                'Para hareketleri yuklenemedi.',
+                'Para hareketleri yüklenemedi.',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15.sp,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
               ),
