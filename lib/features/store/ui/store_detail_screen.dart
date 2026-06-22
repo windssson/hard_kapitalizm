@@ -638,7 +638,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         ),
                         child: BrandedProductImage(
                           fileName: slot.productIcon ?? 'default.webp',
+                          brandId: slot.brandId,
                           brandName: _warehouseSlotBrandName(slot),
+                          productId: slot.productId,
                           fit: BoxFit.contain,
                           showFrame: false,
                         ),
@@ -1527,7 +1529,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         ),
                         child: BrandedProductImage(
                           fileName: slot.productIcon ?? 'default',
+                          brandId: slot.brandId,
                           brandName: _slotBrandName(slot),
+                          productId: slot.productId,
                           fit: BoxFit.contain,
                           showFrame: false,
                         ),

@@ -1140,7 +1140,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 ),
                 child: BrandedProductImage(
                   fileName: slot.productIcon ?? 'default.webp',
+                  brandId: slot.brandId,
                   brandName: _brandNameForSlot(slot, currentBrandName),
+                  productId: slot.productId,
                   fit: BoxFit.contain,
                   showFrame: false,
                 ),
@@ -1359,7 +1361,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       ),
                       child: BrandedProductImage(
                         fileName: slot.productIcon ?? 'default.webp',
+                        brandId: slot.brandId,
                         brandName: _brandNameForSlot(slot, currentBrandName),
+                        productId: slot.productId,
                         fit: BoxFit.contain,
                         showFrame: false,
                       ),
@@ -2202,10 +2206,12 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                       )
                                     : BrandedProductImage(
                                         fileName: slot.productIcon!,
+                                        brandId: slot.brandId,
                                         brandName: _brandNameForSlot(
                                           slot,
                                           currentBrandName,
                                         ),
+                                        productId: slot.productId,
                                         fit: BoxFit.contain,
                                         showFrame: false,
                                       ),
@@ -2904,6 +2910,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     vehicleName: option.vehicleName,
                     isRental: option.isRental,
                     capacity: option.capacity,
+                    speedKmh: option.speedKmh,
                     distanceKm: option.distanceKm,
                     durationLabel: _formatTransferDuration(
                       option.estimatedDurationSeconds,

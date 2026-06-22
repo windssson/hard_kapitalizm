@@ -628,7 +628,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     BuildingBoostModel? activeBoost,
   ) {
     final slotActiveColor = slot.isActive ? AppColors.green : AppColors.red;
-    final isBranded = slot.brandId != SelectableProductionProductModel.defaultBrandId;
+    final isBranded =
+        slot.brandId != SelectableProductionProductModel.defaultBrandId;
     final slotTitle = slot.isEmpty
         ? 'Bos Tarla ${slot.slotIndex}'
         : '${slot.product?.urunAdi ?? slot.productId ?? 'Bilinmeyen Urun'}${isBranded ? ' (${_currentBrandName ?? 'Markali'})' : ''}';
@@ -672,11 +673,13 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                     : BrandedProductImage(
                         fileName: slot.product!.urunIconu,
                         fit: BoxFit.contain,
-                        brandName: slot.brandId !=
-                                SelectableProductionProductModel
-                                    .defaultBrandId
-                            ? _currentBrandName
-                            : null,
+                        brandId: slot.brandId,
+                        brandName:
+                            slot.brandId !=
+                                    SelectableProductionProductModel.defaultBrandId
+                                ? _currentBrandName
+                                : null,
+                        productId: slot.productId,
                         showFrame: false,
                       ),
               ),
@@ -1318,9 +1321,11 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   }
 
   Widget _buildCompactInventoryRow(FarmProductionInventoryModel inventory) {
-    final isBranded = !inventory.isInput &&
+    final isBranded =
+        !inventory.isInput &&
         inventory.brandId != SelectableProductionProductModel.defaultBrandId;
-    final title = (inventory.product?.urunAdi.isNotEmpty == true
+    final title =
+        (inventory.product?.urunAdi.isNotEmpty == true
             ? inventory.product!.urunAdi
             : inventory.productId) +
         (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
@@ -1349,7 +1354,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 ? BrandedProductImage(
                     fileName: inventory.product!.urunIconu,
                     fit: BoxFit.contain,
+                    brandId: inventory.brandId,
                     brandName: isBranded ? _currentBrandName : null,
+                    productId: inventory.productId,
                     showFrame: false,
                   )
                 : Icon(Icons.inventory_2, color: color, size: 14.sp),
@@ -1370,7 +1377,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 1.h),
+                SizedBox(height: 3.h),
+                _buildQualityStars(inventory.qualityLevel),
+                SizedBox(height: 2.h),
                 Text(
                   'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL${inventory.pendingQuantity > 0 ? " | Yolda: ${inventory.pendingQuantity.toStringAsFixed(0)}" : ""}',
                   style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
@@ -1724,9 +1733,11 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     FarmDetailModel detail,
     FarmProductionInventoryModel inventory,
   ) {
-    final isBranded = !inventory.isInput &&
+    final isBranded =
+        !inventory.isInput &&
         inventory.brandId != SelectableProductionProductModel.defaultBrandId;
-    final title = (inventory.product?.urunAdi.isNotEmpty == true
+    final title =
+        (inventory.product?.urunAdi.isNotEmpty == true
             ? inventory.product!.urunAdi
             : inventory.productId) +
         (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
@@ -1761,6 +1772,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                     ? BrandedProductImage(
                         fileName: inventory.product!.urunIconu,
                         fit: BoxFit.contain,
+                        brandId: inventory.brandId,
                         brandName:
                             !inventory.isInput &&
                                 inventory.brandId !=
@@ -1768,6 +1780,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                         .defaultBrandId
                             ? _currentBrandName
                             : null,
+                        productId: inventory.productId,
                         showFrame: false,
                       )
                     : Icon(Icons.inventory_2, color: color, size: 20.sp),
@@ -1788,26 +1801,42 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                       ),
                     ),
                     SizedBox(height: 3.h),
-                    Row(
-                      children: [
-                        _buildQualityStars(inventory.qualityLevel),
-                        if (!inventory.isInput) ...[
-                          SizedBox(width: 6.w),
-                          _buildInlineMetaChip(
-                            inventory.brandId !=
-                                    SelectableProductionProductModel
-                                        .defaultBrandId
-                                ? 'Markali'
-                                : 'Brandsiz',
-                            inventory.brandId !=
-                                    SelectableProductionProductModel
-                                        .defaultBrandId
-                                ? AppColors.gold
-                                : AppColors.textMuted,
+                    if (inventory.isInput)
+                      Row(
+                        children: [
+                          Text(
+                            'Kalite',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
+                          SizedBox(width: 6.w),
+                          _buildQualityStars(inventory.qualityLevel),
                         ],
-                      ],
-                    ),
+                      )
+                    else
+                      Row(
+                        children: [
+                          _buildQualityStars(inventory.qualityLevel),
+                          if (!inventory.isInput) ...[
+                            SizedBox(width: 6.w),
+                            _buildInlineMetaChip(
+                              inventory.brandId !=
+                                      SelectableProductionProductModel
+                                          .defaultBrandId
+                                  ? 'Markali'
+                                  : 'Brandsiz',
+                              inventory.brandId !=
+                                      SelectableProductionProductModel
+                                          .defaultBrandId
+                                  ? AppColors.gold
+                                  : AppColors.textMuted,
+                            ),
+                          ],
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -1978,7 +2007,11 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       final isDisabled = disabledProductIds.contains(product.id);
       return ProductSelectionOption(
         id: product.id,
-        title: product.urunAdi + (selectableProduct.hasPreferredBrand ? ' (${_currentBrandName ?? 'Markali'})' : ''),
+        title:
+            product.urunAdi +
+            (selectableProduct.hasPreferredBrand
+                ? ' (${_currentBrandName ?? 'Markali'})'
+                : ''),
         subtitle: 'Saatlik üretim: ${product.uretimAdedi}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
@@ -2053,7 +2086,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           ? ' Eski bos kayitlardan $deletedObsoleteCount adet temizlendi.'
           : '';
       final isBranded = selectableProduct.hasPreferredBrand;
-      final productName = product.urunAdi + (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
+      final productName =
+          product.urunAdi +
+          (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -3013,7 +3048,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      (item.product?.urunAdi ?? item.productId) +
+                                      (item.product?.urunAdi ??
+                                              item.productId) +
                                           (!item.isInput &&
                                                   item.brandId !=
                                                       SelectableProductionProductModel
@@ -3297,6 +3333,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                     vehicleName: option.vehicleName,
                     isRental: option.isRental,
                     capacity: option.capacity,
+                    speedKmh: option.speedKmh,
                     distanceKm: option.distanceKm,
                     durationLabel: _formatTransferDuration(
                       option.estimatedDurationSeconds,

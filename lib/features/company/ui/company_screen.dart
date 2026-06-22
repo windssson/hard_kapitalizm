@@ -10,6 +10,7 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
+import 'package:hard_kapitalizm/features/company/models/brand_design_options.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
 
 class CompanyScreen extends ConsumerStatefulWidget {
@@ -24,7 +25,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
   bool _isSubmitting = false;
 
   // Custom brand selections for setup state
-  String _selectedLogo = 'logo_1.png';
+  String _selectedLogo = defaultBrandLogoId;
   String _selectedColor = '#E5C05C';
 
   // Sub-tab inside brand management state
@@ -317,9 +318,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 height: 64.h,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: 5,
+                  itemCount: brandLogoOptions.length,
                   itemBuilder: (context, index) {
-                    final logo = 'logo_${index + 1}.png';
+                    final logo = brandLogoOptions[index];
                     final isSelected = _selectedLogo == logo;
                     return GestureDetector(
                       onTap: () => setState(() => _selectedLogo = logo),
@@ -951,6 +952,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                     (item) => _buildPatentCard(
                       item,
                       readOnly: true,
+                      brandId: company.id,
                       brandName: company.brandName,
                       brandColor: brandColor,
                     ),
@@ -960,6 +962,29 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
           ] else ...[
             _buildMarketingTab(brandColor, company),
           ],
+          SizedBox(height: 20.h),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/company/design'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: brandColor,
+                  side: BorderSide(
+                    color: brandColor.withValues(alpha: 0.35),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                icon: const Icon(Icons.palette_outlined),
+                label: const Text('Marka Tasarimini Duzelt'),
+              ),
+            ),
+          ),
+          SizedBox(height: 24.h),
         ],
       ),
     );
@@ -990,6 +1015,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
   Widget _buildPatentCard(
     BrandCompanyProductModel item, {
     bool readOnly = false,
+    String? brandId,
     String? brandName,
     required Color brandColor,
   }) {
@@ -1012,7 +1038,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             child: BrandedProductImage(
               fileName: item.productIcon,
               fit: BoxFit.contain,
+              brandId: readOnly ? brandId : null,
               brandName: readOnly ? brandName : null,
+              productId: item.productId,
+              watermarkAssetId: item.watermarkAssetId,
             ),
           ),
           SizedBox(width: 12.w),
@@ -1040,6 +1069,23 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             ),
           ),
           SizedBox(width: 12.w),
+          if (readOnly) ...[
+            OutlinedButton(
+              onPressed: () =>
+                  context.push('/company/products/${item.productId}/design'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: brandColor,
+                side: BorderSide(
+                  color: brandColor.withValues(alpha: 0.35),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+              ),
+              child: const Text('Tasarim'),
+            ),
+            SizedBox(width: 8.w),
+          ],
           ElevatedButton(
             onPressed: readOnly ? null : () => _patentProduct(item.productId),
             style: ElevatedButton.styleFrom(

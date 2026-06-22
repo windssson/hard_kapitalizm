@@ -83,11 +83,8 @@ class ProductionLogisticsVehicleOption {
       vehicleId: (json['vehicle_id'] ?? '').toString(),
       vehicleOwnerPlayerId: vehicleOwnerPlayerId,
       vehicleName: (json['vehicle_name'] ?? 'Arac').toString(),
-      isRental:
-          (json['is_rental'] as bool? ?? false) ||
-          vehicleOwnerPlayerId.isEmpty ||
-          rentalPrice > 0 ||
-          rentalCost > 0,
+      isRental: json['is_rental'] as bool? ??
+          (vehicleOwnerPlayerId.isEmpty || rentalPrice > 0 || rentalCost > 0),
       capacity: (json['capacity'] as num?)?.toInt() ?? 0,
       speedKmh: (json['speed_kmh'] as num?)?.toInt() ?? 0,
       currentFuel: (json['current_fuel'] as num?)?.toInt() ?? 0,

@@ -65,7 +65,7 @@ class _CashFlowList extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(14.w, 14.h, 14.w, 28.h),
       itemCount: entries.length + 1,
-      separatorBuilder: (_, __) => SizedBox(height: 10.h),
+      separatorBuilder: (_, _) => SizedBox(height: 10.h),
       itemBuilder: (context, index) {
         if (index == 0) {
           return _CashFlowSummaryCard(

@@ -637,6 +637,25 @@ class WarehouseActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> finishLogisticsTransferWithGold(
+    String transferId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'finish_logistics_transfer_with_gold',
+        params: {'p_transfer_id': transferId},
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> deleteWarehouseSlot({
     required String warehouseSlotId,
   }) async {

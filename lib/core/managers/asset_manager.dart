@@ -9,8 +9,8 @@ final assetManagerProvider = Provider(
 );
 
 /// Supabase Storage kontrol sıklığı.
-/// Görseller neredeyse hiç değişmediği için günde bir kontrol yeterli.
-const _kCheckInterval = Duration(days: 1);
+/// Geliştirme sürecinde hızlı güncellemeler için 15 saniyede bir kontrol edilir.
+const _kCheckInterval = Duration(seconds: 15);
 
 /// metadata.json'daki son kontrol zamanı için anahtar.
 const _kLastCheckedKey = '__last_storage_check__';
@@ -168,7 +168,6 @@ class AssetManager {
           .where((f) => f.name != '.emptyFolderPlaceholder' && f.name.isNotEmpty)
           .toList();
 
-      bool metadataChanged = false;
       int total = validFiles.length;
       int current = 0;
 
@@ -189,7 +188,6 @@ class AssetManager {
 
             if (forceDownload) {
               localMetadata[fileName] = remoteUpdatedAt;
-              metadataChanged = true;
             }
 
             current++;

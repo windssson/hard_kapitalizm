@@ -5,6 +5,7 @@ class BrandCompanyProductModel {
   final int maxQualityLevel;
   final bool isBranded;
   final DateTime? brandedAt;
+  final String? watermarkAssetId;
 
   const BrandCompanyProductModel({
     required this.productId,
@@ -13,6 +14,7 @@ class BrandCompanyProductModel {
     required this.maxQualityLevel,
     required this.isBranded,
     required this.brandedAt,
+    required this.watermarkAssetId,
   });
 
   factory BrandCompanyProductModel.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,7 @@ class BrandCompanyProductModel {
       brandedAt: json['branded_at'] != null
           ? DateTime.tryParse(json['branded_at'].toString())
           : null,
+      watermarkAssetId: json['watermark_asset_id']?.toString(),
     );
   }
 }

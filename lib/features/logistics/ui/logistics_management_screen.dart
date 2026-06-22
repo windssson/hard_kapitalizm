@@ -23,19 +23,21 @@ class LogisticsManagementScreen extends ConsumerStatefulWidget {
   const LogisticsManagementScreen({super.key});
 
   @override
-  ConsumerState<LogisticsManagementScreen> createState() => _LogisticsManagementScreenState();
+  ConsumerState<LogisticsManagementScreen> createState() =>
+      _LogisticsManagementScreenState();
 }
 
-class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementScreen> {
+class _LogisticsManagementScreenState
+    extends ConsumerState<LogisticsManagementScreen> {
   String? _expandedVehicleId;
 
   Future<void> _handleRefuelAction(
     BuildContext context,
     LogisticsVehicleModel vehicle,
   ) async {
-    final result = await ref.read(logisticsActionProvider).refuelVehicle(
-          vehicle.id,
-        );
+    final result = await ref
+        .read(logisticsActionProvider)
+        .refuelVehicle(vehicle.id);
     if (!context.mounted) return;
     _handleOpResult(context, result, 'Yakıt ikmali yapıldı.');
   }
@@ -120,9 +122,9 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
       return;
     }
 
-    final result = await ref.read(logisticsActionProvider).repairVehicle(
-          vehicle.id,
-        );
+    final result = await ref
+        .read(logisticsActionProvider)
+        .repairVehicle(vehicle.id);
     if (!context.mounted) return;
     _handleOpResult(
       context,
@@ -136,7 +138,9 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
     BuildContext context,
     LogisticsVehicleModel vehicle,
   ) async {
-    final result = await ref.read(logisticsActionProvider).setVehicleActive(
+    final result = await ref
+        .read(logisticsActionProvider)
+        .setVehicleActive(
           vehicleId: vehicle.id,
           isActive: vehicle.status == 'inactive',
         );
@@ -157,7 +161,9 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
     LogisticsVehicleModel vehicle,
   ) async {
     if (vehicle.isAvailableForRent) {
-      final result = await ref.read(logisticsActionProvider).setVehicleRental(
+      final result = await ref
+          .read(logisticsActionProvider)
+          .setVehicleRental(
             vehicleId: vehicle.id,
             isAvailableForRent: false,
             rentalPrice: 0,
@@ -187,15 +193,10 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
               readOnly: true,
               showCursor: true,
               enableInteractiveSelection: false,
-              decoration: const InputDecoration(
-                hintText: 'Günlük kira bedeli',
-              ),
+              decoration: const InputDecoration(hintText: 'Günlük kira bedeli'),
             ),
             SizedBox(height: 12.h),
-            NumericKeyboard(
-              controller: controller,
-              allowDecimal: true,
-            ),
+            NumericKeyboard(controller: controller, allowDecimal: true),
           ],
         ),
         actions: [
@@ -215,7 +216,9 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
     if (!context.mounted) return;
 
     if (rentalPrice != null && rentalPrice > 0) {
-      final result = await ref.read(logisticsActionProvider).setVehicleRental(
+      final result = await ref
+          .read(logisticsActionProvider)
+          .setVehicleRental(
             vehicleId: vehicle.id,
             isAvailableForRent: true,
             rentalPrice: rentalPrice,
@@ -245,10 +248,8 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
   ) async {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => LogisticsRouteSelectionScreen(
-          vehicle: vehicle,
-          cities: cities,
-        ),
+        builder: (_) =>
+            LogisticsRouteSelectionScreen(vehicle: vehicle, cities: cities),
       ),
     );
 
@@ -307,31 +308,39 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                 data: (company) => constructionAsync.when(
                   data: (construction) => Consumer(
                     builder: (context, ref, _) {
-                      final vehiclesAsync = ref.watch(logisticsVehicleListProvider);
-                      final vehicleTypesAsync = ref.watch(logisticsVehicleTypesProvider);
+                      final vehiclesAsync = ref.watch(
+                        logisticsVehicleListProvider,
+                      );
+                      final vehicleTypesAsync = ref.watch(
+                        logisticsVehicleTypesProvider,
+                      );
                       final citiesAsync = ref.watch(activeCitiesProvider);
                       final playerAsync = ref.watch(playerProvider);
-                      final performanceAsync = ref.watch(logisticsVehiclePerformanceProvider);
+                      final performanceAsync = ref.watch(
+                        logisticsVehiclePerformanceProvider,
+                      );
 
                       return playerAsync.when(
                         data: (player) => vehicleTypesAsync.when(
                           data: (vehicleTypes) => citiesAsync.when(
                             data: (cities) => performanceAsync.when(
-                              data: (performanceByVehicle) => vehiclesAsync.when(
-                                data: (vehicles) => _buildContent(
-                                  context: context,
-                                  company: company,
-                                  construction: construction,
-                                  vehicles: vehicles,
-                                  vehicleTypes: vehicleTypes,
-                                  cities: cities,
-                                  performanceByVehicle: performanceByVehicle,
-                                  playerCash: player?.cash ?? 0,
-                                ),
-                                loading: _buildLoading,
-                                error: (error, stack) =>
-                                    _buildError('Araçlar yüklenemedi.'),
-                              ),
+                              data: (performanceByVehicle) =>
+                                  vehiclesAsync.when(
+                                    data: (vehicles) => _buildContent(
+                                      context: context,
+                                      company: company,
+                                      construction: construction,
+                                      vehicles: vehicles,
+                                      vehicleTypes: vehicleTypes,
+                                      cities: cities,
+                                      performanceByVehicle:
+                                          performanceByVehicle,
+                                      playerCash: player?.cash ?? 0,
+                                    ),
+                                    loading: _buildLoading,
+                                    error: (error, stack) =>
+                                        _buildError('Araçlar yüklenemedi.'),
+                                  ),
                               loading: _buildLoading,
                               error: (error, stack) =>
                                   _buildError('Performans verisi yüklenemedi.'),
@@ -355,7 +364,8 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                       _buildError('İnşaat durumu okunamadı.'),
                 ),
                 loading: _buildLoading,
-                error: (error, stack) => _buildError('Firma verisi yüklenemedi.'),
+                error: (error, stack) =>
+                    _buildError('Firma verisi yüklenemedi.'),
               ),
             ),
           ],
@@ -385,13 +395,14 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
         rawConstructionParams is Map<String, dynamic>
         ? rawConstructionParams
         : rawConstructionParams is Map
-            ? Map<String, dynamic>.from(rawConstructionParams)
-            : null;
+        ? Map<String, dynamic>.from(rawConstructionParams)
+        : null;
     final finishAt = construction?['finish_at'] != null
         ? DateTime.tryParse(construction!['finish_at'].toString())
         : null;
     final constructionDurationMinutes =
-        (constructionParams?['construction_time_minutes'] as num?)?.toInt() ?? 0;
+        (constructionParams?['construction_time_minutes'] as num?)?.toInt() ??
+        0;
 
     return ListView(
       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 80.h),
@@ -444,7 +455,9 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(30.r),
-          border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: AppColors.borderGold.withValues(alpha: 0.2),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -471,10 +484,7 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
               onPressed: () => context.go('/logistics/setup'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
-                padding: EdgeInsets.symmetric(
-                  horizontal: 40.w,
-                  vertical: 15.h,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 40.w, vertical: 15.h),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15.r),
                 ),
@@ -561,11 +571,16 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                     Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6.w,
+                            vertical: 2.h,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.gold.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6.r),
-                            border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Text(
                             'SEVİYE ${company.level}',
@@ -651,15 +666,13 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                 child: ElevatedButton.icon(
                   onPressed: company.currentFuel >= company.fuelCapacity
                       ? null
-                      : () => _showFuelSupplySheet(
-                            context,
-                            company,
-                            playerCash,
-                          ),
+                      : () => _showFuelSupplySheet(context, company),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.gold,
                     foregroundColor: Colors.black,
-                    disabledBackgroundColor: AppColors.cardBgLight.withValues(alpha: 0.5),
+                    disabledBackgroundColor: AppColors.cardBgLight.withValues(
+                      alpha: 0.5,
+                    ),
                     disabledForegroundColor: AppColors.textMuted,
                     padding: EdgeInsets.symmetric(vertical: 11.h),
                     elevation: 0,
@@ -669,7 +682,9 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                   ),
                   icon: Icon(Icons.local_gas_station_rounded, size: 14.sp),
                   label: Text(
-                    company.currentFuel >= company.fuelCapacity ? 'REZERV DOLU' : 'YAKIT AL',
+                    company.currentFuel >= company.fuelCapacity
+                        ? 'REZERV DOLU'
+                        : 'YAKIT AL',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 11.sp,
@@ -709,7 +724,12 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
     );
   }
 
-  Widget _buildPremiumStatTile(String label, String value, IconData icon, Color color) {
+  Widget _buildPremiumStatTile(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
@@ -752,14 +772,17 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
     List<LogisticsVehicleModel> vehicles,
     Map<String, LogisticsVehiclePerformanceModel> performanceByVehicle,
   ) {
-    final onRouteCount = vehicles.where((vehicle) => vehicle.status == 'on_route').length;
+    final onRouteCount = vehicles
+        .where((vehicle) => vehicle.status == 'on_route')
+        .length;
     final totalTrips = performanceByVehicle.values.fold<int>(
       0,
       (sum, performance) => sum + performance.totalTrips,
     );
     final financeEntriesAsync = ref.watch(logisticsFinanceEntriesProvider);
     final now = DateTime.now();
-    final todayEntries = financeEntriesAsync.asData?.value
+    final todayEntries =
+        financeEntriesAsync.asData?.value
             .where((entry) => _isSameDay(entry.createdAt.toLocal(), now))
             .toList() ??
         const [];
@@ -781,22 +804,37 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildOverviewStat('Aktif Filo', '$onRouteCount / ${vehicles.length}', Icons.local_shipping_outlined, AppColors.blue),
-          _buildOverviewDivider(),
-          _buildOverviewStat('Toplam Sefer', '$totalTrips', Icons.route_outlined, AppColors.gold),
+          _buildOverviewStat(
+            'Aktif Filo',
+            '$onRouteCount / ${vehicles.length}',
+            Icons.local_shipping_outlined,
+            AppColors.blue,
+          ),
           _buildOverviewDivider(),
           _buildOverviewStat(
-            'Günlük Kâr', 
-            '${netDaily >= 0 ? '+' : ''}${_formatMoney(netDaily)} TL', 
-            Icons.payments_outlined, 
-            netDaily >= 0 ? AppColors.green : AppColors.red
+            'Toplam Sefer',
+            '$totalTrips',
+            Icons.route_outlined,
+            AppColors.gold,
+          ),
+          _buildOverviewDivider(),
+          _buildOverviewStat(
+            'Günlük Kâr',
+            '${netDaily >= 0 ? '+' : ''}${_formatMoney(netDaily)} TL',
+            Icons.payments_outlined,
+            netDaily >= 0 ? AppColors.green : AppColors.red,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOverviewStat(String label, String value, IconData icon, Color valueColor) {
+  Widget _buildOverviewStat(
+    String label,
+    String value,
+    IconData icon,
+    Color valueColor,
+  ) {
     return Column(
       children: [
         Row(
@@ -806,14 +844,22 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
             SizedBox(width: 4.w),
             Text(
               label,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 9.sp,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
         SizedBox(height: 4.h),
         Text(
           value,
-          style: TextStyle(color: valueColor, fontSize: 13.sp, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: valueColor,
+            fontSize: 13.sp,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
@@ -881,7 +927,9 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                     ),
                     child: Icon(
                       _mapVehicleIcon(type?.icon),
-                      color: isExpanded ? AppColors.gold : AppColors.textSecondary,
+                      color: isExpanded
+                          ? AppColors.gold
+                          : AppColors.textSecondary,
                       size: 20.sp,
                     ),
                   ),
@@ -902,18 +950,28 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                         if (hasRoute)
                           Row(
                             children: [
-                              Icon(Icons.place_outlined, color: AppColors.gold, size: 10.sp),
+                              Icon(
+                                Icons.place_outlined,
+                                color: AppColors.gold,
+                                size: 10.sp,
+                              ),
                               SizedBox(width: 2.w),
                               Text(
                                 '${cityMap[vehicle.routeCityAId]?.name ?? '?'} ➔ ${cityMap[vehicle.routeCityBId]?.name ?? '?'}',
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 10.sp),
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 10.sp,
+                                ),
                               ),
                             ],
                           )
                         else
                           Text(
                             'ID: $vehicleShortId • Rota Yok',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 10.sp,
+                            ),
                           ),
                       ],
                     ),
@@ -926,16 +984,34 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                         SizedBox(height: 4.h),
                         Row(
                           children: [
-                            Icon(Icons.bolt, color: fuelRatio < 0.2 ? AppColors.red : AppColors.gold, size: 10.sp),
+                            Icon(
+                              Icons.bolt,
+                              color: fuelRatio < 0.2
+                                  ? AppColors.red
+                                  : AppColors.gold,
+                              size: 10.sp,
+                            ),
                             Text(
                               ' %${(fuelRatio * 100).toInt()}',
-                              style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 9.sp,
+                              ),
                             ),
                             SizedBox(width: 6.w),
-                            Icon(Icons.handyman_outlined, color: conditionRatio < 0.3 ? AppColors.red : AppColors.green, size: 10.sp),
+                            Icon(
+                              Icons.handyman_outlined,
+                              color: conditionRatio < 0.3
+                                  ? AppColors.red
+                                  : AppColors.green,
+                              size: 10.sp,
+                            ),
                             Text(
                               ' %${(conditionRatio * 100).toInt()}',
-                              style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 9.sp,
+                              ),
                             ),
                           ],
                         ),
@@ -945,7 +1021,10 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                 ],
               ),
               if (isExpanded) ...[
-                Divider(color: Colors.white.withValues(alpha: 0.08), height: 16.h),
+                Divider(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  height: 16.h,
+                ),
                 if (hasRoute) ...[
                   _buildRoutePanel(vehicle, cityMap),
                   SizedBox(height: 12.h),
@@ -974,16 +1053,36 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                   ),
                   child: Row(
                     children: [
-                      _buildVehicleDetailItem(Icons.speed, '${vehicle.speedKmh} km/h', 'Hız'),
-                      _buildVehicleDetailItem(Icons.inventory_2_outlined, '${vehicle.capacity} t', 'Kapasite'),
-                      _buildVehicleDetailItem(Icons.local_gas_station_outlined, '${vehicle.fuelRate} L/km', 'Tüketim'),
+                      _buildVehicleDetailItem(
+                        Icons.speed,
+                        '${vehicle.speedKmh} km/h',
+                        'Hız',
+                      ),
+                      _buildVehicleDetailItem(
+                        Icons.inventory_2_outlined,
+                        '${vehicle.capacity} t',
+                        'Kapasite',
+                      ),
+                      _buildVehicleDetailItem(
+                        Icons.local_gas_station_outlined,
+                        '${vehicle.fuelRate} L/km',
+                        'Tüketim',
+                      ),
                     ],
                   ),
                 ),
                 SizedBox(height: 10.h),
                 _buildVehiclePerformancePanel(performance),
                 SizedBox(height: 12.h),
-                _buildActionButtonsRow(context, vehicle, type, playerCash, fuelRatio, conditionRatio, cities),
+                _buildActionButtonsRow(
+                  context,
+                  vehicle,
+                  type,
+                  playerCash,
+                  fuelRatio,
+                  conditionRatio,
+                  cities,
+                ),
               ],
             ],
           ),
@@ -1023,25 +1122,34 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
             icon: Icons.build,
             label: 'Bakım',
             color: AppColors.green,
-            onTap: () => _handleRepairAction(context, vehicle, type, playerCash),
+            onTap: () =>
+                _handleRepairAction(context, vehicle, type, playerCash),
           ),
         _buildActionButton(
           icon: Icons.alt_route,
           label: 'Rota Belirle',
           color: canChangeRoute ? AppColors.blue : AppColors.textMuted,
-          onTap: canChangeRoute ? () => _openRouteSelectionPage(context, vehicle, cities) : null,
+          onTap: canChangeRoute
+              ? () => _openRouteSelectionPage(context, vehicle, cities)
+              : null,
         ),
         _buildActionButton(
-          icon: vehicle.isAvailableForRent ? Icons.no_meeting_room : Icons.vpn_key,
+          icon: vehicle.isAvailableForRent
+              ? Icons.no_meeting_room
+              : Icons.vpn_key,
           label: vehicle.isAvailableForRent ? 'Kiralama Kapat' : 'Kiraya Ver',
           color: Colors.orangeAccent,
           onTap: () => _handleRentalAction(context, vehicle),
         ),
         if (canToggleActive)
           _buildActionButton(
-            icon: vehicle.status == 'inactive' ? Icons.play_circle_fill : Icons.pause_circle_filled,
+            icon: vehicle.status == 'inactive'
+                ? Icons.play_circle_fill
+                : Icons.pause_circle_filled,
             label: vehicle.status == 'inactive' ? 'Etkinleştir' : 'Pasife Al',
-            color: vehicle.status == 'inactive' ? AppColors.green : AppColors.red,
+            color: vehicle.status == 'inactive'
+                ? AppColors.green
+                : AppColors.red,
             onTap: () => _handleActiveToggle(context, vehicle),
           ),
       ],
@@ -1111,7 +1219,14 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
           children: [
             Icon(Icons.alt_route, color: AppColors.textMuted, size: 14.sp),
             SizedBox(width: 8.w),
-            Text('Rota atanmadı', style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp, fontWeight: FontWeight.bold)),
+            Text(
+              'Rota atanmadı',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       );
@@ -1135,20 +1250,32 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
           Flexible(
             child: Text(
               cityAName,
-              style: TextStyle(color: AppColors.gold, fontSize: 11.sp, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                color: AppColors.gold,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w800,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.w),
-            child: Icon(Icons.sync_alt, color: AppColors.blue.withValues(alpha: 0.7), size: 14.sp),
+            child: Icon(
+              Icons.sync_alt,
+              color: AppColors.blue.withValues(alpha: 0.7),
+              size: 14.sp,
+            ),
           ),
           Icon(Icons.place, color: AppColors.gold, size: 14.sp),
           SizedBox(width: 4.w),
           Flexible(
             child: Text(
               cityBName,
-              style: TextStyle(color: AppColors.gold, fontSize: 11.sp, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                color: AppColors.gold,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w800,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -1163,9 +1290,17 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildMiniStat('Sefer', '${performance.totalTrips}', Icons.local_shipping),
+        _buildMiniStat(
+          'Sefer',
+          '${performance.totalTrips}',
+          Icons.local_shipping,
+        ),
         _buildMiniStat('Aktif', '${performance.activeTrips}', Icons.route),
-        _buildMiniStat('Gelir', '${performance.rentalRevenue.toStringAsFixed(0)} TL', Icons.payments),
+        _buildMiniStat(
+          'Gelir',
+          '${performance.rentalRevenue.toStringAsFixed(0)} TL',
+          Icons.payments,
+        ),
       ],
     );
   }
@@ -1177,10 +1312,7 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
         SizedBox(width: 4.w),
         Text(
           '$value $label',
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 10.sp,
-          ),
+          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
         ),
       ],
     );
@@ -1196,10 +1328,10 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
       onTap: isFull
           ? null
           : () => _showPurchaseVehicleSheet(
-                context: context,
-                company: company,
-                playerCash: playerCash,
-              ),
+              context: context,
+              company: company,
+              playerCash: playerCash,
+            ),
       borderRadius: BorderRadius.circular(16.r),
       child: Container(
         margin: EdgeInsets.only(top: 8.h),
@@ -1281,10 +1413,8 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                         ? constructionDurationMinutes
                         : 1,
                   ),
-                  onFinish: () => _handleConstructionFinished(
-                    context,
-                    constructionId,
-                  ),
+                  onFinish: () =>
+                      _handleConstructionFinished(context, constructionId),
                 ),
             ],
           ),
@@ -1330,7 +1460,6 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
     );
   }
 
-
   Widget _buildPremiumProgressBar(double ratio, Color color) {
     final clampedRatio = ratio.clamp(0.0, 1.0);
 
@@ -1356,10 +1485,7 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                 ),
                 borderRadius: BorderRadius.circular(5.r),
                 boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.3),
-                    blurRadius: 4,
-                  ),
+                  BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 4),
                 ],
               ),
             ),
@@ -1392,7 +1518,7 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                   color: color.withValues(alpha: 0.4),
                   blurRadius: 4,
                   spreadRadius: 1,
-                )
+                ),
               ],
             ),
           ),
@@ -1557,290 +1683,147 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
   Widget _buildLoading() =>
       const Center(child: CircularProgressIndicator(color: AppColors.gold));
 
-  Widget _buildError(String message) =>
-      Center(child: Text(message, style: TextStyle(color: AppColors.red)));
+  Widget _buildError(String message) => Center(
+    child: Text(message, style: TextStyle(color: AppColors.red)),
+  );
 
   Future<void> _showFuelSupplySheet(
     BuildContext context,
     LogisticsCompanyModel company,
-    double playerCash,
   ) async {
-    var mode = 'warehouse';
     final remainingCapacity = company.fuelCapacity - company.currentFuel;
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setModalState) => Consumer(
-          builder: (context, ref, _) {
-            final warehouseAsync = ref.watch(
-              playerLogisticsFuelWarehouseSourcesProvider,
-            );
-            final marketAsync = ref.watch(logisticsFuelMarketListingsProvider);
+      builder: (sheetContext) => Consumer(
+        builder: (context, ref, _) {
+          final warehouseAsync = ref.watch(
+            playerLogisticsFuelWarehouseSourcesProvider,
+          );
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.82,
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: AppColors.navBg,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
-                border: Border.all(
-                  color: AppColors.borderGold.withValues(alpha: 0.2),
-                ),
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.82,
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: AppColors.navBg,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+              border: Border.all(
+                color: AppColors.borderGold.withValues(alpha: 0.2),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44.w,
-                      height: 4.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(999.r),
-                      ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(999.r),
                     ),
                   ),
-                  SizedBox(height: 18.h),
-                  Text('Merkez Yakıt Al', style: AppTextStyles.h2),
-                  SizedBox(height: 6.h),
-                  Text(
-                    'Boş kapasite: $remainingCapacity L',
-                    style: AppTextStyles.body,
+                ),
+                SizedBox(height: 18.h),
+                Text('Merkez Yakıt Al', style: AppTextStyles.h2),
+                SizedBox(height: 6.h),
+                Text(
+                  'Boş kapasite: $remainingCapacity L',
+                  style: AppTextStyles.body,
+                ),
+                SizedBox(height: 16.h),
+                Expanded(
+                  child: warehouseAsync.when(
+                    data: (sources) {
+                      if (sources.isEmpty) {
+                        return _buildEmptyInfoCard(
+                          'Depolarınızda kullanılabilir yakıt bulunmuyor.',
+                        );
+                      }
+                      return ListView.separated(
+                        itemCount: sources.length,
+                        separatorBuilder: (context, index) =>
+                            SizedBox(height: 10.h),
+                        itemBuilder: (context, index) {
+                          final source = sources[index];
+                          final quantity =
+                              (source['quantity'] as num?)?.toInt() ?? 0;
+                          final maxQty = quantity < remainingCapacity
+                              ? quantity
+                              : remainingCapacity;
+
+                          return _buildFuelSourceCard(
+                            title: (source['warehouse_name'] ?? 'Depo')
+                                .toString(),
+                            subtitle:
+                                '${source['city_name'] ?? 'Bilinmeyen Şehir'} / $quantity L',
+                            trailing:
+                                'Maliyet ${(source['cost'] as num?)?.toStringAsFixed(1) ?? '0'}',
+                            onTap: maxQty <= 0
+                                ? null
+                                : () async {
+                                    final qty = await _askFuelQuantity(
+                                      context,
+                                      title: 'Depodan Yakıt Aktar',
+                                      subtitle:
+                                          '${source['warehouse_name']} -> ${company.name}',
+                                      maxQuantity: maxQty,
+                                    );
+                                    if (qty == null) return;
+                                    if (!context.mounted) return;
+
+                                    final result = await ref
+                                        .read(logisticsActionProvider)
+                                        .transferWarehouseFuelToCompany(
+                                          logisticsCompanyId: company.id,
+                                          warehouseSlotId: source['slot_id']
+                                              .toString(),
+                                          quantity: qty,
+                                        );
+                                    if (!context.mounted) return;
+                                    if (result['success'] == true) {
+                                      ref.invalidate(
+                                        playerLogisticsCompanyProvider,
+                                      );
+                                      ref.invalidate(
+                                        playerLogisticsFuelWarehouseSourcesProvider,
+                                      );
+                                      ref.invalidate(warehouseListProvider);
+                                      Navigator.pop(sheetContext);
+                                      AppSnackbar.show(
+                                        context,
+                                        title: 'Başarılı',
+                                        message:
+                                            '$qty L yakıt merkeze aktarıldı.',
+                                        type: SnackbarType.success,
+                                      );
+                                    } else {
+                                      AppSnackbar.show(
+                                        context,
+                                        title: 'Hata',
+                                        message:
+                                            result['message'] ??
+                                            'Yakıt aktarılamadı.',
+                                        type: SnackbarType.error,
+                                      );
+                                    }
+                                  },
+                          );
+                        },
+                      );
+                    },
+                    loading: _buildLoading,
+                    error: (error, stack) =>
+                        _buildError('Depo yakıtları yüklenemedi.'),
                   ),
-                  SizedBox(height: 14.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildFuelModeButton(
-                          label: 'Depomdan',
-                          selected: mode == 'warehouse',
-                          onTap: () => setModalState(() => mode = 'warehouse'),
-                        ),
-                      ),
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: _buildFuelModeButton(
-                          label: 'Pazardan',
-                          selected: mode == 'market',
-                          onTap: () => setModalState(() => mode = 'market'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16.h),
-                  Expanded(
-                    child: mode == 'warehouse'
-                        ? warehouseAsync.when(
-                            data: (sources) {
-                              if (sources.isEmpty) {
-                                return _buildEmptyInfoCard(
-                                  'Depolarınızda kullanılabilir yakıt bulunmuyor.',
-                                );
-                              }
-                              return ListView.separated(
-                                itemCount: sources.length,
-                                separatorBuilder: (context, index) =>
-                                    SizedBox(height: 10.h),
-                                itemBuilder: (context, index) {
-                                  final source = sources[index];
-                                  final quantity =
-                                      (source['quantity'] as num?)?.toInt() ?? 0;
-                                  final maxQty = quantity < remainingCapacity
-                                      ? quantity
-                                      : remainingCapacity;
-
-                                  return _buildFuelSourceCard(
-                                    title:
-                                        (source['warehouse_name'] ?? 'Depo')
-                                            .toString(),
-                                    subtitle:
-                                        '${source['city_name'] ?? 'Bilinmeyen Şehir'} / $quantity L',
-                                    trailing:
-                                        'Maliyet ${(source['cost'] as num?)?.toStringAsFixed(1) ?? '0'}',
-                                    onTap: maxQty <= 0
-                                        ? null
-                                        : () async {
-                                            final qty =
-                                                await _askFuelQuantity(
-                                              context,
-                                              title: 'Depodan Yakıt Aktar',
-                                              subtitle:
-                                                  '${source['warehouse_name']} -> ${company.name}',
-                                              maxQuantity: maxQty,
-                                            );
-                                            if (qty == null) return;
-                                            if (!context.mounted) return;
-
-                                            final result = await ref
-                                                .read(logisticsActionProvider)
-                                                .transferWarehouseFuelToCompany(
-                                                  logisticsCompanyId: company.id,
-                                                  warehouseSlotId:
-                                                      source['slot_id']
-                                                          .toString(),
-                                                  quantity: qty,
-                                                );
-                                            if (!context.mounted) return;
-                                            if (result['success'] == true) {
-                                              ref.invalidate(
-                                                playerLogisticsCompanyProvider,
-                                              );
-                                              ref.invalidate(
-                                                playerLogisticsFuelWarehouseSourcesProvider,
-                                              );
-                                              ref.invalidate(
-                                                warehouseListProvider,
-                                              );
-                                              Navigator.pop(sheetContext);
-                                              AppSnackbar.show(
-                                                context,
-                                                title: 'Başarılı',
-                                                message:
-                                                    '$qty L yakıt merkeze aktarıldı.',
-                                                type: SnackbarType.success,
-                                              );
-                                            } else {
-                                              AppSnackbar.show(
-                                                context,
-                                                title: 'Hata',
-                                                message:
-                                                    result['message'] ??
-                                                    'Yakıt aktarılamadı.',
-                                                type: SnackbarType.error,
-                                              );
-                                            }
-                                          },
-                                  );
-                                },
-                              );
-                            },
-                            loading: _buildLoading,
-                            error: (error, stack) =>
-                                _buildError('Depo yakıtları yüklenemedi.'),
-                          )
-                        : marketAsync.when(
-                            data: (listings) {
-                              if (listings.isEmpty) {
-                                return _buildEmptyInfoCard(
-                                  'Pazarda satışta yakıt ilanı bulunmuyor.',
-                                );
-                              }
-                              return ListView.separated(
-                                itemCount: listings.length,
-                                separatorBuilder: (context, index) =>
-                                    SizedBox(height: 10.h),
-                                itemBuilder: (context, index) {
-                                  final listing = listings[index];
-                                  final maxQty = listing.quantity < remainingCapacity
-                                      ? listing.quantity
-                                      : remainingCapacity;
-                                  return _buildFuelSourceCard(
-                                    title: listing.warehouseName,
-                                    subtitle:
-                                        '${listing.cityName} / ${listing.quantity} L / Q${listing.qualityLevel}',
-                                    trailing:
-                                        '${listing.price.toStringAsFixed(1)} TL/L',
-                                    onTap: maxQty <= 0
-                                        ? null
-                                        : () async {
-                                            final qty =
-                                                await _askFuelQuantity(
-                                              context,
-                                              title: 'Pazardan Yakıt Al',
-                                              subtitle:
-                                                  '${listing.warehouseName} -> ${company.name}',
-                                              maxQuantity: maxQty,
-                                            );
-                                            if (qty == null) return;
-                                            if (!context.mounted) return;
-
-                                            final totalCost = qty * listing.price;
-                                            if (playerCash < totalCost) {
-                                              AppSnackbar.show(
-                                                context,
-                                                title: 'Nakit Yetersiz',
-                                                message:
-                                                    'Gerekli: ${totalCost.toStringAsFixed(0)} TL',
-                                                type: SnackbarType.error,
-                                              );
-                                              return;
-                                            }
-
-                                            final result = await ref
-                                                .read(logisticsActionProvider)
-                                                .buyMarketFuelForCompany(
-                                                  logisticsCompanyId: company.id,
-                                                  sellerSlotId: listing.slotId,
-                                                  quantity: qty,
-                                                );
-                                            if (!context.mounted) return;
-                                            if (result['success'] == true) {
-                                              ref.invalidate(
-                                                playerLogisticsCompanyProvider,
-                                              );
-                                              ref.invalidate(
-                                                logisticsFuelMarketListingsProvider,
-                                              );
-                                              ref.invalidate(playerProvider);
-                                              Navigator.pop(sheetContext);
-                                              AppSnackbar.show(
-                                                context,
-                                                title: 'Başarılı',
-                                                message:
-                                                    '$qty L yakıt pazardan alındı.',
-                                                type: SnackbarType.success,
-                                              );
-                                            } else {
-                                              AppSnackbar.show(
-                                                context,
-                                                title: 'Hata',
-                                                message:
-                                                    result['message'] ??
-                                                    'Yakıt satın alınamadı.',
-                                                type: SnackbarType.error,
-                                              );
-                                            }
-                                          },
-                                  );
-                                },
-                              );
-                            },
-                            loading: _buildLoading,
-                            error: (error, stack) =>
-                                _buildError('Pazar yakıt ilanları yüklenemedi.'),
-                          ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
-    );
-  }
-
-  Widget _buildFuelModeButton({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor:
-            selected ? AppColors.gold : AppColors.cardBgLight,
-        foregroundColor: selected ? Colors.black : AppColors.textPrimary,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-          side: BorderSide(
-            color: selected ? AppColors.gold : AppColors.border,
-          ),
-        ),
-      ),
-      child: Text(label),
     );
   }
 
@@ -1871,7 +1854,10 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                   color: AppColors.gold.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: const Icon(Icons.local_gas_station, color: AppColors.gold),
+                child: const Icon(
+                  Icons.local_gas_station,
+                  color: AppColors.gold,
+                ),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -2124,7 +2110,8 @@ class _LogisticsManagementScreenState extends ConsumerState<LogisticsManagementS
                         type: types[index],
                         canAfford: playerCash >= types[index].purchasePrice,
                         isFleetFull:
-                            company.currentVehicleCount >= company.maxVehicleCount,
+                            company.currentVehicleCount >=
+                            company.maxVehicleCount,
                         onPurchase: () async {
                           final result = await ref
                               .read(logisticsActionProvider)

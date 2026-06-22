@@ -115,9 +115,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     }
   }
 
-  Future<void> _refreshAfterPurchase({
-    required bool isInstant,
-  }) async {
+  Future<void> _refreshAfterPurchase({required bool isInstant}) async {
     if (_activeProductId.isNotEmpty) {
       ref.invalidate(marketProductProvider(_activeProductId));
       ref.invalidate(marketListingsProvider(_activeProductId));
@@ -238,7 +236,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return match?.listing.cityName ?? '-';
   }
 
-
   void _removeCartItem(_MarketCartItem item) {
     setState(() {
       _cartItems.removeWhere((entry) => entry.key == item.key);
@@ -264,7 +261,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     });
   }
 
-  List<MarketListingModel> _applyCartCityRules(List<MarketListingModel> listings) {
+  List<MarketListingModel> _applyCartCityRules(
+    List<MarketListingModel> listings,
+  ) {
     if (_lockedSourceCityId == null) return listings;
 
     final sameCity = listings
@@ -324,10 +323,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           children: [
             TextSpan(
               text: '$label: ',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 10.sp,
-              ),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
             ),
             TextSpan(
               text: value,
@@ -350,7 +346,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   ) {
     if (store == null) return null;
 
-    final slot = store.slots.where((e) => e.id == widget.storeSlotId).firstOrNull;
+    final slot = store.slots
+        .where((e) => e.id == widget.storeSlotId)
+        .firstOrNull;
     if (slot == null) return null;
 
     return MarketBuyerStoreSlotModel(
@@ -388,13 +386,17 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     required MarketBuyerStoreSlotModel? buyerStoreSlot,
   }) {
     if (product == null || product.bazSatisFiyati <= 0) return listings;
-    if (listings.any((listing) => listing.isNpc && listing.productId == product.id)) {
+    if (listings.any(
+      (listing) => listing.isNpc && listing.productId == product.id,
+    )) {
       return listings;
     }
 
     final lockedCityListing = _lockedSourceCityId == null
         ? null
-        : listings.where((listing) => listing.cityId == _lockedSourceCityId).firstOrNull;
+        : listings
+              .where((listing) => listing.cityId == _lockedSourceCityId)
+              .firstOrNull;
 
     final cityId =
         (_lockedSourceCityId ??
@@ -404,12 +406,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             .toString();
     if (cityId.isEmpty) return listings;
 
-    final cityName = (lockedCityListing?.cityName ??
-            buyerStoreSlot?.cityName ??
-            buyer?.cityName ??
-            fallbackCity?['name'] ??
-            'Pazar')
-        .toString();
+    final cityName =
+        (lockedCityListing?.cityName ??
+                buyerStoreSlot?.cityName ??
+                buyer?.cityName ??
+                fallbackCity?['name'] ??
+                'Pazar')
+            .toString();
     final cityX = _resolveCoordinate(
       lockedCityListing?.cityX ?? buyerStoreSlot?.cityX ?? buyer?.cityX,
       fallbackCity?['map_position_x'],
@@ -570,9 +573,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardBgLight.withValues(alpha: 0.28),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: AppColors.borderGold.withValues(alpha: 0.18),
-        ),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -597,7 +598,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 ),
                 child: Text(
                   'Urun Degistir',
-                  style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -675,14 +679,20 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     List<ProductModel> products,
     List<WarehouseModel> warehouses,
   ) {
-    final activeWarehouses = warehouses
-        .where((warehouse) => warehouse.isActive && warehouse.warehouseKind != 'store')
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final activeWarehouses =
+        warehouses
+            .where(
+              (warehouse) =>
+                  warehouse.isActive && warehouse.warehouseKind != 'store',
+            )
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
     final selectedWarehouse = activeWarehouses
         .where((warehouse) => warehouse.id == _activeWarehouseId)
         .firstOrNull;
-    final acceptedProductIds = _acceptedProductIdsForWarehouse(selectedWarehouse);
+    final acceptedProductIds = _acceptedProductIdsForWarehouse(
+      selectedWarehouse,
+    );
     final sortedProducts = [...products]
       ..sort((a, b) => a.urunAdi.compareTo(b.urunAdi));
     final warehouseScopedProducts = selectedWarehouse == null
@@ -754,8 +764,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 separatorBuilder: (context, index) => SizedBox(width: 8.w),
                 itemBuilder: (context, index) {
                   final isAll = index == 0;
-                  final cityName = isAll ? 'Tum Sehirler' : sortedCityNames[index - 1];
-                  final cityId = isAll ? '' : cityGroups[cityName]!.first.cityId;
+                  final cityName = isAll
+                      ? 'Tum Sehirler'
+                      : sortedCityNames[index - 1];
+                  final cityId = isAll
+                      ? ''
+                      : cityGroups[cityName]!.first.cityId;
                   final isSelected = _warehouseCityFilter == cityId;
                   return GestureDetector(
                     onTap: () {
@@ -764,7 +778,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       });
                     },
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 8.h,
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppColors.gold.withValues(alpha: 0.14)
@@ -854,7 +871,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   color: AppColors.textMuted,
                   fontSize: 12.sp,
                 ),
-                prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: AppColors.textMuted,
+                ),
                 filled: true,
                 fillColor: AppColors.cardBgLight.withValues(alpha: 0.35),
                 enabledBorder: OutlineInputBorder(
@@ -1034,8 +1054,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final availableCapacity =
-        (warehouse.capacity - warehouse.reservedCapacity).clamp(0, double.infinity);
+    final availableCapacity = (warehouse.capacity - warehouse.reservedCapacity)
+        .clamp(0, double.infinity);
     final capacityColor = availableCapacity <= 0
         ? AppColors.red
         : availableCapacity <= 25
@@ -1131,9 +1151,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         ? ref.watch(marketBuyerWarehouseProvider(_activeWarehouseId))
         : const AsyncValue<MarketBuyerWarehouseModel?>.data(null);
     final buyerStoreAsync = _isStoreTarget && widget.storeId.isNotEmpty
-        ? ref.watch(storeDetailPageProvider(widget.storeId)).whenData(
-            (page) => page.store,
-          )
+        ? ref
+              .watch(storeDetailPageProvider(widget.storeId))
+              .whenData((page) => page.store)
         : const AsyncValue<StoreModel?>.data(null);
     final buyerStoreSlot = _isStoreTarget
         ? _deriveBuyerStoreSlot(
@@ -1188,7 +1208,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             productsAsync.when(
                               data: (products) => warehousesAsync.when(
                                 data: (warehouses) =>
-                                    _buildInitialSelectionCard(products, warehouses),
+                                    _buildInitialSelectionCard(
+                                      products,
+                                      warehouses,
+                                    ),
                                 loading: _buildLoadingCard,
                                 error: (e, s) =>
                                     _buildErrorCard('Depo listesi alinamadi.'),
@@ -1231,7 +1254,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 8.h),
                       sliver: SliverToBoxAdapter(
-                        child: _buildSectionHeader('SATIS NOKTALARI', 'Pazar Listesi'),
+                        child: _buildSectionHeader(
+                          'SATIS NOKTALARI',
+                          'Pazar Listesi',
+                        ),
                       ),
                     ),
                     SliverPadding(
@@ -1266,9 +1292,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                 buyerStoreSlot.qualityLevel > 0,
                           );
                         },
-                        loading: () => SliverToBoxAdapter(
-                          child: _buildLoadingCard(),
-                        ),
+                        loading: () =>
+                            SliverToBoxAdapter(child: _buildLoadingCard()),
                         error: (e, s) => SliverToBoxAdapter(
                           child: _buildErrorCard('Pazar verileri alinamadi.'),
                         ),
@@ -1283,7 +1308,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ),
     );
   }
-
 
   Widget _buildListingsSliver({
     required List<MarketListingModel> listings,
@@ -1407,7 +1431,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                     color: AppColors.cardBgLight,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: AppColors.borderGold.withValues(alpha: 0.35),
+                                      color: AppColors.borderGold.withValues(
+                                        alpha: 0.35,
+                                      ),
                                     ),
                                   ),
                                   child: ClipOval(
@@ -1422,7 +1448,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                 SizedBox(width: 10.w),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         listing.sellerPlayerName,
@@ -1460,7 +1487,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                     color: AppColors.cardBgLight,
                                     borderRadius: BorderRadius.circular(10.r),
                                     border: Border.all(
-                                      color: AppColors.border.withValues(alpha: 0.45),
+                                      color: AppColors.border.withValues(
+                                        alpha: 0.45,
+                                      ),
                                     ),
                                   ),
                                   child: CachedAssetImage(
@@ -1470,7 +1499,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                 SizedBox(width: 8.w),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         listing.productName,
@@ -1592,10 +1622,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             child: ElevatedButton(
                               onPressed: canAddToCart
                                   ? () => _openAddToCartSheet(
-                                        listing,
-                                        product,
-                                        buyerStoreSlot,
-                                      )
+                                      listing,
+                                      product,
+                                      buyerStoreSlot,
+                                    )
                                   : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.gold,
@@ -1715,7 +1745,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: AppTextStyles.titleGold.copyWith(letterSpacing: 1.2)),
+        Text(
+          title,
+          style: AppTextStyles.titleGold.copyWith(letterSpacing: 1.2),
+        ),
         Text(
           subtitle,
           style: AppTextStyles.body.copyWith(
@@ -1726,6 +1759,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ],
     );
   }
+
   Widget _buildEmptyState() {
     return Container(
       width: double.infinity,
@@ -1737,7 +1771,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ),
       child: Column(
         children: [
-          Icon(Icons.storefront_outlined, color: AppColors.textMuted, size: 48.sp),
+          Icon(
+            Icons.storefront_outlined,
+            color: AppColors.textMuted,
+            size: 48.sp,
+          ),
           SizedBox(height: 16.h),
           Text(
             'Satis Noktasi Bulunamadi',
@@ -1887,7 +1925,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (sheetContext) => _buildCartSummaryBar(sheetContext: sheetContext),
+      builder: (sheetContext) =>
+          _buildCartSummaryBar(sheetContext: sheetContext),
     );
   }
 
@@ -1915,7 +1954,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.shopping_bag_outlined, color: AppColors.gold, size: 18.sp),
+              Icon(
+                Icons.shopping_bag_outlined,
+                color: AppColors.gold,
+                size: 18.sp,
+              ),
               SizedBox(width: 8.w),
               Text(
                 'Sepet • $_cartTotalQuantity',
@@ -1945,8 +1988,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
   Widget _buildCartSummaryBar({required BuildContext sheetContext}) {
     final currentAvailableCapacity = _currentTargetAvailableCapacity();
-    final remainingAfterCart =
-        (currentAvailableCapacity - _cartTotalVolume).clamp(-999999, 999999);
+    final remainingAfterCart = (currentAvailableCapacity - _cartTotalVolume)
+        .clamp(-999999, 999999);
     final capacityOk = _cartFitsCurrentCapacity;
     final capacityColor = capacityOk ? AppColors.green : AppColors.red;
     final largestItem = _largestCartItemByVolume;
@@ -2031,7 +2074,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _cityCatalogEnabled ? null : _enableCityCatalogMode,
+                    onPressed: _cityCatalogEnabled
+                        ? null
+                        : _enableCityCatalogMode,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.gold,
                       side: BorderSide(
@@ -2105,10 +2150,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 SizedBox(height: 2.h),
                 Text(
                   '${item.quantity} adet • ${item.totalVolume.toStringAsFixed(1)} m3',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 9.sp,
-                  ),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
                 ),
               ],
             ),
@@ -2122,11 +2164,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 color: AppColors.red.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6.r),
               ),
-              child: Icon(
-                Icons.close,
-                size: 13.sp,
-                color: AppColors.red,
-              ),
+              child: Icon(Icons.close, size: 13.sp, color: AppColors.red),
             ),
           ),
         ],
@@ -2181,9 +2219,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       return;
     }
 
-    final TransferVehicleOptionsResult<MarketTransferVehicleOptionModel> vehicleResult;
+    final TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>
+    vehicleResult;
     try {
-      vehicleResult = await ref.read(marketActionProvider).getIntercityVehicleOptions(
+      vehicleResult = await ref
+          .read(marketActionProvider)
+          .getIntercityVehicleOptions(
             sourceCityId: _lockedSourceCityId!,
             targetCityId: _activeCityId,
             totalVolume: _cartTotalVolume,
@@ -2254,6 +2295,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     vehicleName: option.vehicleName,
                     isRental: option.isRental,
                     capacity: option.capacity,
+                    speedKmh: option.speedKmh,
                     distanceKm: option.distanceKm,
                     durationLabel: _formatTransferDuration(
                       option.estimatedDurationSeconds,
@@ -2302,7 +2344,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         )
         .toList();
 
-    final result = await ref.read(marketActionProvider).startMultiMarketTransfer(
+    final result = await ref
+        .read(marketActionProvider)
+        .startMultiMarketTransfer(
           buyerWarehouseId: _activeWarehouseId,
           sourceCityId: _lockedSourceCityId!,
           items: items,
@@ -2401,20 +2445,14 @@ class _MarketCartSelection {
   final MarketListingModel listing;
   final int quantity;
 
-  const _MarketCartSelection({
-    required this.listing,
-    required this.quantity,
-  });
+  const _MarketCartSelection({required this.listing, required this.quantity});
 }
 
 class _MarketCartItem {
   final MarketListingModel listing;
   final int quantity;
 
-  const _MarketCartItem({
-    required this.listing,
-    required this.quantity,
-  });
+  const _MarketCartItem({required this.listing, required this.quantity});
 
   String get key => listing.slotId;
   double get totalProductPrice => quantity * listing.price;
@@ -2494,10 +2532,11 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
           : (free / widget.listing.unitVolume).floor();
     }
 
-    return [byStock, byCash, byCapacity].reduce((a, b) => a < b ? a : b).clamp(
-          0,
-          byStock,
-        );
+    return [
+      byStock,
+      byCash,
+      byCapacity,
+    ].reduce((a, b) => a < b ? a : b).clamp(0, byStock);
   }
 
   void _updateQuantity(int maxQuantity, String value) {
@@ -2528,11 +2567,13 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final warehouseCapacityAsync = !_isStoreTarget && widget.buyerWarehouseId != null
+    final warehouseCapacityAsync =
+        !_isStoreTarget && widget.buyerWarehouseId != null
         ? ref.watch(warehouseCapacityStatusProvider(widget.buyerWarehouseId!))
         : const AsyncValue<WarehouseCapacityStatusModel?>.data(null);
     final player = ref.watch(playerProvider).value;
-    final inheritedState = context.findAncestorStateOfType<_MarketScreenState>();
+    final inheritedState = context
+        .findAncestorStateOfType<_MarketScreenState>();
     final reservedCash = inheritedState?._cartTotalProductCost ?? 0;
     final reservedVolume = inheritedState?._cartTotalVolume ?? 0;
     final maxQuantity = _computeMaxQuantity(
@@ -2562,7 +2603,9 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: AppColors.borderGold.withValues(alpha: 0.2),
+          ),
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -2665,13 +2708,19 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
                     label: '1/4',
                     value: maxQuantity <= 0
                         ? '0'
-                        : (maxQuantity / 4).floor().clamp(1, maxQuantity).toString(),
+                        : (maxQuantity / 4)
+                              .floor()
+                              .clamp(1, maxQuantity)
+                              .toString(),
                   ),
                   NumericKeyboardShortcut(
                     label: 'Yari',
                     value: maxQuantity <= 0
                         ? '0'
-                        : (maxQuantity / 2).floor().clamp(1, maxQuantity).toString(),
+                        : (maxQuantity / 2)
+                              .floor()
+                              .clamp(1, maxQuantity)
+                              .toString(),
                   ),
                   NumericKeyboardShortcut(
                     label: 'Tamami',
@@ -2761,7 +2810,9 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: AppColors.borderGold.withValues(alpha: 0.2),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -3036,6 +3087,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                     vehicleName: option.vehicleName,
                     isRental: option.isRental,
                     capacity: option.capacity,
+                    speedKmh: option.speedKmh,
                     distanceKm: option.distanceKm,
                     durationLabel: _formatTransferDuration(
                       option.estimatedDurationSeconds,

@@ -7,6 +7,7 @@ CREATE TABLE brand_company_products (
     brand_company_id uuid NOT NULL REFERENCES brand_companies(id),
     player_id uuid NOT NULL REFERENCES players(id),
     product_id text NOT NULL REFERENCES products(id),
+    watermark_asset_id text,
     is_active boolean NOT NULL DEFAULT true,
     created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())
@@ -21,7 +22,7 @@ CREATE TABLE brand_companies (
     updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
     brand_level integer NOT NULL DEFAULT 1,
     brand_xp bigint NOT NULL,
-    logo_id text NOT NULL DEFAULT 'logo_1.png',
+    logo_id text NOT NULL DEFAULT 'logo1.webp',
     theme_color text NOT NULL DEFAULT '#E5C05C'
 );
 
@@ -1094,6 +1095,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION transfer_warehouse_fuel_to_logistics_company(
+    
+) RETURNS void AS $$
+BEGIN
+    -- Implementation details not available in OpenAPI spec
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION start_building_boost(
     
 ) RETURNS void AS $$
@@ -1223,14 +1232,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION start_warehouse_to_warehouse_transfer(
-    
-) RETURNS void AS $$
-BEGIN
-    -- Implementation details not available in OpenAPI spec
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION buy_market_fuel_for_logistics_company(
     
 ) RETURNS void AS $$
 BEGIN
@@ -1439,6 +1440,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION get_player_brand_company_products(
+    
+) RETURNS void AS $$
+BEGIN
+    -- Implementation details not available in OpenAPI spec
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION set_brand_company_product_watermark(
     
 ) RETURNS void AS $$
 BEGIN
@@ -2069,4 +2078,3 @@ BEGIN
     -- Implementation details not available in OpenAPI spec
 END;
 $$ LANGUAGE plpgsql;
-

@@ -86,6 +86,30 @@ class CompanyActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> updateBrandCompany({
+    required String logoId,
+    required String themeColor,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'update_brand_company',
+        params: {
+          'p_logo_id': logoId,
+          'p_theme_color': themeColor,
+        },
+      );
+      _ref.invalidate(playerBrandCompanyProvider);
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> patentBrandProduct({
     required String productId,
   }) async {
@@ -100,6 +124,30 @@ class CompanyActionNotifier {
         params: {'p_product_id': productId},
       );
       _ref.invalidate(playerBrandCompanyProvider);
+      _ref.invalidate(playerBrandCompanyProductsProvider);
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> setBrandProductWatermark({
+    required String productId,
+    String? watermarkAssetId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'set_brand_company_product_watermark',
+        params: {
+          'p_product_id': productId,
+          'p_watermark_asset_id': watermarkAssetId,
+        },
+      );
       _ref.invalidate(playerBrandCompanyProductsProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {

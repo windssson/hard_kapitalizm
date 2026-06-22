@@ -6,6 +6,7 @@ class TransferVehicleOptionCard extends StatelessWidget {
   final String vehicleName;
   final bool isRental;
   final int capacity;
+  final int speedKmh;
   final double distanceKm;
   final String durationLabel;
   final double transportCost;
@@ -23,6 +24,7 @@ class TransferVehicleOptionCard extends StatelessWidget {
     required this.vehicleName,
     required this.isRental,
     required this.capacity,
+    required this.speedKmh,
     required this.distanceKm,
     required this.durationLabel,
     required this.transportCost,
@@ -60,12 +62,8 @@ class TransferVehicleOptionCard extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.cardBg.withValues(
-                alpha: isSelected ? 0.34 : 0.42,
-              ),
-              AppColors.cardBgLight.withValues(
-                alpha: isSelected ? 0.48 : 0.58,
-              ),
+              AppColors.cardBg.withValues(alpha: isSelected ? 0.34 : 0.42),
+              AppColors.cardBgLight.withValues(alpha: isSelected ? 0.48 : 0.58),
             ],
           ),
           borderRadius: BorderRadius.circular(16.r),
@@ -168,26 +166,10 @@ class TransferVehicleOptionCard extends StatelessWidget {
               runSpacing: 8.h,
               children: [
                 _buildStatChip('Kapasite', '$capacity'),
+                _buildStatChip('Hiz', '$speedKmh km/h'),
                 _buildStatChip('Mesafe', '${distanceKm.toStringAsFixed(0)} km'),
                 _buildStatChip('Sure', durationLabel),
               ],
-            ),
-            SizedBox(height: 10.h),
-            Text(
-              _buildCostBreakdown(),
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            SizedBox(height: 3.h),
-            Text(
-              'Yakit ihtiyaci ${fuelNeeded.toStringAsFixed(0)} | Kondisyon ${conditionNeeded.toStringAsFixed(0)}',
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
-              ),
             ),
             if (!canSelect && disabledReason != null) ...[
               SizedBox(height: 8.h),
@@ -237,18 +219,5 @@ class TransferVehicleOptionCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _buildCostBreakdown() {
-    if (rentalCost > 0 && fuelCost > 0) {
-      return 'Kira ${rentalCost.toStringAsFixed(0)} TL + Yakit ${fuelCost.toStringAsFixed(0)} TL';
-    }
-    if (rentalCost > 0) {
-      return 'Kira bedeli ${rentalCost.toStringAsFixed(0)} TL';
-    }
-    if (fuelCost > 0) {
-      return 'Yakit maliyeti ${fuelCost.toStringAsFixed(0)} TL';
-    }
-    return 'Ek nakliye maliyeti yok';
   }
 }

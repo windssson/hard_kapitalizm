@@ -35,11 +35,7 @@ class MineDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
-  static const Map<int, int> _mineBoostStarCosts = {
-    6: 3,
-    12: 6,
-    24: 12,
-  };
+  static const Map<int, int> _mineBoostStarCosts = {6: 3, 12: 6, 24: 12};
 
   String? get _currentBrandName =>
       ref.read(playerBrandCompanyProvider).value?.brandName;
@@ -65,7 +61,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       ref.invalidate(playerProvider);
     }
 
-    if (includeWarehouseList || (warehouseId != null && warehouseId.isNotEmpty)) {
+    if (includeWarehouseList ||
+        (warehouseId != null && warehouseId.isNotEmpty)) {
       ref.invalidate(warehouseListProvider);
     }
 
@@ -86,7 +83,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     ref.watch(playerBrandCompanyProvider);
     final detailAsync = ref.watch(mineDetailProvider(widget.mineId));
     final activeBoost = ref.watch(activeMineBoostProvider(widget.mineId)).value;
-    final activeUpgrade = ref.watch(activeMineUpgradeProvider(widget.mineId)).value;
+    final activeUpgrade = ref
+        .watch(activeMineUpgradeProvider(widget.mineId))
+        .value;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -148,12 +147,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
-                      _buildProductionCard(
-                        context,
-                        ref,
-                        detail,
-                        activeBoost,
-                      ),
+                      _buildProductionCard(context, ref, detail, activeBoost),
                     ],
                   ),
                 ),
@@ -441,7 +435,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   Icons.flash_on_rounded,
                   canBoost ? AppColors.goldDark : AppColors.textMuted,
                   canBoost
-                      ? () => _showMineBoostSheet(context, ref, detail, activeBoost)
+                      ? () => _showMineBoostSheet(
+                          context,
+                          ref,
+                          detail,
+                          activeBoost,
+                        )
                       : () {
                           AppSnackbar.show(
                             context,
@@ -462,11 +461,11 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   canUpgrade ? AppColors.green : AppColors.textMuted,
                   canUpgrade
                       ? () => _showMineUpgradeSheet(
-                            context,
-                            ref,
-                            detail,
-                            activeUpgrade,
-                          )
+                          context,
+                          ref,
+                          detail,
+                          activeUpgrade,
+                        )
                       : () {
                           AppSnackbar.show(
                             context,
@@ -613,10 +612,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             message,
             style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
           ),
-          if (action != null) ...[
-            SizedBox(height: 12.h),
-            action,
-          ],
+          if (action != null) ...[SizedBox(height: 12.h), action],
         ],
       ),
     );
@@ -676,7 +672,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 child: BrandedProductImage(
                   fileName: product.urunIconu,
                   fit: BoxFit.contain,
+                  brandId: detail.mine.brandId,
                   brandName: isBranded ? _currentBrandName : null,
+                  productId: product.id,
                   showFrame: false,
                 ),
               ),
@@ -1114,7 +1112,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           context,
                           title: 'Hata',
                           message:
-                              result['message'] ?? 'Maden boostu baslatilamadi.',
+                              result['message'] ??
+                              'Maden boostu baslatilamadi.',
                           type: SnackbarType.error,
                         );
                       }
@@ -1216,7 +1215,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       builder: (sheetContext) {
         final nextLevel = detail.mine.level + 1;
         final nextOutputCapacity = detail.mine.outputCapacity * 2;
-        final durationMinutes = detail.mineType.constructionTimeMinutes * nextLevel;
+        final durationMinutes =
+            detail.mineType.constructionTimeMinutes * nextLevel;
         final upgradeCost = detail.mineType.cost * nextLevel;
 
         return Padding(
@@ -1303,18 +1303,18 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   syncProviders: false,
                                 );
                             if (!context.mounted) return;
-                             if (result['success'] == true) {
-                               await _refreshMineEcosystem();
-                               if (!context.mounted) return;
-                               AppSnackbar.show(
-                                 context,
-                                 title: 'Basarili',
-                                 message: 'Maden yukseltmesi baslatildi.',
-                                 type: SnackbarType.success,
-                               );
-                             } else {
-                               if (!context.mounted) return;
-                               AppSnackbar.show(
+                            if (result['success'] == true) {
+                              await _refreshMineEcosystem();
+                              if (!context.mounted) return;
+                              AppSnackbar.show(
+                                context,
+                                title: 'Basarili',
+                                message: 'Maden yukseltmesi baslatildi.',
+                                type: SnackbarType.success,
+                              );
+                            } else {
+                              if (!context.mounted) return;
+                              AppSnackbar.show(
                                 context,
                                 title: 'Hata',
                                 message:
@@ -1342,9 +1342,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
   }
 
-  Future<void> _finishMineUpgradeWithGold(
-    BuildingUpgradeModel upgrade,
-  ) async {
+  Future<void> _finishMineUpgradeWithGold(BuildingUpgradeModel upgrade) async {
     final result = await ref
         .read(mineActionProvider)
         .finishMineUpgradeWithGold(upgrade.id, syncProviders: false);
@@ -1378,9 +1376,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   ) async {
     List<SelectableProductionProductModel> products;
     try {
-      products = await ref.read(mineActionProvider).getSelectableProducts(
-            typeId: detail.mineType.id,
-          );
+      products = await ref
+          .read(mineActionProvider)
+          .getSelectableProducts(typeId: detail.mineType.id);
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -1397,7 +1395,11 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       final product = selectableProduct.product;
       return ProductSelectionOption(
         id: product.id,
-        title: product.urunAdi + (selectableProduct.hasPreferredBrand ? ' (${_currentBrandName ?? 'Markali'})' : ''),
+        title:
+            product.urunAdi +
+            (selectableProduct.hasPreferredBrand
+                ? ' (${_currentBrandName ?? 'Markali'})'
+                : ''),
         subtitle: 'Saatlik uretim: ${product.uretimAdedi}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
@@ -1405,12 +1407,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         iconPath: product.urunIconu,
         onTap: () async {
           Navigator.pop(context);
-          await _selectMineProduct(
-            context,
-            ref,
-            detail,
-            selectableProduct,
-          );
+          await _selectMineProduct(context, ref, detail, selectableProduct);
         },
       );
     }).toList();
@@ -1429,7 +1426,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     SelectableProductionProductModel selectableProduct,
   ) async {
     final product = selectableProduct.product;
-    final result = await ref.read(mineActionProvider).setMineProduct(
+    final result = await ref
+        .read(mineActionProvider)
+        .setMineProduct(
           mineId: detail.mine.id,
           productId: product.id,
           syncProviders: false,
@@ -1461,7 +1460,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     WidgetRef ref,
     MineDetailModel detail,
   ) async {
-    final result = await ref.read(mineActionProvider).setMineActive(
+    final result = await ref
+        .read(mineActionProvider)
+        .setMineActive(
           mineId: detail.mine.id,
           isActive: !detail.mine.isActive,
           syncProviders: false,
@@ -1495,8 +1496,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     WidgetRef ref,
     MineDetailModel detail,
   ) async {
-    final sendableInventories =
-        detail.outputInventories.where((item) => item.quantity > 0).toList();
+    final sendableInventories = detail.outputInventories
+        .where((item) => item.quantity > 0)
+        .toList();
     if (sendableInventories.isEmpty) {
       AppSnackbar.show(
         context,
@@ -1527,7 +1529,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         (warehouse['warehouse_type'] as Map?)?['accepted_product_ids'],
       );
       final eligibleInventories = sendableInventories
-          .where((inventory) => acceptedProductIds.contains(inventory.productId))
+          .where(
+            (inventory) => acceptedProductIds.contains(inventory.productId),
+          )
           .toList();
       if (eligibleInventories.isEmpty) continue;
 
@@ -1540,8 +1544,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           id: warehouseOption.id,
           title: warehouseOption.name,
           subtitle: warehouseOption.cityName,
-          badgeText:
-              warehouseOption.isSameCity ? 'Anlik Transfer' : 'Lojistik Transfer',
+          badgeText: warehouseOption.isSameCity
+              ? 'Anlik Transfer'
+              : 'Lojistik Transfer',
           infoText: '${eligibleInventories.length} uygun stok secilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
           onTap: () {
@@ -1591,9 +1596,11 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   }) async {
     final selectedQuantities = <String, int>{};
     final sortedInventories = [...inventories]
-      ..sort((a, b) => (a.product?.urunAdi ?? a.productId).compareTo(
-            b.product?.urunAdi ?? b.productId,
-          ));
+      ..sort(
+        (a, b) => (a.product?.urunAdi ?? a.productId).compareTo(
+          b.product?.urunAdi ?? b.productId,
+        ),
+      );
 
     Future<void> openQuantityEditor(
       BuildContext sheetContext,
@@ -1689,7 +1696,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 }
                 Navigator.pop(dialogContext, quantity);
               },
-              child: const Text('Kaydet', style: TextStyle(color: Colors.black)),
+              child: const Text(
+                'Kaydet',
+                style: TextStyle(color: Colors.black),
+              ),
             ),
           ],
         ),
@@ -1746,12 +1756,18 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   SizedBox(height: 6.h),
                   Text(
                     '${targetWarehouse.name} | ${targetWarehouse.cityName}',
-                    style: TextStyle(color: AppColors.goldLight, fontSize: 12.sp),
+                    style: TextStyle(
+                      color: AppColors.goldLight,
+                      fontSize: 12.sp,
+                    ),
                   ),
                   SizedBox(height: 4.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet secildi',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
                   ),
                   SizedBox(height: 16.h),
                   Expanded(
@@ -1761,7 +1777,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           SizedBox(height: 10.h),
                       itemBuilder: (_, index) {
                         final item = sortedInventories[index];
-                        final selectedQuantity = selectedQuantities[item.id] ?? 0;
+                        final selectedQuantity =
+                            selectedQuantities[item.id] ?? 0;
                         final isSelected = selectedQuantity > 0;
                         return Container(
                           padding: EdgeInsets.all(12.w),
@@ -1785,7 +1802,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      (item.product?.urunAdi ?? item.productId) +
+                                      (item.product?.urunAdi ??
+                                              item.productId) +
                                           (item.brandId !=
                                                   SelectableProductionProductModel
                                                       .defaultBrandId
@@ -1821,7 +1839,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                       : AppColors.goldLight,
                                 ),
                                 child: Text(
-                                  isSelected ? 'Adet: $selectedQuantity' : 'Ekle',
+                                  isSelected
+                                      ? 'Adet: $selectedQuantity'
+                                      : 'Ekle',
                                 ),
                               ),
                             ],
@@ -1872,7 +1892,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   AppSnackbar.show(
                                     context,
                                     title: 'Basarili',
-                                    message: 'Secilen stoklar depoya gonderildi.',
+                                    message:
+                                        'Secilen stoklar depoya gonderildi.',
                                     type: SnackbarType.success,
                                   );
                                   return;
@@ -1921,7 +1942,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       options: [],
       unavailableReason: null,
     );
-    final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalQuantity = items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
     final totalVolume = items.fold<double>(
       0,
       (sum, item) =>
@@ -2056,6 +2080,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     vehicleName: option.vehicleName,
                     isRental: option.isRental,
                     capacity: option.capacity,
+                    speedKmh: option.speedKmh,
                     distanceKm: option.distanceKm,
                     durationLabel: _formatTransferDuration(
                       option.estimatedDurationSeconds,
@@ -2089,7 +2114,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     if (hours > 0) return '${hours}s ${minutes}dk';
     return '${duration.inMinutes}dk';
   }
-
 }
 
 class _SelectedMineProductionTransferItem {
@@ -2226,7 +2250,9 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final totalSeconds = upgrade.finishAt.difference(upgrade.startedAt).inSeconds;
+    final totalSeconds = upgrade.finishAt
+        .difference(upgrade.startedAt)
+        .inSeconds;
     final elapsedSeconds = now.difference(upgrade.startedAt).inSeconds;
     final progress = totalSeconds > 0
         ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
@@ -2307,9 +2333,7 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: AppColors.gold.withValues(alpha: 0.35),
-                ),
+                side: BorderSide(color: AppColors.gold.withValues(alpha: 0.35)),
                 foregroundColor: AppColors.goldLight,
               ),
               onPressed: onFinishWithGold,
@@ -2334,4 +2358,3 @@ String _formatCountdownLabel(Duration remaining) {
   }
   return '${remaining.inMinutes}dk';
 }
-

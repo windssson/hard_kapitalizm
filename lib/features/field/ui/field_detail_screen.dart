@@ -38,11 +38,7 @@ class FieldDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
-  static const Map<int, int> _fieldBoostStarCosts = {
-    6: 3,
-    12: 6,
-    24: 12,
-  };
+  static const Map<int, int> _fieldBoostStarCosts = {6: 3, 12: 6, 24: 12};
 
   String? get _currentBrandName =>
       ref.read(playerBrandCompanyProvider).value?.brandName;
@@ -68,7 +64,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       ref.invalidate(playerProvider);
     }
 
-    if (includeWarehouseList || (warehouseId != null && warehouseId.isNotEmpty)) {
+    if (includeWarehouseList ||
+        (warehouseId != null && warehouseId.isNotEmpty)) {
       ref.invalidate(warehouseListProvider);
     }
 
@@ -88,10 +85,12 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   Widget build(BuildContext context) {
     ref.watch(playerBrandCompanyProvider);
     final detailAsync = ref.watch(fieldDetailProvider(widget.fieldId));
-    final activeBoost = ref.watch(activeFieldBoostProvider(widget.fieldId)).value;
-    final activeUpgrade = ref.watch(
-      activeFieldUpgradeProvider(widget.fieldId),
-    ).value;
+    final activeBoost = ref
+        .watch(activeFieldBoostProvider(widget.fieldId))
+        .value;
+    final activeUpgrade = ref
+        .watch(activeFieldUpgradeProvider(widget.fieldId))
+        .value;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -471,12 +470,18 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   Icons.flash_on_rounded,
                   canBoost ? AppColors.goldDark : AppColors.textMuted,
                   canBoost
-                      ? () => _showFieldBoostSheet(context, ref, detail, activeBoost)
+                      ? () => _showFieldBoostSheet(
+                          context,
+                          ref,
+                          detail,
+                          activeBoost,
+                        )
                       : () {
                           AppSnackbar.show(
                             context,
                             title: 'Bilgi',
-                            message: 'Boost baslatmadan once en az bir uretim slotu acmalisin.',
+                            message:
+                                'Boost baslatmadan once en az bir uretim slotu acmalisin.',
                             type: SnackbarType.info,
                           );
                         },
@@ -488,7 +493,12 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   'Yukselt',
                   Icons.upgrade_rounded,
                   AppColors.green,
-                  () => _showFieldUpgradeSheet(context, ref, detail, activeUpgrade),
+                  () => _showFieldUpgradeSheet(
+                    context,
+                    ref,
+                    detail,
+                    activeUpgrade,
+                  ),
                 ),
               ),
               SizedBox(width: 8.w),
@@ -634,7 +644,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     BuildingBoostModel? activeBoost,
   ) {
     final slotActiveColor = slot.isActive ? AppColors.green : AppColors.red;
-    final isBranded = slot.brandId != SelectableProductionProductModel.defaultBrandId;
+    final isBranded =
+        slot.brandId != SelectableProductionProductModel.defaultBrandId;
     final slotTitle = slot.isEmpty
         ? 'Bos Ciftlik ${slot.slotIndex}'
         : '${slot.product?.urunAdi ?? slot.productId ?? 'Bilinmeyen Urun'}${isBranded ? ' (${_currentBrandName ?? 'Markali'})' : ''}';
@@ -678,11 +689,13 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                     : BrandedProductImage(
                         fileName: slot.product!.urunIconu,
                         fit: BoxFit.contain,
-                        brandName: slot.brandId !=
-                                SelectableProductionProductModel
-                                    .defaultBrandId
+                        brandId: slot.brandId,
+                        brandName:
+                            slot.brandId !=
+                                SelectableProductionProductModel.defaultBrandId
                             ? _currentBrandName
                             : null,
+                        productId: slot.productId,
                         showFrame: false,
                       ),
               ),
@@ -1024,7 +1037,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           context,
                           title: 'Hata',
                           message:
-                              result['message'] ?? 'Ciftlik boostu baslatilamadi.',
+                              result['message'] ??
+                              'Ciftlik boostu baslatilamadi.',
                           type: SnackbarType.error,
                         );
                       }
@@ -1104,10 +1118,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 ),
                 child: Text(
                   'Aktif boost bitene kadar yeni boost baslatilamaz.',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12.sp,
-                  ),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
                 ),
               ),
           ],
@@ -1231,10 +1242,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   Navigator.pop(sheetContext);
                   final result = await ref
                       .read(fieldActionProvider)
-                      .startFieldUpgrade(
-                        detail.field.id,
-                        syncProviders: false,
-                      );
+                      .startFieldUpgrade(detail.field.id, syncProviders: false);
                   if (!context.mounted) return;
                   if (result['success'] == true) {
                     await _refreshFieldEcosystem();
@@ -1294,9 +1302,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   Widget _buildHeroChipColumn(FieldDetailModel detail) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        _buildTag('Lv ${detail.field.level}', AppColors.gold),
-      ],
+      children: [_buildTag('Lv ${detail.field.level}', AppColors.gold)],
     );
   }
 
@@ -1334,9 +1340,11 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   }
 
   Widget _buildCompactInventoryRow(ProductionInventoryModel inventory) {
-    final isBranded = !inventory.isInput &&
+    final isBranded =
+        !inventory.isInput &&
         inventory.brandId != SelectableProductionProductModel.defaultBrandId;
-    final title = (inventory.product?.urunAdi.isNotEmpty == true
+    final title =
+        (inventory.product?.urunAdi.isNotEmpty == true
             ? inventory.product!.urunAdi
             : inventory.productId) +
         (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
@@ -1365,7 +1373,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 ? BrandedProductImage(
                     fileName: inventory.product!.urunIconu,
                     fit: BoxFit.contain,
+                    brandId: inventory.brandId,
                     brandName: isBranded ? _currentBrandName : null,
+                    productId: inventory.productId,
                     showFrame: false,
                   )
                 : Icon(Icons.inventory_2, color: color, size: 14.sp),
@@ -1386,7 +1396,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 1.h),
+                SizedBox(height: 3.h),
+                _buildQualityStars(inventory.qualityLevel),
+                SizedBox(height: 2.h),
                 Text(
                   'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL${inventory.pendingQuantity > 0 ? " | Yolda: ${inventory.pendingQuantity.toStringAsFixed(0)}" : ""}',
                   style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
@@ -1439,11 +1451,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(7.r),
           ),
-          child: Icon(
-            Icons.science_outlined,
-            color: color,
-            size: 13.sp,
-          ),
+          child: Icon(Icons.science_outlined, color: color, size: 13.sp),
         ),
         SizedBox(width: 7.w),
         Expanded(
@@ -1583,10 +1591,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                       left: left,
                       top: 0,
                       bottom: 0,
-                      child: Container(
-                        width: width,
-                        color: segment.color,
-                      ),
+                      child: Container(width: width, color: segment.color),
                     );
                     left += width;
                     return positioned;
@@ -1671,9 +1676,11 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     FieldDetailModel detail,
     ProductionInventoryModel inventory,
   ) {
-    final isBranded = !inventory.isInput &&
+    final isBranded =
+        !inventory.isInput &&
         inventory.brandId != SelectableProductionProductModel.defaultBrandId;
-    final title = (inventory.product?.urunAdi.isNotEmpty == true
+    final title =
+        (inventory.product?.urunAdi.isNotEmpty == true
             ? inventory.product!.urunAdi
             : inventory.productId) +
         (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
@@ -1708,6 +1715,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                     ? BrandedProductImage(
                         fileName: inventory.product!.urunIconu,
                         fit: BoxFit.contain,
+                        brandId: inventory.brandId,
                         brandName:
                             !inventory.isInput &&
                                 inventory.brandId !=
@@ -1715,6 +1723,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                         .defaultBrandId
                             ? _currentBrandName
                             : null,
+                        productId: inventory.productId,
                         showFrame: false,
                       )
                     : Icon(Icons.inventory_2, color: color, size: 20.sp),
@@ -1735,26 +1744,42 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                       ),
                     ),
                     SizedBox(height: 3.h),
-                    Row(
-                      children: [
-                        _buildQualityStars(inventory.qualityLevel),
-                        if (!inventory.isInput) ...[
-                          SizedBox(width: 6.w),
-                          _buildInlineMetaChip(
-                            inventory.brandId !=
-                                    SelectableProductionProductModel
-                                        .defaultBrandId
-                                ? 'Markali'
-                                : 'Brandsiz',
-                            inventory.brandId !=
-                                    SelectableProductionProductModel
-                                        .defaultBrandId
-                                ? AppColors.gold
-                                : AppColors.textMuted,
+                    if (inventory.isInput)
+                      Row(
+                        children: [
+                          Text(
+                            'Kalite',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
+                          SizedBox(width: 6.w),
+                          _buildQualityStars(inventory.qualityLevel),
                         ],
-                      ],
-                    ),
+                      )
+                    else
+                      Row(
+                        children: [
+                          _buildQualityStars(inventory.qualityLevel),
+                          if (!inventory.isInput) ...[
+                            SizedBox(width: 6.w),
+                            _buildInlineMetaChip(
+                              inventory.brandId !=
+                                      SelectableProductionProductModel
+                                          .defaultBrandId
+                                  ? 'Markali'
+                                  : 'Brandsiz',
+                              inventory.brandId !=
+                                      SelectableProductionProductModel
+                                          .defaultBrandId
+                                  ? AppColors.gold
+                                  : AppColors.textMuted,
+                            ),
+                          ],
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -1838,7 +1863,10 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     FieldDetailModel detail,
     ProductionInventoryModel inventory,
   ) {
-    final ratio = _inventoryRatio(inventory.quantity, detail.field.outputCapacity);
+    final ratio = _inventoryRatio(
+      inventory.quantity,
+      detail.field.outputCapacity,
+    );
     final isBranded =
         inventory.brandId != SelectableProductionProductModel.defaultBrandId;
 
@@ -1960,7 +1988,10 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     try {
       products = await ref
           .read(fieldActionProvider)
-          .getSelectableProducts(ownerKind: 'field', typeId: detail.fieldType.id);
+          .getSelectableProducts(
+            ownerKind: 'field',
+            typeId: detail.fieldType.id,
+          );
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -1985,14 +2016,20 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       final isDisabled = disabledProductIds.contains(product.id);
       return ProductSelectionOption(
         id: product.id,
-        title: product.urunAdi + (selectableProduct.hasPreferredBrand ? ' (${_currentBrandName ?? 'Markali'})' : ''),
+        title:
+            product.urunAdi +
+            (selectableProduct.hasPreferredBrand
+                ? ' (${_currentBrandName ?? 'Markali'})'
+                : ''),
         subtitle: 'Saatlik üretim: ${product.uretimAdedi}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
             '${selectableProduct.hasPreferredBrand ? ' • Marka Hazir' : ''}',
         iconPath: product.urunIconu,
         isDisabled: isDisabled,
-        disabledReason: isDisabled ? 'Bu ürün başka bir slotta kullanılıyor' : null,
+        disabledReason: isDisabled
+            ? 'Bu ürün başka bir slotta kullanılıyor'
+            : null,
         onTap: () async {
           Navigator.pop(context);
           await _selectSlotProduct(
@@ -2058,7 +2095,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           ? ' Eski bos kayitlardan $deletedObsoleteCount adet temizlendi.'
           : '';
       final isBranded = selectableProduct.hasPreferredBrand;
-      final productName = product.urunAdi + (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
+      final productName =
+          product.urunAdi +
+          (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -2073,9 +2112,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: sanitizeUserFacingError(
-        result['message'] ?? 'Urun secilemedi.',
-      ),
+      message: sanitizeUserFacingError(result['message'] ?? 'Urun secilemedi.'),
       type: SnackbarType.error,
     );
   }
@@ -2172,7 +2209,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       final warehouseId = warehouse['id']?.toString() ?? '';
       final cityId = warehouse['city_id']?.toString() ?? '';
       final name = (warehouse['name'] ?? 'Depo').toString();
-      final cityName = (warehouse['city']?['name'] ?? detail.cityName).toString();
+      final cityName = (warehouse['city']?['name'] ?? detail.cityName)
+          .toString();
       warehouseChoices.add(
         _FieldInboundWarehouseChoice(
           warehouseId: warehouseId,
@@ -2197,35 +2235,36 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       return;
     }
 
-    final options = warehouseChoices
-        .map(
-          (warehouse) => WarehouseSelectionOption(
-            id: warehouse.warehouseId,
-            title: warehouse.warehouseName,
-            subtitle: warehouse.cityName,
-            badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
-            infoText:
-                '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity',
-            isHighlightBadge: warehouse.isSameCity,
-            onTap: () {
-              Navigator.pop(context);
-              _showFieldInboundSelectionSheet(
-                context: context,
-                ref: ref,
-                detail: detail,
-                warehouse: warehouse,
-                remainingInputCapacity: remainingInputCapacity,
-              );
-            },
-          ),
-        )
-        .toList()
-      ..sort((a, b) {
-        if (a.isHighlightBadge != b.isHighlightBadge) {
-          return a.isHighlightBadge ? -1 : 1;
-        }
-        return a.title.compareTo(b.title);
-      });
+    final options =
+        warehouseChoices
+            .map(
+              (warehouse) => WarehouseSelectionOption(
+                id: warehouse.warehouseId,
+                title: warehouse.warehouseName,
+                subtitle: warehouse.cityName,
+                badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
+                infoText:
+                    '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity',
+                isHighlightBadge: warehouse.isSameCity,
+                onTap: () {
+                  Navigator.pop(context);
+                  _showFieldInboundSelectionSheet(
+                    context: context,
+                    ref: ref,
+                    detail: detail,
+                    warehouse: warehouse,
+                    remainingInputCapacity: remainingInputCapacity,
+                  );
+                },
+              ),
+            )
+            .toList()
+          ..sort((a, b) {
+            if (a.isHighlightBadge != b.isHighlightBadge) {
+              return a.isHighlightBadge ? -1 : 1;
+            }
+            return a.title.compareTo(b.title);
+          });
 
     await WarehouseSelectionSheet.show(
       context: context,
@@ -2274,7 +2313,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         (warehouse['warehouse_type'] as Map?)?['accepted_product_ids'],
       );
       final eligibleInventories = sendableInventories
-          .where((inventory) => acceptedProductIds.contains(inventory.productId))
+          .where(
+            (inventory) => acceptedProductIds.contains(inventory.productId),
+          )
           .toList();
       if (eligibleInventories.isEmpty) continue;
 
@@ -2287,8 +2328,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           id: warehouseOption.id,
           title: warehouseOption.name,
           subtitle: warehouseOption.cityName,
-          badgeText:
-              warehouseOption.isSameCity ? 'Anlik Transfer' : 'Lojistik Transfer',
+          badgeText: warehouseOption.isSameCity
+              ? 'Anlik Transfer'
+              : 'Lojistik Transfer',
           infoText: '${eligibleInventories.length} uygun stok secilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
           onTap: () {
@@ -2441,7 +2483,10 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 }
                 Navigator.pop(dialogContext, quantity);
               },
-              child: const Text('Kaydet', style: TextStyle(color: Colors.black)),
+              child: const Text(
+                'Kaydet',
+                style: TextStyle(color: Colors.black),
+              ),
             ),
           ],
         ),
@@ -2504,12 +2549,18 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   SizedBox(height: 6.h),
                   Text(
                     '${warehouse.warehouseName} | ${warehouse.cityName}',
-                    style: TextStyle(color: AppColors.goldLight, fontSize: 12.sp),
+                    style: TextStyle(
+                      color: AppColors.goldLight,
+                      fontSize: 12.sp,
+                    ),
                   ),
                   SizedBox(height: 4.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
                   ),
                   SizedBox(height: 16.h),
                   Expanded(
@@ -2568,17 +2619,19 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                 onPressed: maxQuantity <= 0
                                     ? null
                                     : () => openQuantityEditor(
-                                          sheetContext,
-                                          modalSetState,
-                                          slot,
-                                        ),
+                                        sheetContext,
+                                        modalSetState,
+                                        slot,
+                                      ),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: isSelected
                                       ? AppColors.green
                                       : AppColors.goldLight,
                                 ),
                                 child: Text(
-                                  isSelected ? 'Adet: $selectedQuantity' : 'Ekle',
+                                  isSelected
+                                      ? 'Adet: $selectedQuantity'
+                                      : 'Ekle',
                                 ),
                               ),
                             ],
@@ -2695,7 +2748,10 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       options: [],
       unavailableReason: null,
     );
-    final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalQuantity = items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
     final totalVolume = items.fold<double>(
       0,
       (sum, item) => sum + (item.quantity * item.slot.unitVolume),
@@ -2895,7 +2951,10 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 }
                 Navigator.pop(dialogContext, quantity);
               },
-              child: const Text('Kaydet', style: TextStyle(color: Colors.black)),
+              child: const Text(
+                'Kaydet',
+                style: TextStyle(color: Colors.black),
+              ),
             ),
           ],
         ),
@@ -2952,12 +3011,18 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   SizedBox(height: 6.h),
                   Text(
                     '${targetWarehouse.name} | ${targetWarehouse.cityName}',
-                    style: TextStyle(color: AppColors.goldLight, fontSize: 12.sp),
+                    style: TextStyle(
+                      color: AppColors.goldLight,
+                      fontSize: 12.sp,
+                    ),
                   ),
                   SizedBox(height: 4.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet secildi',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
                   ),
                   SizedBox(height: 16.h),
                   Expanded(
@@ -2967,7 +3032,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           SizedBox(height: 10.h),
                       itemBuilder: (_, index) {
                         final item = sortedInventories[index];
-                        final selectedQuantity = selectedQuantities[item.id] ?? 0;
+                        final selectedQuantity =
+                            selectedQuantities[item.id] ?? 0;
                         final isSelected = selectedQuantity > 0;
                         return Container(
                           padding: EdgeInsets.all(12.w),
@@ -2991,7 +3057,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      (item.product?.urunAdi ?? item.productId) +
+                                      (item.product?.urunAdi ??
+                                              item.productId) +
                                           (!item.isInput &&
                                                   item.brandId !=
                                                       SelectableProductionProductModel
@@ -3028,7 +3095,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                       : AppColors.goldLight,
                                 ),
                                 child: Text(
-                                  isSelected ? 'Adet: $selectedQuantity' : 'Ekle',
+                                  isSelected
+                                      ? 'Adet: $selectedQuantity'
+                                      : 'Ekle',
                                 ),
                               ),
                             ],
@@ -3079,7 +3148,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                   AppSnackbar.show(
                                     context,
                                     title: 'Basarili',
-                                    message: 'Secilen stoklar depoya gonderildi.',
+                                    message:
+                                        'Secilen stoklar depoya gonderildi.',
                                     type: SnackbarType.success,
                                   );
                                   return;
@@ -3128,7 +3198,10 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       options: [],
       unavailableReason: null,
     );
-    final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalQuantity = items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
     final totalVolume = items.fold<double>(
       0,
       (sum, item) =>
@@ -3265,6 +3338,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   vehicleName: option.vehicleName,
                   isRental: option.isRental,
                   capacity: option.capacity,
+                  speedKmh: option.speedKmh,
                   distanceKm: option.distanceKm,
                   durationLabel: _formatTransferDuration(
                     option.estimatedDurationSeconds,
@@ -3573,7 +3647,9 @@ class _ActiveFieldUpgradeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final totalSeconds = upgrade.finishAt.difference(upgrade.startedAt).inSeconds;
+    final totalSeconds = upgrade.finishAt
+        .difference(upgrade.startedAt)
+        .inSeconds;
     final elapsedSeconds = now.difference(upgrade.startedAt).inSeconds;
     final progress = totalSeconds > 0
         ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
@@ -3654,9 +3730,7 @@ class _ActiveFieldUpgradeCard extends ConsumerWidget {
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: AppColors.gold.withValues(alpha: 0.35),
-                ),
+                side: BorderSide(color: AppColors.gold.withValues(alpha: 0.35)),
                 foregroundColor: AppColors.goldLight,
               ),
               onPressed: onFinishWithGold,

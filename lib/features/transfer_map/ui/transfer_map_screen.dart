@@ -12,6 +12,11 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_history_item_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
+import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
+import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 
 class TransferMapScreen extends ConsumerStatefulWidget {
   const TransferMapScreen({super.key});
@@ -91,6 +96,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     required String? brandName,
     required int itemCount,
     required Color accentColor,
+    String? brandId,
+    String? productId,
   }) {
     return Container(
       width: 48.w,
@@ -138,7 +145,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             )
           : BrandedProductImage(
               fileName: productIcon,
+              brandId: brandId,
               brandName: brandName,
+              productId: productId,
               fit: BoxFit.contain,
               showFrame: false,
             ),
@@ -358,6 +367,21 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                 ],
                               ),
                             ),
+                            if (remaining.inSeconds > 0) ...[
+                              SizedBox(height: 12.h),
+                              GoldFinishButton(
+                                starCost: (remaining.inSeconds / 600.0).ceil(),
+                                onPressed: () {
+                                  final starCost = (remaining.inSeconds / 600.0).ceil();
+                                  _confirmFinishWithStars(
+                                    context,
+                                    ref,
+                                    transfer,
+                                    starCost,
+                                  );
+                                },
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -372,7 +396,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     );
   }
 
-  /*
   Future<void> _confirmFinishWithStars(
     BuildContext context,
     WidgetRef ref,
@@ -385,8 +408,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     if (currentGold < starCost) {
       AppSnackbar.show(
         context,
-        title: 'Yetersiz Yildiz',
-        message: 'Bu islemi gerceklestirmek icin yeterli yildiziniz yok. Gerekli: $starCost, Mevcut: ${currentGold.toInt()}',
+        title: 'Yetersiz Yıldız',
+        message: 'Bu işlemi gerçekleştirmek için yeterli yıldızınız yok. Gerekli: $starCost, Mevcut: ${currentGold.toInt()}',
         type: SnackbarType.error,
       );
       return;
@@ -408,14 +431,14 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           ],
         ),
         content: Text(
-          'Bu transferi $starCost ⭐ harcayarak aninda tamamlamak istiyor musunuz?\n\nMevcut Yildiziniz: ${currentGold.toInt()}',
+          'Bu transferi $starCost ⭐ harcayarak anında tamamlamak istiyor musunuz?\n\nMevcut Yıldızınız: ${currentGold.toInt()}',
           style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
-              'Vazgec',
+              'Vazgeç',
               style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
             ),
           ),
@@ -450,8 +473,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
     try {
       final result = await ref
-          .read(marketActionProvider)
-          .finishMarketTransferWithStars(transfer.id);
+          .read(warehouseActionProvider)
+          .finishLogisticsTransferWithGold(transfer.id);
 
       if (context.mounted) {
         Navigator.of(context).pop(); // Pop loading dialog
@@ -465,13 +488,14 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         ref.invalidate(buyerTransferMapProvider);
         ref.invalidate(buyerTransferHistoryProvider);
         ref.invalidate(playerProvider);
-        _invalidateAffectedTransferTargets(result);
+        ref.invalidate(warehouseListProvider);
+        _invalidateAffectedTransferTargets(transfer);
 
         if (context.mounted) {
           AppSnackbar.show(
             context,
-            title: 'Basarili',
-            message: 'Transfer yildiz kullanilarak aninda tamamlandi!',
+            title: 'Başarılı',
+            message: 'Transfer yıldız kullanılarak anında tamamlandı!',
             type: SnackbarType.success,
           );
         }
@@ -480,7 +504,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           AppSnackbar.show(
             context,
             title: 'Hata',
-            message: result['message'] ?? 'Transfer tamamlanirken bir hata olustu.',
+            message: result['message'] ?? 'Transfer tamamlanırken bir hata oluştu.',
             type: SnackbarType.error,
           );
         }
@@ -500,7 +524,19 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     }
   }
 
-  */
+  void _invalidateAffectedTransferTargets(TransferMapItemModel transfer) {
+    try {
+      final buyerId = transfer.buyerEndpoint.id;
+      final kind = transfer.buyerEndpoint.kind;
+      if (buyerId.isNotEmpty) {
+        if (kind == 'warehouse') {
+          ref.invalidate(warehouseDetailProvider(buyerId));
+        } else if (kind == 'store' || kind == 'store_slot') {
+          ref.invalidate(storeDetailPageProvider(buyerId));
+        }
+      }
+    } catch (_) {}
+  }
   Widget _buildDialogInfoRow(IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1261,6 +1297,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   brandName: transfer.brandName,
                   itemCount: transfer.itemCount,
                   accentColor: accentColor,
+                  brandId: transfer.brandId,
+                  productId: transfer.product.id,
                 ),
                 SizedBox(width: 12.w),
                 Expanded(
@@ -1667,6 +1705,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   brandName: item.brandName,
                   itemCount: item.itemCount,
                   accentColor: statusColor,
+                  brandId: item.brandId,
+                  productId: item.product.id,
                 ),
                 SizedBox(width: 12.w),
                 Expanded(

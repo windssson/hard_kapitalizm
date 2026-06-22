@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
-import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_type_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_finance_entry_model.dart';
@@ -11,6 +9,7 @@ import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_mode
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_performance_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_type_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 const logisticsFuelProductId = 'YAKIT';
 
@@ -86,12 +85,18 @@ final logisticsVehicleListProvider =
 
       final list = response as List<dynamic>;
       return list
-          .map((json) => LogisticsVehicleModel.fromJson(Map<String, dynamic>.from(json as Map)))
+          .map(
+            (json) => LogisticsVehicleModel.fromJson(
+              Map<String, dynamic>.from(json as Map),
+            ),
+          )
           .toList();
     });
 
 final logisticsVehiclePerformanceProvider =
-    FutureProvider.autoDispose<Map<String, LogisticsVehiclePerformanceModel>>((ref) async {
+    FutureProvider.autoDispose<Map<String, LogisticsVehiclePerformanceModel>>((
+      ref,
+    ) async {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
 
@@ -192,7 +197,8 @@ final playerLogisticsFuelWarehouseSourcesProvider =
 
         for (final rawSlot in slots) {
           final slot = Map<String, dynamic>.from(rawSlot as Map);
-          if ((slot['product_id']?.toString() ?? '') != logisticsFuelProductId) {
+          if ((slot['product_id']?.toString() ?? '') !=
+              logisticsFuelProductId) {
             continue;
           }
           final quantity = (slot['quantity'] as num?)?.toInt() ?? 0;
@@ -211,23 +217,6 @@ final playerLogisticsFuelWarehouseSourcesProvider =
       }
 
       return sources;
-    });
-
-final logisticsFuelMarketListingsProvider =
-    FutureProvider.autoDispose<List<MarketListingModel>>((ref) async {
-      final supabase = Supabase.instance.client;
-      final response = await supabase.rpc(
-        'get_market_listings_for_product',
-        params: {'p_product_id': logisticsFuelProductId},
-      );
-
-      return (response as List<dynamic>)
-          .map(
-            (json) => MarketListingModel.fromJson(
-              json as Map<String, dynamic>,
-            ),
-          )
-          .toList();
     });
 
 class LogisticsActionNotifier {
@@ -249,11 +238,7 @@ class LogisticsActionNotifier {
     try {
       final response = await _supabase.rpc(
         'start_logistics_company_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_type_id': typeId,
-          'p_name': name,
-        },
+        params: {'p_player_id': user.id, 'p_type_id': typeId, 'p_name': name},
       );
       if (syncProviders) {
         _ref.invalidate(playerLogisticsCompanyProvider);
@@ -278,10 +263,7 @@ class LogisticsActionNotifier {
     try {
       final response = await _supabase.rpc(
         'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       if (syncProviders) {
         _ref.invalidate(playerLogisticsCompanyProvider);
@@ -294,11 +276,9 @@ class LogisticsActionNotifier {
   }
 
   Future<Map<String, dynamic>> finishConstructionWithGold(
-    String constructionId,
-    {
+    String constructionId, {
     bool syncProviders = true,
-  }
-  ) async {
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -307,10 +287,7 @@ class LogisticsActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_construction_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       if (syncProviders) {
         _ref.invalidate(playerLogisticsCompanyProvider);
@@ -398,10 +375,7 @@ class LogisticsActionNotifier {
     try {
       final response = await _supabase.rpc(
         'refuel_logistics_vehicle',
-        params: {
-          'p_player_id': user.id,
-          'p_vehicle_id': vehicleId,
-        },
+        params: {'p_player_id': user.id, 'p_vehicle_id': vehicleId},
       );
       _ref.invalidate(logisticsVehicleListProvider);
       _ref.invalidate(playerLogisticsCompanyProvider);
@@ -420,10 +394,7 @@ class LogisticsActionNotifier {
     try {
       final response = await _supabase.rpc(
         'repair_logistics_vehicle',
-        params: {
-          'p_player_id': user.id,
-          'p_vehicle_id': vehicleId,
-        },
+        params: {'p_player_id': user.id, 'p_vehicle_id': vehicleId},
       );
       _ref.invalidate(logisticsVehicleListProvider);
       _ref.invalidate(playerProvider);
@@ -454,35 +425,6 @@ class LogisticsActionNotifier {
       _ref.invalidate(logisticsVehicleListProvider);
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
-      return Map<String, dynamic>.from(response as Map);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> buyMarketFuelForCompany({
-    required String logisticsCompanyId,
-    required String sellerSlotId,
-    required int quantity,
-    bool syncProviders = true,
-  }) async {
-    try {
-      final response = await _supabase.rpc(
-        'buy_market_fuel_for_logistics_company',
-        params: {
-          'p_logistics_company_id': logisticsCompanyId,
-          'p_seller_slot_id': sellerSlotId,
-          'p_quantity': quantity,
-        },
-      );
-      if (syncProviders) {
-        _ref.invalidate(playerLogisticsCompanyProvider);
-        _ref.invalidate(logisticsFuelMarketListingsProvider);
-        _ref.invalidate(playerProvider);
-        _ref.invalidate(logisticsVehicleListProvider);
-        _ref.invalidate(logisticsFinanceSummaryProvider);
-        _ref.invalidate(logisticsFinanceEntriesProvider);
-      }
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -551,8 +493,8 @@ class LogisticsActionNotifier {
     } on PostgrestException catch (e) {
       final message =
           e.message.toLowerCase().contains('set_logistics_vehicle_route')
-              ? 'Rota guncelleme islemi su anda tamamlanamadi.'
-              : e.message;
+          ? 'Rota guncelleme islemi su anda tamamlanamadi.'
+          : e.message;
       return {'success': false, 'message': message};
     } catch (e) {
       return {'success': false, 'message': e.toString()};

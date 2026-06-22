@@ -30,6 +30,8 @@ import 'package:hard_kapitalizm/features/mine/ui/mine_detail_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/market/ui/market_screen.dart';
 import 'package:hard_kapitalizm/features/company/ui/company_screen.dart';
+import 'package:hard_kapitalizm/features/company/ui/brand_design_screen.dart';
+import 'package:hard_kapitalizm/features/company/ui/brand_product_design_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_finance_report_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_setup_screen.dart';
@@ -256,6 +258,16 @@ final _router = GoRouter(
     GoRoute(
       path: '/company',
       builder: (context, state) => const CompanyScreen(),
+    ),
+    GoRoute(
+      path: '/company/design',
+      builder: (context, state) => const BrandDesignScreen(),
+    ),
+    GoRoute(
+      path: '/company/products/:productId/design',
+      builder: (context, state) => BrandProductDesignScreen(
+        productId: state.pathParameters['productId']!,
+      ),
     ),
     GoRoute(
       path: '/market',

@@ -342,9 +342,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       case 'factory':
         return 'Fabrika';
       case 'farm':
-        return 'Ciftlik';
-      case 'field':
         return 'Tarla';
+      case 'field':
+        return 'Ciftlik';
       case 'mine':
         return 'Maden';
       case 'logistics':

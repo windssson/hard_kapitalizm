@@ -343,7 +343,9 @@ class _WarehouseHistoryScreenState
                 ),
                 child: BrandedProductImage(
                   fileName: item.productIcon,
+                  brandId: item.brandId,
                   brandName: item.brandName,
+                  productId: item.productId,
                   fit: BoxFit.contain,
                   showFrame: false,
                 ),

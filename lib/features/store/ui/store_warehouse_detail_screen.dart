@@ -279,10 +279,12 @@ class _StoreWarehouseSlotCard extends StatelessWidget {
             ),
             child: BrandedProductImage(
               fileName: slot.productIcon ?? '',
+              brandId: slot.brandId,
               brandName:
                   slot.brandId == '00000000-0000-0000-0000-000000000000'
                   ? null
                   : currentBrandName,
+              productId: slot.productId,
               fit: BoxFit.contain,
               showFrame: false,
               errorWidget: Icon(

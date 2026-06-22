@@ -709,10 +709,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 child: BrandedProductImage(
                   fileName: product.urunIconu,
                   fit: BoxFit.contain,
+                  brandId: detail.factory.brandId,
                   brandName: detail.factory.brandId !=
                           SelectableProductionProductModel.defaultBrandId
                       ? _currentBrandName
                       : null,
+                  productId: product.id,
                   showFrame: false,
                 ),
               ),
@@ -1137,7 +1139,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 ? BrandedProductImage(
                     fileName: inventory.product!.urunIconu,
                     fit: BoxFit.contain,
+                    brandId: inventory.brandId,
                     brandName: isBranded ? _currentBrandName : null,
+                    productId: inventory.productId,
                     showFrame: false,
                   )
                 : Icon(Icons.inventory_2, color: color, size: 14.sp),
@@ -1353,12 +1357,14 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     ? BrandedProductImage(
                         fileName: inventory.product!.urunIconu,
                         fit: BoxFit.contain,
+                        brandId: inventory.brandId,
                         brandName: !inventory.isInput &&
                                 inventory.brandId !=
                                     SelectableProductionProductModel
                                         .defaultBrandId
                             ? _currentBrandName
                             : null,
+                        productId: inventory.productId,
                         showFrame: false,
                       )
                     : Icon(Icons.inventory_2, color: color, size: 20.sp),
@@ -3204,6 +3210,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     vehicleName: option.vehicleName,
                     isRental: option.isRental,
                     capacity: option.capacity,
+                    speedKmh: option.speedKmh,
                     distanceKm: option.distanceKm,
                     durationLabel: _formatTransferDuration(
                       option.estimatedDurationSeconds,

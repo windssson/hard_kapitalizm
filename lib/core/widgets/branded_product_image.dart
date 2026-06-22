@@ -6,8 +6,13 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 
 class BrandedProductImage extends ConsumerWidget {
+  static const String defaultBrandId = '00000000-0000-0000-0000-000000000000';
+
   final String fileName;
+  final String? brandId;
   final String? brandName;
+  final String? productId;
+  final String? watermarkAssetId;
   final double? width;
   final double? height;
   final BoxFit fit;
@@ -16,11 +21,16 @@ class BrandedProductImage extends ConsumerWidget {
   final Widget? placeholder;
   final BorderRadius? borderRadius;
   final bool showFrame;
+  final double watermarkSizeRatio;
+  final double fontSizeRatio;
 
   const BrandedProductImage({
     super.key,
     required this.fileName,
+    this.brandId,
     this.brandName,
+    this.productId,
+    this.watermarkAssetId,
     this.width,
     this.height,
     this.fit = BoxFit.contain,
@@ -29,9 +39,14 @@ class BrandedProductImage extends ConsumerWidget {
     this.placeholder,
     this.borderRadius,
     this.showFrame = true,
+    this.watermarkSizeRatio = 0.50,
+    this.fontSizeRatio = 0.10,
   });
 
-  bool get _isBranded => brandName != null && brandName!.trim().isNotEmpty;
+  bool get _isBranded =>
+      brandId != null &&
+      brandId!.trim().isNotEmpty &&
+      brandId!.trim() != defaultBrandId;
 
   Color _parseHexColor(String hex, {Color fallback = AppColors.gold}) {
     try {
@@ -48,116 +63,174 @@ class BrandedProductImage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final radius = borderRadius ?? BorderRadius.circular(12.r);
-    
     // Check if the current user's brand matches
     final companyAsync = ref.watch(playerBrandCompanyProvider);
     final company = companyAsync.value;
-    
-    final bool isUserBrand = _isBranded && 
-        company != null && 
-        brandName!.trim().toLowerCase() == company.brandName.trim().toLowerCase();
 
-    final themeColor = isUserBrand 
-        ? _parseHexColor(company.themeColor) 
+    final bool isUserBrand =
+        _isBranded && company != null && brandId!.trim() == company.id;
+
+    final themeColor = isUserBrand
+        ? _parseHexColor(company.themeColor)
         : AppColors.gold;
 
     final logoId = isUserBrand ? company.logoId : null;
+    final displayBrandName = isUserBrand
+        ? company.brandName.trim()
+        : brandName?.trim();
 
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: showFrame && _isBranded
-            ? Border.all(color: themeColor.withValues(alpha: 0.55), width: 1.2)
-            : null,
-        boxShadow: _isBranded
-            ? [
-                BoxShadow(
-                  color: themeColor.withValues(alpha: 0.18),
-                  blurRadius: 10,
-                  spreadRadius: 0.5,
-                ),
-              ]
-            : null,
-      ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Padding(
-              padding: padding ?? EdgeInsets.zero,
-              child: CachedAssetImage(
-                fileName: fileName,
-                fit: fit,
-                errorWidget: errorWidget,
-                placeholder: placeholder,
-              ),
-            ),
-            if (_isBranded)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.0),
-                        Colors.black.withValues(alpha: 0.52),
-                        Colors.black.withValues(alpha: 0.88),
-                      ],
+    // Resolve watermarkAssetId
+    String? resolvedWatermark = watermarkAssetId;
+    if (resolvedWatermark == null && isUserBrand && productId != null) {
+      final productsAsync = ref.watch(playerBrandCompanyProductsProvider);
+      final products = productsAsync.value ?? [];
+      for (final p in products) {
+        if (p.productId == productId) {
+          resolvedWatermark = p.watermarkAssetId;
+          break;
+        }
+      }
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Resolve size
+        final double size =
+            width ??
+            height ??
+            (constraints.maxWidth.isFinite ? constraints.maxWidth : 60.0);
+        final double scale = size / 60.0;
+
+        final radius = borderRadius ?? BorderRadius.circular(12.r * scale);
+
+        final watermarkSize = size * watermarkSizeRatio;
+        final fontSizeValue = size * fontSizeRatio;
+
+        final badgeSize = size * 0.22;
+        final badgeOffset = size * 0.055;
+        final badgePadding = badgeSize * 0.12;
+        final badgeBorderWidth = (size * 0.011).clamp(0.5, 2.5);
+        final borderFrameWidth = (size * 0.016).clamp(0.6, 3.0);
+
+        return Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: showFrame && _isBranded
+                ? Border.all(
+                    color: themeColor.withValues(alpha: 0.55),
+                    width: borderFrameWidth,
+                  )
+                : null,
+            boxShadow: _isBranded
+                ? [
+                    BoxShadow(
+                      color: themeColor.withValues(alpha: 0.18),
+                      blurRadius: 10 * scale,
+                      spreadRadius: 0.5 * scale,
                     ),
-                  ),
-                  child: Text(
-                    brandName!.trim(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: isUserBrand ? themeColor : AppColors.goldLight,
-                      fontSize: 9.sp,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                      shadows: const [
-                        Shadow(
-                          color: Colors.black87,
-                          blurRadius: 4,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            if (isUserBrand && logoId != null)
-              Positioned(
-                top: 4.w,
-                left: 4.w,
-                child: Container(
-                  width: 16.w,
-                  height: 16.w,
-                  padding: EdgeInsets.all(2.w),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: themeColor.withValues(alpha: 0.4), width: 0.8),
-                  ),
+                  ]
+                : null,
+          ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Padding(
+                  padding: padding ?? EdgeInsets.zero,
                   child: CachedAssetImage(
-                    fileName: logoId,
-                    fit: BoxFit.contain,
-                    placeholder: const SizedBox.shrink(),
-                    errorWidget: const SizedBox.shrink(),
+                    fileName: fileName,
+                    fit: fit,
+                    errorWidget: errorWidget,
+                    placeholder: placeholder,
                   ),
                 ),
-              ),
-          ],
-        ),
-      ),
+                if ((resolvedWatermark != null &&
+                        resolvedWatermark.isNotEmpty) ||
+                    (displayBrandName != null && displayBrandName.isNotEmpty))
+                  Positioned(
+                    top: badgeOffset,
+                    right: badgeOffset,
+                    child: IgnorePointer(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          if (resolvedWatermark != null &&
+                              resolvedWatermark.isNotEmpty)
+                            CachedAssetImage(
+                              fileName: resolvedWatermark,
+                              width: watermarkSize,
+                              height: watermarkSize,
+                              fit: BoxFit.contain,
+                              placeholder: const SizedBox.shrink(),
+                              errorWidget: const SizedBox.shrink(),
+                            )
+                          else
+                            SizedBox(
+                              width: watermarkSize,
+                              height: watermarkSize,
+                            ),
+                          if (displayBrandName != null &&
+                              displayBrandName.isNotEmpty)
+                            Transform.translate(
+                              offset: Offset(
+                                watermarkSize * 0.08,
+                                -watermarkSize * 0.08,
+                              ),
+                              child: Transform.rotate(
+                                angle: 3.1415926535 / 4,
+                                child: Text(
+                                  displayBrandName,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.75),
+                                    fontSize: fontSizeValue,
+                                    fontWeight: FontWeight.w900,
+                                    shadows: const [
+                                      Shadow(
+                                        color: Colors.black87,
+                                        blurRadius: 3,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (isUserBrand && logoId != null)
+                  Positioned(
+                    top: badgeOffset,
+                    left: badgeOffset,
+                    child: Container(
+                      width: badgeSize,
+                      height: badgeSize,
+                      padding: EdgeInsets.all(badgePadding),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: themeColor.withValues(alpha: 0.4),
+                          width: badgeBorderWidth,
+                        ),
+                      ),
+                      child: CachedAssetImage(
+                        fileName: logoId,
+                        fit: BoxFit.contain,
+                        placeholder: const SizedBox.shrink(),
+                        errorWidget: const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

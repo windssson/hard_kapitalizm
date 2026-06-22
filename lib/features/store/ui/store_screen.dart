@@ -760,9 +760,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   )
                 : BrandedProductImage(
                     fileName: slot.productIcon ?? 'default.webp',
+                    brandId: slot.brandId,
                     brandName: slot.brandId == _defaultBrandId
                         ? null
                         : currentBrandName,
+                    productId: slot.productId,
                     fit: BoxFit.contain,
                     showFrame: false,
                   ),
