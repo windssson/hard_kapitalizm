@@ -103,31 +103,48 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                     final podiumEntries = entries.take(3).toList();
                     final listEntries = entries.skip(3).toList();
 
-                    return ListView(
+                    return CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                      children: [
-                        _buildPodium(podiumEntries),
-                        SizedBox(height: 20.h),
-                        if (listEntries.isNotEmpty) ...[
-                          Text(
-                            'Sıralama Listesi',
-                            style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+                      slivers: [
+                        SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                          sliver: SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildPodium(podiumEntries),
+                                if (listEntries.isNotEmpty) ...[
+                                  SizedBox(height: 20.h),
+                                  Text(
+                                    'Sıralama Listesi',
+                                    style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+                                  ),
+                                  SizedBox(height: 10.h),
+                                ],
+                              ],
+                            ),
                           ),
-                          SizedBox(height: 10.h),
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: listEntries.length,
-                            separatorBuilder: (context, index) => SizedBox(height: 8.h),
-                            itemBuilder: (context, index) {
-                              final entry = listEntries[index];
-                              final rank = index + 4;
-                              return _buildListRow(rank, entry);
-                            },
+                        ),
+                        if (listEntries.isNotEmpty)
+                          SliverPadding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final entry = listEntries[index];
+                                  final rank = index + 4;
+                                  return Padding(
+                                    padding: EdgeInsets.only(bottom: 8.h),
+                                    child: _buildListRow(rank, entry),
+                                  );
+                                },
+                                childCount: listEntries.length,
+                              ),
+                            ),
                           ),
-                        ],
-                        SizedBox(height: 80.h), // Leave space for sticky bottom card
+                        SliverToBoxAdapter(
+                          child: SizedBox(height: 80.h),
+                        ),
                       ],
                     );
                   },

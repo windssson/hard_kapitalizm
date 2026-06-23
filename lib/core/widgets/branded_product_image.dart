@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
+import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
+import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
 
 class BrandedProductImage extends ConsumerWidget {
   static const String defaultBrandId = '00000000-0000-0000-0000-000000000000';
@@ -23,6 +25,8 @@ class BrandedProductImage extends ConsumerWidget {
   final bool showFrame;
   final double watermarkSizeRatio;
   final double fontSizeRatio;
+  final BrandCompanyModel? company;
+  final List<BrandCompanyProductModel>? companyProducts;
 
   const BrandedProductImage({
     super.key,
@@ -41,6 +45,8 @@ class BrandedProductImage extends ConsumerWidget {
     this.showFrame = true,
     this.watermarkSizeRatio = 0.50,
     this.fontSizeRatio = 0.10,
+    this.company,
+    this.companyProducts,
   });
 
   bool get _isBranded =>
@@ -64,26 +70,25 @@ class BrandedProductImage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Check if the current user's brand matches
-    final companyAsync = ref.watch(playerBrandCompanyProvider);
-    final company = companyAsync.value;
+    final resolvedCompany = company ?? ref.watch(playerBrandCompanyProvider).value;
 
     final bool isUserBrand =
-        _isBranded && company != null && brandId!.trim() == company.id;
+        _isBranded && resolvedCompany != null && brandId!.trim() == resolvedCompany.id;
 
     final themeColor = isUserBrand
-        ? _parseHexColor(company.themeColor)
+        ? _parseHexColor(resolvedCompany.themeColor)
         : AppColors.gold;
 
-    final logoId = isUserBrand ? company.logoId : null;
+    final logoId = isUserBrand ? resolvedCompany.logoId : null;
     final displayBrandName = isUserBrand
-        ? company.brandName.trim()
+        ? resolvedCompany.brandName.trim()
         : brandName?.trim();
 
     // Resolve watermarkAssetId
     String? resolvedWatermark = watermarkAssetId;
     if (resolvedWatermark == null && isUserBrand && productId != null) {
-      final productsAsync = ref.watch(playerBrandCompanyProductsProvider);
-      final products = productsAsync.value ?? [];
+      final List<BrandCompanyProductModel> products = companyProducts ??
+          (companyProducts == null ? (ref.watch(playerBrandCompanyProductsProvider).value ?? const []) : const []);
       for (final p in products) {
         if (p.productId == productId) {
           resolvedWatermark = p.watermarkAssetId;

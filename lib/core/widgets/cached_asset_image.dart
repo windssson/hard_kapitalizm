@@ -89,11 +89,21 @@ class _CachedAssetImageState extends ConsumerState<CachedAssetImage> {
       );
     }
 
+    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final cacheW = widget.width != null && widget.width! > 0
+        ? (widget.width! * devicePixelRatio).round().clamp(1, 2000)
+        : null;
+    final cacheH = widget.height != null && widget.height! > 0
+        ? (widget.height! * devicePixelRatio).round().clamp(1, 2000)
+        : null;
+
     return Image.file(
       _imageFile!,
       width: widget.width,
       height: widget.height,
       fit: widget.fit,
+      cacheWidth: cacheW,
+      cacheHeight: cacheH,
     );
   }
 }

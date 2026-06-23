@@ -31,11 +31,11 @@ class TimedTaskRuntime extends ConsumerStatefulWidget {
 
 class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     with WidgetsBindingObserver {
-  static const Duration _idlePollInterval = Duration(seconds: 30);
   static const Duration _errorRetryInterval = Duration(seconds: 10);
 
   Timer? _timer;
   bool _isRunning = false;
+  bool _needsReschedule = false;
   AppLifecycleState? _lastLifecycleState;
 
   @override
@@ -75,15 +75,25 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     return state == null || state == AppLifecycleState.resumed;
   }
 
-  void _scheduleNextRun(Duration delay) {
+  void _onProviderUpdated() {
+    if (_isRunning) {
+      _needsReschedule = true;
+      return;
+    }
+    _scheduleNextRun(Duration.zero);
+  }
+
+  void _scheduleNextRun(Duration? delay) {
     _timer?.cancel();
+    _timer = null;
+    if (delay == null) return;
     if (!mounted || !_isForeground) return;
     _timer = Timer(delay, _runCycle);
   }
 
-  Duration _capDelay(DateTime? nextDueAt) {
+  Duration? _capDelay(DateTime? nextDueAt) {
     if (nextDueAt == null) {
-      return _idlePollInterval;
+      return null;
     }
 
     final rawDelay = nextDueAt.difference(DateTime.now());
@@ -91,13 +101,14 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
       return Duration.zero;
     }
 
-    return rawDelay < _idlePollInterval ? rawDelay : _idlePollInterval;
+    return rawDelay;
   }
 
   Future<void> _runCycle() async {
     if (!mounted || !_isForeground || _isRunning) return;
 
     _isRunning = true;
+    _needsReschedule = false;
     try {
       final snapshot = await _loadSnapshot();
       final now = DateTime.now();
@@ -120,6 +131,10 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
       _scheduleNextRun(_errorRetryInterval);
     } finally {
       _isRunning = false;
+      if (_needsReschedule) {
+        _needsReschedule = false;
+        _scheduleNextRun(Duration.zero);
+      }
     }
   }
 
@@ -672,7 +687,21 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    ref.listen(buyerTransferMapProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(activeArgeResearchesProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(factoryConstructionProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(farmConstructionProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(fieldConstructionProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(mineConstructionProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(playerArgeConstructionProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(playerLogisticsConstructionProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(storesListProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(warehouseListProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(anyActiveWarehouseUpgradeProvider, (prev, next) => _onProviderUpdated());
+
+    return widget.child;
+  }
 }
 
 class _CompletionResult {

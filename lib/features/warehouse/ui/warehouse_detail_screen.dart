@@ -24,6 +24,8 @@ import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart'
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
+import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
+import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
 
 class WarehouseDetailScreen extends ConsumerStatefulWidget {
   final String warehouseId;
@@ -40,7 +42,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
+    final companyAsync = ref.watch(playerBrandCompanyProvider);
+    final company = companyAsync.value;
+    final companyProductsAsync = ref.watch(playerBrandCompanyProductsProvider);
+    final companyProducts = companyProductsAsync.value;
+    final currentBrandName = company?.brandName;
     final warehouseAsync = ref.watch(
       warehouseDetailProvider(widget.warehouseId),
     );
@@ -125,7 +131,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           context,
                           ref,
                           warehouse,
-                          currentBrandName,
+                          company,
+                          companyProducts,
                         ),
                       ],
                     ),
@@ -796,7 +803,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     BuildContext context,
     WidgetRef ref,
     WarehouseModel warehouse,
-    String? currentBrandName,
+    BrandCompanyModel? company,
+    List<BrandCompanyProductModel>? companyProducts,
   ) {
     final sortedSlots = _sortedSlots(warehouse.slots);
 
@@ -826,7 +834,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       separatorBuilder: (context, index) => SizedBox(height: 8.h),
       itemBuilder: (context, index) {
         final slot = sortedSlots[index];
-        return _buildSlotCard(context, ref, warehouse, slot);
+        return _buildSlotCard(context, ref, warehouse, slot, company, companyProducts);
       },
     );
   }
@@ -1035,8 +1043,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     WidgetRef ref,
     WarehouseModel warehouse,
     WarehouseSlotModel slot,
+    BrandCompanyModel? company,
+    List<BrandCompanyProductModel>? companyProducts,
   ) {
-    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
+    final currentBrandName = company?.brandName;
     if (slot.isEmpty) {
       return Container(
         margin: EdgeInsets.only(bottom: 12.h),
@@ -1145,6 +1155,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   productId: slot.productId,
                   fit: BoxFit.contain,
                   showFrame: false,
+                  company: company,
+                  companyProducts: companyProducts,
                 ),
               ),
               SizedBox(width: 12.w),
