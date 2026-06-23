@@ -8,6 +8,7 @@ class HomeDashboardModel {
   final HomeModulesSummary modules;
   final List<HomeOngoingActivity> ongoingActivities;
   final List<PlayerNotificationModel> notifications;
+  final List<HomeActiveProduction> activeProductions;
   final int unreadNotificationCount;
   final int activeWarningCount;
 
@@ -19,6 +20,7 @@ class HomeDashboardModel {
     required this.modules,
     required this.ongoingActivities,
     required this.notifications,
+    required this.activeProductions,
     required this.unreadNotificationCount,
     required this.activeWarningCount,
   });
@@ -31,6 +33,7 @@ class HomeDashboardModel {
     final ongoingList = _asList(json['ongoing_activities']);
     final notificationList = _asList(json['notifications']);
     final summaryMap = _asMap(json['notification_summary']);
+    final activeProdList = _asList(json['active_productions']);
 
     return HomeDashboardModel(
       success: json['success'] as bool? ?? false,
@@ -49,6 +52,10 @@ class HomeDashboardModel {
               Map<String, dynamic>.from(item),
             ),
           )
+          .toList(),
+      activeProductions: activeProdList
+          .whereType<Map>()
+          .map((item) => HomeActiveProduction.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
       unreadNotificationCount:
           (summaryMap['unread_count'] as num?)?.toInt() ?? 0,
@@ -319,5 +326,34 @@ class HomeOngoingActivity {
     if (ratio < 0) return 0;
     if (ratio > 1) return 1;
     return ratio;
+  }
+}
+
+class HomeActiveProduction {
+  final String productId;
+  final String productName;
+  final String productIcon;
+  final String ownerKind;
+  final int qualityLevel;
+  final int activeSlots;
+
+  const HomeActiveProduction({
+    required this.productId,
+    required this.productName,
+    required this.productIcon,
+    required this.ownerKind,
+    required this.qualityLevel,
+    required this.activeSlots,
+  });
+
+  factory HomeActiveProduction.fromJson(Map<String, dynamic> json) {
+    return HomeActiveProduction(
+      productId: (json['product_id'] ?? '').toString(),
+      productName: (json['product_name'] ?? '').toString(),
+      productIcon: (json['product_icon'] ?? '').toString(),
+      ownerKind: (json['owner_kind'] ?? '').toString(),
+      qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
+      activeSlots: (json['active_slots'] as num?)?.toInt() ?? 0,
+    );
   }
 }

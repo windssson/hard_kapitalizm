@@ -79,6 +79,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     SizedBox(height: 8.h),
                     _buildFinancialStats(),
                     SizedBox(height: 8.h),
+                    _buildActiveProductionsCard(),
+                    SizedBox(height: 8.h),
                     _buildOperationsSection(),
                     SizedBox(height: 8.h),
                     _buildAttentionColumns(),
@@ -975,6 +977,268 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Icons.monetization_on_rounded,
                 AppColors.gold,
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActiveProductionsCard() {
+    return Consumer(
+      builder: (context, ref, child) {
+        final dashboard = ref.watch(homeDashboardProvider).value;
+        final activeProductions = dashboard?.activeProductions ?? const [];
+
+        int totalActiveSlots = 0;
+        for (final prod in activeProductions) {
+          totalActiveSlots += prod.activeSlots;
+        }
+
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14.r),
+            image: const DecorationImage(
+              image: AssetImage('assets/theme/cartback.webp'),
+              fit: BoxFit.fill,
+            ),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF0C1624).withValues(alpha: 0.42),
+                const Color(0xFF07111C).withValues(alpha: 0.58),
+              ],
+            ),
+            border: Border.all(
+              color: AppColors.borderGold.withValues(alpha: 0.34),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.precision_manufacturing_rounded,
+                    color: AppColors.gold,
+                    size: 15.sp,
+                  ),
+                  SizedBox(width: 6.w),
+                  Text(
+                    'AKTIF URETIM HATLARI',
+                    style: TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.25,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (activeProductions.isNotEmpty)
+                    Text(
+                      '$totalActiveSlots Aktif Slot',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 9.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              if (activeProductions.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Aktif uretim bulunmuyor.',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(height: 6.h),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.go('/factories');
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold.withValues(alpha: 0.15),
+                            foregroundColor: AppColors.gold,
+                            elevation: 0,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 4.h,
+                            ),
+                            side: BorderSide(
+                              color: AppColors.gold.withValues(alpha: 0.4),
+                              width: 1,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                          ),
+                          child: Text(
+                            'Uretime Basla',
+                            style: TextStyle(
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 76.h,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: activeProductions.length,
+                    separatorBuilder: (context, index) => SizedBox(width: 8.w),
+                    itemBuilder: (context, index) {
+                      final prod = activeProductions[index];
+                      Color kindColor;
+                      String kindLabel;
+                      switch (prod.ownerKind.toLowerCase()) {
+                        case 'factory':
+                          kindColor = AppColors.gold;
+                          kindLabel = 'Fabrika';
+                          break;
+                        case 'farm':
+                          kindColor = const Color(0xFF7ED957);
+                          kindLabel = 'Tarla';
+                          break;
+                        case 'field':
+                          kindColor = const Color(0xFF8ED081);
+                          kindLabel = 'Ciftlik';
+                          break;
+                        case 'mine':
+                          kindColor = const Color(0xFFC8A96B);
+                          kindLabel = 'Maden';
+                          break;
+                        default:
+                          kindColor = AppColors.gold;
+                          kindLabel = 'Uretim';
+                      }
+
+                      return Container(
+                        width: 125.w,
+                        padding: EdgeInsets.all(6.w),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0D1B2A).withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(10.r),
+                          border: Border.all(
+                            color: AppColors.borderGold.withValues(alpha: 0.18),
+                            width: 1,
+                          ),
+                        ),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Row(
+                              children: [
+                                SizedBox(
+                                  width: 32.w,
+                                  height: 32.w,
+                                  child: CachedAssetImage(
+                                    fileName: prod.productIcon,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        prod.productName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 9.sp,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      SizedBox(height: 1.h),
+                                      Row(
+                                        children: List.generate(5, (i) {
+                                          final isFilled = i < prod.qualityLevel;
+                                          return Icon(
+                                            isFilled
+                                                ? Icons.star_rounded
+                                                : Icons.star_border_rounded,
+                                            color: isFilled
+                                                ? AppColors.gold
+                                                : Colors.white24,
+                                            size: 9.sp,
+                                          );
+                                        }),
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 4.w,
+                                          vertical: 1.h,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: kindColor.withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(4.r),
+                                          border: Border.all(
+                                            color: kindColor.withValues(alpha: 0.3),
+                                            width: 0.5,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          kindLabel,
+                                          style: TextStyle(
+                                            color: kindColor,
+                                            fontSize: 6.5.sp,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Positioned(
+                              top: -2.h,
+                              right: -2.w,
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 4.w,
+                                  vertical: 1.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.gold.withValues(alpha: 0.85),
+                                  borderRadius: BorderRadius.circular(6.r),
+                                ),
+                                child: Text(
+                                  'x${prod.activeSlots}',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 7.sp,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
             ],
           ),
         );

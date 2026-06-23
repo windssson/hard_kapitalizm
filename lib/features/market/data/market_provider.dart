@@ -102,7 +102,6 @@ final warehouseCapacityStatusProvider =
         json as Map<String, dynamic>,
       );
     });
-
 class MarketActionNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
   final TransferVehicleOptionsService _vehicleOptionsService =
@@ -126,7 +125,7 @@ class MarketActionNotifier {
           'p_buyer_warehouse_id': buyerWarehouseId,
           'p_source_city_id': sourceCityId,
           'p_items': items,
-          'p_vehicle_id': ?vehicleId,
+          'p_vehicle_id': vehicleId,
         },
       );
 

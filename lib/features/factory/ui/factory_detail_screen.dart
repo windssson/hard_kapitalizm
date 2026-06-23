@@ -1162,7 +1162,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 1.h),
+                SizedBox(height: 3.h),
+                _buildQualityStars(inventory.qualityLevel),
+                SizedBox(height: 2.h),
                 Text(
                   'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL${inventory.pendingQuantity > 0 ? " | Yolda: ${inventory.pendingQuantity.toStringAsFixed(0)}" : ""}',
                   style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
