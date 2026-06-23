@@ -45,6 +45,7 @@ import 'package:hard_kapitalizm/features/mission/ui/mission_screen.dart';
 import 'package:hard_kapitalizm/features/notification/ui/notification_screen.dart';
 import 'package:hard_kapitalizm/features/notification/ui/alert_screen.dart';
 import 'package:hard_kapitalizm/features/achievement/ui/achievement_screen.dart';
+import 'package:hard_kapitalizm/features/leaderboard/ui/leaderboard_screen.dart';
 import 'package:hard_kapitalizm/features/cash_flow/ui/cash_flow_screen.dart';
 import 'package:hard_kapitalizm/features/production_report/ui/production_report_screen.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -92,6 +93,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/achievements',
       builder: (context, state) => const AchievementScreen(),
+    ),
+    GoRoute(
+      path: '/leaderboard',
+      builder: (context, state) => const LeaderboardScreen(),
     ),
     GoRoute(
       path: '/cash-history',

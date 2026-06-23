@@ -558,23 +558,19 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }) {
     final bool isStore = _isStoreTarget;
     final String targetName = isStore
-        ? (buyerStoreSlot?.storeName ?? 'Magaza')
+        ? (buyerStoreSlot?.storeName ?? 'Mağaza')
         : (buyerWarehouse?.warehouseName ?? 'Merkez Depo');
     final String cityName = isStore
-        ? (buyerStoreSlot?.cityName ?? 'Sehir')
-        : (buyerWarehouse?.cityName ?? 'Sehir');
+        ? (buyerStoreSlot?.cityName ?? 'Şehir')
+        : (buyerWarehouse?.cityName ?? 'Şehir');
     final String capacityText = isStore
-        ? 'Bos ${buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'}'
-        : 'Bos ${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m3';
+        ? 'Boş ${buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'}'
+        : 'Boş ${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m³';
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.28),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.18)),
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+      decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.35), 14.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -582,54 +578,56 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             children: [
               Expanded(
                 child: Text(
-                  product?.urunAdi ?? 'Urun Sec',
+                  product?.urunAdi ?? 'Ürün Seç',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.h2.copyWith(fontSize: 13.sp),
+                  style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
                 ),
               ),
-              TextButton(
+              TextButton.icon(
                 onPressed: _resetProductSelection,
+                icon: Icon(Icons.swap_horiz, size: 14.sp, color: AppColors.gold),
+                label: Text(
+                  'Ürün Değiştir',
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.gold,
                   padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: Text(
-                  'Urun Degistir',
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
               ),
             ],
           ),
-          SizedBox(height: 6.h),
+          SizedBox(height: 8.h),
           Wrap(
             spacing: 6.w,
             runSpacing: 6.h,
             children: [
               _buildInlineStat('Hedef', targetName),
-              _buildInlineStat('Sehir', cityName),
+              _buildInlineStat('Şehir', cityName),
               _buildInlineStat('Kapasite', capacityText),
             ],
           ),
-          SizedBox(height: 6.h),
+          SizedBox(height: 8.h),
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton(
+            child: TextButton.icon(
               onPressed: _resetWarehouseSelection,
+              icon: Icon(Icons.edit, size: 12.sp, color: AppColors.gold),
+              label: Text(
+                'Depo Değiştir',
+                style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w700),
+              ),
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.gold,
                 padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text(
-                'Depo Degistir',
-                style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -711,7 +709,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         .firstOrNull;
     final cityGroups = <String, List<WarehouseModel>>{};
     for (final warehouse in activeWarehouses) {
-      final cityName = (warehouse.cityName ?? 'Bilinmeyen Sehir').trim();
+      final cityName = (warehouse.cityName ?? 'Bilinmeyen Şehir').trim();
       cityGroups.putIfAbsent(cityName, () => []).add(warehouse);
     }
     final sortedCityNames = cityGroups.keys.toList()..sort();
@@ -722,213 +720,324 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             return firstWarehouse.cityId == _warehouseCityFilter;
           }).toList();
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Hedef Depo',
-                style: AppTextStyles.body.copyWith(
-                  color: AppColors.textMuted,
-                  fontSize: 11.sp,
-                ),
-              ),
-              const Spacer(),
-              if (selectedWarehouse != null)
+    // Step 1: Warehouse Selection Mode
+    if (selectedWarehouse == null) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(16.w),
+        decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.25), 20.r),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.warehouse, color: AppColors.gold, size: 18.sp),
+                SizedBox(width: 8.w),
                 Text(
-                  selectedWarehouse.cityName ?? '-',
-                  style: AppTextStyles.body.copyWith(
-                    color: AppColors.gold,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Hedef Depo Seçin',
+                  style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
                 ),
-            ],
-          ),
-          SizedBox(height: 8.h),
-          if (sortedCityNames.isNotEmpty)
-            SizedBox(
-              height: 38.h,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: sortedCityNames.length + 1,
-                separatorBuilder: (context, index) => SizedBox(width: 8.w),
-                itemBuilder: (context, index) {
-                  final isAll = index == 0;
-                  final cityName = isAll
-                      ? 'Tum Sehirler'
-                      : sortedCityNames[index - 1];
-                  final cityId = isAll
-                      ? ''
-                      : cityGroups[cityName]!.first.cityId;
-                  final isSelected = _warehouseCityFilter == cityId;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _warehouseCityFilter = cityId;
-                      });
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 8.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.gold.withValues(alpha: 0.14)
-                            : AppColors.cardBgLight.withValues(alpha: 0.28),
-                        borderRadius: BorderRadius.circular(999.r),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.gold
-                              : AppColors.border.withValues(alpha: 0.7),
-                        ),
-                      ),
-                      child: Text(
-                        cityName,
-                        style: TextStyle(
-                          color: isSelected ? AppColors.gold : Colors.white,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+              ],
             ),
-          if (sortedCityNames.isNotEmpty) SizedBox(height: 10.h),
-          if (activeWarehouses.isNotEmpty)
-            ...visibleCityNames.expand((cityName) {
-              final warehousesInCity = cityGroups[cityName]!
-                ..sort((a, b) => a.name.compareTo(b.name));
-              return [
-                Padding(
-                  padding: EdgeInsets.only(bottom: 8.h, top: 2.h),
-                  child: Text(
-                    cityName,
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.gold,
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                ...warehousesInCity.map(
-                  (warehouse) => Padding(
-                    padding: EdgeInsets.only(bottom: 10.h),
-                    child: _buildSelectableWarehouseCard(
-                      warehouse: warehouse,
-                      isSelected: warehouse.id == _activeWarehouseId,
-                      onTap: () {
-                        setState(() {
-                          _selectedWarehouseId = warehouse.id;
-                          _selectedCityId = warehouse.cityId;
-                          _warehouseCityFilter = warehouse.cityId;
-                          _selectedProductId = '';
-                          _productSearchQuery = '';
-                          _resetCartState();
-                        });
-                      },
-                    ),
-                  ),
-                ),
-              ];
-            }),
-          if (activeWarehouses.isEmpty) ...[
             SizedBox(height: 12.h),
-            _buildInfoBox(
-              'Pazara alim yapabilmek icin once aktif bir normal depo gerekli.',
-              AppColors.red,
-            ),
-          ] else if (selectedWarehouse == null) ...[
-            SizedBox(height: 10.h),
-            _buildInfoBox(
-              'Once hedef depoyu sec. Sonra yalnizca bu deponun kabul ettigi urunler listelenecek.',
-              AppColors.blue,
-            ),
-          ] else ...[
-            SizedBox(height: 12.h),
-            TextField(
-              onChanged: (value) {
-                setState(() {
-                  _productSearchQuery = value;
-                });
-              },
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Urun ara',
-                hintStyle: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 12.sp,
-                ),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: AppColors.textMuted,
-                ),
-                filled: true,
-                fillColor: AppColors.cardBgLight.withValues(alpha: 0.35),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                  borderSide: BorderSide(
-                    color: AppColors.border.withValues(alpha: 0.7),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                  borderSide: const BorderSide(color: AppColors.gold),
-                ),
-              ),
-            ),
-            SizedBox(height: 10.h),
-            Text(
-              'Urun',
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11.sp,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            if (filteredProducts.isEmpty)
-              _buildInfoBox(
-                'Bu depo icin uygun urun bulunamadi.',
-                AppColors.red,
-              )
-            else
+            if (sortedCityNames.isNotEmpty)
               SizedBox(
-                height: 78.h,
+                height: 38.h,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: filteredProducts.length,
+                  itemCount: sortedCityNames.length + 1,
                   separatorBuilder: (context, index) => SizedBox(width: 8.w),
                   itemBuilder: (context, index) {
-                    final product = filteredProducts[index];
-                    final isSelected = product.id == _activeProductId;
-                    return _buildSelectableProductCard(
-                      product: product,
-                      isSelected: isSelected,
+                    final isAll = index == 0;
+                    final cityName = isAll
+                        ? 'Tüm Şehirler'
+                        : sortedCityNames[index - 1];
+                    final cityId = isAll
+                        ? ''
+                        : cityGroups[cityName]!.first.cityId;
+                    final isSelected = _warehouseCityFilter == cityId;
+                    return GestureDetector(
                       onTap: () {
                         setState(() {
-                          _selectedProductId = product.id;
+                          _warehouseCityFilter = cityId;
                         });
                       },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 8.h,
+                        ),
+                        decoration: isSelected
+                            ? BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.gold.withValues(alpha: 0.25),
+                                    AppColors.goldDark.withValues(alpha: 0.1),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(20.r),
+                                border: Border.all(
+                                  color: AppColors.gold,
+                                  width: 1.2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.gold.withValues(alpha: 0.12),
+                                    blurRadius: 6,
+                                    spreadRadius: 0.5,
+                                  ),
+                                ],
+                              )
+                            : BoxDecoration(
+                                color: AppColors.cardBgLight.withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(20.r),
+                                border: Border.all(
+                                  color: AppColors.border.withValues(alpha: 0.5),
+                                ),
+                              ),
+                        child: Center(
+                          child: Text(
+                            cityName,
+                            style: TextStyle(
+                              color: isSelected ? AppColors.gold : Colors.white,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
                     );
                   },
                 ),
               ),
-            if (selectedProduct != null) ...[
-              SizedBox(height: 10.h),
-              _buildSelectedProductSummary(selectedProduct),
+            if (sortedCityNames.isNotEmpty) SizedBox(height: 12.h),
+            if (activeWarehouses.isNotEmpty)
+              ...visibleCityNames.expand((cityName) {
+                final warehousesInCity = cityGroups[cityName]!
+                  ..sort((a, b) => a.name.compareTo(b.name));
+                return [
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 8.h, top: 4.h),
+                    child: Text(
+                      cityName,
+                      style: AppTextStyles.body.copyWith(
+                        color: AppColors.gold,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  ...warehousesInCity.map(
+                    (warehouse) => Padding(
+                      padding: EdgeInsets.only(bottom: 10.h),
+                      child: _buildSelectableWarehouseCard(
+                        warehouse: warehouse,
+                        isSelected: warehouse.id == _activeWarehouseId,
+                        onTap: () {
+                          setState(() {
+                            _selectedWarehouseId = warehouse.id;
+                            _selectedCityId = warehouse.cityId;
+                            _warehouseCityFilter = warehouse.cityId;
+                            _selectedProductId = '';
+                            _productSearchQuery = '';
+                            _resetCartState();
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ];
+              }),
+            if (activeWarehouses.isEmpty) ...[
+              SizedBox(height: 12.h),
+              _buildInfoBox(
+                'Pazara alım yapabilmek için önce aktif bir normal depo gerekli.',
+                AppColors.red,
+              ),
             ],
+          ],
+        ),
+      );
+    }
+
+    // Step 2: Product Selection Mode (Warehouse is selected, Product is empty)
+    final double availableCapacity = (selectedWarehouse.capacity - selectedWarehouse.reservedCapacity)
+        .clamp(0, double.infinity);
+    final double reservedCapacity = selectedWarehouse.reservedCapacity.clamp(0.0, selectedWarehouse.capacity);
+    final double fillPercent = selectedWarehouse.capacity > 0 
+        ? (reservedCapacity / selectedWarehouse.capacity).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.25), 20.r),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Collapsed Selected Warehouse Header Card
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: AppColors.cardBgLight.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38.w,
+                  height: 38.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.blue.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(color: AppColors.blue.withValues(alpha: 0.3)),
+                  ),
+                  child: Icon(Icons.warehouse_outlined, color: AppColors.blue, size: 18.sp),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'HEDEF DEPO SEÇİLDİ',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        selectedWarehouse.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: Colors.white, fontSize: 13.sp, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 4.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(2.r),
+                              child: LinearProgressIndicator(
+                                value: fillPercent,
+                                backgroundColor: Colors.white10,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  fillPercent > 0.9 ? AppColors.red : fillPercent > 0.75 ? AppColors.gold : AppColors.green,
+                                ),
+                                minHeight: 3.h,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            '${availableCapacity.toStringAsFixed(0)} m³ boş',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 9.sp),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                TextButton.icon(
+                  onPressed: _resetWarehouseSelection,
+                  icon: Icon(Icons.swap_horiz, size: 14.sp, color: AppColors.gold),
+                  label: Text(
+                    'Değiştir',
+                    style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.gold,
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 14.h),
+          TextField(
+            onChanged: (value) {
+              setState(() {
+                _productSearchQuery = value;
+              });
+            },
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Ürün ara...',
+              hintStyle: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12.sp,
+              ),
+              prefixIcon: Icon(
+                Icons.search,
+                color: AppColors.gold.withValues(alpha: 0.6),
+                size: 18.sp,
+              ),
+              contentPadding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 16.w),
+              filled: true,
+              fillColor: AppColors.cardBgLight.withValues(alpha: 0.5),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide(
+                  color: AppColors.borderGold.withValues(alpha: 0.35),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: const BorderSide(color: AppColors.gold, width: 1.5),
+              ),
+            ),
+          ),
+          SizedBox(height: 14.h),
+          Text(
+            'Ürün Seçin',
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 10.h),
+          if (filteredProducts.isEmpty)
+            _buildInfoBox(
+              'Bu depo için uygun ürün bulunamadı.',
+              AppColors.red,
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 10.h,
+                crossAxisSpacing: 10.w,
+                childAspectRatio: 0.9,
+              ),
+              itemCount: filteredProducts.length,
+              itemBuilder: (context, index) {
+                final product = filteredProducts[index];
+                final isSelected = product.id == _activeProductId;
+                return _buildSelectableProductCard(
+                  product: product,
+                  isSelected: isSelected,
+                  onTap: () {
+                    setState(() {
+                      _selectedProductId = product.id;
+                    });
+                  },
+                );
+              },
+            ),
+          if (selectedProduct != null) ...[
+            SizedBox(height: 14.h),
+            _buildSelectedProductSummary(selectedProduct),
           ],
         ],
       ),
@@ -944,43 +1053,47 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 92.w,
-        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.gold.withValues(alpha: 0.14)
-              : AppColors.cardBgLight.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.gold
-                : AppColors.border.withValues(alpha: 0.7),
-          ),
-        ),
+        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 8.h),
+        decoration: isSelected
+            ? AppDecorations.glowingAction(AppColors.gold, 14.r)
+            : BoxDecoration(
+                color: AppColors.cardBgLight.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: 0.5),
+                ),
+              ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 34.w,
-              height: 34.w,
+              width: 36.w,
+              height: 36.w,
               padding: EdgeInsets.all(5.w),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.18),
+                color: isSelected
+                    ? AppColors.gold.withValues(alpha: 0.15)
+                    : Colors.black.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.gold.withValues(alpha: 0.3)
+                      : AppColors.border.withValues(alpha: 0.3),
+                ),
               ),
               child: CachedAssetImage(fileName: product.urunIconu),
             ),
             SizedBox(height: 6.h),
-            Expanded(
-              child: Text(
-                product.urunAdi,
-                maxLines: 1,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: isSelected ? AppColors.gold : Colors.white,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w700,
-                ),
+            Text(
+              product.urunAdi,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isSelected ? AppColors.gold : Colors.white,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w700,
+                height: 1.1,
               ),
             ),
           ],
@@ -992,34 +1105,32 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Widget _buildSelectedProductSummary(ProductModel product) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.24)),
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      decoration: AppDecorations.glowingAction(AppColors.gold.withValues(alpha: 0.5), 14.r),
       child: Row(
         children: [
           Container(
-            width: 34.w,
-            height: 34.w,
+            width: 36.w,
+            height: 36.w,
             padding: EdgeInsets.all(6.w),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.18),
+              color: Colors.black.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
             child: CachedAssetImage(fileName: product.urunIconu),
           ),
-          SizedBox(width: 10.w),
+          SizedBox(width: 12.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Secili Urun',
+                  'Seçili Ürün',
                   style: AppTextStyles.body.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 10.sp,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 SizedBox(height: 2.h),
@@ -1029,7 +1140,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 11.sp,
+                    fontSize: 12.sp,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1040,7 +1151,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             '${product.bazSatisFiyati.toStringAsFixed(1)} TL',
             style: TextStyle(
               color: AppColors.gold,
-              fontSize: 10.sp,
+              fontSize: 11.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1056,6 +1167,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }) {
     final availableCapacity = (warehouse.capacity - warehouse.reservedCapacity)
         .clamp(0, double.infinity);
+    final double reservedCapacity = warehouse.reservedCapacity.clamp(0.0, warehouse.capacity);
+    final double fillPercent = warehouse.capacity > 0 
+        ? (reservedCapacity / warehouse.capacity).clamp(0.0, 1.0)
+        : 0.0;
     final capacityColor = availableCapacity <= 0
         ? AppColors.red
         : availableCapacity <= 25
@@ -1067,25 +1182,30 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         duration: const Duration(milliseconds: 180),
         width: double.infinity,
         padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.blue.withValues(alpha: 0.12)
-              : AppColors.cardBgLight.withValues(alpha: 0.28),
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.blue
-                : AppColors.border.withValues(alpha: 0.7),
-          ),
-        ),
+        decoration: isSelected
+            ? AppDecorations.premiumCard(AppColors.blue, 14.r)
+            : BoxDecoration(
+                color: AppColors.cardBgLight.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: 0.5),
+                ),
+              ),
         child: Row(
           children: [
             Container(
               width: 42.w,
               height: 42.w,
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.18),
+                color: isSelected
+                    ? AppColors.blue.withValues(alpha: 0.15)
+                    : Colors.black.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.blue.withValues(alpha: 0.3)
+                      : Colors.transparent,
+                ),
               ),
               child: Icon(
                 Icons.warehouse_outlined,
@@ -1093,7 +1213,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 size: 20.sp,
               ),
             ),
-            SizedBox(width: 10.w),
+            SizedBox(width: 12.w),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1108,20 +1228,48 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    '${warehouse.cityName ?? 'Bilinmeyen Sehir'} • ${availableCapacity.toStringAsFixed(0)} bos',
-                    style: TextStyle(
-                      color: capacityColor,
-                      fontSize: 10.sp,
-                      fontWeight: availableCapacity <= 0
-                          ? FontWeight.w700
-                          : FontWeight.w500,
+                  SizedBox(height: 6.h),
+                  Row(
+                    children: [
+                      Text(
+                        '${warehouse.cityName ?? 'Bilinmeyen Şehir'} • ',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10.sp,
+                        ),
+                      ),
+                      Text(
+                        '${availableCapacity.toStringAsFixed(0)} boş',
+                        style: TextStyle(
+                          color: capacityColor,
+                          fontSize: 10.sp,
+                          fontWeight: availableCapacity <= 0
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6.h),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4.r),
+                    child: LinearProgressIndicator(
+                      value: fillPercent,
+                      backgroundColor: Colors.white10,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        fillPercent > 0.9
+                            ? AppColors.red
+                            : fillPercent > 0.75
+                                ? AppColors.gold
+                                : AppColors.green,
+                      ),
+                      minHeight: 4.h,
                     ),
                   ),
                 ],
               ),
             ),
+            SizedBox(width: 12.w),
             if (isSelected)
               Icon(Icons.check_circle, color: AppColors.blue, size: 20.sp),
           ],
@@ -1243,8 +1391,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             SizedBox(height: 8.h),
                             _buildInfoBox(
                               _cityCatalogEnabled
-                                  ? 'Sepet sehri kilitlendi: ${_resolveLockedCityName()}. Urun kilidi kalkti; bu sehirdeki tum market ilanlari gosteriliyor.'
-                                  : 'Sepet sehri kilitlendi: ${_resolveLockedCityName()}. Alimi tamamlarsaniz mevcut urunle devam eder, alisverise devam ederseniz ayni sehrin tum ilanlari acilir.',
+                                  ? 'Sepet Şehri Kilitlendi: ${_resolveLockedCityName()} (Tüm Ürünler Açık)'
+                                  : 'Sepet Şehri Kilitlendi: ${_resolveLockedCityName()}',
                               AppColors.gold,
                             ),
                           ],
@@ -1936,27 +2084,14 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       child: GestureDetector(
         onTap: _showCartSheet,
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(
-              color: AppColors.borderGold.withValues(alpha: 0.24),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.24),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          decoration: AppDecorations.glowingAction(AppColors.gold, 16.r),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.shopping_bag_outlined,
-                color: AppColors.gold,
+                color: Colors.white,
                 size: 18.sp,
               ),
               SizedBox(width: 8.w),
@@ -1978,7 +2113,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 ),
               ),
               SizedBox(width: 8.w),
-              Icon(Icons.expand_less, color: AppColors.textMuted, size: 18.sp),
+              Icon(Icons.expand_less, color: Colors.white70, size: 18.sp),
             ],
           ),
         ),
@@ -1997,13 +2132,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 14.h),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          border: Border(
-            top: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.2)),
-          ),
-        ),
+        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 20.h),
+        decoration: AppDecorations.panelGlass(24.r),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2026,7 +2156,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             ),
             SizedBox(height: 4.h),
             Text(
-              'Sehir: ${_resolveLockedCityName()} - Hacim: ${_cartTotalVolume.toStringAsFixed(1)} m3',
+              'Şehir: ${_resolveLockedCityName()} - Hacim: ${_cartTotalVolume.toStringAsFixed(1)} m³',
               style: AppTextStyles.body.copyWith(
                 color: AppColors.textMuted,
                 fontSize: 10.sp,
@@ -2035,7 +2165,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             if (largestItem != null) ...[
               SizedBox(height: 4.h),
               Text(
-                'En cok yer kaplayan: ${largestItem.listing.productName} • ${largestItem.totalVolume.toStringAsFixed(1)} m3',
+                'En çok yer kaplayan: ${largestItem.listing.productName} • ${largestItem.totalVolume.toStringAsFixed(1)} m³',
                 style: AppTextStyles.body.copyWith(
                   color: AppColors.gold,
                   fontSize: 10.sp,
@@ -2047,8 +2177,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               SizedBox(height: 6.h),
               Text(
                 capacityOk
-                    ? 'Hedef kapasite uygun • Kalan: ${remainingAfterCart.toStringAsFixed(1)} m3'
-                    : 'Kapasite asildi • Eksik: ${(-remainingAfterCart).toStringAsFixed(1)} m3',
+                    ? 'Hedef kapasite uygun • Kalan: ${remainingAfterCart.toStringAsFixed(1)} m³'
+                    : 'Kapasite aşıldı • Eksik: ${(-remainingAfterCart).toStringAsFixed(1)} m³',
                 style: AppTextStyles.body.copyWith(
                   color: capacityColor,
                   fontSize: 10.sp,
@@ -2069,7 +2199,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 },
               ),
             ),
-            SizedBox(height: 10.h),
+            SizedBox(height: 12.h),
             Row(
               children: [
                 Expanded(
@@ -2083,7 +2213,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         color: AppColors.gold.withValues(alpha: 0.35),
                       ),
                     ),
-                    child: const Text('Alisverise Devam Et'),
+                    child: const Text('Alışverişe Devam Et'),
                   ),
                 ),
                 SizedBox(width: 10.w),
@@ -2099,7 +2229,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       backgroundColor: AppColors.gold,
                       foregroundColor: Colors.black,
                     ),
-                    child: const Text('Alimi Tamamla'),
+                    child: const Text('Alımı Tamamla'),
                   ),
                 ),
               ],
@@ -2115,9 +2245,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       width: 190.w,
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.45),
+        color: AppColors.cardBgLight.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
@@ -2149,7 +2279,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  '${item.quantity} adet • ${item.totalVolume.toStringAsFixed(1)} m3',
+                  '${item.quantity} adet • ${item.totalVolume.toStringAsFixed(1)} m³',
                   style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
                 ),
               ],
@@ -2258,13 +2388,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-      ),
       builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 20.h),
+        decoration: AppDecorations.panelGlass(20.r),
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(sheetContext).size.height * 0.8,
         ),
@@ -2272,7 +2400,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Arac Secin',
+              'Araç Seçin',
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 18.sp,
@@ -2281,7 +2409,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             ),
             SizedBox(height: 6.h),
             Text(
-              '${sourceCity.name} -> ${targetCity.name} | ${_cartTotalVolume.toStringAsFixed(1)} m3',
+              '${sourceCity.name} -> ${targetCity.name} | ${_cartTotalVolume.toStringAsFixed(1)} m³',
               style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
             ),
             SizedBox(height: 16.h),
@@ -2595,47 +2723,35 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
       color: Colors.transparent,
       child: Container(
         padding: EdgeInsets.fromLTRB(
-          14.w,
-          14.h,
-          14.w,
-          MediaQuery.of(context).viewInsets.bottom + 14.h,
+          16.w,
+          16.h,
+          16.w,
+          MediaQuery.of(context).viewInsets.bottom + 16.h,
         ),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(
-            color: AppColors.borderGold.withValues(alpha: 0.2),
-          ),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Sepete Ekle',
-                      style: AppTextStyles.h1.copyWith(fontSize: 20.sp),
-                    ),
+        decoration: AppDecorations.panelGlass(24.r),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Sepete Ekle',
+                    style: AppTextStyles.h1.copyWith(fontSize: 20.sp),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(
-                      Icons.close,
-                      color: AppColors.textMuted,
-                      size: 20.sp,
-                    ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(
+                    Icons.close,
+                    color: AppColors.textMuted,
+                    size: 20.sp,
                   ),
-                ],
-              ),
-              SizedBox(height: 6.h),
-              Text(
-                '${widget.listing.sellerPlayerName} oyuncusundan ${widget.listing.productName} sececeksiniz.',
-                style: AppTextStyles.body,
-              ),
-              SizedBox(height: 10.h),
+                ),
+              ],
+            ),
+            SizedBox(height: 6.h),
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
@@ -2790,10 +2906,9 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
             ],
           ),
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
 class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   @override

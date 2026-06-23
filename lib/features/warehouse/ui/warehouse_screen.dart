@@ -232,12 +232,13 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
       decoration: AppDecorations.premiumCard(null, 14.r),
       child: TabBar(
         controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
           color: AppColors.gold.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
         ),
-        indicatorPadding: EdgeInsets.all(6.w),
+        indicatorPadding: EdgeInsets.all(4.w),
         dividerColor: Colors.transparent,
         labelColor: AppColors.gold,
         unselectedLabelColor: AppColors.textMuted,

@@ -112,7 +112,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     }
 
     setState(() => _isSubmitting = true);
-    final result = await ref.read(companyActionProvider).createBrandCompany(
+    final result = await ref
+        .read(companyActionProvider)
+        .createBrandCompany(
           brandName: brandName,
           logoId: _selectedLogo,
           themeColor: _selectedColor,
@@ -138,7 +140,8 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
         .patentBrandProduct(productId: productId);
     if (!mounted) return;
     final success = result['success'] == true;
-    var message = (result['message'] ?? 'Patent işlemi tamamlanamadı.').toString();
+    var message = (result['message'] ?? 'Patent işlemi tamamlanamadı.')
+        .toString();
     if (success) {
       final syncedFactoryCount =
           (result['synced_factory_count'] as num?)?.toInt() ?? 0;
@@ -229,7 +232,8 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                       child: CircularProgressIndicator(color: AppColors.gold),
                     ),
                     error: (error, _) => _buildError(error.toString()),
-                    data: (products) => _buildManagementState(company, products),
+                    data: (products) =>
+                        _buildManagementState(company, products),
                   );
                 },
               ),
@@ -284,7 +288,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 ),
               ),
               SizedBox(height: 20.h),
-              
+
               // Brand Name Input
               TextField(
                 controller: _brandNameController,
@@ -332,7 +336,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                           shape: BoxShape.circle,
                           color: Colors.black26,
                           border: Border.all(
-                            color: isSelected ? themeColor : AppColors.border.withValues(alpha: 0.5),
+                            color: isSelected
+                                ? themeColor
+                                : AppColors.border.withValues(alpha: 0.5),
                             width: isSelected ? 2.5 : 1,
                           ),
                           boxShadow: isSelected
@@ -341,7 +347,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                                     color: themeColor.withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     spreadRadius: 1,
-                                  )
+                                  ),
                                 ]
                               : null,
                         ),
@@ -351,7 +357,11 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                             fileName: logo,
                             fit: BoxFit.contain,
                             placeholder: const SizedBox.shrink(),
-                            errorWidget: const Icon(Icons.star, color: AppColors.gold, size: 20),
+                            errorWidget: const Icon(
+                              Icons.star,
+                              color: AppColors.gold,
+                              size: 20,
+                            ),
                           ),
                         ),
                       ),
@@ -373,41 +383,44 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               SizedBox(height: 10.h),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  {'name': 'Altın', 'hex': '#E5C05C'},
-                  {'name': 'Mavi', 'hex': '#4A90E2'},
-                  {'name': 'Yeşil', 'hex': '#50E3C2'},
-                  {'name': 'Kırmızı', 'hex': '#E25050'},
-                  {'name': 'Mor', 'hex': '#BD10E0'},
-                ].map((colorMap) {
-                  final hex = colorMap['hex']!;
-                  final color = _parseHexColor(hex);
-                  final isSelected = _selectedColor == hex;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedColor = hex),
-                    child: Container(
-                      width: 44.w,
-                      height: 44.w,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: color,
-                        border: Border.all(
-                          color: isSelected ? Colors.white : Colors.transparent,
-                          width: 2.5,
+                children:
+                    [
+                      {'name': 'Altın', 'hex': '#E5C05C'},
+                      {'name': 'Mavi', 'hex': '#4A90E2'},
+                      {'name': 'Yeşil', 'hex': '#50E3C2'},
+                      {'name': 'Kırmızı', 'hex': '#E25050'},
+                      {'name': 'Mor', 'hex': '#BD10E0'},
+                    ].map((colorMap) {
+                      final hex = colorMap['hex']!;
+                      final color = _parseHexColor(hex);
+                      final isSelected = _selectedColor == hex;
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedColor = hex),
+                        child: Container(
+                          width: 44.w,
+                          height: 44.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: color,
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.transparent,
+                              width: 2.5,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: color.withValues(alpha: 0.4),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: color.withValues(alpha: 0.4),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
-                                )
-                              ]
-                            : null,
-                      ),
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }).toList(),
               ),
               SizedBox(height: 28.h),
 
@@ -443,7 +456,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     );
   }
 
-  Widget _buildBrandHeaderCard(BrandCompanyModel company, List<BrandCompanyProductModel> brandedProducts) {
+  Widget _buildBrandHeaderCard(
+    BrandCompanyModel company,
+    List<BrandCompanyProductModel> brandedProducts,
+  ) {
     final brandColor = _parseHexColor(company.themeColor);
 
     return Container(
@@ -463,13 +479,16 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 decoration: BoxDecoration(
                   color: Colors.black38,
                   shape: BoxShape.circle,
-                  border: Border.all(color: brandColor.withValues(alpha: 0.45), width: 1.5),
+                  border: Border.all(
+                    color: brandColor.withValues(alpha: 0.45),
+                    width: 1.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: brandColor.withValues(alpha: 0.15),
                       blurRadius: 8,
                       spreadRadius: 0.5,
-                    )
+                    ),
                   ],
                 ),
                 child: ClipOval(
@@ -482,7 +501,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 ),
               ),
               SizedBox(width: 14.w),
-              
+
               // Identity Text
               Expanded(
                 child: Column(
@@ -500,7 +519,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                         ),
                         SizedBox(width: 8.w),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6.w,
+                            vertical: 2.h,
+                          ),
                           decoration: BoxDecoration(
                             color: brandColor,
                             borderRadius: BorderRadius.circular(6.r),
@@ -530,7 +552,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             ],
           ),
           SizedBox(height: 16.h),
-          
+
           // XP Progress Bar Layout
           Builder(
             builder: (context) {
@@ -538,11 +560,14 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               final currentXp = company.brandXp;
               final baseLvlXp = getXpBaseForLevel(currentLvl);
               final nextLvlXp = getXpRequiredForNextLevel(currentLvl);
-              
+
               final lvlProgress = nextLvlXp == baseLvlXp
                   ? 1.0
-                  : ((currentXp - baseLvlXp) / (nextLvlXp - baseLvlXp)).clamp(0.0, 1.0);
-              
+                  : ((currentXp - baseLvlXp) / (nextLvlXp - baseLvlXp)).clamp(
+                      0.0,
+                      1.0,
+                    );
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -558,7 +583,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                         ),
                       ),
                       Text(
-                        currentLvl >= 5 ? 'MAX LEVEL ($currentXp XP)' : '$currentXp / $nextLvlXp XP',
+                        currentLvl >= 5
+                            ? 'MAX LEVEL ($currentXp XP)'
+                            : '$currentXp / $nextLvlXp XP',
                         style: TextStyle(
                           color: brandColor,
                           fontSize: 11.sp,
@@ -588,7 +615,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                                   color: brandColor.withValues(alpha: 0.5),
                                   blurRadius: 4,
                                   spreadRadius: 1,
-                                )
+                                ),
                               ],
                             ),
                           ),
@@ -598,9 +625,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   ),
                   SizedBox(height: 6.h),
                   Text(
-                    currentLvl >= 5 
+                    currentLvl >= 5
                         ? 'En yüksek marka prestijine ulaştın! Mağaza satış hızı (+%35) ve taban fiyat toleransı bonusu maksimumda.'
-                        : 'Bir sonraki seviye için ${(nextLvlXp - currentXp).clamp(0, nextLvlXp)} XP gerekiyor. Mağazalarında markalı ürün sattıkça tecrübe kazanırsın.',
+                        : 'Bir sonraki seviye için ${(nextLvlXp - currentXp).clamp(0, nextLvlXp)} XP gerekiyor. Mağazalarında markalı ürün sattıkça yada başkası sizin ürününüzü sattıkça tecrübe kazanırsın.',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 10.sp,
@@ -632,9 +659,13 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 10.h),
                 decoration: BoxDecoration(
-                  color: _selectedTab == 0 ? brandColor.withValues(alpha: 0.18) : Colors.transparent,
+                  color: _selectedTab == 0
+                      ? brandColor.withValues(alpha: 0.18)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(8.r),
-                  border: _selectedTab == 0 ? Border.all(color: brandColor.withValues(alpha: 0.35)) : null,
+                  border: _selectedTab == 0
+                      ? Border.all(color: brandColor.withValues(alpha: 0.35))
+                      : null,
                 ),
                 child: Text(
                   'Patentler & Ürünler',
@@ -654,9 +685,13 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 10.h),
                 decoration: BoxDecoration(
-                  color: _selectedTab == 1 ? brandColor.withValues(alpha: 0.18) : Colors.transparent,
+                  color: _selectedTab == 1
+                      ? brandColor.withValues(alpha: 0.18)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(8.r),
-                  border: _selectedTab == 1 ? Border.all(color: brandColor.withValues(alpha: 0.35)) : null,
+                  border: _selectedTab == 1
+                      ? Border.all(color: brandColor.withValues(alpha: 0.35))
+                      : null,
                 ),
                 child: Text(
                   'Pazarlama',
@@ -687,13 +722,28 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
       ),
       error: (err, _) => _buildError(err.toString()),
       data: (activeCampaigns) {
-        final isLocalActive = activeCampaigns.any((c) => c['campaign_type'] == 'local');
-        final isRegionalActive = activeCampaigns.any((c) => c['campaign_type'] == 'regional');
-        final isGlobalActive = activeCampaigns.any((c) => c['campaign_type'] == 'global');
+        final isLocalActive = activeCampaigns.any(
+          (c) => c['campaign_type'] == 'local',
+        );
+        final isRegionalActive = activeCampaigns.any(
+          (c) => c['campaign_type'] == 'regional',
+        );
+        final isGlobalActive = activeCampaigns.any(
+          (c) => c['campaign_type'] == 'global',
+        );
 
-        final localCampaign = activeCampaigns.firstWhere((c) => c['campaign_type'] == 'local', orElse: () => <String, dynamic>{});
-        final regionalCampaign = activeCampaigns.firstWhere((c) => c['campaign_type'] == 'regional', orElse: () => <String, dynamic>{});
-        final globalCampaign = activeCampaigns.firstWhere((c) => c['campaign_type'] == 'global', orElse: () => <String, dynamic>{});
+        final localCampaign = activeCampaigns.firstWhere(
+          (c) => c['campaign_type'] == 'local',
+          orElse: () => <String, dynamic>{},
+        );
+        final regionalCampaign = activeCampaigns.firstWhere(
+          (c) => c['campaign_type'] == 'regional',
+          orElse: () => <String, dynamic>{},
+        );
+        final globalCampaign = activeCampaigns.firstWhere(
+          (c) => c['campaign_type'] == 'global',
+          orElse: () => <String, dynamic>{},
+        );
 
         return Column(
           children: [
@@ -791,9 +841,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     return Container(
       margin: EdgeInsets.only(left: 16.w, right: 16.w, bottom: 12.h),
       padding: EdgeInsets.all(16.w),
-      decoration: AppDecorations.premiumCard(
-        isActive ? brandColor : null,
-      ),
+      decoration: AppDecorations.premiumCard(isActive ? brandColor : null),
       child: Row(
         children: [
           Expanded(
@@ -813,11 +861,16 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                     if (isActive) ...[
                       SizedBox(width: 8.w),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.w,
+                          vertical: 2.h,
+                        ),
                         decoration: BoxDecoration(
                           color: brandColor.withValues(alpha: 0.16),
                           borderRadius: BorderRadius.circular(6.r),
-                          border: Border.all(color: brandColor.withValues(alpha: 0.35)),
+                          border: Border.all(
+                            color: brandColor.withValues(alpha: 0.35),
+                          ),
                         ),
                         child: Text(
                           'AKTİF',
@@ -870,7 +923,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
           ),
           SizedBox(width: 12.w),
           ElevatedButton(
-            onPressed: isActive || _isSubmitting ? null : () => _startCampaign(type),
+            onPressed: isActive || _isSubmitting
+                ? null
+                : () => _startCampaign(type),
             style: ElevatedButton.styleFrom(
               backgroundColor: isActive ? Colors.grey.shade800 : brandColor,
               foregroundColor: Colors.black,
@@ -894,8 +949,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     List<BrandCompanyProductModel> products,
   ) {
     final brandedProducts = products.where((item) => item.isBranded).toList();
-    final availableProducts = products.where((item) => !item.isBranded).toList();
-    
+    final availableProducts = products
+        .where((item) => !item.isBranded)
+        .toList();
+
     final brandColor = _parseHexColor(company.themeColor);
 
     return RefreshIndicator(
@@ -909,12 +966,12 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
         children: [
           // XP progress card and Brand identity
           _buildBrandHeaderCard(company, brandedProducts),
-          
+
           // Tab switcher
           _buildTabSwitcher(brandColor),
-          
+
           SizedBox(height: 8.h),
-          
+
           if (_selectedTab == 0) ...[
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -924,13 +981,20 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             if (availableProducts.isEmpty)
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: _buildEmptyCard('Kalite 2 seviyesinde patentlenebilir yeni ürün yok.'),
+                child: _buildEmptyCard(
+                  'Kalite 2 seviyesinde patentlenebilir yeni ürün yok.',
+                ),
               )
             else
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: Column(
-                  children: availableProducts.map((item) => _buildPatentCard(item, brandColor: brandColor)).toList(),
+                  children: availableProducts
+                      .map(
+                        (item) =>
+                            _buildPatentCard(item, brandColor: brandColor),
+                      )
+                      .toList(),
                 ),
               ),
             SizedBox(height: 16.h),
@@ -942,21 +1006,25 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             if (brandedProducts.isEmpty)
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: _buildEmptyCard('Bu marka altında henüz aktif ürün yok.'),
+                child: _buildEmptyCard(
+                  'Bu marka altında henüz aktif ürün yok.',
+                ),
               )
             else
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: Column(
-                  children: brandedProducts.map(
-                    (item) => _buildPatentCard(
-                      item,
-                      readOnly: true,
-                      brandId: company.id,
-                      brandName: company.brandName,
-                      brandColor: brandColor,
-                    ),
-                  ).toList(),
+                  children: brandedProducts
+                      .map(
+                        (item) => _buildPatentCard(
+                          item,
+                          readOnly: true,
+                          brandId: company.id,
+                          brandName: company.brandName,
+                          brandColor: brandColor,
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
           ] else ...[
@@ -971,9 +1039,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 onPressed: () => context.push('/company/design'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: brandColor,
-                  side: BorderSide(
-                    color: brandColor.withValues(alpha: 0.35),
-                  ),
+                  side: BorderSide(color: brandColor.withValues(alpha: 0.35)),
                   padding: EdgeInsets.symmetric(vertical: 14.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
@@ -1022,9 +1088,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
       padding: EdgeInsets.all(12.w),
-      decoration: AppDecorations.premiumCard(
-        readOnly ? brandColor : null,
-      ),
+      decoration: AppDecorations.premiumCard(readOnly ? brandColor : null),
       child: Row(
         children: [
           Container(
@@ -1075,9 +1139,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   context.push('/company/products/${item.productId}/design'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: brandColor,
-                side: BorderSide(
-                  color: brandColor.withValues(alpha: 0.35),
-                ),
+                side: BorderSide(color: brandColor.withValues(alpha: 0.35)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10.r),
                 ),
@@ -1089,9 +1151,13 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
           ElevatedButton(
             onPressed: readOnly ? null : () => _patentProduct(item.productId),
             style: ElevatedButton.styleFrom(
-              backgroundColor: readOnly ? brandColor.withValues(alpha: 0.16) : brandColor,
+              backgroundColor: readOnly
+                  ? brandColor.withValues(alpha: 0.16)
+                  : brandColor,
               foregroundColor: readOnly ? brandColor : Colors.black,
-              side: readOnly ? BorderSide(color: brandColor.withValues(alpha: 0.35)) : null,
+              side: readOnly
+                  ? BorderSide(color: brandColor.withValues(alpha: 0.35))
+                  : null,
             ),
             child: Text(readOnly ? 'Markalı' : 'Patent Al'),
           ),

@@ -10,18 +10,17 @@ import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
 
 class BrandProductDesignScreen extends ConsumerStatefulWidget {
-  const BrandProductDesignScreen({
-    super.key,
-    required this.productId,
-  });
+  const BrandProductDesignScreen({super.key, required this.productId});
 
   final String productId;
 
   @override
-  ConsumerState<BrandProductDesignScreen> createState() => _BrandProductDesignScreenState();
+  ConsumerState<BrandProductDesignScreen> createState() =>
+      _BrandProductDesignScreenState();
 }
 
-class _BrandProductDesignScreenState extends ConsumerState<BrandProductDesignScreen> {
+class _BrandProductDesignScreenState
+    extends ConsumerState<BrandProductDesignScreen> {
   String? _selectedWatermark;
   bool _didInitialize = false;
   bool _isSaving = false;
@@ -47,7 +46,9 @@ class _BrandProductDesignScreenState extends ConsumerState<BrandProductDesignScr
 
   Future<void> _saveWatermark(String productId) async {
     setState(() => _isSaving = true);
-    final result = await ref.read(companyActionProvider).setBrandProductWatermark(
+    final result = await ref
+        .read(companyActionProvider)
+        .setBrandProductWatermark(
           productId: productId,
           watermarkAssetId: _selectedWatermark,
         );
@@ -100,7 +101,8 @@ class _BrandProductDesignScreenState extends ConsumerState<BrandProductDesignScr
                     data: (products) {
                       BrandCompanyProductModel? product;
                       for (final item in products) {
-                        if (item.productId == widget.productId && item.isBranded) {
+                        if (item.productId == widget.productId &&
+                            item.isBranded) {
                           product = item;
                           break;
                         }
@@ -118,7 +120,10 @@ class _BrandProductDesignScreenState extends ConsumerState<BrandProductDesignScr
                         padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
                         children: [
                           Container(
-                            padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 16.w),
+                            padding: EdgeInsets.symmetric(
+                              vertical: 20.h,
+                              horizontal: 16.w,
+                            ),
                             decoration: AppDecorations.panelGlass(),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -178,10 +183,15 @@ class _BrandProductDesignScreenState extends ConsumerState<BrandProductDesignScr
                               itemCount: _watermarkOptions.length + 1,
                               itemBuilder: (context, index) {
                                 final isNone = index == 0;
-                                final watermark = isNone ? null : _watermarkOptions[index - 1];
-                                final isSelected = _selectedWatermark == watermark;
+                                final watermark = isNone
+                                    ? null
+                                    : _watermarkOptions[index - 1];
+                                final isSelected =
+                                    _selectedWatermark == watermark;
                                 return GestureDetector(
-                                  onTap: () => setState(() => _selectedWatermark = watermark),
+                                  onTap: () => setState(
+                                    () => _selectedWatermark = watermark,
+                                  ),
                                   child: Container(
                                     margin: EdgeInsets.only(right: 12.w),
                                     width: 72.w,
@@ -214,20 +224,24 @@ class _BrandProductDesignScreenState extends ConsumerState<BrandProductDesignScr
                                       child: isNone
                                           ? Center(
                                               child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
                                                 children: [
                                                   Icon(
                                                     Icons.block,
-                                                    color: AppColors.textSecondary,
+                                                    color:
+                                                        AppColors.textSecondary,
                                                     size: 20.sp,
                                                   ),
                                                   SizedBox(height: 4.h),
                                                   Text(
                                                     'Yok',
                                                     style: TextStyle(
-                                                      color: AppColors.textSecondary,
+                                                      color: AppColors
+                                                          .textSecondary,
                                                       fontSize: 10.sp,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                     ),
                                                   ),
                                                 ],
@@ -236,13 +250,16 @@ class _BrandProductDesignScreenState extends ConsumerState<BrandProductDesignScr
                                           : Stack(
                                               fit: StackFit.expand,
                                               children: [
-                                                Container(color: Colors.black38),
+                                                Container(
+                                                  color: Colors.black38,
+                                                ),
                                                 Opacity(
                                                   opacity: 0.7,
                                                   child: CachedAssetImage(
                                                     fileName: watermark!,
                                                     fit: BoxFit.cover,
-                                                    placeholder: const SizedBox.shrink(),
+                                                    placeholder:
+                                                        const SizedBox.shrink(),
                                                     errorWidget: const Icon(
                                                       Icons.broken_image,
                                                       color: Colors.grey,
@@ -254,15 +271,20 @@ class _BrandProductDesignScreenState extends ConsumerState<BrandProductDesignScr
                                                   left: 4.w,
                                                   right: 4.w,
                                                   child: Container(
-                                                    padding: EdgeInsets.symmetric(vertical: 2.h),
+                                                    padding:
+                                                        EdgeInsets.symmetric(
+                                                          vertical: 2.h,
+                                                        ),
                                                     color: Colors.black54,
                                                     child: Text(
                                                       'Filigran $index',
-                                                      textAlign: TextAlign.center,
+                                                      textAlign:
+                                                          TextAlign.center,
                                                       style: TextStyle(
                                                         color: Colors.white,
                                                         fontSize: 9.sp,
-                                                        fontWeight: FontWeight.w600,
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
                                                     ),
                                                   ),
@@ -293,7 +315,9 @@ class _BrandProductDesignScreenState extends ConsumerState<BrandProductDesignScr
                                 shadowColor: brandColor.withValues(alpha: 0.3),
                               ),
                               child: Text(
-                                _isSaving ? 'Kaydediliyor...' : 'Filigrani Kaydet',
+                                _isSaving
+                                    ? 'Kaydediliyor...'
+                                    : 'Filigrani Kaydet',
                                 style: TextStyle(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.bold,
@@ -351,8 +375,4 @@ const List<String> _watermarkOptions = [
   'filigran8.webp',
   'filigran9.webp',
   'filigran10.webp',
-  'filigran11.webp',
-  'filigran12.webp',
-  'filigran13.webp',
-  'filigran14.webp',
 ];

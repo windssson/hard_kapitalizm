@@ -501,6 +501,77 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
         SizedBox(height: 24.h),
+        Text('Liderlik ve Siralama', style: AppTextStyles.h2),
+        SizedBox(height: 12.h),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12.r),
+            child: InkWell(
+              onTap: () => context.go('/leaderboard'),
+              borderRadius: BorderRadius.circular(12.r),
+              child: Padding(
+                padding: EdgeInsets.all(14.w),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36.w,
+                      height: 36.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.emoji_events_rounded,
+                        color: AppColors.gold,
+                        size: 18.sp,
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Liderlik Tablosu',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            'Diger oyuncular arasindaki yerini gor',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.gold,
+                      size: 20.sp,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 24.h),
         Text('Finansal Durum', style: AppTextStyles.h2),
         SizedBox(height: 12.h),
         Container(

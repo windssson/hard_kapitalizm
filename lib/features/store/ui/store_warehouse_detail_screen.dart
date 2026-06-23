@@ -272,7 +272,7 @@ class _StoreWarehouseSlotCard extends StatelessWidget {
           Container(
             width: 46.w,
             height: 46.w,
-            padding: EdgeInsets.all(6.w),
+            padding: EdgeInsets.all(2.w),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(12.r),

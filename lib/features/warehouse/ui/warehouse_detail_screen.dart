@@ -1128,7 +1128,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               Container(
                 width: 58.w,
                 height: 58.w,
-                padding: EdgeInsets.all(7.w),
+                padding: EdgeInsets.all(2.w),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.24),
                   borderRadius: BorderRadius.circular(16.r),
@@ -1351,7 +1351,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     Container(
                       width: 46.w,
                       height: 46.w,
-                      padding: EdgeInsets.all(6.w),
+                      padding: EdgeInsets.all(2.w),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.28),
                         borderRadius: BorderRadius.circular(12.r),
@@ -1977,111 +1977,281 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
       final result = await showDialog<int>(
         context: sheetContext,
-        builder: (dialogContext) => AlertDialog(
-          backgroundColor: AppColors.cardBg,
-          title: Text(
-            (slot.productName ?? 'Urun') +
-                (slot.brandId != _defaultBrandId
-                    ? ' (${currentBrandName ?? 'Markali'})'
-                    : ''),
-            style: TextStyle(color: Colors.white, fontSize: 16.sp),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kalite ${slot.qualityLevel} | Stok: ${slot.quantity}',
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 12.sp,
-                ),
-              ),
-              SizedBox(height: 4.h),
-              Text(
-                'Bu hedef icin maksimum: $effectiveLimit',
-                style: TextStyle(
-                  color: AppColors.goldLight,
-                  fontSize: 12.sp,
-                ),
-              ),
-              SizedBox(height: 14.h),
-              TextField(
-                controller: controller,
-                readOnly: true,
-                showCursor: true,
-                enableInteractiveSelection: false,
-                style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  labelText: 'Miktar',
-                  labelStyle: TextStyle(color: AppColors.gold),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.textMuted),
+        builder: (dialogContext) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
+          child: Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: AppDecorations.premiumCard(AppColors.gold, 20.r),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    (slot.productName ?? 'Urun') +
+                        (slot.brandId != _defaultBrandId
+                            ? ' (${currentBrandName ?? 'Markali'})'
+                            : ''),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.gold),
+                  SizedBox(height: 4.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (int i = 0; i < 5; i++)
+                        Icon(
+                          i < slot.qualityLevel
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: i < slot.qualityLevel
+                              ? AppColors.gold
+                              : Colors.white24,
+                          size: 16.sp,
+                        ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        'Q${slot.qualityLevel}',
+                        style: TextStyle(
+                          color: AppColors.gold,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              SizedBox(height: 12.h),
-              NumericKeyboard(
-                controller: controller,
-                shortcuts: [
-                  if (effectiveLimit > 0)
-                    NumericKeyboardShortcut(
-                      label: '1/4',
-                      value:
-                          ((effectiveLimit / 4).ceil().clamp(1, effectiveLimit))
+                  Center(
+                    child: Container(
+                      width: 72.w,
+                      height: 72.w,
+                      margin: EdgeInsets.symmetric(vertical: 12.h),
+                      padding: EdgeInsets.all(2.w),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.25),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: slot.productIcon == null || slot.productIcon!.isEmpty
+                          ? Icon(
+                              Icons.inventory_2_outlined,
+                              color: AppColors.gold,
+                              size: 32.sp,
+                            )
+                          : BrandedProductImage(
+                              fileName: slot.productIcon!,
+                              brandId: slot.brandId,
+                              brandName: _brandNameForSlot(
+                                slot,
+                                currentBrandName,
+                              ),
+                              productId: slot.productId,
+                              fit: BoxFit.contain,
+                              showFrame: false,
+                            ),
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 6.h,
+                      horizontal: 12.w,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Mevcut Stok:',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11.sp,
+                              ),
+                            ),
+                            Text(
+                              '${slot.quantity} Adet',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 4.h),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Hedef Maksimum:',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11.sp,
+                              ),
+                            ),
+                            Text(
+                              '$effectiveLimit Adet',
+                              style: TextStyle(
+                                color: AppColors.goldLight,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  TextField(
+                    controller: controller,
+                    readOnly: true,
+                    showCursor: true,
+                    enableInteractiveSelection: false,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Miktar (Maks: $effectiveLimit)',
+                      labelStyle: const TextStyle(color: AppColors.gold),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.gold),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  NumericKeyboard(
+                    controller: controller,
+                    shortcuts: [
+                      if (effectiveLimit > 0)
+                        NumericKeyboardShortcut(
+                          label: '1/4',
+                          value: ((effectiveLimit / 4).ceil().clamp(1, effectiveLimit))
                               .toString(),
-                    ),
-                  if (effectiveLimit > 0)
-                    NumericKeyboardShortcut(
-                      label: 'Yari',
-                      value:
-                          ((effectiveLimit / 2).ceil().clamp(1, effectiveLimit))
+                        ),
+                      if (effectiveLimit > 0)
+                        NumericKeyboardShortcut(
+                          label: 'Yari',
+                          value: ((effectiveLimit / 2).ceil().clamp(1, effectiveLimit))
                               .toString(),
-                    ),
-                  if (effectiveLimit > 0)
-                    NumericKeyboardShortcut(
-                      label: 'Tamami',
-                      value: effectiveLimit.toString(),
-                    ),
+                        ),
+                      if (effectiveLimit > 0)
+                        NumericKeyboardShortcut(
+                          label: 'Tamami',
+                          value: effectiveLimit.toString(),
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 14.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: const BorderSide(color: Colors.white24),
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: Text(
+                            'Iptal',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (currentQuantity > 0) ...[
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.red,
+                              side: BorderSide(color: AppColors.red.withValues(alpha: 0.5)),
+                              padding: EdgeInsets.symmetric(vertical: 10.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.r),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(dialogContext, 0),
+                            child: Text(
+                              'Kaldir',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.gold.withValues(alpha: 0.16),
+                                blurRadius: 8,
+                                spreadRadius: 0.5,
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.gold,
+                              foregroundColor: Colors.black,
+                              padding: EdgeInsets.symmetric(vertical: 10.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.r),
+                              ),
+                            ),
+                            onPressed: () {
+                              final quantity = int.tryParse(controller.text) ?? 0;
+                              if (quantity <= 0 || quantity > effectiveLimit) {
+                                AppSnackbar.show(
+                                  dialogContext,
+                                  title: 'Gecersiz Miktar',
+                                  message:
+                                      '1 ile $effectiveLimit arasinda bir miktar girin.',
+                                  type: SnackbarType.warning,
+                                );
+                                return;
+                              }
+                              Navigator.pop(dialogContext, quantity);
+                            },
+                            child: Text(
+                              'Kaydet',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Iptal'),
-            ),
-            if (currentQuantity > 0)
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, 0),
-                child: const Text('Kaldir'),
-              ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-              onPressed: () {
-                final quantity = int.tryParse(controller.text) ?? 0;
-                if (quantity <= 0 || quantity > effectiveLimit) {
-                  AppSnackbar.show(
-                    dialogContext,
-                    title: 'Gecersiz Miktar',
-                    message:
-                        '1 ile $effectiveLimit arasinda bir miktar girin.',
-                    type: SnackbarType.warning,
-                  );
-                  return;
-                }
-                Navigator.pop(dialogContext, quantity);
-              },
-              child: const Text(
-                'Kaydet',
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-          ],
         ),
       );
 
@@ -2177,7 +2347,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                         final maxForSlot = maxSelectableForSlot(slot);
                         final isDisabled = maxForSlot <= 0 && !isSelected;
                         return Container(
-                          padding: EdgeInsets.all(12.w),
+                          padding: EdgeInsets.all(10.w),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(14.r),
@@ -2191,18 +2361,23 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           child: Row(
                             children: [
                               Container(
-                                width: 48.w,
-                                height: 48.w,
+                                width: 42.w,
+                                height: 42.w,
+                                padding: EdgeInsets.all(2.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.28),
-                                  borderRadius: BorderRadius.circular(12.r),
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(
+                                    color: (isSelected ? AppColors.green : Colors.white10)
+                                        .withValues(alpha: 0.2),
+                                  ),
                                 ),
                                 child: slot.productIcon == null ||
                                         slot.productIcon!.isEmpty
                                     ? Icon(
                                         Icons.inventory_2_outlined,
                                         color: AppColors.gold,
-                                        size: 22.sp,
+                                        size: 20.sp,
                                       )
                                     : BrandedProductImage(
                                         fileName: slot.productIcon!,
@@ -2216,7 +2391,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                         showFrame: false,
                                       ),
                               ),
-                              SizedBox(width: 12.w),
+                              SizedBox(width: 10.w),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2226,19 +2401,40 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                           (slot.brandId != _defaultBrandId
                                               ? ' (${currentBrandName ?? 'Markali'})'
                                               : ''),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 13.sp,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    SizedBox(height: 4.h),
-                                    Text(
-                                      'Kalite ${slot.qualityLevel} | Stok ${slot.quantity} | Birim ${_formatValue(slot.unitVolume)} m3',
-                                      style: TextStyle(
-                                        color: AppColors.textMuted,
-                                        fontSize: 11.sp,
-                                      ),
+                                    SizedBox(height: 3.h),
+                                    Row(
+                                      children: [
+                                        for (int i = 0; i < 5; i++)
+                                          Icon(
+                                            i < slot.qualityLevel
+                                                ? Icons.star_rounded
+                                                : Icons.star_border_rounded,
+                                            color: i < slot.qualityLevel
+                                                ? AppColors.gold
+                                                : Colors.white12,
+                                            size: 11.sp,
+                                          ),
+                                        SizedBox(width: 4.w),
+                                        Expanded(
+                                          child: Text(
+                                            '| Stok ${slot.quantity} | Birim ${_formatValue(slot.unitVolume)} m3',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.textMuted,
+                                              fontSize: 10.sp,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     SizedBox(height: 2.h),
                                     Text(
@@ -2274,11 +2470,19 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                             : AppColors.gold)
                                         .withValues(alpha: 0.35),
                                   ),
+                                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
                                 ),
                                 child: Text(
                                   isSelected
                                       ? 'Adet: $selectedQuantity'
                                       : 'Ekle',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],

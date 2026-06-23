@@ -65,7 +65,7 @@ class AppTopBar extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
-                      flex: compact ? 55 : 57,
+                      flex: compact ? 52 : 54,
                       child: _buildProfilePanel(
                         context: context,
                         player: player,
@@ -75,12 +75,17 @@ class AppTopBar extends ConsumerWidget {
                     ),
                     SizedBox(width: compact ? 4.w : 6.w),
                     Expanded(
-                      flex: compact ? 27 : 28,
+                      flex: compact ? 26 : 26,
                       child: _buildResourceColumn(
                         context,
                         player,
                         compact: compact,
                       ),
+                    ),
+                    SizedBox(width: compact ? 4.w : 6.w),
+                    _buildLeaderboardAction(
+                      context: context,
+                      compact: compact,
                     ),
                     SizedBox(width: compact ? 4.w : 6.w),
                     _buildNotificationAction(
@@ -497,6 +502,61 @@ class AppTopBar extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildLeaderboardAction({
+    required BuildContext context,
+    required bool compact,
+  }) {
+    return InkWell(
+      onTap: () => context.push('/leaderboard'),
+      borderRadius: BorderRadius.circular(compact ? 12.r : 14.r),
+      child: Container(
+        width: compact ? 38.w : 42.w,
+        height: compact ? 50.h : 56.h,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.cardBg.withValues(alpha: 0.92),
+              AppColors.navBg.withValues(alpha: 0.98),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(compact ? 12.r : 14.r),
+          border: Border.all(
+            color: AppColors.borderGold.withValues(alpha: 0.95),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.goldDark.withValues(alpha: 0.12),
+              blurRadius: 12.r,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.emoji_events_rounded,
+              color: AppColors.goldLight,
+              size: compact ? 18.sp : 20.sp,
+            ),
+            if (!compact) ...[
+              SizedBox(height: 2.h),
+              Text(
+                'Sıralama',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 6.8.sp,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

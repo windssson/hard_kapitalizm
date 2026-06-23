@@ -191,7 +191,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         return;
       }
 
-      await _showStoreSalesSummaryDialog(context, result);
+      await _showStoreSalesSummaryDialog(context, result, page.store.slots);
 
       if (!mounted) return;
       final exp = result.experience;
@@ -204,62 +204,77 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   Future<void> _showStoreSalesSummaryDialog(
     BuildContext context,
     StoreSaleResultModel result,
+    List<StoreSlotModel> slots,
   ) {
     final profitColor = result.totalProfit >= 0 ? AppColors.green : AppColors.red;
+    final currentBrandName = ref.read(playerBrandCompanyProvider).value?.brandName;
 
     return showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.background,
-        titlePadding: EdgeInsets.fromLTRB(18.w, 18.h, 18.w, 0),
-        contentPadding: EdgeInsets.fromLTRB(18.w, 12.h, 18.w, 0),
-        actionsPadding: EdgeInsets.fromLTRB(18.w, 4.h, 18.w, 12.h),
-        title: Row(
-          children: [
-            Container(
-              width: 36.w,
-              height: 36.w,
-              decoration: BoxDecoration(
-                color: AppColors.green.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.green.withValues(alpha: 0.35),
-                ),
-              ),
-              child: Icon(
-                Icons.point_of_sale_outlined,
-                color: AppColors.green,
-                size: 18.sp,
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Expanded(
-              child: Text(
-                'Satis Ozeti',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: 420.h, maxWidth: 340.w),
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
+        child: Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: AppDecorations.premiumCard(profitColor, 20.r),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36.w,
+                      height: 36.w,
+                      decoration: BoxDecoration(
+                        color: profitColor.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: profitColor.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Icon(
+                        result.totalProfit >= 0
+                            ? Icons.trending_up_rounded
+                            : Icons.trending_down_rounded,
+                        color: profitColor,
+                        size: 20.sp,
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Satis Ozeti',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Gecen Sure: ${_formatElapsedSalesDuration(result.elapsedMinutes)}',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 10.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 14.h),
                 Container(
-                  width: double.infinity,
                   padding: EdgeInsets.all(12.w),
                   decoration: BoxDecoration(
-                    color: profitColor.withValues(alpha: 0.08),
+                    color: Colors.white.withValues(alpha: 0.02),
                     borderRadius: BorderRadius.circular(14.r),
                     border: Border.all(
-                      color: profitColor.withValues(alpha: 0.35),
+                      color: Colors.white.withValues(alpha: 0.05),
                     ),
                   ),
                   child: Column(
@@ -276,42 +291,50 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                           Expanded(
                             child: _buildSalesSummaryMetric(
                               'Ciro',
-                              result.totalRevenue.toStringAsFixed(1),
+                              '${result.totalRevenue.toStringAsFixed(1)} TL',
                               AppColors.green,
                             ),
                           ),
                           Expanded(
                             child: _buildSalesSummaryMetric(
                               'Kar',
-                              result.totalProfit.toStringAsFixed(1),
+                              '${result.totalProfit.toStringAsFixed(1)} TL',
                               profitColor,
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 8.h),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Sure: ${_formatElapsedSalesDuration(result.elapsedMinutes)}',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 11.sp,
-                              ),
+                      if ((result.experience?.amount ?? 0) > 0) ...[
+                        SizedBox(height: 10.h),
+                        Container(
+                          padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 12.w),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.blue.withValues(alpha: 0.15),
+                                Colors.blue.withValues(alpha: 0.03),
+                              ],
                             ),
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(color: AppColors.blue.withValues(alpha: 0.25)),
                           ),
-                          if ((result.experience?.amount ?? 0) > 0)
-                            Text(
-                              '+${result.experience!.amount} XP',
-                              style: TextStyle(
-                                color: AppColors.blue,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w800,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.star_rounded, color: AppColors.blue, size: 14.sp),
+                              SizedBox(width: 6.w),
+                              Text(
+                                '+${result.experience!.amount} XP Kazandin!',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -320,89 +343,176 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   Text(
                     'Urunler',
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: Colors.white70,
                       fontSize: 13.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   SizedBox(height: 8.h),
-                  ...result.items.map(
-                    (item) => Container(
-                      width: double.infinity,
-                      margin: EdgeInsets.only(bottom: 8.h),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 9.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.textPrimary.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: AppColors.border.withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.productName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.bold,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: 250.h),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const ClampingScrollPhysics(),
+                      itemCount: result.items.length,
+                      separatorBuilder: (_, index) => SizedBox(height: 8.h),
+                      itemBuilder: (context, index) {
+                        final item = result.items[index];
+                        final slot = slots.firstWhere(
+                          (s) => s.slotIndex == item.slotIndex || s.productId == item.productId,
+                          orElse: () => StoreSlotModel(
+                            id: '',
+                            storeId: '',
+                            slotIndex: item.slotIndex,
+                            brandId: _defaultBrandId,
+                            quantity: 0,
+                            pendingQuantity: 0,
+                            qualityLevel: item.qualityLevel,
+                            capacity: 0,
+                            boostMultiplier: 1.0,
+                            isActive: false,
+                            isEmpty: true,
+                            usedCapacityRatio: 0.0,
+                          ),
+                        );
+                        final productIcon = slot.productIcon ?? slot.product?.urunIconu ?? 'default.webp';
+
+                        return Container(
+                          padding: EdgeInsets.all(8.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.03),
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.06),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36.w,
+                                height: 36.w,
+                                padding: EdgeInsets.all(2.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.08),
                                   ),
                                 ),
-                                SizedBox(height: 2.h),
-                                Text(
-                                  'Slot ${item.slotIndex} | Kalite ${item.qualityLevel}',
-                                  style: TextStyle(
-                                    color: AppColors.textMuted,
-                                    fontSize: 10.sp,
-                                  ),
+                                child: BrandedProductImage(
+                                  fileName: productIcon,
+                                  brandId: slot.brandId,
+                                  brandName: slot.brandId != _defaultBrandId
+                                      ? currentBrandName
+                                      : null,
+                                  productId: item.productId,
+                                  fit: BoxFit.contain,
+                                  showFrame: false,
                                 ),
-                              ],
-                            ),
+                              ),
+                              SizedBox(width: 10.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.productName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2.h),
+                                    Row(
+                                      children: [
+                                        for (int i = 0; i < 5; i++)
+                                          Icon(
+                                            i < item.qualityLevel
+                                                ? Icons.star_rounded
+                                                : Icons.star_border_rounded,
+                                            color: i < item.qualityLevel
+                                                ? AppColors.gold
+                                                : Colors.white10,
+                                            size: 10.sp,
+                                          ),
+                                        SizedBox(width: 6.w),
+                                        Text(
+                                          '| Slot ${item.slotIndex}',
+                                          style: TextStyle(
+                                            color: AppColors.textMuted,
+                                            fontSize: 9.sp,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '${item.soldQuantity} Adet',
+                                    style: TextStyle(
+                                      color: AppColors.gold,
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${item.profit >= 0 ? '+' : ''}${item.profit.toStringAsFixed(1)} TL',
+                                    style: TextStyle(
+                                      color: item.profit >= 0 ? AppColors.green : AppColors.red,
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            '${item.soldQuantity} adet',
-                            style: TextStyle(
-                              color: AppColors.gold,
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          SizedBox(width: 10.w),
-                          Text(
-                            item.profit.toStringAsFixed(1),
-                            style: TextStyle(
-                              color: item.profit >= 0
-                                  ? AppColors.green
-                                  : AppColors.red,
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                   ),
                 ],
+                SizedBox(height: 16.h),
+                Container(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: profitColor.withValues(alpha: 0.16),
+                        blurRadius: 8,
+                        spreadRadius: 0.5,
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: profitColor,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 11.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text(
+                      'Tamam',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Tamam'),
-          ),
-        ],
       ),
     );
   }
@@ -628,7 +738,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       return Container(
                         width: 42.w,
                         height: 42.w,
-                        padding: EdgeInsets.all(6.w),
+                        padding: EdgeInsets.all(2.w),
                         decoration: BoxDecoration(
                           color: AppColors.textPrimary.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12.r),

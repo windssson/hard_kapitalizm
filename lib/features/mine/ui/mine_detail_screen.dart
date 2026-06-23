@@ -661,7 +661,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               Container(
                 width: 70.w,
                 height: 70.w,
-                padding: EdgeInsets.all(8.w),
+                padding: EdgeInsets.all(2.w),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(14.r),
@@ -1615,93 +1615,228 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       );
       final result = await showDialog<int>(
         context: sheetContext,
-        builder: (dialogContext) => AlertDialog(
-          backgroundColor: AppColors.background,
-          title: Text(
-            (item.product?.urunAdi ?? item.productId) +
-                (item.brandId != SelectableProductionProductModel.defaultBrandId
-                    ? ' (${_currentBrandName ?? 'Markali'})'
-                    : ''),
-            style: TextStyle(color: Colors.white, fontSize: 18.sp),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kalite ${item.qualityLevel} | Stok: ${item.quantity}',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
-              ),
-              SizedBox(height: 12.h),
-              TextField(
-                controller: controller,
-                readOnly: true,
-                showCursor: true,
-                enableInteractiveSelection: false,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Miktar (Maks: ${item.quantity})',
-                  labelStyle: const TextStyle(color: AppColors.gold),
-                  enabledBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white24),
+        builder: (dialogContext) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
+          child: Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: AppDecorations.premiumCard(AppColors.gold, 20.r),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    (item.product?.urunAdi ?? item.productId) +
+                        (item.brandId != SelectableProductionProductModel.defaultBrandId
+                            ? ' (${_currentBrandName ?? 'Markali'})'
+                            : ''),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.gold),
+                  SizedBox(height: 4.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (int i = 0; i < 5; i++)
+                        Icon(
+                          i < item.qualityLevel
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: i < item.qualityLevel
+                              ? AppColors.gold
+                              : Colors.white24,
+                          size: 16.sp,
+                        ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        'Q${item.qualityLevel}',
+                        style: TextStyle(
+                          color: AppColors.gold,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              SizedBox(height: 12.h),
-              NumericKeyboard(
-                controller: controller,
-                shortcuts: [
-                  NumericKeyboardShortcut(
-                    label: '1/4',
-                    value: (item.quantity / 4)
-                        .floor()
-                        .clamp(1, item.quantity)
-                        .toString(),
+                  Center(
+                    child: Container(
+                      width: 72.w,
+                      height: 72.w,
+                      margin: EdgeInsets.symmetric(vertical: 12.h),
+                      padding: EdgeInsets.all(2.w),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.25),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: BrandedProductImage(
+                        fileName: item.product?.urunIconu ?? 'default.webp',
+                        brandId: item.brandId,
+                        brandName: item.brandId !=
+                                SelectableProductionProductModel.defaultBrandId
+                            ? _currentBrandName
+                            : null,
+                        productId: item.productId,
+                        fit: BoxFit.contain,
+                        showFrame: false,
+                      ),
+                    ),
                   ),
-                  NumericKeyboardShortcut(
-                    label: 'Yari',
-                    value: (item.quantity / 2)
-                        .floor()
-                        .clamp(1, item.quantity)
-                        .toString(),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 6.h,
+                      horizontal: 12.w,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Mevcut Stok:',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                        Text(
+                          '${item.quantity} Adet',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  NumericKeyboardShortcut(
-                    label: 'Tamami',
-                    value: item.quantity.toString(),
+                  SizedBox(height: 12.h),
+                  TextField(
+                    controller: controller,
+                    readOnly: true,
+                    showCursor: true,
+                    enableInteractiveSelection: false,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Miktar (Maks: ${item.quantity})',
+                      labelStyle: const TextStyle(color: AppColors.gold),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.white24),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.gold),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  NumericKeyboard(
+                    controller: controller,
+                    shortcuts: [
+                      NumericKeyboardShortcut(
+                        label: '1/4',
+                        value: (item.quantity / 4)
+                            .floor()
+                            .clamp(1, item.quantity)
+                            .toString(),
+                      ),
+                      NumericKeyboardShortcut(
+                        label: 'Yarı',
+                        value: (item.quantity / 2)
+                            .floor()
+                            .clamp(1, item.quantity)
+                            .toString(),
+                      ),
+                      NumericKeyboardShortcut(
+                        label: 'Tamamı',
+                        value: item.quantity.toString(),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 14.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: const BorderSide(color: Colors.white24),
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: Text(
+                            'İptal',
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.gold.withValues(alpha: 0.16),
+                                blurRadius: 8,
+                                spreadRadius: 0.5,
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.gold,
+                              foregroundColor: Colors.black,
+                              padding: EdgeInsets.symmetric(vertical: 10.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.r),
+                              ),
+                            ),
+                            onPressed: () {
+                              final quantity =
+                                  int.tryParse(controller.text) ?? 0;
+                              if (quantity <= 0 || quantity > item.quantity) {
+                                AppSnackbar.show(
+                                  sheetContext,
+                                  title: 'Hata',
+                                  message: 'Geçersiz miktar!',
+                                  type: SnackbarType.error,
+                                );
+                                return;
+                              }
+                              Navigator.pop(dialogContext, quantity);
+                            },
+                            child: Text(
+                              'Kaydet',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Iptal'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-              onPressed: () {
-                final quantity = int.tryParse(controller.text) ?? 0;
-                if (quantity <= 0 || quantity > item.quantity) {
-                  AppSnackbar.show(
-                    sheetContext,
-                    title: 'Hata',
-                    message: 'Gecersiz miktar!',
-                    type: SnackbarType.error,
-                  );
-                  return;
-                }
-                Navigator.pop(dialogContext, quantity);
-              },
-              child: const Text(
-                'Kaydet',
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-          ],
         ),
       );
 
@@ -1781,7 +1916,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             selectedQuantities[item.id] ?? 0;
                         final isSelected = selectedQuantity > 0;
                         return Container(
-                          padding: EdgeInsets.all(12.w),
+                          padding: EdgeInsets.all(10.w),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(14.r),
@@ -1797,6 +1932,32 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           ),
                           child: Row(
                             children: [
+                              Container(
+                                width: 42.w,
+                                height: 42.w,
+                                padding: EdgeInsets.all(2.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(
+                                    color: (isSelected ? AppColors.green : Colors.white10)
+                                        .withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: BrandedProductImage(
+                                  fileName: item.product?.urunIconu ?? 'default.webp',
+                                  brandId: item.brandId,
+                                  brandName: item.brandId !=
+                                          SelectableProductionProductModel
+                                              .defaultBrandId
+                                      ? _currentBrandName
+                                      : null,
+                                  productId: item.productId,
+                                  fit: BoxFit.contain,
+                                  showFrame: false,
+                                ),
+                              ),
+                              SizedBox(width: 10.w),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1809,19 +1970,40 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                                       .defaultBrandId
                                               ? ' (${_currentBrandName ?? 'Markali'})'
                                               : ''),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 13.sp,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    SizedBox(height: 4.h),
-                                    Text(
-                                      'Kalite ${item.qualityLevel} | Stok ${item.quantity}',
-                                      style: TextStyle(
-                                        color: AppColors.textMuted,
-                                        fontSize: 11.sp,
-                                      ),
+                                    SizedBox(height: 3.h),
+                                    Row(
+                                      children: [
+                                        for (int i = 0; i < 5; i++)
+                                          Icon(
+                                            i < item.qualityLevel
+                                                ? Icons.star_rounded
+                                                : Icons.star_border_rounded,
+                                            color: i < item.qualityLevel
+                                                ? AppColors.gold
+                                                : Colors.white12,
+                                            size: 11.sp,
+                                          ),
+                                        SizedBox(width: 4.w),
+                                        Expanded(
+                                          child: Text(
+                                            '| Stok ${item.quantity}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.textMuted,
+                                              fontSize: 10.sp,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

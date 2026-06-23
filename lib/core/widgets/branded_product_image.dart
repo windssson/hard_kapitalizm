@@ -103,7 +103,6 @@ class BrandedProductImage extends ConsumerWidget {
 
         final radius = borderRadius ?? BorderRadius.circular(12.r * scale);
 
-        final watermarkSize = size * watermarkSizeRatio;
         final fontSizeValue = size * fontSizeRatio;
 
         final badgeSize = size * 0.22;
@@ -147,58 +146,48 @@ class BrandedProductImage extends ConsumerWidget {
                     placeholder: placeholder,
                   ),
                 ),
-                if ((resolvedWatermark != null &&
-                        resolvedWatermark.isNotEmpty) ||
-                    (displayBrandName != null && displayBrandName.isNotEmpty))
-                  Positioned(
-                    top: badgeOffset,
-                    right: badgeOffset,
+                if (resolvedWatermark != null && resolvedWatermark.isNotEmpty)
+                  Positioned.fill(
                     child: IgnorePointer(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          if (resolvedWatermark != null &&
-                              resolvedWatermark.isNotEmpty)
-                            CachedAssetImage(
-                              fileName: resolvedWatermark,
-                              width: watermarkSize,
-                              height: watermarkSize,
-                              fit: BoxFit.contain,
-                              placeholder: const SizedBox.shrink(),
-                              errorWidget: const SizedBox.shrink(),
-                            )
-                          else
-                            SizedBox(
-                              width: watermarkSize,
-                              height: watermarkSize,
-                            ),
-                          if (displayBrandName != null &&
-                              displayBrandName.isNotEmpty)
-                            Transform.translate(
-                              offset: Offset(
-                                watermarkSize * 0.08,
-                                -watermarkSize * 0.08,
+                      child: CachedAssetImage(
+                        fileName: resolvedWatermark,
+                        fit: BoxFit.contain,
+                        placeholder: const SizedBox.shrink(),
+                        errorWidget: const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                if (displayBrandName != null && displayBrandName.isNotEmpty)
+                  Positioned(
+                    bottom: 4 * scale,
+                    left: 4 * scale,
+                    right: 4 * scale,
+                    child: IgnorePointer(
+                      child: Center(
+                        child: Text(
+                          displayBrandName.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: (fontSizeValue * 0.85).clamp(8.0, 12.0),
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5 * scale,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.95),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
                               ),
-                              child: Transform.rotate(
-                                angle: 3.1415926535 / 4,
-                                child: Text(
-                                  displayBrandName,
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.75),
-                                    fontSize: fontSizeValue,
-                                    fontWeight: FontWeight.w900,
-                                    shadows: const [
-                                      Shadow(
-                                        color: Colors.black87,
-                                        blurRadius: 3,
-                                        offset: Offset(0, 1),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.8),
+                                blurRadius: 2,
+                                offset: const Offset(0, 0),
                               ),
-                            ),
-                        ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
