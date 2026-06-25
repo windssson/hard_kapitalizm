@@ -876,9 +876,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
   }
 
   String _formatCapacity(double value) {
-    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
-    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
-    return value.toStringAsFixed(0);
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M m3';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K m3';
+    return '${value.toStringAsFixed(0)} m3';
   }
 }
 

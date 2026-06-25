@@ -1031,6 +1031,52 @@ class StoreActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> fillStoreShelves({
+    required String storeId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'fill_store_shelves',
+        params: {
+          'p_player_id': user.id,
+          'p_store_id': storeId,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> bulkUpdateStoreSlotPrices({
+    required String storeId,
+    required int markupPercent,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'bulk_update_store_slot_prices',
+        params: {
+          'p_player_id': user.id,
+          'p_store_id': storeId,
+          'p_markup_percent': markupPercent,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
 }
 
 final storeActionProvider = Provider((ref) => StoreActionNotifier());

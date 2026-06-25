@@ -13,7 +13,6 @@ import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -41,6 +40,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   String? _lastShownSalesResultKey;
   Timer? _salesRefreshTimer;
   bool _isAutoRefreshingStoreSales = false;
+  bool _isFillingShelves = false;
+  bool _isBulkUpdatingPrices = false;
   static const Map<int, int> _storeBoostStarCosts = {
     6: 3,
     12: 6,
@@ -713,7 +714,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   Expanded(
                     child: _buildInfoMetricCard(
                       'Kapasite',
-                      '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)}',
+                      '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)} m3',
                     ),
                   ),
                   SizedBox(width: 12.w),
@@ -862,7 +863,103 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   _buildStoreWarehouseCard(context, store, storeWarehouse),
                 ],
                 SizedBox(height: 24.h),
-                Text('Magaza Raflari', style: TextStyle(color: AppColors.textPrimary, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Magaza Raflari',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    SizedBox(
+                      width: 220.w,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  !_isBulkUpdatingPrices &&
+                                      _canBulkUpdateStorePrices(store)
+                                  ? () => _showBulkPriceUpdateDialog(context, ref, store)
+                                  : null,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.blue,
+                                side: BorderSide(
+                                  color: AppColors.blue.withValues(alpha: 0.35),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8.w,
+                                  vertical: 8.h,
+                                ),
+                              ),
+                              icon: _isBulkUpdatingPrices
+                                  ? SizedBox(
+                                      width: 13.w,
+                                      height: 13.w,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.blue,
+                                      ),
+                                    )
+                                  : Icon(Icons.sell_outlined, size: 14.sp),
+                              label: Text(
+                                _isBulkUpdatingPrices ? 'Guncel' : 'Fiyat',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  !_isFillingShelves &&
+                                      _canFillStoreShelves(store, storeWarehouse)
+                                  ? () => _fillStoreShelves(context, ref, store)
+                                  : null,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.goldLight,
+                                side: BorderSide(
+                                  color: AppColors.gold.withValues(alpha: 0.35),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8.w,
+                                  vertical: 8.h,
+                                ),
+                              ),
+                              icon: _isFillingShelves
+                                  ? SizedBox(
+                                      width: 13.w,
+                                      height: 13.w,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.goldLight,
+                                      ),
+                                    )
+                                  : Icon(Icons.inventory_2_outlined, size: 14.sp),
+                              label: Text(
+                                _isFillingShelves ? 'Doluyor' : 'Doldur',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 SizedBox(height: 12.h),
                 _buildSlotList(context, ref, store),
                 SizedBox(height: 32.h),
@@ -1861,6 +1958,43 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     return slot.quantity > 0;
   }
 
+  bool _canFillStoreShelves(
+    StoreModel store,
+    StoreWarehouseSummaryModel? storeWarehouse,
+  ) {
+    if (storeWarehouse == null) return false;
+
+    return store.slots.any((slot) {
+      final availableCapacity =
+          slot.capacity - slot.quantity - slot.pendingQuantity;
+      if (!slot.isActive) return false;
+      if ((slot.productId ?? '').isEmpty) return false;
+      if (slot.qualityLevel <= 0) return false;
+      if (availableCapacity <= 0) return false;
+
+      return storeWarehouse.slots.any(
+        (warehouseSlot) =>
+            warehouseSlot.productId == slot.productId &&
+            warehouseSlot.qualityLevel == slot.qualityLevel &&
+            (warehouseSlot.brandId.isEmpty
+                    ? _defaultBrandId
+                    : warehouseSlot.brandId) ==
+                (slot.brandId.isEmpty ? _defaultBrandId : slot.brandId) &&
+            warehouseSlot.quantity > 0,
+      );
+    });
+  }
+
+  bool _canBulkUpdateStorePrices(StoreModel store) {
+    return store.slots.any(
+      (slot) =>
+          slot.isActive &&
+          (slot.productId ?? '').isNotEmpty &&
+          slot.qualityLevel > 0 &&
+          (slot.cost ?? 0) > 0,
+    );
+  }
+
   void _showSuccess(BuildContext context, String message) {
     AppSnackbar.show(
       context,
@@ -1880,6 +2014,174 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       message: message,
       type: SnackbarType.error,
     );
+  }
+
+  Future<void> _fillStoreShelves(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+  ) async {
+    if (_isFillingShelves) return;
+
+    setState(() {
+      _isFillingShelves = true;
+    });
+
+    try {
+      final result = await ref.read(storeActionProvider).fillStoreShelves(
+            storeId: store.id,
+          );
+
+      if (!context.mounted) return;
+
+      if (result['success'] == true) {
+        await _refreshStorePageAndSync(
+          store.id,
+          refreshPlayer: true,
+          historyDirty: true,
+          performanceDirty: true,
+        );
+        if (!context.mounted) return;
+
+        final transferredQuantity =
+            (result['transferred_quantity'] as num?)?.toInt() ?? 0;
+        final filledSlotCount =
+            (result['filled_slot_count'] as num?)?.toInt() ?? 0;
+        final message = result['message']?.toString() ??
+            (transferredQuantity > 0
+                ? 'Magaza raflari dolduruldu.'
+                : 'Doldurulacak uygun depo stogu bulunamadi.');
+
+        if (transferredQuantity > 0) {
+          _showSuccess(
+            context,
+            '$message ($filledSlotCount raf, $transferredQuantity adet)',
+          );
+        } else {
+          _showInfo(context, message);
+        }
+        return;
+      }
+
+      _showError(context, 'Hata: ${result['message']}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFillingShelves = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _showBulkPriceUpdateDialog(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+  ) async {
+    final markupPercent = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.background,
+        title: Text(
+          'Toplu Fiyat Guncelle',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Tum aktif raf urunlerinin satis fiyatini secilen maliyet marjina gore guncelle.',
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 13.sp,
+            height: 1.35,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Iptal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(25),
+            child: const Text('Maliyet +%25'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(30),
+            child: const Text('Maliyet +%30'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(50),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Maliyet +%50'),
+          ),
+        ],
+      ),
+    );
+
+    if (markupPercent == null || !context.mounted) return;
+    await _bulkUpdateStorePrices(context, ref, store, markupPercent);
+  }
+
+  Future<void> _bulkUpdateStorePrices(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+    int markupPercent,
+  ) async {
+    if (_isBulkUpdatingPrices) return;
+
+    setState(() {
+      _isBulkUpdatingPrices = true;
+    });
+
+    try {
+      final result = await ref.read(storeActionProvider).bulkUpdateStoreSlotPrices(
+            storeId: store.id,
+            markupPercent: markupPercent,
+          );
+
+      if (!context.mounted) return;
+
+      if (result['success'] == true) {
+        await _refreshStorePageAndSync(
+          store.id,
+          refreshPlayer: false,
+          historyDirty: false,
+          performanceDirty: true,
+        );
+        if (!context.mounted) return;
+
+        final updatedSlotCount =
+            (result['updated_slot_count'] as num?)?.toInt() ?? 0;
+        final message = result['message']?.toString() ??
+            (updatedSlotCount > 0
+                ? 'Toplu fiyat guncellemesi tamamlandi.'
+                : 'Guncellenecek uygun raf bulunamadi.');
+
+        if (updatedSlotCount > 0) {
+          _showSuccess(
+            context,
+            '$message ($updatedSlotCount raf)',
+          );
+        } else {
+          _showInfo(context, message);
+        }
+        return;
+      }
+
+      _showError(context, 'Hata: ${result['message']}');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isBulkUpdatingPrices = false;
+        });
+      }
+    }
   }
 
   void _showInfo(BuildContext context, String message) {
@@ -2101,6 +2403,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         NumericKeyboardShortcut(
           label: 'Maliyet +%25',
           value: shortcutValue(cost * 1.25),
+        ),
+      if (cost > 0)
+        NumericKeyboardShortcut(
+          label: 'Maliyet +%30',
+          value: shortcutValue(cost * 1.30),
+        ),
+      if (cost > 0)
+        NumericKeyboardShortcut(
+          label: 'Maliyet +%50',
+          value: shortcutValue(cost * 1.50),
         ),
       if (basePrice > 0)
         NumericKeyboardShortcut(
@@ -2598,32 +2910,18 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       return;
     }
 
-    final options = matchingSlots.map((warehouseSlot) {
-      return WarehouseSelectionOption(
-        id: warehouseSlot.id,
-        title: storeWarehouse.name,
-        subtitle:
-            '${warehouseSlot.productName}${warehouseSlot.brandId != _defaultBrandId ? ' (${ref.read(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})' : ''} | Kalite ${warehouseSlot.qualityLevel}',
-        badgeText: 'Magaza Deposu',
-        infoText: '${warehouseSlot.quantity} Adet',
-        isHighlightBadge: true,
-        onTap: () {
-          Navigator.pop(context);
-          _showStoreWarehouseTransferQuantityDialog(
-            context,
-            ref,
-            store,
-            slot,
-            warehouseSlot,
-          );
-        },
-      );
-    }).toList();
+    matchingSlots.sort((a, b) {
+      final quantityCompare = b.quantity.compareTo(a.quantity);
+      if (quantityCompare != 0) return quantityCompare;
+      return a.cost.compareTo(b.cost);
+    });
 
-    WarehouseSelectionSheet.show(
-      context: context,
-      title: 'Magaza Deposu Stogu',
-      options: options,
+    _showStoreWarehouseTransferQuantityDialog(
+      context,
+      ref,
+      store,
+      slot,
+      matchingSlots.first,
     );
   }
 

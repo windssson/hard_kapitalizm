@@ -15,7 +15,6 @@ import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
-import 'package:hard_kapitalizm/features/market/models/market_buyer_store_slot_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_warehouse_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
@@ -33,9 +32,6 @@ class MarketScreen extends ConsumerStatefulWidget {
   final String warehouseId;
   final String playerId;
   final String cityId;
-  final String targetType;
-  final String storeId;
-  final String storeSlotId;
 
   const MarketScreen({
     super.key,
@@ -43,9 +39,6 @@ class MarketScreen extends ConsumerStatefulWidget {
     this.warehouseId = '',
     this.playerId = '',
     this.cityId = '',
-    this.targetType = 'warehouse',
-    this.storeId = '',
-    this.storeSlotId = '',
   });
 
   @override
@@ -75,13 +68,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   String get _activeWarehouseId => _selectedWarehouseId;
   String get _activeCityId => _selectedCityId;
   bool get _requiresInitialSelection =>
-      !_isStoreTarget &&
-      (_activeProductId.isEmpty ||
-          _activeWarehouseId.isEmpty ||
-          _activeCityId.isEmpty);
-
-  bool get _isStoreTarget =>
-      widget.targetType == 'store' && widget.storeSlotId.isNotEmpty;
+      _activeProductId.isEmpty ||
+      _activeWarehouseId.isEmpty ||
+      _activeCityId.isEmpty;
 
   bool get _hasCart => _cartItems.isNotEmpty;
   int get _cartTotalQuantity =>
@@ -100,12 +89,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     }
     if (_lockedSourceCityId != null) {
       ref.invalidate(marketCityListingsProvider(_lockedSourceCityId!));
-    }
-    if (_isStoreTarget) {
-      if (widget.storeId.isNotEmpty) {
-        ref.invalidate(storeDetailPageProvider(widget.storeId));
-      }
-      return;
     }
 
     if (_activeWarehouseId.isNotEmpty) {
@@ -126,26 +109,19 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     ref.invalidate(playerProvider);
     ref.invalidate(buyerTransferMapProvider);
     ref.invalidate(buyerTransferHistoryProvider);
-    if (_isStoreTarget) {
-      if (widget.storeId.isNotEmpty) {
-        ref.invalidate(storeDetailPageProvider(widget.storeId));
-      }
-    } else {
-      if (_activeWarehouseId.isNotEmpty) {
-        ref.invalidate(marketBuyerWarehouseProvider(_activeWarehouseId));
-        ref.invalidate(warehouseCapacityStatusProvider(_activeWarehouseId));
-      }
-      ref.invalidate(warehouseListProvider);
-      if (_activeWarehouseId.isNotEmpty) {
-        ref.invalidate(warehouseDetailProvider(_activeWarehouseId));
-      }
+    if (_activeWarehouseId.isNotEmpty) {
+      ref.invalidate(marketBuyerWarehouseProvider(_activeWarehouseId));
+      ref.invalidate(warehouseCapacityStatusProvider(_activeWarehouseId));
+    }
+    ref.invalidate(warehouseListProvider);
+    if (_activeWarehouseId.isNotEmpty) {
+      ref.invalidate(warehouseDetailProvider(_activeWarehouseId));
     }
   }
 
   Future<void> _openAddToCartSheet(
     MarketListingModel listing,
     ProductModel? product,
-    MarketBuyerStoreSlotModel? buyerStoreSlot,
   ) async {
     if (product == null) {
       AppSnackbar.show(
@@ -157,14 +133,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       return;
     }
 
-    final capacityStatus = !_isStoreTarget && _activeWarehouseId.isNotEmpty
+    final capacityStatus = _activeWarehouseId.isNotEmpty
         ? ref.read(warehouseCapacityStatusProvider(_activeWarehouseId)).value
         : null;
     if (!_canAddListingToCart(
       listing: listing,
       product: product,
       capacity: capacityStatus,
-      buyerStoreSlot: buyerStoreSlot,
     )) {
       if (!mounted) return;
       AppSnackbar.show(
@@ -174,7 +149,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           listing: listing,
           product: product,
           capacity: capacityStatus,
-          buyerStoreSlot: buyerStoreSlot,
         ),
         type: SnackbarType.warning,
       );
@@ -191,8 +165,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           constraints: BoxConstraints(maxWidth: 520.w),
           child: _AddToCartSheet(
             listing: listing,
-            buyerStoreSlot: buyerStoreSlot,
-            buyerWarehouseId: _isStoreTarget ? null : _activeWarehouseId,
+            buyerWarehouseId: _activeWarehouseId,
             product: product,
           ),
         ),
@@ -339,51 +312,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
-  MarketBuyerStoreSlotModel? _deriveBuyerStoreSlot(
-    StoreModel? store,
-    MarketBuyerStoreSlotModel? rawStoreSlot,
-    Map<String, dynamic>? fallbackCity,
-  ) {
-    if (store == null) return null;
-
-    final slot = store.slots
-        .where((e) => e.id == widget.storeSlotId)
-        .firstOrNull;
-    if (slot == null) return null;
-
-    return MarketBuyerStoreSlotModel(
-      storeSlotId: slot.id,
-      storeId: store.id,
-      storeName: store.name,
-      cityId: store.cityId ?? _activeCityId,
-      cityName:
-          store.cityName ??
-          rawStoreSlot?.cityName ??
-          fallbackCity?['name']?.toString() ??
-          'Bilinmeyen Sehir',
-      cityX: _resolveCoordinate(
-        rawStoreSlot?.cityX,
-        fallbackCity?['map_position_x'],
-      ),
-      cityY: _resolveCoordinate(
-        rawStoreSlot?.cityY,
-        fallbackCity?['map_position_y'],
-      ),
-      isActive: store.isActive,
-      productId: slot.productId,
-      qualityLevel: slot.qualityLevel,
-      quantity: slot.quantity,
-      pendingQuantity: slot.pendingQuantity,
-      capacity: slot.capacity,
-    );
-  }
-
   List<MarketListingModel> _withNpcListing({
     required List<MarketListingModel> listings,
     required ProductModel? product,
     required Map<String, dynamic>? fallbackCity,
     required MarketBuyerWarehouseModel? buyer,
-    required MarketBuyerStoreSlotModel? buyerStoreSlot,
   }) {
     if (product == null || product.bazSatisFiyati <= 0) return listings;
     if (listings.any(
@@ -399,26 +332,22 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               .firstOrNull;
 
     final cityId =
-        (_lockedSourceCityId ??
-                buyerStoreSlot?.cityId ??
-                buyer?.cityId ??
-                _activeCityId)
+        (_lockedSourceCityId ?? buyer?.cityId ?? _activeCityId)
             .toString();
     if (cityId.isEmpty) return listings;
 
     final cityName =
         (lockedCityListing?.cityName ??
-                buyerStoreSlot?.cityName ??
                 buyer?.cityName ??
                 fallbackCity?['name'] ??
                 'Pazar')
             .toString();
     final cityX = _resolveCoordinate(
-      lockedCityListing?.cityX ?? buyerStoreSlot?.cityX ?? buyer?.cityX,
+      lockedCityListing?.cityX ?? buyer?.cityX,
       fallbackCity?['map_position_x'],
     );
     final cityY = _resolveCoordinate(
-      lockedCityListing?.cityY ?? buyerStoreSlot?.cityY ?? buyer?.cityY,
+      lockedCityListing?.cityY ?? buyer?.cityY,
       fallbackCity?['map_position_y'],
     );
 
@@ -438,34 +367,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     ];
   }
 
-  List<MarketListingModel> _filterListingsForTargetSlot(
-    List<MarketListingModel> listings,
-    MarketBuyerStoreSlotModel? buyerStoreSlot,
-  ) {
-    if (!_isStoreTarget || buyerStoreSlot == null) return listings;
-
-    final hasLockedStock =
-        buyerStoreSlot.quantity > 0 || buyerStoreSlot.pendingQuantity > 0;
-    final lockedQuality = buyerStoreSlot.qualityLevel;
-
-    if (!hasLockedStock || lockedQuality <= 0) {
-      return listings;
-    }
-
-    return listings
-        .where((listing) => listing.qualityLevel == lockedQuality)
-        .toList();
-  }
-
   bool _canAddListingToCart({
     required MarketListingModel listing,
     required ProductModel? product,
     required WarehouseCapacityStatusModel? capacity,
-    required MarketBuyerStoreSlotModel? buyerStoreSlot,
   }) {
-    if (_isStoreTarget) {
-      return (buyerStoreSlot?.availableCapacity ?? 0) > 0;
-    }
     final unitVolume = listing.unitVolume > 0
         ? listing.unitVolume
         : (product?.birimHacim ?? 0);
@@ -476,19 +382,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   String? _buildCapacityBannerMessage({
     required ProductModel? product,
     required WarehouseCapacityStatusModel? capacity,
-    required MarketBuyerStoreSlotModel? buyerStoreSlot,
     required List<MarketListingModel> listings,
   }) {
     if (_requiresInitialSelection) return null;
-
-    if (_isStoreTarget) {
-      final available = buyerStoreSlot?.availableCapacity ?? 0;
-      if (available <= 0) {
-        return 'Hedef slotta bos alan kalmadi. Sepete ekleme kapatildi.';
-      }
-      if (listings.isEmpty) return null;
-      return null;
-    }
 
     final available = capacity?.availableCapacity ?? 0;
     if (available <= 0) {
@@ -513,12 +409,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     required MarketListingModel listing,
     required ProductModel? product,
     required WarehouseCapacityStatusModel? capacity,
-    required MarketBuyerStoreSlotModel? buyerStoreSlot,
   }) {
-    if (_isStoreTarget) {
-      final available = buyerStoreSlot?.availableCapacity ?? 0;
-      return 'Hedef slotta bos alan yok. Kalan alan: ${available.toStringAsFixed(0)}.';
-    }
     final unitVolume = listing.unitVolume > 0
         ? listing.unitVolume
         : (product?.birimHacim ?? 0);
@@ -553,55 +444,28 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Widget _buildCompactSelectionBar({
     required ProductModel? product,
     required MarketBuyerWarehouseModel? buyerWarehouse,
-    required MarketBuyerStoreSlotModel? buyerStoreSlot,
     required WarehouseCapacityStatusModel? capacity,
   }) {
-    final bool isStore = _isStoreTarget;
-    final String targetName = isStore
-        ? (buyerStoreSlot?.storeName ?? 'Mağaza')
-        : (buyerWarehouse?.warehouseName ?? 'Merkez Depo');
-    final String cityName = isStore
-        ? (buyerStoreSlot?.cityName ?? 'Şehir')
-        : (buyerWarehouse?.cityName ?? 'Şehir');
-    final String capacityText = isStore
-        ? 'Boş ${buyerStoreSlot?.availableCapacity.toStringAsFixed(0) ?? '0'}'
-        : 'Boş ${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m³';
+    final String targetName = buyerWarehouse?.warehouseName ?? 'Merkez Depo';
+    final String cityName = buyerWarehouse?.cityName ?? 'Sehir';
+    final String capacityText =
+        'Bos ${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m3';
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-      decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.35), 14.r),
+      decoration: AppDecorations.premiumCard(
+        AppColors.borderGold.withValues(alpha: 0.35),
+        14.r,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  product?.urunAdi ?? 'Ürün Seç',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: _resetProductSelection,
-                icon: Icon(Icons.swap_horiz, size: 14.sp, color: AppColors.gold),
-                label: Text(
-                  'Ürün Değiştir',
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.gold,
-                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-            ],
+          Text(
+            product?.urunAdi ?? 'Urun Sec',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
           ),
           SizedBox(height: 8.h),
           Wrap(
@@ -609,7 +473,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             runSpacing: 6.h,
             children: [
               _buildInlineStat('Hedef', targetName),
-              _buildInlineStat('Şehir', cityName),
+              _buildInlineStat('Sehir', cityName),
               _buildInlineStat('Kapasite', capacityText),
             ],
           ),
@@ -620,7 +484,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               onPressed: _resetWarehouseSelection,
               icon: Icon(Icons.edit, size: 12.sp, color: AppColors.gold),
               label: Text(
-                'Depo Değiştir',
+                'Depo Degistir',
                 style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w700),
               ),
               style: TextButton.styleFrom(
@@ -634,13 +498,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         ],
       ),
     );
-  }
-
-  void _resetProductSelection() {
-    setState(() {
-      _selectedProductId = '';
-      _productSearchQuery = '';
-    });
   }
 
   void _resetWarehouseSelection() {
@@ -673,21 +530,230 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         .toSet();
   }
 
-  Widget _buildInitialSelectionCard(
+  List<ProductModel> _productsForActiveWarehouse(
     List<ProductModel> products,
     List<WarehouseModel> warehouses,
   ) {
+    final selectedWarehouse = warehouses
+        .where((warehouse) => warehouse.id == _activeWarehouseId)
+        .firstOrNull;
+    final acceptedProductIds = _acceptedProductIdsForWarehouse(
+      selectedWarehouse,
+    );
+    final scopedProducts = acceptedProductIds.isEmpty
+        ? products.toList()
+        : products
+            .where(
+              (product) => acceptedProductIds.contains(product.id.toUpperCase()),
+            )
+            .toList();
+
+    scopedProducts.sort((a, b) => a.urunAdi.compareTo(b.urunAdi));
+    return scopedProducts;
+  }
+
+  Widget _buildHorizontalProductSelector({
+    required List<ProductModel> products,
+    required Set<String> sellingProductIds,
+    required Map<String, int> productNeedById,
+  }) {
+    final lockedCityName = _lockedSourceCityId == null
+        ? null
+        : _resolveLockedCityName();
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(
+          color: AppColors.borderGold.withValues(alpha: 0.28),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.tune, size: 14.sp, color: AppColors.gold),
+              SizedBox(width: 6.w),
+              Expanded(
+                child: Text(
+                  lockedCityName == null
+                      ? 'Urun Sec'
+                      : 'Sepet Sehri: $lockedCityName',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (_lockedSourceCityId != null && !_cityCatalogEnabled)
+                TextButton(
+                  onPressed: _enableCityCatalogMode,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.gold,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 8.w,
+                      vertical: 2.h,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'Tum Urunler',
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          SizedBox(
+            height: 44.h,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: products.length,
+              separatorBuilder: (_, __) => SizedBox(width: 8.w),
+              itemBuilder: (context, index) {
+                final product = products[index];
+                final isSelected = product.id == _activeProductId;
+                final isSellingInStore = sellingProductIds.contains(product.id);
+                final productNeed = productNeedById[product.id] ?? 0;
+                return GestureDetector(
+                  onTap: () {
+                    if (isSelected) return;
+                    setState(() {
+                      _selectedProductId = product.id;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.gold.withValues(alpha: 0.18)
+                          : Colors.black.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(999.r),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.gold
+                            : AppColors.border.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 24.w,
+                          height: 24.w,
+                          padding: EdgeInsets.all(3.w),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(999.r),
+                          ),
+                          child: CachedAssetImage(fileName: product.urunIconu),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          product.urunAdi,
+                          style: TextStyle(
+                            color: isSelected
+                                ? AppColors.goldLight
+                                : Colors.white,
+                            fontSize: 11.sp,
+                            fontWeight: isSelected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          ),
+                        ),
+                        if (isSellingInStore) ...[
+                          SizedBox(width: 6.w),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 5.w,
+                              vertical: 2.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.green.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(999.r),
+                              border: Border.all(
+                                color: AppColors.green.withValues(alpha: 0.45),
+                              ),
+                            ),
+                            child: Text(
+                              'Satista',
+                              style: TextStyle(
+                                color: AppColors.green,
+                                fontSize: 8.sp,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (productNeed > 0) ...[
+                          SizedBox(width: 6.w),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 5.w,
+                              vertical: 2.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.gold.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(999.r),
+                              border: Border.all(
+                                color: AppColors.gold.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Text(
+                              'Ihtiyac: $productNeed adet',
+                              style: TextStyle(
+                                color: AppColors.goldLight,
+                                fontSize: 8.sp,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInitialSelectionCard(
+    List<ProductModel> products,
+    List<WarehouseModel> warehouses,
+    List<StoreModel> stores,
+  ) {
     final activeWarehouses =
         warehouses
-            .where(
-              (warehouse) =>
-                  warehouse.isActive && warehouse.warehouseKind != 'store',
-            )
+            .where((warehouse) => warehouse.isActive)
             .toList()
           ..sort((a, b) => a.name.compareTo(b.name));
     final selectedWarehouse = activeWarehouses
         .where((warehouse) => warehouse.id == _activeWarehouseId)
         .firstOrNull;
+    final selectedStore = _storeForWarehouse(
+      stores: stores,
+      warehouse: selectedWarehouse,
+    );
+    final sellingProductIds = _sellingProductIdsForStore(selectedStore);
     final acceptedProductIds = _acceptedProductIdsForWarehouse(
       selectedWarehouse,
     );
@@ -851,7 +917,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             if (activeWarehouses.isEmpty) ...[
               SizedBox(height: 12.h),
               _buildInfoBox(
-                'Pazara alım yapabilmek için önce aktif bir normal depo gerekli.',
+                'Pazara alim yapabilmek icin once aktif bir depo gerekli.',
                 AppColors.red,
               ),
             ],
@@ -918,6 +984,15 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         style: TextStyle(color: Colors.white, fontSize: 13.sp, fontWeight: FontWeight.bold),
                       ),
                       SizedBox(height: 4.h),
+                      _buildTypeBadge(
+                        selectedWarehouse.warehouseKind == 'store'
+                            ? 'Magaza Deposu'
+                            : 'Normal Depo',
+                        selectedWarehouse.warehouseKind == 'store'
+                            ? AppColors.blue
+                            : AppColors.gold,
+                      ),
+                      SizedBox(height: 4.h),
                       Row(
                         children: [
                           Expanded(
@@ -935,7 +1010,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           ),
                           SizedBox(width: 8.w),
                           Text(
-                            '${availableCapacity.toStringAsFixed(0)} m³ boş',
+                            '${availableCapacity.toStringAsFixed(0)} m3 bos',
                             style: TextStyle(color: AppColors.textSecondary, fontSize: 9.sp),
                           ),
                         ],
@@ -1027,6 +1102,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 return _buildSelectableProductCard(
                   product: product,
                   isSelected: isSelected,
+                  isSellingInStore: sellingProductIds.contains(product.id),
                   onTap: () {
                     setState(() {
                       _selectedProductId = product.id;
@@ -1047,6 +1123,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Widget _buildSelectableProductCard({
     required ProductModel product,
     required bool isSelected,
+    required bool isSellingInStore,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -1066,22 +1143,53 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 36.w,
-              height: 36.w,
-              padding: EdgeInsets.all(5.w),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.gold.withValues(alpha: 0.15)
-                    : Colors.black.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.gold.withValues(alpha: 0.3)
-                      : AppColors.border.withValues(alpha: 0.3),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 36.w,
+                  height: 36.w,
+                  padding: EdgeInsets.all(5.w),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.gold.withValues(alpha: 0.15)
+                        : Colors.black.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.gold.withValues(alpha: 0.3)
+                          : AppColors.border.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: CachedAssetImage(fileName: product.urunIconu),
                 ),
-              ),
-              child: CachedAssetImage(fileName: product.urunIconu),
+                if (isSellingInStore)
+                  Positioned(
+                    top: -8.h,
+                    right: -18.w,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 5.w,
+                        vertical: 2.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.green.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999.r),
+                        border: Border.all(
+                          color: AppColors.green.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Text(
+                        'Satista',
+                        style: TextStyle(
+                          color: AppColors.green,
+                          fontSize: 7.sp,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             SizedBox(height: 6.h),
             Text(
@@ -1208,7 +1316,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 ),
               ),
               child: Icon(
-                Icons.warehouse_outlined,
+                warehouse.warehouseKind == 'store'
+                    ? Icons.storefront_outlined
+                    : Icons.warehouse_outlined,
                 color: isSelected ? AppColors.blue : AppColors.gold,
                 size: 20.sp,
               ),
@@ -1229,17 +1339,51 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     ),
                   ),
                   SizedBox(height: 6.h),
-                  Row(
+                  Wrap(
+                    spacing: 6.w,
+                    runSpacing: 4.h,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
-                        '${warehouse.cityName ?? 'Bilinmeyen Şehir'} • ',
+                        warehouse.cityName ?? 'Bilinmeyen Sehir',
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 10.sp,
                         ),
                       ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.w,
+                          vertical: 2.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (warehouse.warehouseKind == 'store'
+                                  ? AppColors.blue
+                                  : AppColors.gold)
+                              .withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999.r),
+                          border: Border.all(
+                            color: (warehouse.warehouseKind == 'store'
+                                    ? AppColors.blue
+                                    : AppColors.gold)
+                                .withValues(alpha: 0.28),
+                          ),
+                        ),
+                        child: Text(
+                          warehouse.warehouseKind == 'store'
+                              ? 'Magaza'
+                              : 'Normal',
+                          style: TextStyle(
+                            color: warehouse.warehouseKind == 'store'
+                                ? AppColors.blue
+                                : AppColors.goldLight,
+                            fontSize: 8.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                       Text(
-                        '${availableCapacity.toStringAsFixed(0)} boş',
+                        '${availableCapacity.toStringAsFixed(0)} m3 bos',
                         style: TextStyle(
                           color: capacityColor,
                           fontSize: 10.sp,
@@ -1282,6 +1426,33 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(allProductsProvider);
     final warehousesAsync = ref.watch(warehouseListProvider);
+    final storesAsync = ref.watch(storesListProvider);
+    final scopedProducts =
+        productsAsync.hasValue && warehousesAsync.hasValue
+            ? _productsForActiveWarehouse(
+                productsAsync.value ?? const <ProductModel>[],
+                warehousesAsync.value ?? const <WarehouseModel>[],
+              )
+            : const <ProductModel>[];
+    final selectedWarehouse =
+        warehousesAsync.hasValue
+            ? (warehousesAsync.value ?? const <WarehouseModel>[])
+                .where((warehouse) => warehouse.id == _activeWarehouseId)
+                .firstOrNull
+            : null;
+    final selectedStore =
+        storesAsync.hasValue
+            ? _storeForWarehouse(
+                stores: storesAsync.value ?? const <StoreModel>[],
+                warehouse: selectedWarehouse,
+              )
+            : null;
+    final horizontalSellingProductIds = _sellingProductIdsForStore(
+      selectedStore,
+    );
+    final horizontalProductNeedById = _neededCapacityByProductForStore(
+      selectedStore,
+    );
     final productAsync = _activeProductId.isNotEmpty
         ? ref.watch(marketProductProvider(_activeProductId))
         : const AsyncValue<ProductModel?>.data(null);
@@ -1293,33 +1464,16 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final fallbackCityAsync = _activeCityId.isNotEmpty
         ? ref.watch(marketCityProvider(_activeCityId))
         : const AsyncValue<Map<String, dynamic>?>.data(null);
-    final buyerWarehouseAsync = _isStoreTarget
-        ? AsyncValue<MarketBuyerWarehouseModel?>.data(null)
-        : _activeWarehouseId.isNotEmpty
+    final buyerWarehouseAsync = _activeWarehouseId.isNotEmpty
         ? ref.watch(marketBuyerWarehouseProvider(_activeWarehouseId))
         : const AsyncValue<MarketBuyerWarehouseModel?>.data(null);
-    final buyerStoreAsync = _isStoreTarget && widget.storeId.isNotEmpty
-        ? ref
-              .watch(storeDetailPageProvider(widget.storeId))
-              .whenData((page) => page.store)
-        : const AsyncValue<StoreModel?>.data(null);
-    final buyerStoreSlot = _isStoreTarget
-        ? _deriveBuyerStoreSlot(
-            buyerStoreAsync.value,
-            null,
-            fallbackCityAsync.value,
-          )
-        : null;
-    final capacityAsync = _isStoreTarget
-        ? AsyncValue<WarehouseCapacityStatusModel?>.data(null)
-        : _activeWarehouseId.isNotEmpty
+    final capacityAsync = _activeWarehouseId.isNotEmpty
         ? ref.watch(warehouseCapacityStatusProvider(_activeWarehouseId))
         : const AsyncValue<WarehouseCapacityStatusModel?>.data(null);
     final previewListings = listingsAsync.value ?? const <MarketListingModel>[];
     final capacityBannerMessage = _buildCapacityBannerMessage(
       product: productAsync.value,
       capacity: capacityAsync.value,
-      buyerStoreSlot: buyerStoreSlot,
       listings: previewListings,
     );
 
@@ -1355,11 +1509,18 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           if (_requiresInitialSelection) ...[
                             productsAsync.when(
                               data: (products) => warehousesAsync.when(
-                                data: (warehouses) =>
-                                    _buildInitialSelectionCard(
-                                      products,
-                                      warehouses,
-                                    ),
+                                data: (warehouses) => storesAsync.when(
+                                  data: (stores) =>
+                                      _buildInitialSelectionCard(
+                                        products,
+                                        warehouses,
+                                        stores,
+                                      ),
+                                  loading: _buildLoadingCard,
+                                  error: (e, s) => _buildErrorCard(
+                                    'Magaza listesi alinamadi.',
+                                  ),
+                                ),
                                 loading: _buildLoadingCard,
                                 error: (e, s) =>
                                     _buildErrorCard('Depo listesi alinamadi.'),
@@ -1374,7 +1535,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             _buildCompactSelectionBar(
                               product: productAsync.value,
                               buyerWarehouse: buyerWarehouseAsync.value,
-                              buyerStoreSlot: buyerStoreSlot,
                               capacity: capacityAsync.value,
                             ),
                           ],
@@ -1387,13 +1547,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                   : AppColors.red,
                             ),
                           ],
-                          if (_lockedSourceCityId != null) ...[
+                          if (!_requiresInitialSelection &&
+                              scopedProducts.isNotEmpty) ...[
                             SizedBox(height: 8.h),
-                            _buildInfoBox(
-                              _cityCatalogEnabled
-                                  ? 'Sepet Şehri Kilitlendi: ${_resolveLockedCityName()} (Tüm Ürünler Açık)'
-                                  : 'Sepet Şehri Kilitlendi: ${_resolveLockedCityName()}',
-                              AppColors.gold,
+                            _buildHorizontalProductSelector(
+                              products: scopedProducts,
+                              sellingProductIds: horizontalSellingProductIds,
+                              productNeedById: horizontalProductNeedById,
                             ),
                           ],
                         ]),
@@ -1417,27 +1577,16 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             product: productAsync.value,
                             fallbackCity: fallbackCityAsync.value,
                             buyer: buyerWarehouseAsync.value,
-                            buyerStoreSlot: buyerStoreSlot,
                           );
                           final filteredListings = _applyCartCityRules(
-                            _filterListingsForTargetSlot(
-                              baseListings,
-                              buyerStoreSlot,
-                            ),
+                            baseListings,
                           );
 
                           return _buildListingsSliver(
                             listings: filteredListings,
                             buyer: buyerWarehouseAsync.value,
-                            buyerStoreSlot: buyerStoreSlot,
                             fallbackCity: fallbackCityAsync.value,
                             product: productAsync.value,
-                            showQualityLockNotice:
-                                _isStoreTarget &&
-                                buyerStoreSlot != null &&
-                                (buyerStoreSlot.quantity > 0 ||
-                                    buyerStoreSlot.pendingQuantity > 0) &&
-                                buyerStoreSlot.qualityLevel > 0,
                           );
                         },
                         loading: () =>
@@ -1460,10 +1609,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Widget _buildListingsSliver({
     required List<MarketListingModel> listings,
     required MarketBuyerWarehouseModel? buyer,
-    required MarketBuyerStoreSlotModel? buyerStoreSlot,
     required Map<String, dynamic>? fallbackCity,
     required ProductModel? product,
-    required bool showQualityLockNotice,
   }) {
     if (listings.isEmpty) {
       return SliverToBoxAdapter(child: _buildEmptyState());
@@ -1471,18 +1618,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
     return SliverList(
       delegate: SliverChildListDelegate.fixed([
-        if (showQualityLockNotice) ...[
-          _buildInfoBox(
-            'Bu slotta aktif veya yoldaki stok oldugu icin yalnizca ayni kalite ilanlar gosteriliyor.',
-            AppColors.gold,
-          ),
-          SizedBox(height: 10.h),
-        ],
         ...listings.map(
           (listing) => _buildListingCard(
             listing,
             buyer,
-            buyerStoreSlot,
             fallbackCity,
             product,
           ),
@@ -1494,18 +1633,16 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   Widget _buildListingCard(
     MarketListingModel listing,
     MarketBuyerWarehouseModel? buyer,
-    MarketBuyerStoreSlotModel? buyerStoreSlot,
     Map<String, dynamic>? fallbackCity,
     ProductModel? product,
   ) {
-    final capacityStatus = !_isStoreTarget && _activeWarehouseId.isNotEmpty
+    final capacityStatus = _activeWarehouseId.isNotEmpty
         ? ref.read(warehouseCapacityStatusProvider(_activeWarehouseId)).value
         : null;
     final canAddToCart = _canAddListingToCart(
       listing: listing,
       product: product,
       capacity: capacityStatus,
-      buyerStoreSlot: buyerStoreSlot,
     );
     final addDisabledReason = canAddToCart
         ? null
@@ -1513,14 +1650,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             listing: listing,
             product: product,
             capacity: capacityStatus,
-            buyerStoreSlot: buyerStoreSlot,
           );
     final targetCityX = _resolveCoordinate(
-      buyerStoreSlot?.cityX ?? buyer?.cityX,
+      buyer?.cityX,
       fallbackCity?['map_position_x'],
     );
     final targetCityY = _resolveCoordinate(
-      buyerStoreSlot?.cityY ?? buyer?.cityY,
+      buyer?.cityY,
       fallbackCity?['map_position_y'],
     );
     final hasTarget =
@@ -1772,7 +1908,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                   ? () => _openAddToCartSheet(
                                       listing,
                                       product,
-                                      buyerStoreSlot,
                                     )
                                   : null,
                               style: ElevatedButton.styleFrom(
@@ -2001,9 +2136,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   double _degreesToRadians(double degrees) => degrees * (math.pi / 180);
 
   double _currentTargetAvailableCapacity() {
-    if (_isStoreTarget) {
-      return 0;
-    }
     if (_activeWarehouseId.isEmpty) return 0;
     return ref
             .read(warehouseCapacityStatusProvider(_activeWarehouseId))
@@ -2013,7 +2145,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }
 
   bool get _cartFitsCurrentCapacity =>
-      _isStoreTarget || _cartTotalVolume <= _currentTargetAvailableCapacity();
+      _cartTotalVolume <= _currentTargetAvailableCapacity();
 
   _MarketCartItem? get _largestCartItemByVolume {
     if (_cartItems.isEmpty) return null;
@@ -2073,8 +2205,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (sheetContext) =>
-          _buildCartSummaryBar(sheetContext: sheetContext),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => _buildCartSummaryBar(
+          sheetContext: sheetContext,
+          refreshSheet: setSheetState,
+        ),
+      ),
     );
   }
 
@@ -2121,7 +2257,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
-  Widget _buildCartSummaryBar({required BuildContext sheetContext}) {
+  Widget _buildCartSummaryBar({
+    required BuildContext sheetContext,
+    required void Function(void Function()) refreshSheet,
+  }) {
     final currentAvailableCapacity = _currentTargetAvailableCapacity();
     final remainingAfterCart = (currentAvailableCapacity - _cartTotalVolume)
         .clamp(-999999, 999999);
@@ -2173,19 +2312,17 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 ),
               ),
             ],
-            if (!_isStoreTarget) ...[
-              SizedBox(height: 6.h),
-              Text(
-                capacityOk
-                    ? 'Hedef kapasite uygun • Kalan: ${remainingAfterCart.toStringAsFixed(1)} m³'
-                    : 'Kapasite aşıldı • Eksik: ${(-remainingAfterCart).toStringAsFixed(1)} m³',
-                style: AppTextStyles.body.copyWith(
-                  color: capacityColor,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w700,
-                ),
+            SizedBox(height: 6.h),
+            Text(
+              capacityOk
+                  ? 'Hedef kapasite uygun • Kalan: ${remainingAfterCart.toStringAsFixed(1)} m3'
+                  : 'Kapasite aşıldı • Eksik: ${(-remainingAfterCart).toStringAsFixed(1)} m3',
+              style: AppTextStyles.body.copyWith(
+                color: capacityColor,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w700,
               ),
-            ],
+            ),
             SizedBox(height: 10.h),
             SizedBox(
               height: 56.h,
@@ -2195,44 +2332,37 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 separatorBuilder: (context, index) => SizedBox(width: 8.w),
                 itemBuilder: (context, index) {
                   final item = _cartItems[index];
-                  return _buildCartItemPill(item);
+                  return _buildCartItemPill(
+                    item,
+                    onRemove: () {
+                      _removeCartItem(item);
+                      if (!mounted) return;
+                      if (_cartItems.isEmpty) {
+                        Navigator.of(sheetContext).pop();
+                        return;
+                      }
+                      refreshSheet(() {});
+                    },
+                  );
                 },
               ),
             ),
             SizedBox(height: 12.h),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _cityCatalogEnabled
-                        ? null
-                        : _enableCityCatalogMode,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.gold,
-                      side: BorderSide(
-                        color: AppColors.gold.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: const Text('Alışverişe Devam Et'),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: capacityOk
+                    ? () {
+                        Navigator.of(sheetContext).pop();
+                        _openCartCheckout();
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: Colors.black,
                 ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: capacityOk
-                        ? () {
-                            Navigator.of(sheetContext).pop();
-                            _openCartCheckout();
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.gold,
-                      foregroundColor: Colors.black,
-                    ),
-                    child: const Text('Alımı Tamamla'),
-                  ),
-                ),
-              ],
+                child: const Text('Alımı Tamamla'),
+              ),
             ),
           ],
         ),
@@ -2240,7 +2370,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
-  Widget _buildCartItemPill(_MarketCartItem item) {
+  Widget _buildCartItemPill(
+    _MarketCartItem item, {
+    VoidCallback? onRemove,
+  }) {
     return Container(
       width: 190.w,
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
@@ -2286,7 +2419,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             ),
           ),
           GestureDetector(
-            onTap: () => _removeCartItem(item),
+            onTap: onRemove ?? () => _removeCartItem(item),
             child: Container(
               width: 22.w,
               height: 22.w,
@@ -2314,17 +2447,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       );
       return;
     }
-    if (_isStoreTarget) {
-      AppSnackbar.show(
-        context,
-        title: 'Gecici Kapali',
-        message:
-            'Magaza slotuna dogrudan market alimi kapatildi. Yeni akista alimlar magaza deposuna yapilacak.',
-        type: SnackbarType.warning,
-      );
-      return;
-    }
-
     if (_lockedSourceCityId == _activeCityId) {
       await _submitMultiMarketTransfer();
       return;
@@ -2545,8 +2667,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 class _PurchaseSheet extends ConsumerStatefulWidget {
   final MarketListingModel listing;
   final String? buyerWarehouseId;
-  final String? buyerStoreSlotId;
-  final MarketBuyerStoreSlotModel? buyerStoreSlot;
   final String targetCityId;
   final ProductModel product;
   final BuildContext parentContext;
@@ -2556,8 +2676,6 @@ class _PurchaseSheet extends ConsumerStatefulWidget {
   const _PurchaseSheet({
     required this.listing,
     required this.buyerWarehouseId,
-    required this.buyerStoreSlotId,
-    required this.buyerStoreSlot,
     required this.targetCityId,
     required this.product,
     required this.parentContext,
@@ -2598,13 +2716,11 @@ class _AddToCartSheet extends ConsumerStatefulWidget {
   final MarketListingModel listing;
   final ProductModel product;
   final String? buyerWarehouseId;
-  final MarketBuyerStoreSlotModel? buyerStoreSlot;
 
   const _AddToCartSheet({
     required this.listing,
     required this.product,
     required this.buyerWarehouseId,
-    required this.buyerStoreSlot,
   });
 
   @override
@@ -2614,8 +2730,6 @@ class _AddToCartSheet extends ConsumerStatefulWidget {
 class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
   late final TextEditingController _quantityController;
   int _quantity = 1;
-
-  bool get _isStoreTarget => widget.buyerStoreSlot != null;
 
   @override
   void initState() {
@@ -2642,15 +2756,7 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
         : (remainingCash / widget.listing.price).floor();
 
     int byCapacity = byStock;
-    if (_isStoreTarget) {
-      final free = math.max(
-        (widget.buyerStoreSlot?.availableCapacity ?? 0) - reservedVolume,
-        0,
-      );
-      byCapacity = widget.listing.unitVolume <= 0
-          ? byStock
-          : (free / widget.listing.unitVolume).floor();
-    } else if (warehouseCapacity != null) {
+    if (warehouseCapacity != null) {
       final free = math.max(
         warehouseCapacity.availableCapacity - reservedVolume,
         0,
@@ -2696,7 +2802,7 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
   @override
   Widget build(BuildContext context) {
     final warehouseCapacityAsync =
-        !_isStoreTarget && widget.buyerWarehouseId != null
+        widget.buyerWarehouseId != null
         ? ref.watch(warehouseCapacityStatusProvider(widget.buyerWarehouseId!))
         : const AsyncValue<WarehouseCapacityStatusModel?>.data(null);
     final player = ref.watch(playerProvider).value;
@@ -3007,32 +3113,16 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
               ),
             ),
             SizedBox(height: 10.h),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _cityCatalogEnabled ? null : _enableCityCatalogMode,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.gold,
-                      side: BorderSide(
-                        color: AppColors.gold.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: const Text('Alisverise Devam Et'),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _openCartCheckout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: Colors.black,
                 ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _openCartCheckout,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.gold,
-                      foregroundColor: Colors.black,
-                    ),
-                    child: const Text('Alimi Tamamla'),
-                  ),
-                ),
-              ],
+                child: const Text('Alimi Tamamla'),
+              ),
             ),
           ],
         ),
@@ -3042,17 +3132,6 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
 
   Future<void> _openCartCheckout() async {
     if (_cartItems.isEmpty || _lockedSourceCityId == null) return;
-    if (_isStoreTarget) {
-      AppSnackbar.show(
-        context,
-        title: 'Gecici Kapali',
-        message:
-            'Magaza slotuna dogrudan market alimi kapatildi. Yeni akista alimlar magaza deposuna yapilacak.',
-        type: SnackbarType.warning,
-      );
-      return;
-    }
-
     if (_lockedSourceCityId == _activeCityId) {
       await _submitMultiMarketTransfer();
       return;
@@ -3326,6 +3405,59 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
     return '${duration.inMinutes}dk';
   }
   */
+}
+
+StoreModel? _storeForWarehouse({
+  required List<StoreModel> stores,
+  required WarehouseModel? warehouse,
+}) {
+  final storeId = warehouse?.storeId;
+  if (storeId == null || storeId.isEmpty) return null;
+
+  for (final store in stores) {
+    if (store.id == storeId) return store;
+  }
+
+  return null;
+}
+
+Set<String> _sellingProductIdsForStore(StoreModel? store) {
+  if (store == null || !store.isActive) return const <String>{};
+
+  return store.slots
+      .where(
+        (slot) =>
+            slot.isActive &&
+            (slot.productId ?? '').isNotEmpty &&
+            slot.qualityLevel > 0,
+      )
+        .map((slot) => slot.productId!)
+        .toSet();
+}
+
+Map<String, int> _neededCapacityByProductForStore(StoreModel? store) {
+  if (store == null || !store.isActive) return const <String, int>{};
+
+  final result = <String, int>{};
+  for (final slot in store.slots) {
+    final productId = slot.productId;
+    if (!slot.isActive || productId == null || productId.isEmpty) {
+      continue;
+    }
+    if (slot.qualityLevel <= 0) continue;
+
+    final availableCapacity =
+        slot.capacity - slot.quantity - slot.pendingQuantity;
+    if (availableCapacity <= 0) continue;
+
+    result.update(
+      productId,
+      (value) => value + availableCapacity,
+      ifAbsent: () => availableCapacity,
+    );
+  }
+
+  return result;
 }
 
 double _resolvePriceDeltaPercent(ProductModel? product, double listingPrice) {

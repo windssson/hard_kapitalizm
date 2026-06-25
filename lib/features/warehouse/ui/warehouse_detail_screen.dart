@@ -494,7 +494,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 ),
                 _buildHeaderMetricCard(
                   label: 'Bos Kapasite',
-                  value: _formatValue(availableCapacity),
+                  value: '${_formatValue(availableCapacity)} m3',
                   icon: Icons.straighten,
                   color: AppColors.red,
                 ),
@@ -2906,7 +2906,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     ),
                     SizedBox(height: 10.h),
                     Text(
-                      'Kapasite: ${_formatValue(warehouse.capacity)} -> ${_formatValue(warehouse.capacity + baseCapacity)}',
+                      'Kapasite: ${_formatValue(warehouse.capacity)} m3 -> ${_formatValue(warehouse.capacity + baseCapacity)} m3',
                       style: TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 12.sp,

@@ -280,17 +280,11 @@ final _router = GoRouter(
         final warehouseId = state.uri.queryParameters['warehouseId'] ?? '';
         final playerId = state.uri.queryParameters['playerId'] ?? '';
         final cityId = state.uri.queryParameters['cityId'] ?? '';
-        final targetType = state.uri.queryParameters['targetType'] ?? 'warehouse';
-        final storeId = state.uri.queryParameters['storeId'] ?? '';
-        final storeSlotId = state.uri.queryParameters['storeSlotId'] ?? '';
 
         return MarketScreen(
           warehouseId: warehouseId,
           playerId: playerId,
           cityId: cityId,
-          targetType: targetType,
-          storeId: storeId,
-          storeSlotId: storeSlotId,
         );
       },
     ),
@@ -301,18 +295,12 @@ final _router = GoRouter(
         final warehouseId = state.uri.queryParameters['warehouseId'] ?? '';
         final playerId = state.uri.queryParameters['playerId'] ?? '';
         final cityId = state.uri.queryParameters['cityId'] ?? '';
-        final targetType = state.uri.queryParameters['targetType'] ?? 'warehouse';
-        final storeId = state.uri.queryParameters['storeId'] ?? '';
-        final storeSlotId = state.uri.queryParameters['storeSlotId'] ?? '';
 
         return MarketScreen(
           productId: productId,
           warehouseId: warehouseId,
           playerId: playerId,
           cityId: cityId,
-          targetType: targetType,
-          storeId: storeId,
-          storeSlotId: storeSlotId,
         );
       },
     ),

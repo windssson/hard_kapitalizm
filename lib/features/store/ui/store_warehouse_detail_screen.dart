@@ -221,7 +221,7 @@ class _StoreWarehouseHeaderCard extends StatelessWidget {
                 child: _MetricCard(
                   label: 'Kapasite',
                   value:
-                      '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)}',
+                      '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)} m3',
                 ),
               ),
               SizedBox(width: 10.w),
