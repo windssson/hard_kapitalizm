@@ -24,6 +24,7 @@ import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 
 class FactoryDetailScreen extends ConsumerStatefulWidget {
   final String factoryId;
@@ -1914,8 +1915,15 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
     if (!context.mounted) return;
 
+    final activeProducts = ref.read(playerActiveProductsProvider).value ?? [];
+    final sellingProductIds = activeProducts
+        .where((p) => p.role == 'sale')
+        .map((p) => p.productId)
+        .toSet();
+
     final options = products.map((selectableProduct) {
       final product = selectableProduct.product;
+      final isSelling = sellingProductIds.contains(product.id);
       return ProductSelectionOption(
         id: product.id,
         title: product.urunAdi + (selectableProduct.hasPreferredBrand ? ' (${_currentBrandName ?? 'Markali'})' : ''),
@@ -1924,6 +1932,28 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
             '${selectableProduct.hasPreferredBrand ? ' Ã¢â‚¬Â¢ Marka Hazir' : ''}',
         iconPath: product.urunIconu,
+        trailingWidget: isSelling
+            ? Container(
+                margin: EdgeInsets.only(top: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6.r),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.35),
+                    width: 1.w,
+                  ),
+                ),
+                child: Text(
+                  'Satışta',
+                  style: TextStyle(
+                    color: AppColors.goldLight,
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,
         onTap: () async {
           Navigator.pop(context);
           await _selectFactoryProduct(

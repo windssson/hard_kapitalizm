@@ -1721,12 +1721,28 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                     ),
                                   ),
                                   child: ClipOval(
-                                    child: Padding(
-                                      padding: EdgeInsets.all(5.w),
-                                      child: CachedAssetImage(
-                                        fileName: listing.sellerAvatarId,
-                                      ),
-                                    ),
+                                    child:
+                                        listing.sellerGoogleAvatarUrl != null &&
+                                            listing
+                                                .sellerGoogleAvatarUrl!
+                                                .trim()
+                                                .isNotEmpty
+                                        ? Image.network(
+                                            listing.sellerGoogleAvatarUrl!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Padding(
+                                              padding: EdgeInsets.all(5.w),
+                                              child: CachedAssetImage(
+                                                fileName: listing.sellerAvatarId,
+                                              ),
+                                            ),
+                                          )
+                                        : Padding(
+                                            padding: EdgeInsets.all(5.w),
+                                            child: CachedAssetImage(
+                                              fileName: listing.sellerAvatarId,
+                                            ),
+                                          ),
                                   ),
                                 ),
                                 SizedBox(width: 10.w),

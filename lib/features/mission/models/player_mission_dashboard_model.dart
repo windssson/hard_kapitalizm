@@ -4,30 +4,41 @@ class PlayerMissionDashboardModel {
   final bool success;
   final PlayerMissionModel? mainMission;
   final List<PlayerMissionModel> dailyMissions;
+  final List<PlayerMissionModel> weeklyMissions;
   final List<PlayerMissionModel> sideMissions;
   final int claimableCount;
   final int dailyClaimableCount;
+  final int weeklyClaimableCount;
   final int completedCount;
   final int dailyCompletedCount;
+  final int weeklyCompletedCount;
   final int totalCount;
 
   const PlayerMissionDashboardModel({
     required this.success,
     required this.mainMission,
     required this.dailyMissions,
+    required this.weeklyMissions,
     required this.sideMissions,
     required this.claimableCount,
     required this.dailyClaimableCount,
+    required this.weeklyClaimableCount,
     required this.completedCount,
     required this.dailyCompletedCount,
+    required this.weeklyCompletedCount,
     required this.totalCount,
   });
 
   bool get hasAnyMission =>
-      mainMission != null || dailyMissions.isNotEmpty || sideMissions.isNotEmpty;
+      mainMission != null ||
+      dailyMissions.isNotEmpty ||
+      weeklyMissions.isNotEmpty ||
+      sideMissions.isNotEmpty;
+
   List<PlayerMissionModel> get allMissions => [
     ?mainMission,
     ...dailyMissions,
+    ...weeklyMissions,
     ...sideMissions,
   ];
   int get inProgressCount =>
@@ -40,6 +51,7 @@ class PlayerMissionDashboardModel {
   factory PlayerMissionDashboardModel.fromJson(Map<String, dynamic> json) {
     final rawMain = json['main_mission'];
     final rawDaily = (json['daily_missions'] as List?) ?? const [];
+    final rawWeekly = (json['weekly_missions'] as List?) ?? const [];
     final rawSide = (json['side_missions'] as List?) ?? const [];
     final rawSummary = json['summary'];
 
@@ -60,15 +72,22 @@ class PlayerMissionDashboardModel {
           .whereType<Map>()
           .map((item) => PlayerMissionModel.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
+      weeklyMissions: rawWeekly
+          .whereType<Map>()
+          .map((item) => PlayerMissionModel.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
       sideMissions: rawSide
           .whereType<Map>()
           .map((item) => PlayerMissionModel.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
       claimableCount: (json['claimable_count'] as num?)?.toInt() ?? 0,
       dailyClaimableCount: (json['daily_claimable_count'] as num?)?.toInt() ?? 0,
+      weeklyClaimableCount: (json['weekly_claimable_count'] as num?)?.toInt() ?? 0,
       completedCount: (summaryMap['completed_count'] as num?)?.toInt() ?? 0,
       dailyCompletedCount:
           (summaryMap['daily_completed_count'] as num?)?.toInt() ?? 0,
+      weeklyCompletedCount:
+          (summaryMap['weekly_completed_count'] as num?)?.toInt() ?? 0,
       totalCount: (summaryMap['total_count'] as num?)?.toInt() ?? 0,
     );
   }

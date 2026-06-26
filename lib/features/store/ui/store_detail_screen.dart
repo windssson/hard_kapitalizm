@@ -24,6 +24,7 @@ import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
 import 'package:hard_kapitalizm/features/store/ui/widgets/store_detail_header.dart';
 import 'package:hard_kapitalizm/features/store/ui/widgets/store_quick_actions.dart';
+import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 
 class StoreDetailScreen extends ConsumerStatefulWidget {
   final String storeId;
@@ -1898,7 +1899,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       Text('STOK DURUMU', style: TextStyle(color: AppColors.textSecondary, fontSize: 9.sp, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                       const Spacer(),
                       Text(
-                        '${slot.quantity} stok | ${slot.pendingQuantity} rezerve | ${slot.capacity - slot.quantity - slot.pendingQuantity} bos',
+                        '${slot.quantity} stok / ${slot.capacity} kapasite',
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 10.sp,
@@ -1912,9 +1913,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     slot.capacity > 0
                         ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
                         : 0,
-                    reservedProgress: slot.capacity > 0
-                        ? (slot.pendingQuantity / slot.capacity).clamp(0.0, 1.0)
-                        : 0,
                   ),
                   SizedBox(height: 6.h),
                   Row(
@@ -1922,11 +1920,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       _buildCapacityLegend(
                         color: AppColors.gold,
                         label: 'Stok',
-                      ),
-                      SizedBox(width: 12.w),
-                      _buildCapacityLegend(
-                        color: AppColors.blue.withValues(alpha: 0.8),
-                        label: 'Rezerve',
                       ),
                       SizedBox(width: 12.w),
                       _buildCapacityLegend(
@@ -2748,7 +2741,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       return;
     }
 
+    final activeProducts = ref.read(playerActiveProductsProvider).value ?? [];
+    final producedProductIds = activeProducts
+        .where((p) => p.role == 'output')
+        .map((p) => p.productId)
+        .toSet();
+
     final options = products.map((product) {
+      final productId = product['product_id']?.toString() ?? '';
+      final isProduced = producedProductIds.contains(productId);
       final qualityLevel = (product['quality_level'] as num?)?.toInt() ?? 1;
       final quantity = (product['quantity'] as num?)?.toInt() ?? 0;
       return ProductSelectionOption(
@@ -2757,6 +2758,28 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         subtitle: 'Kalite $qualityLevel | Stok: $quantity',
         iconPath: (product['icon'] ?? 'default').toString(),
         badgeText: 'Magaza Deposu',
+        trailingWidget: isProduced
+            ? Container(
+                margin: EdgeInsets.only(top: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+                decoration: BoxDecoration(
+                  color: AppColors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6.r),
+                  border: Border.all(
+                    color: AppColors.green.withValues(alpha: 0.35),
+                    width: 1.w,
+                  ),
+                ),
+                child: Text(
+                  'Üretilen',
+                  style: TextStyle(
+                    color: AppColors.green,
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,
         onTap: () async {
           Navigator.pop(context);
           await _handleProductSelection(
@@ -3150,11 +3173,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   }
 
   Widget _buildMiniProgressStacked(
-    double progress, {
-    double reservedProgress = 0,
-  }) {
+    double progress,
+  ) {
     final stockRatio = progress.clamp(0.0, 1.0);
-    final totalRatio = (stockRatio + reservedProgress).clamp(0.0, 1.0);
 
     return Container(
       width: double.infinity,
@@ -3164,20 +3185,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         borderRadius: BorderRadius.circular(4.r),
         border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.05)),
       ),
-      child: Stack(
-        children: [
-          if (totalRatio > 0)
-            FractionallySizedBox(
-              widthFactor: totalRatio,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.blue.withValues(alpha: 0.28),
-                  borderRadius: BorderRadius.circular(4.r),
-                ),
-              ),
-            ),
-          if (stockRatio > 0)
-            FractionallySizedBox(
+      child: stockRatio > 0
+          ? FractionallySizedBox(
+              alignment: Alignment.centerLeft,
               widthFactor: stockRatio,
               child: Container(
                 decoration: BoxDecoration(
@@ -3198,9 +3208,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   ],
                 ),
               ),
-            ),
-        ],
-      ),
+            )
+          : null,
     );
   }
 

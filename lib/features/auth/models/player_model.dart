@@ -5,6 +5,7 @@ class PlayerModel {
   final String playerName;
   final String companyName;
   final String avatarId;
+  final String? googleAvatarUrl;
   final int level;
   final int experience;
   final int currentLevelStartExperience;
@@ -26,6 +27,7 @@ class PlayerModel {
     required this.playerName,
     required this.companyName,
     required this.avatarId,
+    required this.googleAvatarUrl,
     required this.level,
     required this.experience,
     required this.currentLevelStartExperience,
@@ -51,6 +53,7 @@ class PlayerModel {
       playerName: json['player_name'] as String? ?? 'Oyuncu',
       companyName: json['company_name'] as String? ?? 'Yeni Holding',
       avatarId: json['avatar_id'] as String? ?? 'avatar_1.webp',
+      googleAvatarUrl: json['google_avatar_url']?.toString(),
       level: json['level'] as int? ?? 1,
       experience: json['experience'] as int? ?? 0,
       currentLevelStartExperience:
@@ -94,6 +97,7 @@ class PlayerModel {
       'player_name': playerName,
       'company_name': companyName,
       'avatar_id': avatarId,
+      'google_avatar_url': googleAvatarUrl,
       'level': level,
       'experience': experience,
       'current_level_start_experience': currentLevelStartExperience,

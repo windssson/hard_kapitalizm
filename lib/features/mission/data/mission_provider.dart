@@ -16,11 +16,14 @@ final playerMissionDashboardProvider =
       success: false,
       mainMission: null,
       dailyMissions: [],
+      weeklyMissions: [],
       sideMissions: [],
       claimableCount: 0,
       dailyClaimableCount: 0,
+      weeklyClaimableCount: 0,
       completedCount: 0,
       dailyCompletedCount: 0,
+      weeklyCompletedCount: 0,
       totalCount: 0,
     );
   }

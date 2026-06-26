@@ -17,6 +17,7 @@ class MarketListingModel {
   final String sellerPlayerId;
   final String sellerPlayerName;
   final String sellerAvatarId;
+  final String? sellerGoogleAvatarUrl;
   final int quantity;
   final int qualityLevel;
   final double price;
@@ -43,6 +44,7 @@ class MarketListingModel {
     required this.sellerPlayerId,
     required this.sellerPlayerName,
     required this.sellerAvatarId,
+    required this.sellerGoogleAvatarUrl,
     required this.quantity,
     required this.qualityLevel,
     required this.price,
@@ -81,6 +83,7 @@ class MarketListingModel {
       sellerPlayerId: 'npc',
       sellerPlayerName: 'Toptan Ticaret',
       sellerAvatarId: 'ae1.webp',
+      sellerGoogleAvatarUrl: null,
       quantity: 18500,
       qualityLevel: 1,
       price: price,
@@ -140,6 +143,9 @@ class MarketListingModel {
       sellerAvatarId:
           (json['seller_avatar_id'] ?? json['avatar_id'] ?? 'ae1.webp')
               .toString(),
+      sellerGoogleAvatarUrl:
+          json['seller_google_avatar_url']?.toString() ??
+          json['google_avatar_url']?.toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       price: (json['price'] as num?)?.toDouble() ?? 0,

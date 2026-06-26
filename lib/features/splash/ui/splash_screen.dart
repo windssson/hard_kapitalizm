@@ -6,6 +6,7 @@ import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 class SplashScreen extends ConsumerStatefulWidget {
@@ -58,6 +59,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           await ref.read(notificationActionProvider).refreshAttention();
         } catch (_) {
           // Bildirim attention refresh basarisiz olsa da giris akisina devam.
+        }
+        try {
+          await ref.read(playerActiveProductsProvider.future);
+        } catch (_) {
+          // Aktif urunleri on yukleme basarisiz olsa da giris akisina devam.
         }
       }
 

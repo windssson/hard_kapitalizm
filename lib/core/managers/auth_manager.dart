@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -10,8 +12,41 @@ final authManagerProvider = Provider(
   (ref) => AuthManager(Supabase.instance.client),
 );
 
+class GoogleLinkCelebrationData {
+  const GoogleLinkCelebrationData({
+    this.displayName,
+    this.email,
+    this.avatarUrl,
+    this.playerName,
+  });
+
+  final String? displayName;
+  final String? email;
+  final String? avatarUrl;
+  final String? playerName;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'display_name': displayName,
+      'email': email,
+      'avatar_url': avatarUrl,
+      'player_name': playerName,
+    };
+  }
+
+  factory GoogleLinkCelebrationData.fromJson(Map<String, dynamic> json) {
+    return GoogleLinkCelebrationData(
+      displayName: json['display_name']?.toString(),
+      email: json['email']?.toString(),
+      avatarUrl: json['avatar_url']?.toString(),
+      playerName: json['player_name']?.toString(),
+    );
+  }
+}
+
 class AuthManager {
   static const _deviceUuidKey = 'device_uuid';
+  static const _googleLinkCelebrationKey = 'google_link_celebration';
   static const _secureStorage = FlutterSecureStorage();
 
   final SupabaseClient _supabase;
@@ -128,6 +163,13 @@ class AuthManager {
     );
   }
 
+  Future<void> signInWithGoogle() async {
+    await _supabase.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: kIsWeb ? null : SupabaseConstants.authCallbackUrl,
+    );
+  }
+
   Future<void> syncLinkedGoogleProfileMetadata() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
@@ -147,6 +189,9 @@ class AuthManager {
     }
 
     final currentMetadata = Map<String, dynamic>.from(user.userMetadata ?? const {});
+    final isFirstGoogleLink =
+        (currentMetadata['linked_google_email']?.toString().trim().isEmpty ?? true) &&
+        (identityData['email']?.toString().trim().isNotEmpty ?? false);
     final mergedMetadata = <String, dynamic>{
       ...currentMetadata,
       if (identityData['full_name'] != null)
@@ -163,11 +208,17 @@ class AuthManager {
 
     if (_mapsEqual(currentMetadata, mergedMetadata)) {
       await _syncGoogleIdentityIntoPlayerRecord(identityData);
+      if (isFirstGoogleLink) {
+        await _storeGoogleLinkCelebration(identityData);
+      }
       return;
     }
 
     await _supabase.auth.updateUser(UserAttributes(data: mergedMetadata));
     await _syncGoogleIdentityIntoPlayerRecord(identityData);
+    if (isFirstGoogleLink) {
+      await _storeGoogleLinkCelebration(identityData);
+    }
   }
 
   Future<bool> syncGoogleProfileIfLinked() async {
@@ -183,6 +234,29 @@ class AuthManager {
     }
 
     await syncLinkedGoogleProfileMetadata();
+    return true;
+  }
+
+  Future<bool> unlinkGoogleIdentity() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      throw const AuthException('Oturum bulunamadi.');
+    }
+
+    final identities = await _supabase.auth.getUserIdentities();
+    UserIdentity? googleIdentity;
+    for (final identity in identities) {
+      if (identity.provider == 'google') {
+        googleIdentity = identity;
+        break;
+      }
+    }
+
+    if (googleIdentity == null) {
+      return false;
+    }
+
+    await _supabase.auth.unlinkIdentity(googleIdentity);
     return true;
   }
 
@@ -215,5 +289,42 @@ class AuthManager {
         'p_google_avatar_url': googleAvatarUrl,
       },
     );
+  }
+
+  Future<void> _storeGoogleLinkCelebration(
+    Map<String, dynamic> identityData,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final payload = GoogleLinkCelebrationData(
+      displayName:
+          identityData['full_name']?.toString() ??
+          identityData['name']?.toString(),
+      email: identityData['email']?.toString(),
+      avatarUrl:
+          identityData['avatar_url']?.toString() ??
+          identityData['picture']?.toString(),
+      playerName:
+          identityData['full_name']?.toString() ??
+          identityData['name']?.toString(),
+    );
+    await prefs.setString(
+      _googleLinkCelebrationKey,
+      jsonEncode(payload.toJson()),
+    );
+  }
+
+  Future<GoogleLinkCelebrationData?> consumeGoogleLinkCelebration() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_googleLinkCelebrationKey);
+    if (raw == null || raw.isEmpty) return null;
+    await prefs.remove(_googleLinkCelebrationKey);
+
+    try {
+      return GoogleLinkCelebrationData.fromJson(
+        Map<String, dynamic>.from(jsonDecode(raw) as Map),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 }

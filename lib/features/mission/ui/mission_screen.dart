@@ -13,6 +13,7 @@ import 'package:hard_kapitalizm/features/mission/models/player_mission_model.dar
 enum _MissionTab {
   main('Ana Görev'),
   daily('Günlük'),
+  weekly('Haftalık'),
   achievements('Başarılar');
 
   const _MissionTab(this.label);
@@ -32,6 +33,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
 
   bool _mainClaimedExpanded = false;
   bool _dailyClaimedExpanded = false;
+  bool _weeklyClaimedExpanded = false;
   bool _achievementsClaimedExpanded = false;
 
   Future<void> _refresh() async {
@@ -254,6 +256,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   Widget _buildCustomTabBar(PlayerMissionDashboardModel dashboard) {
     final mainBadge = (dashboard.mainMission?.claimable == true) ? 1 : 0;
     final dailyBadge = dashboard.dailyClaimableCount;
+    final weeklyBadge = dashboard.weeklyClaimableCount;
     final achievementBadge =
         dashboard.sideMissions.where((m) => m.claimable).length;
 
@@ -272,6 +275,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           int badgeCount = 0;
           if (tab == _MissionTab.main) badgeCount = mainBadge;
           if (tab == _MissionTab.daily) badgeCount = dailyBadge;
+          if (tab == _MissionTab.weekly) badgeCount = weeklyBadge;
           if (tab == _MissionTab.achievements) badgeCount = achievementBadge;
 
           return Expanded(
@@ -372,6 +376,22 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             claimed,
             _dailyClaimedExpanded,
             () => setState(() => _dailyClaimedExpanded = !_dailyClaimedExpanded),
+          ),
+        ];
+
+      case _MissionTab.weekly:
+        final active = dashboard.weeklyMissions.where((m) => !m.isClaimed).toList();
+        final claimed = dashboard.weeklyMissions.where((m) => m.isClaimed).toList();
+
+        return [
+          if (active.isEmpty)
+            _buildWeekliesAllCompletedState(claimed.isNotEmpty)
+          else
+            ...active.map((m) => _buildMissionCard(m)),
+          _buildCollapsibleCompletedSection(
+            claimed,
+            _weeklyClaimedExpanded,
+            () => setState(() => _weeklyClaimedExpanded = !_weeklyClaimedExpanded),
           ),
         ];
 
@@ -741,6 +761,40 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               hasClaimedMissions
                   ? 'Bugünün tüm günlük görevlerini tamamladın.\nYarın yeni görevler gelecek!'
                   : 'Bugün için atanmış bir günlük görev bulunmuyor.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 11.sp,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeekliesAllCompletedState(bool hasClaimedMissions) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 20.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.task_alt_rounded, color: AppColors.green, size: 48.sp),
+            SizedBox(height: 12.h),
+            Text(
+              hasClaimedMissions ? 'Harika İş!' : 'Haftalık Görev Yok',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              hasClaimedMissions
+                  ? 'Bu haftanın tüm haftalık görevlerini tamamladın.\nGelecek hafta yeni görevler gelecek!'
+                  : 'Bu hafta için atanmış bir haftalık görev bulunmuyor.',
               style: TextStyle(
                 color: AppColors.textMuted,
                 fontSize: 11.sp,

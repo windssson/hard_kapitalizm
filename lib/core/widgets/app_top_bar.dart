@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 
@@ -13,6 +14,7 @@ class AppTopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(playerProvider).value;
+    final authIdentity = ref.watch(authIdentityProvider).value;
     final missionDashboard = ref.watch(playerMissionDashboardProvider).value;
     final claimableMissionCount = missionDashboard?.claimableCount ?? 0;
     final progress = (player?.expProgressRatio ?? 0).clamp(0.0, 1.0);
@@ -69,6 +71,7 @@ class AppTopBar extends ConsumerWidget {
                       child: _buildProfilePanel(
                         context: context,
                         player: player,
+                        googleAvatarUrl: authIdentity?.avatarUrl,
                         progress: progress,
                         compact: compact,
                       ),
@@ -106,12 +109,17 @@ class AppTopBar extends ConsumerWidget {
   Widget _buildProfilePanel({
     required BuildContext context,
     required dynamic player,
+    required String? googleAvatarUrl,
     required double progress,
     required bool compact,
   }) {
     return Row(
       children: [
-        _buildAvatarMedallion(player, compact: compact),
+        _buildAvatarMedallion(
+          player,
+          googleAvatarUrl: googleAvatarUrl,
+          compact: compact,
+        ),
         SizedBox(width: compact ? 6.w : 8.w),
         Expanded(
           child: Column(
@@ -200,8 +208,14 @@ class AppTopBar extends ConsumerWidget {
     );
   }
 
-  Widget _buildAvatarMedallion(dynamic player, {required bool compact}) {
+  Widget _buildAvatarMedallion(
+    dynamic player, {
+    required String? googleAvatarUrl,
+    required bool compact,
+  }) {
     final avatarSize = compact ? 52.w : 60.w;
+    final hasGoogleAvatar =
+        googleAvatarUrl != null && googleAvatarUrl.trim().isNotEmpty;
     return SizedBox(
       width: avatarSize,
       height: avatarSize,
@@ -241,20 +255,39 @@ class AppTopBar extends ConsumerWidget {
                 ),
               ),
               child: ClipOval(
-                child: CachedAssetImage(
-                  fileName: player?.avatarId ?? 'avatar_1.webp',
-                  fit: BoxFit.cover,
-                  placeholder: Icon(
-                    Icons.person,
-                    color: AppColors.gold,
-                    size: compact ? 20.sp : 24.sp,
-                  ),
-                  errorWidget: Icon(
-                    Icons.person,
-                    color: AppColors.gold,
-                    size: compact ? 20.sp : 24.sp,
-                  ),
-                ),
+                child: hasGoogleAvatar
+                    ? Image.network(
+                        googleAvatarUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => CachedAssetImage(
+                          fileName: player?.avatarId ?? 'avatar_1.webp',
+                          fit: BoxFit.cover,
+                          placeholder: Icon(
+                            Icons.person,
+                            color: AppColors.gold,
+                            size: compact ? 20.sp : 24.sp,
+                          ),
+                          errorWidget: Icon(
+                            Icons.person,
+                            color: AppColors.gold,
+                            size: compact ? 20.sp : 24.sp,
+                          ),
+                        ),
+                      )
+                    : CachedAssetImage(
+                        fileName: player?.avatarId ?? 'avatar_1.webp',
+                        fit: BoxFit.cover,
+                        placeholder: Icon(
+                          Icons.person,
+                          color: AppColors.gold,
+                          size: compact ? 20.sp : 24.sp,
+                        ),
+                        errorWidget: Icon(
+                          Icons.person,
+                          color: AppColors.gold,
+                          size: compact ? 20.sp : 24.sp,
+                        ),
+                      ),
               ),
             ),
           ),

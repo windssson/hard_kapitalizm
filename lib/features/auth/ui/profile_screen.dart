@@ -26,6 +26,9 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final int _selectedIndex = 4;
   StreamSubscription<AuthState>? _authSubscription;
+  bool _isGoogleLinkInProgress = false;
+  bool _didShowGoogleLinkSuccess = false;
+  bool _isGoogleSignInInProgress = false;
 
   @override
   void initState() {
@@ -34,6 +37,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       try {
         final synced = await ref.read(authManagerProvider).syncGoogleProfileIfLinked();
         if (synced) {
+          _handleCompletedGoogleLink();
           ref.invalidate(authIdentityProvider);
           ref.invalidate(playerProvider);
         }
@@ -53,6 +57,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         await ref.read(authManagerProvider).syncLinkedGoogleProfileMetadata();
       } catch (_) {}
 
+      if (mounted && _isGoogleSignInInProgress) {
+        setState(() {
+          _isGoogleSignInInProgress = false;
+        });
+      }
+      _handleCompletedGoogleLink();
       ref.invalidate(authIdentityProvider);
       ref.invalidate(playerProvider);
     });
@@ -205,6 +215,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     PlayerModel player,
     AuthIdentityState? authIdentity,
   ) {
+    final googleAvatarUrl =
+        authIdentity?.avatarUrl ??
+        player.googleAvatarUrl;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -241,20 +255,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         border: Border.all(color: AppColors.gold, width: 2.w),
                       ),
                       child: ClipOval(
-                        child: CachedAssetImage(
-                          fileName: player.avatarId,
-                          fit: BoxFit.cover,
-                          placeholder: Icon(
-                            Icons.person,
-                            color: AppColors.gold,
-                            size: 40.sp,
-                          ),
-                          errorWidget: Icon(
-                            Icons.person,
-                            color: AppColors.gold,
-                            size: 40.sp,
-                          ),
-                        ),
+                        child:
+                            googleAvatarUrl != null &&
+                                googleAvatarUrl.trim().isNotEmpty
+                            ? Image.network(
+                                googleAvatarUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => CachedAssetImage(
+                                  fileName: player.avatarId,
+                                  fit: BoxFit.cover,
+                                  placeholder: Icon(
+                                    Icons.person,
+                                    color: AppColors.gold,
+                                    size: 40.sp,
+                                  ),
+                                  errorWidget: Icon(
+                                    Icons.person,
+                                    color: AppColors.gold,
+                                    size: 40.sp,
+                                  ),
+                                ),
+                              )
+                            : CachedAssetImage(
+                                fileName: player.avatarId,
+                                fit: BoxFit.cover,
+                                placeholder: Icon(
+                                  Icons.person,
+                                  color: AppColors.gold,
+                                  size: 40.sp,
+                                ),
+                                errorWidget: Icon(
+                                  Icons.person,
+                                  color: AppColors.gold,
+                                  size: 40.sp,
+                                ),
+                              ),
                       ),
                     ),
                     Positioned(
@@ -658,6 +693,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildAccountLinkCard(AuthIdentityState? authIdentity) {
     final isGoogleLinked = authIdentity?.isGoogleLinked ?? false;
     final linkedEmail = authIdentity?.effectiveEmail;
+    final isBusy = _isGoogleLinkInProgress && !isGoogleLinked;
+    final isSignInBusy = _isGoogleSignInInProgress && !isGoogleLinked;
 
     return Container(
       width: double.infinity,
@@ -709,6 +746,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
           SizedBox(height: 12.h),
+          if (!isGoogleLinked) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 42.h,
+              child: OutlinedButton.icon(
+                onPressed: isBusy || isSignInBusy
+                    ? null
+                    : () => _handleExistingGoogleSignIn(authIdentity),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.blue,
+                  side: BorderSide(
+                    color: AppColors.blue.withValues(alpha: 0.35),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                ),
+                icon: Icon(
+                  isSignInBusy
+                      ? Icons.hourglass_top_rounded
+                      : Icons.login_rounded,
+                  size: 18.sp,
+                ),
+                label: Text(
+                  isSignInBusy
+                      ? 'Giris Bekleniyor'
+                      : 'Var Olan Google Hesabina Gir',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 12.h),
+          ],
           SizedBox(
             width: double.infinity,
             height: 46.h,
@@ -716,32 +789,90 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: isGoogleLinked
                     ? AppColors.green.withValues(alpha: 0.14)
+                    : isBusy
+                    ? AppColors.gold.withValues(alpha: 0.16)
                     : AppColors.cardBgLight,
                 side: BorderSide(
                   color: isGoogleLinked
                       ? AppColors.green.withValues(alpha: 0.45)
+                      : isBusy
+                      ? AppColors.gold.withValues(alpha: 0.45)
                       : AppColors.gold.withValues(alpha: 0.35),
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10.r),
                 ),
               ),
-              onPressed: isGoogleLinked ? null : _handleGoogleLink,
+              onPressed: isGoogleLinked || isBusy ? null : _handleGoogleLink,
               icon: Icon(
-                isGoogleLinked ? Icons.check_circle_rounded : Icons.g_mobiledata_rounded,
-                color: isGoogleLinked ? AppColors.green : Colors.white,
+                isGoogleLinked
+                    ? Icons.check_circle_rounded
+                    : isBusy
+                    ? Icons.hourglass_top_rounded
+                    : Icons.g_mobiledata_rounded,
+                color: isGoogleLinked
+                    ? AppColors.green
+                    : isBusy
+                    ? AppColors.gold
+                    : Colors.white,
                 size: 22.sp,
               ),
               label: Text(
-                isGoogleLinked ? 'Google Baglandi' : 'Google Hesabina Bagla',
+                isGoogleLinked
+                    ? 'Google Baglandi'
+                    : isBusy
+                    ? 'Baglanti Bekleniyor'
+                    : 'Google Hesabina Bagla',
                 style: TextStyle(
-                  color: isGoogleLinked ? AppColors.green : Colors.white,
+                  color: isGoogleLinked
+                      ? AppColors.green
+                      : isBusy
+                      ? AppColors.gold
+                      : Colors.white,
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
           ),
+          if (isGoogleLinked) ...[
+            SizedBox(height: 10.h),
+            SizedBox(
+              width: double.infinity,
+              height: 42.h,
+              child: OutlinedButton.icon(
+                onPressed: _handleGoogleUnlink,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.red,
+                  side: BorderSide(
+                    color: AppColors.red.withValues(alpha: 0.35),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                ),
+                icon: Icon(Icons.link_off_rounded, size: 18.sp),
+                label: Text(
+                  'Google Baglantisini Kaldir',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (isBusy) ...[
+            SizedBox(height: 10.h),
+            Text(
+              'Tarayici veya Google penceresinden onay verip oyuna geri don. Baglanti tamamlaninca durum otomatik guncellenecek.',
+              style: TextStyle(
+                color: AppColors.goldLight,
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -749,15 +880,169 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _handleGoogleLink() async {
     try {
+      setState(() {
+        _isGoogleLinkInProgress = true;
+        _didShowGoogleLinkSuccess = false;
+      });
       await ref.read(authManagerProvider).linkGoogleIdentity();
-      await ref.read(authManagerProvider).syncLinkedGoogleProfileMetadata();
-      ref.invalidate(authIdentityProvider);
-      ref.invalidate(playerProvider);
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        message: 'Google hesabi basariyla baglandi.',
-        type: SnackbarType.success,
+        message:
+            'Google girisi acildi. Onaydan sonra uygulamaya dondugunde hesap otomatik baglanacak.',
+        type: SnackbarType.info,
+      );
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleLinkInProgress = false;
+        });
+      }
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: _friendlyGoogleLinkErrorMessage(e),
+        type: SnackbarType.error,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleLinkInProgress = false;
+        });
+      }
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString(),
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  String _friendlyGoogleLinkErrorMessage(AuthException error) {
+    final raw = error.message.toLowerCase();
+    final status = (error.statusCode ?? '').toLowerCase();
+
+    if (status.contains('identity_already_exists') ||
+        raw.contains('identity is already linked to another user')) {
+      return 'Bu Google hesabi zaten baska bir oyun hesabina bagli. Farkli bir Google hesabi kullanin veya once eski baglantiyi kaldirin.';
+    }
+
+    if (raw.contains('popup closed') || raw.contains('cancelled')) {
+      return 'Google baglama islemi iptal edildi.';
+    }
+
+    return error.message;
+  }
+
+  Future<void> _handleExistingGoogleSignIn(
+    AuthIdentityState? authIdentity,
+  ) async {
+    final shouldContinue = await _confirmExistingAccountSignIn();
+    if (!shouldContinue) return;
+
+    try {
+      setState(() {
+        _isGoogleSignInInProgress = true;
+      });
+      await ref.read(authManagerProvider).signInWithGoogle();
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message:
+            'Google girisi acildi. Dondugunuzde kayitli hesabiniza gecis yapilacak.',
+        type: SnackbarType.info,
+      );
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleSignInInProgress = false;
+        });
+      }
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: _friendlyGoogleSignInErrorMessage(e),
+        type: SnackbarType.error,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleSignInInProgress = false;
+        });
+      }
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString(),
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  Future<bool> _confirmExistingAccountSignIn() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18.r),
+        ),
+        title: Text(
+          'Kayitli Hesaba Gec',
+          style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
+        ),
+        content: Text(
+          'Bu islem mevcut cihaz oturumundan cikarak Google hesabina bagli kayitli oyun hesabina gecis yapar.',
+          style: AppTextStyles.body,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Vazgec',
+              style: TextStyle(color: AppColors.textMuted),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Devam Et'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  String _friendlyGoogleSignInErrorMessage(AuthException error) {
+    final raw = error.message.toLowerCase();
+
+    if (raw.contains('popup closed') || raw.contains('cancelled')) {
+      return 'Google ile giris islemi iptal edildi.';
+    }
+
+    return error.message;
+  }
+
+  Future<void> _handleGoogleUnlink() async {
+    try {
+      final removed = await ref.read(authManagerProvider).unlinkGoogleIdentity();
+      ref.invalidate(authIdentityProvider);
+      ref.invalidate(playerProvider);
+      if (!mounted) return;
+
+      AppSnackbar.show(
+        context,
+        message: removed
+            ? 'Google baglantisi kaldirildi.'
+            : 'Kaldirilacak bir Google baglantisi bulunamadi.',
+        type: removed ? SnackbarType.success : SnackbarType.info,
       );
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -774,6 +1059,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         type: SnackbarType.error,
       );
     }
+  }
+
+  void _handleCompletedGoogleLink() {
+    if (!mounted) return;
+
+    final user = Supabase.instance.client.auth.currentUser;
+    final identities = user?.identities ?? const <UserIdentity>[];
+    final hasGoogleIdentity = identities.any(
+      (identity) => identity.provider == 'google',
+    );
+
+    if (!hasGoogleIdentity) return;
+    final shouldShowSuccess = _isGoogleLinkInProgress;
+
+    if (_isGoogleLinkInProgress) {
+      setState(() {
+        _isGoogleLinkInProgress = false;
+      });
+    }
+
+    if (!shouldShowSuccess) return;
+    if (_didShowGoogleLinkSuccess) return;
+    _didShowGoogleLinkSuccess = true;
+
+    AppSnackbar.show(
+      context,
+      message: 'Google hesabi basariyla baglandi.',
+      type: SnackbarType.success,
+    );
   }
 
   Widget _buildStatCard(IconData icon, String label, String value, Color color) {
