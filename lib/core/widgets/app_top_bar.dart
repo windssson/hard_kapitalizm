@@ -86,10 +86,7 @@ class AppTopBar extends ConsumerWidget {
                       ),
                     ),
                     SizedBox(width: compact ? 4.w : 6.w),
-                    _buildLeaderboardAction(
-                      context: context,
-                      compact: compact,
-                    ),
+                    _buildLeaderboardAction(context: context, compact: compact),
                     SizedBox(width: compact ? 4.w : 6.w),
                     _buildNotificationAction(
                       context: context,
@@ -257,9 +254,9 @@ class AppTopBar extends ConsumerWidget {
               child: ClipOval(
                 child: hasGoogleAvatar
                     ? Image.network(
-                        googleAvatarUrl!,
+                        googleAvatarUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => CachedAssetImage(
+                        errorBuilder: (_, _, _) => CachedAssetImage(
                           fileName: player?.avatarId ?? 'avatar_1.webp',
                           fit: BoxFit.cover,
                           placeholder: Icon(

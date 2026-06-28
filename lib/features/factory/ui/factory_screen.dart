@@ -594,7 +594,13 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                       SizedBox(height: 8.h),
                       _buildResourceSection(item),
                       SizedBox(height: 8.h),
-                      _buildOutputSection(item),
+                      Row(
+                        children: [
+                          Expanded(child: _buildOutputSection(item)),
+                          SizedBox(width: 8.w),
+                          Expanded(child: _buildInputSection(item)),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -702,7 +708,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     final ratio = item.outputStockRatio;
     final color = _getRatioColor(ratio);
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12.r),
@@ -714,28 +720,121 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.inventory_2,
-                    color: AppColors.textSecondary,
-                    size: 13.sp,
-                  ),
-                  SizedBox(width: 5.w),
-                  Text(
-                    'Output',
-                    style: TextStyle(
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.inventory_2,
                       color: AppColors.textSecondary,
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w500,
+                      size: 13.sp,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 5.w),
+                    Expanded(
+                      child: Text(
+                        'Urun Deposu',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              SizedBox(width: 4.w),
               Text(
-                '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.factory.outputCapacity)}',
+                '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.factory.outputCapacity)} m³',
                 style: TextStyle(
                   color: ratio >= 0.9 ? AppColors.red : Colors.white,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 6.h),
+          Container(
+            height: 5.h,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(3.r),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: ratio,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3.r),
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withValues(alpha: 0.6),
+                      color,
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputSection(FactoryListItemModel item) {
+    final ratio = item.inputStockRatio;
+    final color = AppColors.blue;
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.science_outlined,
+                      color: AppColors.textSecondary,
+                      size: 13.sp,
+                    ),
+                    SizedBox(width: 5.w),
+                    Expanded(
+                      child: Text(
+                        'Hammadde Deposu',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 4.w),
+              Text(
+                '${_formatCompact(item.inputStockQuantity)} adet / ${_formatCompact(item.factory.inputCapacity)} m³',
+                style: TextStyle(
+                  color: Colors.white,
                   fontSize: 10.sp,
                   fontWeight: FontWeight.bold,
                 ),

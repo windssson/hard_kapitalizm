@@ -37,6 +37,7 @@ class FarmListItemModel {
   final String farmTypeName;
   final String farmTypeIcon;
   final int outputStockQuantity;
+  final int inputStockQuantity;
   final List<FarmSlotPreviewModel> slots;
 
   const FarmListItemModel({
@@ -45,6 +46,7 @@ class FarmListItemModel {
     required this.farmTypeName,
     required this.farmTypeIcon,
     required this.outputStockQuantity,
+    required this.inputStockQuantity,
     required this.slots,
   });
 
@@ -56,5 +58,14 @@ class FarmListItemModel {
   double get outputStockRatio {
     if (totalOutputCapacity <= 0) return 0.0;
     return (outputStockQuantity / totalOutputCapacity).clamp(0.0, 1.0);
+  }
+
+  int get totalInputCapacity {
+    return farm.inputCapacity;
+  }
+
+  double get inputStockRatio {
+    if (totalInputCapacity <= 0) return 0.0;
+    return (inputStockQuantity / totalInputCapacity).clamp(0.0, 1.0);
   }
 }

@@ -133,7 +133,7 @@ class _GoogleLinkSuccessDialog extends StatelessWidget {
                         ? Image.network(
                             avatarUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => CachedAssetImage(
+                            errorBuilder: (_, _, _) => CachedAssetImage(
                               fileName: player?.avatarId ?? 'ae1.webp',
                               fit: BoxFit.cover,
                             ),
@@ -830,22 +830,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             (modules?.warehouses.warningCount ?? 0) > 0,
       ),
       _HomeModuleCardData(
-        title: 'Fabrikalar',
-        image: 'fabrikalar.webp',
-        accentColor: AppColors.gold,
-        primaryLabel: 'Aktif',
-        primaryValue:
-            '${modules?.factories.activeCount ?? 0}/${modules?.factories.count ?? 0}',
-        secondaryLabel: 'Doluluk',
-        secondaryValue: _formatRatio(modules?.factories.productionRatio ?? 0),
-        badgeText: (modules?.factories.blockedCount ?? 0) > 0
-            ? '${modules!.factories.blockedCount} sorun'
-            : 'Uretimde',
-        hasAlert:
-            alertedModules.contains('factories') ||
-            (modules?.factories.blockedCount ?? 0) > 0,
-      ),
-      _HomeModuleCardData(
         title: 'Tarlalar',
         image: 'tarlalar.webp',
         accentColor: const Color(0xFF7ED957),
@@ -880,6 +864,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('fields') ||
             (modules?.fields.warningCount ?? 0) > 0,
+      ),
+      _HomeModuleCardData(
+        title: 'Fabrikalar',
+        image: 'fabrikalar.webp',
+        accentColor: AppColors.gold,
+        primaryLabel: 'Aktif',
+        primaryValue:
+            '${modules?.factories.activeCount ?? 0}/${modules?.factories.count ?? 0}',
+        secondaryLabel: 'Doluluk',
+        secondaryValue: _formatRatio(modules?.factories.productionRatio ?? 0),
+        badgeText: (modules?.factories.blockedCount ?? 0) > 0
+            ? '${modules!.factories.blockedCount} sorun'
+            : 'Uretimde',
+        hasAlert:
+            alertedModules.contains('factories') ||
+            (modules?.factories.blockedCount ?? 0) > 0,
       ),
       _HomeModuleCardData(
         title: 'Madenler',

@@ -981,7 +981,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$totalStock stok | ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
+            '$totalStock adet | ${totalPending.toStringAsFixed(1)} yolda / $capacity m³',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11.sp,
@@ -1279,7 +1279,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             SizedBox(width: 6.w),
             Expanded(
               child: Text(
-                'Uretilen urun stogu $quantity/${detail.factory.outputCapacity}',
+                'Uretilen urun stogu $quantity adet / ${detail.factory.outputCapacity} m³',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 11.sp,
@@ -1781,7 +1781,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       ),
                       SizedBox(height: 10.h),
                       Text(
-                        'Hammadde kapasitesi: ${detail.factory.inputCapacity} -> $nextInputCapacity',
+                        'Hammadde kapasitesi: ${detail.factory.inputCapacity} m³ -> $nextInputCapacity m³',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 12.sp,
@@ -1789,7 +1789,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       ),
                       SizedBox(height: 6.h),
                       Text(
-                        'Uretilen urun kapasitesi: ${detail.factory.outputCapacity} -> $nextOutputCapacity',
+                        'Uretilen urun kapasitesi: ${detail.factory.outputCapacity} m³ -> $nextOutputCapacity m³',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 12.sp,

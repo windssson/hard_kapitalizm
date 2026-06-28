@@ -37,6 +37,7 @@ class FieldListItemModel {
   final String fieldTypeName;
   final String fieldTypeIcon;
   final int outputStockQuantity;
+  final int inputStockQuantity;
   final List<FieldSlotPreviewModel> slots;
 
   const FieldListItemModel({
@@ -45,6 +46,7 @@ class FieldListItemModel {
     required this.fieldTypeName,
     required this.fieldTypeIcon,
     required this.outputStockQuantity,
+    required this.inputStockQuantity,
     required this.slots,
   });
 
@@ -56,5 +58,14 @@ class FieldListItemModel {
   double get outputStockRatio {
     if (totalOutputCapacity <= 0) return 0.0;
     return (outputStockQuantity / totalOutputCapacity).clamp(0.0, 1.0);
+  }
+
+  int get totalInputCapacity {
+    return field.inputCapacity;
+  }
+
+  double get inputStockRatio {
+    if (totalInputCapacity <= 0) return 0.0;
+    return (inputStockQuantity / totalInputCapacity).clamp(0.0, 1.0);
   }
 }

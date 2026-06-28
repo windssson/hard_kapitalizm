@@ -91,11 +91,17 @@ class _WarehouseTypeSelectionScreenState
     double playerCash,
     int playerLevel,
   ) {
+    final filteredTypes = types.where((t) {
+      final typeMap = t as Map<String, dynamic>;
+      final acceptedUnits = typeMap['accepted_production_units']?.toString() ?? '';
+      return acceptedUnits.trim().toUpperCase() != 'MAGAZA';
+    }).toList();
+
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      itemCount: types.length,
+      itemCount: filteredTypes.length,
       itemBuilder: (context, index) {
-        final type = types[index] as Map<String, dynamic>;
+        final type = filteredTypes[index] as Map<String, dynamic>;
         final isSelected = _selectedType?['id'] == type['id'];
 
         final levelLocked = playerLevel < (type['required_level'] ?? 1);

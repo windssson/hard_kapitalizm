@@ -42,6 +42,8 @@ final fieldListProvider =
       fieldTypeIcon: (map['field_type_icon'] ?? 'field.webp').toString(),
       outputStockQuantity:
           (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
+      inputStockQuantity:
+          (map['input_stock_quantity'] as num?)?.toInt() ?? 0,
       slots: (map['slots'] as List<dynamic>? ?? const [])
           .map(
             (slot) => FieldSlotPreviewModel.fromJson(

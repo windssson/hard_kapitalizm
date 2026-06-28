@@ -1197,7 +1197,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    'Hammadde kapasitesi: ${detail.field.inputCapacity} -> $nextInputCapacity',
+                    'Hammadde kapasitesi: ${detail.field.inputCapacity} m³ -> $nextInputCapacity m³',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12.sp,
@@ -1205,7 +1205,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    'Uretilen urun kapasitesi: ${detail.field.outputCapacity} -> $nextOutputCapacity',
+                    'Uretilen urun kapasitesi: ${detail.field.outputCapacity} m³ -> $nextOutputCapacity m³',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12.sp,
@@ -1504,7 +1504,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$totalStock stok â€¢ ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
+            '$totalStock adet | ${totalPending.toStringAsFixed(1)} yolda / $capacity m³',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11.sp,
@@ -1884,7 +1884,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             SizedBox(width: 6.w),
             Expanded(
               child: Text(
-                'Uretilen urun stogu ${inventory.quantity}/${detail.field.outputCapacity}',
+                'Uretilen urun stogu ${inventory.quantity} adet / ${detail.field.outputCapacity} m³',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 11.sp,

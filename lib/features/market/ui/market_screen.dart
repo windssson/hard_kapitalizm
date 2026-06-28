@@ -331,9 +331,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               .where((listing) => listing.cityId == _lockedSourceCityId)
               .firstOrNull;
 
-    final cityId =
-        (_lockedSourceCityId ?? buyer?.cityId ?? _activeCityId)
-            .toString();
+    final cityId = (_lockedSourceCityId ?? buyer?.cityId ?? _activeCityId)
+        .toString();
     if (cityId.isEmpty) return listings;
 
     final cityName =
@@ -543,10 +542,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final scopedProducts = acceptedProductIds.isEmpty
         ? products.toList()
         : products
-            .where(
-              (product) => acceptedProductIds.contains(product.id.toUpperCase()),
-            )
-            .toList();
+              .where(
+                (product) =>
+                    acceptedProductIds.contains(product.id.toUpperCase()),
+              )
+              .toList();
 
     scopedProducts.sort((a, b) => a.urunAdi.compareTo(b.urunAdi));
     return scopedProducts;
@@ -567,9 +567,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardBgLight.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: AppColors.borderGold.withValues(alpha: 0.28),
-        ),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,7 +618,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: products.length,
-              separatorBuilder: (_, __) => SizedBox(width: 8.w),
+              separatorBuilder: (_, _) => SizedBox(width: 8.w),
               itemBuilder: (context, index) {
                 final product = products[index];
                 final isSelected = product.id == _activeProductId;
@@ -742,9 +740,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     List<StoreModel> stores,
   ) {
     final activeWarehouses =
-        warehouses
-            .where((warehouse) => warehouse.isActive)
-            .toList()
+        warehouses.where((warehouse) => warehouse.isActive).toList()
           ..sort((a, b) => a.name.compareTo(b.name));
     final selectedWarehouse = activeWarehouses
         .where((warehouse) => warehouse.id == _activeWarehouseId)
@@ -791,7 +787,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       return Container(
         width: double.infinity,
         padding: EdgeInsets.all(16.w),
-        decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.25), 20.r),
+        decoration: AppDecorations.premiumCard(
+          AppColors.borderGold.withValues(alpha: 0.25),
+          20.r,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -848,17 +847,23 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.gold.withValues(alpha: 0.12),
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.12,
+                                    ),
                                     blurRadius: 6,
                                     spreadRadius: 0.5,
                                   ),
                                 ],
                               )
                             : BoxDecoration(
-                                color: AppColors.cardBgLight.withValues(alpha: 0.4),
+                                color: AppColors.cardBgLight.withValues(
+                                  alpha: 0.4,
+                                ),
                                 borderRadius: BorderRadius.circular(20.r),
                                 border: Border.all(
-                                  color: AppColors.border.withValues(alpha: 0.5),
+                                  color: AppColors.border.withValues(
+                                    alpha: 0.5,
+                                  ),
                                 ),
                               ),
                         child: Center(
@@ -927,17 +932,26 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     }
 
     // Step 2: Product Selection Mode (Warehouse is selected, Product is empty)
-    final double availableCapacity = (selectedWarehouse.capacity - selectedWarehouse.reservedCapacity)
-        .clamp(0, double.infinity);
-    final double reservedCapacity = selectedWarehouse.reservedCapacity.clamp(0.0, selectedWarehouse.capacity);
-    final double fillPercent = selectedWarehouse.capacity > 0 
+    final double availableCapacity =
+        (selectedWarehouse.capacity - selectedWarehouse.reservedCapacity).clamp(
+          0,
+          double.infinity,
+        );
+    final double reservedCapacity = selectedWarehouse.reservedCapacity.clamp(
+      0.0,
+      selectedWarehouse.capacity,
+    );
+    final double fillPercent = selectedWarehouse.capacity > 0
         ? (reservedCapacity / selectedWarehouse.capacity).clamp(0.0, 1.0)
         : 0.0;
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.w),
-      decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.25), 20.r),
+      decoration: AppDecorations.premiumCard(
+        AppColors.borderGold.withValues(alpha: 0.25),
+        20.r,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -948,7 +962,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             decoration: BoxDecoration(
               color: AppColors.cardBgLight.withValues(alpha: 0.35),
               borderRadius: BorderRadius.circular(14.r),
-              border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.25)),
+              border: Border.all(
+                color: AppColors.borderGold.withValues(alpha: 0.25),
+              ),
             ),
             child: Row(
               children: [
@@ -958,9 +974,15 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.blue.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10.r),
-                    border: Border.all(color: AppColors.blue.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.blue.withValues(alpha: 0.3),
+                    ),
                   ),
-                  child: Icon(Icons.warehouse_outlined, color: AppColors.blue, size: 18.sp),
+                  child: Icon(
+                    Icons.warehouse_outlined,
+                    color: AppColors.blue,
+                    size: 18.sp,
+                  ),
                 ),
                 SizedBox(width: 12.w),
                 Expanded(
@@ -981,7 +1003,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         selectedWarehouse.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.white, fontSize: 13.sp, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       SizedBox(height: 4.h),
                       _buildTypeBadge(
@@ -1002,7 +1028,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                 value: fillPercent,
                                 backgroundColor: Colors.white10,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  fillPercent > 0.9 ? AppColors.red : fillPercent > 0.75 ? AppColors.gold : AppColors.green,
+                                  fillPercent > 0.9
+                                      ? AppColors.red
+                                      : fillPercent > 0.75
+                                      ? AppColors.gold
+                                      : AppColors.green,
                                 ),
                                 minHeight: 3.h,
                               ),
@@ -1011,7 +1041,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           SizedBox(width: 8.w),
                           Text(
                             '${availableCapacity.toStringAsFixed(0)} m3 bos',
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 9.sp),
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 9.sp,
+                            ),
                           ),
                         ],
                       ),
@@ -1021,14 +1054,24 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 SizedBox(width: 10.w),
                 TextButton.icon(
                   onPressed: _resetWarehouseSelection,
-                  icon: Icon(Icons.swap_horiz, size: 14.sp, color: AppColors.gold),
+                  icon: Icon(
+                    Icons.swap_horiz,
+                    size: 14.sp,
+                    color: AppColors.gold,
+                  ),
                   label: Text(
                     'Değiştir',
-                    style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.gold,
-                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 6.h,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -1046,16 +1089,16 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: 'Ürün ara...',
-              hintStyle: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 12.sp,
-              ),
+              hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
               prefixIcon: Icon(
                 Icons.search,
                 color: AppColors.gold.withValues(alpha: 0.6),
                 size: 18.sp,
               ),
-              contentPadding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 16.w),
+              contentPadding: EdgeInsets.symmetric(
+                vertical: 10.h,
+                horizontal: 16.w,
+              ),
               filled: true,
               fillColor: AppColors.cardBgLight.withValues(alpha: 0.5),
               enabledBorder: OutlineInputBorder(
@@ -1081,10 +1124,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           ),
           SizedBox(height: 10.h),
           if (filteredProducts.isEmpty)
-            _buildInfoBox(
-              'Bu depo için uygun ürün bulunamadı.',
-              AppColors.red,
-            )
+            _buildInfoBox('Bu depo için uygun ürün bulunamadı.', AppColors.red)
           else
             GridView.builder(
               shrinkWrap: true,
@@ -1214,7 +1254,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-      decoration: AppDecorations.glowingAction(AppColors.gold.withValues(alpha: 0.5), 14.r),
+      decoration: AppDecorations.glowingAction(
+        AppColors.gold.withValues(alpha: 0.5),
+        14.r,
+      ),
       child: Row(
         children: [
           Container(
@@ -1275,8 +1318,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }) {
     final availableCapacity = (warehouse.capacity - warehouse.reservedCapacity)
         .clamp(0, double.infinity);
-    final double reservedCapacity = warehouse.reservedCapacity.clamp(0.0, warehouse.capacity);
-    final double fillPercent = warehouse.capacity > 0 
+    final double reservedCapacity = warehouse.reservedCapacity.clamp(
+      0.0,
+      warehouse.capacity,
+    );
+    final double fillPercent = warehouse.capacity > 0
         ? (reservedCapacity / warehouse.capacity).clamp(0.0, 1.0)
         : 0.0;
     final capacityColor = availableCapacity <= 0
@@ -1357,16 +1403,18 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           vertical: 2.h,
                         ),
                         decoration: BoxDecoration(
-                          color: (warehouse.warehouseKind == 'store'
-                                  ? AppColors.blue
-                                  : AppColors.gold)
-                              .withValues(alpha: 0.12),
+                          color:
+                              (warehouse.warehouseKind == 'store'
+                                      ? AppColors.blue
+                                      : AppColors.gold)
+                                  .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(999.r),
                           border: Border.all(
-                            color: (warehouse.warehouseKind == 'store'
-                                    ? AppColors.blue
-                                    : AppColors.gold)
-                                .withValues(alpha: 0.28),
+                            color:
+                                (warehouse.warehouseKind == 'store'
+                                        ? AppColors.blue
+                                        : AppColors.gold)
+                                    .withValues(alpha: 0.28),
                           ),
                         ),
                         child: Text(
@@ -1404,8 +1452,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         fillPercent > 0.9
                             ? AppColors.red
                             : fillPercent > 0.75
-                                ? AppColors.gold
-                                : AppColors.green,
+                            ? AppColors.gold
+                            : AppColors.green,
                       ),
                       minHeight: 4.h,
                     ),
@@ -1427,26 +1475,23 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final productsAsync = ref.watch(allProductsProvider);
     final warehousesAsync = ref.watch(warehouseListProvider);
     final storesAsync = ref.watch(storesListProvider);
-    final scopedProducts =
-        productsAsync.hasValue && warehousesAsync.hasValue
-            ? _productsForActiveWarehouse(
-                productsAsync.value ?? const <ProductModel>[],
-                warehousesAsync.value ?? const <WarehouseModel>[],
-              )
-            : const <ProductModel>[];
-    final selectedWarehouse =
-        warehousesAsync.hasValue
-            ? (warehousesAsync.value ?? const <WarehouseModel>[])
-                .where((warehouse) => warehouse.id == _activeWarehouseId)
-                .firstOrNull
-            : null;
-    final selectedStore =
-        storesAsync.hasValue
-            ? _storeForWarehouse(
-                stores: storesAsync.value ?? const <StoreModel>[],
-                warehouse: selectedWarehouse,
-              )
-            : null;
+    final scopedProducts = productsAsync.hasValue && warehousesAsync.hasValue
+        ? _productsForActiveWarehouse(
+            productsAsync.value ?? const <ProductModel>[],
+            warehousesAsync.value ?? const <WarehouseModel>[],
+          )
+        : const <ProductModel>[];
+    final selectedWarehouse = warehousesAsync.hasValue
+        ? (warehousesAsync.value ?? const <WarehouseModel>[])
+              .where((warehouse) => warehouse.id == _activeWarehouseId)
+              .firstOrNull
+        : null;
+    final selectedStore = storesAsync.hasValue
+        ? _storeForWarehouse(
+            stores: storesAsync.value ?? const <StoreModel>[],
+            warehouse: selectedWarehouse,
+          )
+        : null;
     final horizontalSellingProductIds = _sellingProductIdsForStore(
       selectedStore,
     );
@@ -1510,12 +1555,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             productsAsync.when(
                               data: (products) => warehousesAsync.when(
                                 data: (warehouses) => storesAsync.when(
-                                  data: (stores) =>
-                                      _buildInitialSelectionCard(
-                                        products,
-                                        warehouses,
-                                        stores,
-                                      ),
+                                  data: (stores) => _buildInitialSelectionCard(
+                                    products,
+                                    warehouses,
+                                    stores,
+                                  ),
                                   loading: _buildLoadingCard,
                                   error: (e, s) => _buildErrorCard(
                                     'Magaza listesi alinamadi.',
@@ -1619,12 +1663,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return SliverList(
       delegate: SliverChildListDelegate.fixed([
         ...listings.map(
-          (listing) => _buildListingCard(
-            listing,
-            buyer,
-            fallbackCity,
-            product,
-          ),
+          (listing) => _buildListingCard(listing, buyer, fallbackCity, product),
         ),
       ]),
     );
@@ -1723,17 +1762,17 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                   child: ClipOval(
                                     child:
                                         listing.sellerGoogleAvatarUrl != null &&
-                                            listing
-                                                .sellerGoogleAvatarUrl!
+                                            listing.sellerGoogleAvatarUrl!
                                                 .trim()
                                                 .isNotEmpty
                                         ? Image.network(
                                             listing.sellerGoogleAvatarUrl!,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Padding(
+                                            errorBuilder: (_, _, _) => Padding(
                                               padding: EdgeInsets.all(5.w),
                                               child: CachedAssetImage(
-                                                fileName: listing.sellerAvatarId,
+                                                fileName:
+                                                    listing.sellerAvatarId,
                                               ),
                                             ),
                                           )
@@ -1921,10 +1960,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             height: 28.h,
                             child: ElevatedButton(
                               onPressed: canAddToCart
-                                  ? () => _openAddToCartSheet(
-                                      listing,
-                                      product,
-                                    )
+                                  ? () => _openAddToCartSheet(listing, product)
                                   : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.gold,
@@ -2386,10 +2422,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
-  Widget _buildCartItemPill(
-    _MarketCartItem item, {
-    VoidCallback? onRemove,
-  }) {
+  Widget _buildCartItemPill(_MarketCartItem item, {VoidCallback? onRemove}) {
     return Container(
       width: 190.w,
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
@@ -2817,8 +2850,7 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final warehouseCapacityAsync =
-        widget.buyerWarehouseId != null
+    final warehouseCapacityAsync = widget.buyerWarehouseId != null
         ? ref.watch(warehouseCapacityStatusProvider(widget.buyerWarehouseId!))
         : const AsyncValue<WarehouseCapacityStatusModel?>.data(null);
     final player = ref.watch(playerProvider).value;
@@ -2874,163 +2906,163 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
               ],
             ),
             SizedBox(height: 6.h),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBgLight.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Wrap(
-                  spacing: 8.w,
-                  runSpacing: 6.h,
-                  children: [
-                    Text(
-                      'Sehir: ${widget.listing.cityName}',
-                      style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-                    ),
-                    Text(
-                      'Fiyat: ${widget.listing.price.toStringAsFixed(1)}',
-                      style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-                    ),
-                    Text(
-                      'Kalite: Lv.${widget.listing.qualityLevel}',
-                      style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-                    ),
-                    Text(
-                      'Maksimum: $maxQuantity',
-                      style: AppTextStyles.body.copyWith(
-                        fontSize: 10.sp,
-                        color: AppColors.gold,
-                      ),
-                    ),
-                  ],
-                ),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: AppColors.cardBgLight.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: AppColors.border),
               ),
-              SizedBox(height: 10.h),
-              TextField(
-                controller: _quantityController,
-                readOnly: true,
-                showCursor: true,
-                enableInteractiveSelection: false,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Miktar',
-                  labelStyle: TextStyle(color: AppColors.textMuted),
-                  helperText: maxQuantity > 0
-                      ? '1 - $maxQuantity adet arasi girebilirsiniz'
-                      : 'Yeterli nakit veya kapasite yok',
-                  helperStyle: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 10.sp,
+              child: Wrap(
+                spacing: 8.w,
+                runSpacing: 6.h,
+                children: [
+                  Text(
+                    'Sehir: ${widget.listing.cityName}',
+                    style: AppTextStyles.body.copyWith(fontSize: 10.sp),
                   ),
-                  filled: true,
-                  fillColor: AppColors.cardBg,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    borderSide: const BorderSide(color: AppColors.border),
+                  Text(
+                    'Fiyat: ${widget.listing.price.toStringAsFixed(1)}',
+                    style: AppTextStyles.body.copyWith(fontSize: 10.sp),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    borderSide: const BorderSide(color: AppColors.gold),
+                  Text(
+                    'Kalite: Lv.${widget.listing.qualityLevel}',
+                    style: AppTextStyles.body.copyWith(fontSize: 10.sp),
                   ),
-                ),
-              ),
-              SizedBox(height: 10.h),
-              NumericKeyboard(
-                controller: _quantityController,
-                onChanged: (value) => _updateQuantity(maxQuantity, value),
-                shortcuts: [
-                  NumericKeyboardShortcut(
-                    label: '1/4',
-                    value: maxQuantity <= 0
-                        ? '0'
-                        : (maxQuantity / 4)
-                              .floor()
-                              .clamp(1, maxQuantity)
-                              .toString(),
-                  ),
-                  NumericKeyboardShortcut(
-                    label: 'Yari',
-                    value: maxQuantity <= 0
-                        ? '0'
-                        : (maxQuantity / 2)
-                              .floor()
-                              .clamp(1, maxQuantity)
-                              .toString(),
-                  ),
-                  NumericKeyboardShortcut(
-                    label: 'Tamami',
-                    value: maxQuantity.toString(),
+                  Text(
+                    'Maksimum: $maxQuantity',
+                    style: AppTextStyles.body.copyWith(
+                      fontSize: 10.sp,
+                      color: AppColors.gold,
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: 12.h),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(10.w),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBg,
+            ),
+            SizedBox(height: 10.h),
+            TextField(
+              controller: _quantityController,
+              readOnly: true,
+              showCursor: true,
+              enableInteractiveSelection: false,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Miktar',
+                labelStyle: TextStyle(color: AppColors.textMuted),
+                helperText: maxQuantity > 0
+                    ? '1 - $maxQuantity adet arasi girebilirsiniz'
+                    : 'Yeterli nakit veya kapasite yok',
+                helperStyle: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 10.sp,
+                ),
+                filled: true,
+                fillColor: AppColors.cardBg,
+                enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: AppColors.border),
+                  borderSide: const BorderSide(color: AppColors.border),
                 ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Urun Bedeli', style: AppTextStyles.body),
-                        Text(
-                          totalPrice.toStringAsFixed(1),
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: const BorderSide(color: AppColors.gold),
+                ),
+              ),
+            ),
+            SizedBox(height: 10.h),
+            NumericKeyboard(
+              controller: _quantityController,
+              onChanged: (value) => _updateQuantity(maxQuantity, value),
+              shortcuts: [
+                NumericKeyboardShortcut(
+                  label: '1/4',
+                  value: maxQuantity <= 0
+                      ? '0'
+                      : (maxQuantity / 4)
+                            .floor()
+                            .clamp(1, maxQuantity)
+                            .toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Yari',
+                  value: maxQuantity <= 0
+                      ? '0'
+                      : (maxQuantity / 2)
+                            .floor()
+                            .clamp(1, maxQuantity)
+                            .toString(),
+                ),
+                NumericKeyboardShortcut(
+                  label: 'Tamami',
+                  value: maxQuantity.toString(),
+                ),
+              ],
+            ),
+            SizedBox(height: 12.h),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(10.w),
+              decoration: BoxDecoration(
+                color: AppColors.cardBg,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Urun Bedeli', style: AppTextStyles.body),
+                      Text(
+                        totalPrice.toStringAsFixed(1),
+                        style: TextStyle(
+                          color: AppColors.gold,
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 12.h),
-              SizedBox(
-                width: double.infinity,
-                height: 42.h,
-                child: ElevatedButton(
-                  onPressed: _quantity <= 0
-                      ? null
-                      : () {
-                          Navigator.of(context).pop(
-                            _MarketCartSelection(
-                              listing: widget.listing,
-                              quantity: _quantity,
-                            ),
-                          );
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold,
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
+                      ),
+                    ],
                   ),
-                  child: Text(
-                    'SEPETE EKLE',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12.sp,
-                    ),
+                ],
+              ),
+            ),
+            SizedBox(height: 12.h),
+            SizedBox(
+              width: double.infinity,
+              height: 42.h,
+              child: ElevatedButton(
+                onPressed: _quantity <= 0
+                    ? null
+                    : () {
+                        Navigator.of(context).pop(
+                          _MarketCartSelection(
+                            listing: widget.listing,
+                            quantity: _quantity,
+                          ),
+                        );
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
+                child: Text(
+                  'SEPETE EKLE',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.sp,
+                  ),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
+}
 
 class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   @override
@@ -3447,8 +3479,8 @@ Set<String> _sellingProductIdsForStore(StoreModel? store) {
             (slot.productId ?? '').isNotEmpty &&
             slot.qualityLevel > 0,
       )
-        .map((slot) => slot.productId!)
-        .toSet();
+      .map((slot) => slot.productId!)
+      .toSet();
 }
 
 Map<String, int> _neededCapacityByProductForStore(StoreModel? store) {

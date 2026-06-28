@@ -35,7 +35,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     super.initState();
     Future.microtask(() async {
       try {
-        final synced = await ref.read(authManagerProvider).syncGoogleProfileIfLinked();
+        final synced = await ref
+            .read(authManagerProvider)
+            .syncGoogleProfileIfLinked();
         if (synced) {
           _handleCompletedGoogleLink();
           ref.invalidate(authIdentityProvider);
@@ -183,13 +185,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   return GestureDetector(
                     onTap: () async {
                       Navigator.pop(context);
-                      await ref.read(playerActionProvider).setPlayerAvatar(avatar);
+                      await ref
+                          .read(playerActionProvider)
+                          .setPlayerAvatar(avatar);
                     },
                     child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected ? AppColors.green : AppColors.border,
+                          color: isSelected
+                              ? AppColors.green
+                              : AppColors.border,
                           width: isSelected ? 3.w : 1.w,
                         ),
                       ),
@@ -215,9 +221,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     PlayerModel player,
     AuthIdentityState? authIdentity,
   ) {
-    final googleAvatarUrl =
-        authIdentity?.avatarUrl ??
-        player.googleAvatarUrl;
+    final googleAvatarUrl = authIdentity?.avatarUrl ?? player.googleAvatarUrl;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,10 +237,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                AppColors.gold.withValues(alpha: 0.1),
-                AppColors.cardBg,
-              ],
+              colors: [AppColors.gold.withValues(alpha: 0.1), AppColors.cardBg],
             ),
           ),
           child: Row(
@@ -261,7 +262,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             ? Image.network(
                                 googleAvatarUrl,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => CachedAssetImage(
+                                errorBuilder: (_, _, _) => CachedAssetImage(
                                   fileName: player.avatarId,
                                   fit: BoxFit.cover,
                                   placeholder: Icon(
@@ -502,10 +503,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               if (player.featuredBadges.isEmpty)
                 Text(
                   'Ilk rozetlerini acmak icin gorevlerini ve buyume adimlarini tamamla.',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12.sp,
-                  ),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
                 )
               else
                 Column(
@@ -525,7 +523,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: player.featuredBadges.length,
-                        separatorBuilder: (context, index) => SizedBox(width: 10.w),
+                        separatorBuilder: (context, index) =>
+                            SizedBox(width: 10.w),
                         itemBuilder: (_, index) =>
                             _buildBadgeChip(player.featuredBadges[index]),
                       ),
@@ -710,14 +709,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Row(
             children: [
               Icon(
-                isGoogleLinked ? Icons.verified_user_rounded : Icons.link_rounded,
+                isGoogleLinked
+                    ? Icons.verified_user_rounded
+                    : Icons.link_rounded,
                 color: isGoogleLinked ? AppColors.green : AppColors.gold,
                 size: 18.sp,
               ),
               SizedBox(width: 8.w),
               Expanded(
                 child: Text(
-                  isGoogleLinked ? 'Google Hesabi Bagli' : 'Hesabi Guvenceye Al',
+                  isGoogleLinked
+                      ? 'Google Hesabi Bagli'
+                      : 'Hesabi Guvenceye Al',
                   style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
                 ),
               ),
@@ -1000,10 +1003,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'Vazgec',
-              style: TextStyle(color: AppColors.textMuted),
-            ),
+            child: Text('Vazgec', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -1032,7 +1032,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _handleGoogleUnlink() async {
     try {
-      final removed = await ref.read(authManagerProvider).unlinkGoogleIdentity();
+      final removed = await ref
+          .read(authManagerProvider)
+          .unlinkGoogleIdentity();
       ref.invalidate(authIdentityProvider);
       ref.invalidate(playerProvider);
       if (!mounted) return;
@@ -1046,11 +1048,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
     } on AuthException catch (e) {
       if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message: e.message,
-        type: SnackbarType.error,
-      );
+      AppSnackbar.show(context, message: e.message, type: SnackbarType.error);
     } catch (e) {
       if (!mounted) return;
       AppSnackbar.show(
@@ -1090,7 +1088,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildStatCard(IconData icon, String label, String value, Color color) {
+  Widget _buildStatCard(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Expanded(
       child: Container(
         padding: EdgeInsets.all(12.w),

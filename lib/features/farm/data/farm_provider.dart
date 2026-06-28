@@ -41,6 +41,8 @@ final farmListProvider =
       farmTypeIcon: (map['farm_type_icon'] ?? 'farm.webp').toString(),
       outputStockQuantity:
           (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
+      inputStockQuantity:
+          (map['input_stock_quantity'] as num?)?.toInt() ?? 0,
       slots: (map['slots'] as List<dynamic>? ?? const [])
           .map(
             (slot) => FarmSlotPreviewModel.fromJson(

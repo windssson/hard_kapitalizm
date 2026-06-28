@@ -1183,7 +1183,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    'Hammadde kapasitesi: ${detail.farm.inputCapacity} -> $nextInputCapacity',
+                    'Hammadde kapasitesi: ${detail.farm.inputCapacity} m³ -> $nextInputCapacity m³',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12.sp,
@@ -1191,7 +1191,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    'Uretilen urun kapasitesi: ${detail.farm.outputCapacity} -> $nextOutputCapacity',
+                    'Uretilen urun kapasitesi: ${detail.farm.outputCapacity} m³ -> $nextOutputCapacity m³',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12.sp,
@@ -1489,7 +1489,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             SizedBox(width: 6.w),
             Expanded(
               child: Text(
-                'Uretilen urun stogu ${inventory.quantity}/${detail.farm.outputCapacity}',
+                'Uretilen urun stogu ${inventory.quantity} adet / ${detail.farm.outputCapacity} m³',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 11.sp,
@@ -1561,7 +1561,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$totalStock stok | ${totalPending.toStringAsFixed(1)} yolda / $capacity kapasite',
+            '$totalStock adet | ${totalPending.toStringAsFixed(1)} yolda / $capacity m³',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11.sp,

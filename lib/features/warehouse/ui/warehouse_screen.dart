@@ -23,25 +23,17 @@ class WarehouseScreen extends ConsumerStatefulWidget {
   ConsumerState<WarehouseScreen> createState() => _WarehouseScreenState();
 }
 
-class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
-    with SingleTickerProviderStateMixin {
+class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   final int _selectedIndex = -1;
   String _selectedFilter = 'Tumu';
-  late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) return;
-      setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -93,16 +85,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
             Expanded(
               child: warehousesAsync.when(
                 data: (warehouses) {
-                  final normalWarehouses = warehouses
-                      .where((warehouse) => warehouse.warehouseKind != 'store')
-                      .toList();
-                  final storeWarehouses = warehouses
-                      .where((warehouse) => warehouse.warehouseKind == 'store')
-                      .toList();
-                  final selectedWarehouses = _tabController.index == 0
-                      ? normalWarehouses
-                      : storeWarehouses;
-                  final filtered = _applyStatusFilter(selectedWarehouses);
+                  final filtered = _applyStatusFilter(warehouses);
 
                   return RefreshIndicator(
                     onRefresh: () =>
@@ -113,16 +96,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
                         SliverPadding(
                           padding: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
                           sliver: SliverToBoxAdapter(
-                            child: _buildStatsHeader(selectedWarehouses),
-                          ),
-                        ),
-                        SliverPadding(
-                          padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
-                          sliver: SliverToBoxAdapter(
-                            child: _buildWarehouseTabs(
-                              normalCount: normalWarehouses.length,
-                              storeCount: storeWarehouses.length,
-                            ),
+                            child: _buildStatsHeader(warehouses),
                           ),
                         ),
                         SliverPadding(
@@ -134,9 +108,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
                           sliver: filtered.isEmpty
                               ? SliverToBoxAdapter(
                                   child: _buildEmptyState(
-                                    isStoreTab: _tabController.index == 1,
-                                    hasAnyWarehouseInTab:
-                                        selectedWarehouses.isNotEmpty,
+                                    hasAnyWarehouse: warehouses.isNotEmpty,
                                   ),
                                 )
                               : SliverList.builder(
@@ -224,36 +196,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
     );
   }
 
-  Widget _buildWarehouseTabs({
-    required int normalCount,
-    required int storeCount,
-  }) {
-    return Container(
-      decoration: AppDecorations.premiumCard(null, 14.r),
-      child: TabBar(
-        controller: _tabController,
-        indicatorSize: TabBarIndicatorSize.tab,
-        indicator: BoxDecoration(
-          color: AppColors.gold.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
-        ),
-        indicatorPadding: EdgeInsets.all(4.w),
-        dividerColor: Colors.transparent,
-        labelColor: AppColors.gold,
-        unselectedLabelColor: AppColors.textMuted,
-        labelStyle: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: TextStyle(
-          fontSize: 12.sp,
-          fontWeight: FontWeight.w600,
-        ),
-        tabs: [
-          Tab(text: 'Depolar ($normalCount)'),
-          Tab(text: 'Magaza Depolari ($storeCount)'),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildStatItem(
     IconData icon,
@@ -817,14 +760,11 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen>
   }
 
   Widget _buildEmptyState({
-    required bool isStoreTab,
-    required bool hasAnyWarehouseInTab,
+    required bool hasAnyWarehouse,
   }) {
-    final title = hasAnyWarehouseInTab
+    final title = hasAnyWarehouse
         ? 'Secili filtreye uygun depo bulunamadi.'
-        : isStoreTab
-        ? 'Bu sekmede henuz magaza deponuz bulunmuyor.'
-        : 'Bu sekmede henuz normal deponuz bulunmuyor.';
+        : 'Henuz deponuz bulunmuyor.';
 
     return Center(
       child: Column(
