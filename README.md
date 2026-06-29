@@ -26,8 +26,8 @@ Oyuncu marka şirketini kurar
 - **Yükseltme ve boost sistemi:** üretim, mağaza, depo ve ilgili yapıların yükseltme/boost akışları.
 - **Mağaza sistemi:** mağaza liste/detay ekranı, slot yönetimi, ürün atama, fiyatlandırma, aktif/pasif kontrol, mağaza deposu, satış geçmişi ve performans raporu.
 - **Satış sistemi:** mağaza detayına girildiğinde çalışan pull-based satış işleme, satış sonucu bildirimi, günlük performans ve geçmiş kayıtları.
-- **Depo sistemi:** depo listesi/detayı, stok slotları, kalite/maliyet takibi, kapasite ve rezerve kapasite mantığı, satışa açılabilir depo stoğu.
-- **Üretim sistemi:** tarla, çiftlik, fabrika ve maden modülleri; üretim slotları, input/output envanteri, ürün seçimi, kalite seviyesi, marka tercihi ve üretim raporu.
+- **Depo sistemi:** Tüm depoların (normal ve mağaza depoları) tek bir birleşik listede görüntülendiği sekmelerden arındırılmış yeni listeleme ekranı, depo detayı, stok slotları, kalite/maliyet takibi, kapasite (m³) ve rezerve kapasite mantığı, satışa açılabilir depo stoğu.
+- **Üretim sistemi:** Tarla, çiftlik, fabrika ve maden modülleri; ürün deposu (üretilen ürün) ve hammadde deposu stok durumlarının yan yana 2 kolon halinde adet ve m³ cinsinden gösterimi, üretim slotları, input/output envanteri, ürün seçimi, kalite seviyesi, marka tercihi ve üretim raporu.
 - **Maden sistemi:** maden tipi seçimi, ürün seçimi, üretim envanteri ve depoya transfer akışı.
 - **Lojistik sistemi:** lojistik şirketi, araçlar, kapasite, hız, yakıt, kondisyon, kiralık/özmal araç seçimi, finans raporu ve transfer yönetimi.
 - **Multi transfer sistemi:** tek parent transfer kaydı altında birden fazla transfer item'ı taşıyabilen yapı. Depo, mağaza, üretim ve pazar akışları multi transfer mantığına bağlanır.
