@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/cash_flow/data/cash_flow_provider.dart';
 import 'package:hard_kapitalizm/features/cash_flow/models/cash_movement_entry_model.dart';
@@ -599,7 +600,7 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
                 ),
               ),
               Text(
-                'TL ${_formatMoney(amount)} (%${(percent * 100).toStringAsFixed(1)})',
+                '${AppMoney.compact(amount)} (%${(percent * 100).toStringAsFixed(1)})',
                 style: TextStyle(
                   color: color,
                   fontSize: 11.sp,
@@ -1016,17 +1017,7 @@ class _CashFlowError extends StatelessWidget {
 }
 
 String _formatMoney(double amount) {
-  final absolute = amount.abs();
-  if (absolute >= 1000000000) {
-    return '${(amount / 1000000000).toStringAsFixed(1)}B';
-  }
-  if (absolute >= 1000000) {
-    return '${(amount / 1000000).toStringAsFixed(1)}M';
-  }
-  if (absolute >= 1000) {
-    return '${(amount / 1000).toStringAsFixed(1)}K';
-  }
-  return amount.toStringAsFixed(0);
+  return AppMoney.compact(amount, withSymbol: false);
 }
 
 String _formatDateTime(DateTime value) {

@@ -116,6 +116,7 @@ class FarmProductionInventoryModel {
   final int quantity;
   final double pendingQuantity;
   final double cost;
+  final double unitVolume;
   final ProductModel? product;
 
   const FarmProductionInventoryModel({
@@ -129,6 +130,7 @@ class FarmProductionInventoryModel {
     required this.quantity,
     required this.pendingQuantity,
     required this.cost,
+    required this.unitVolume,
     required this.product,
   });
 
@@ -136,6 +138,10 @@ class FarmProductionInventoryModel {
   bool get isOutput => inventoryType == 'output';
 
   factory FarmProductionInventoryModel.fromJson(Map<String, dynamic> json) {
+    final productJson = json['product'] is Map
+        ? Map<String, dynamic>.from(json['product'] as Map)
+        : null;
+
     return FarmProductionInventoryModel(
       id: (json['id'] ?? '').toString(),
       ownerKind: (json['owner_kind'] ?? '').toString(),
@@ -149,8 +155,12 @@ class FarmProductionInventoryModel {
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       pendingQuantity: (json['pending_quantity'] as num?)?.toDouble() ?? 0,
       cost: (json['cost'] as num?)?.toDouble() ?? 0,
-      product: json['product'] != null
-          ? ProductModel.fromJson(Map<String, dynamic>.from(json['product'] as Map))
+      unitVolume:
+          (json['unit_volume'] as num?)?.toDouble() ??
+          (productJson?['birim_hacim'] as num?)?.toDouble() ??
+          0,
+      product: productJson != null
+          ? ProductModel.fromJson(productJson)
           : null,
     );
   }

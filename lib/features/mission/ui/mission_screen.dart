@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -884,9 +885,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   String _formatMoney(dynamic amount) {
-    final value = double.tryParse(amount.toString()) ?? 0;
-    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
-    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
-    return value.toStringAsFixed(0);
+    return AppMoney.compact(double.tryParse(amount.toString()) ?? 0);
   }
 }

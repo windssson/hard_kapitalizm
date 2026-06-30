@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/data/production_daily_stats_service.dart';
 import 'package:hard_kapitalizm/core/models/production_daily_stat_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 
@@ -517,16 +518,7 @@ class ProductionReportScreen extends ConsumerWidget {
   }
 
   String _formatMoney(double value) {
-    if (value >= 1000000000) {
-      return '${(value / 1000000000).toStringAsFixed(1)}B TL';
-    }
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M TL';
-    }
-    if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K TL';
-    }
-    return '${value.toStringAsFixed(0)} TL';
+    return AppMoney.compact(value);
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/app_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -20,6 +21,7 @@ import 'package:hard_kapitalizm/features/notification/data/notification_provider
 import 'package:hard_kapitalizm/features/notification/models/player_notification_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
+import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 
 class _HomeModuleCardData {
   final String title;
@@ -230,6 +232,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void refreshRouteData() {
     ref.invalidate(homeDashboardProvider);
     ref.invalidate(playerMissionDashboardProvider);
+    ref.invalidate(taxDebtProvider);
   }
 
   Future<void> _maybeShowGoogleLinkCelebration() async {
@@ -283,6 +286,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     _buildMissionHighlightCard(),
                     SizedBox(height: 8.h),
                     _buildModuleGrid(),
+                    SizedBox(height: 8.h),
+                    _buildTaxInstitutionButton(),
                     SizedBox(height: 8.h),
                     _buildFinancialStats(),
                     SizedBox(height: 8.h),
@@ -461,7 +466,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     SizedBox(width: 6.w),
                     Text(
-                      'TL${_formatCompactNumber(companyValue)}',
+                      AppMoney.compact(companyValue),
                       style: TextStyle(
                         color: AppColors.gold,
                         fontSize: 12.5.sp,
@@ -483,7 +488,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           _buildSummaryStatLine(
                             Icons.trending_up_rounded,
                             'Bugunku Kar:',
-                            'TL${_formatCompactNumber(dailyProfit)}',
+                            AppMoney.compact(dailyProfit),
                             AppColors.green,
                           ),
                           SizedBox(height: 6.h),
@@ -781,16 +786,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   String _formatCompactNumber(num value) {
-    if (value >= 1000000000) {
-      return '${(value / 1000000000).toStringAsFixed(2)}B';
-    }
-    if (value >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(2)}M';
-    }
-    if (value >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-    return value.toStringAsFixed(0);
+    return AppMoney.compact(value, withSymbol: false);
   }
 
   List<_HomeModuleCardData> _buildModuleCards(
@@ -1096,6 +1092,135 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
+  Widget _buildTaxInstitutionButton() {
+    return Consumer(
+      builder: (context, ref, child) {
+        final taxDebtAsync = ref.watch(taxDebtProvider);
+        return taxDebtAsync.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
+          data: (taxDebt) {
+            final hasDebt = taxDebt > 0;
+            return Container(
+              margin: EdgeInsets.symmetric(vertical: 4.h),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => context.push('/tax'),
+                  borderRadius: BorderRadius.circular(14.r),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 12.h,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14.r),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/theme/cartback.webp'),
+                        fit: BoxFit.fill,
+                      ),
+                      border: Border.all(
+                        color: hasDebt
+                            ? AppColors.red.withValues(alpha: 0.5)
+                            : AppColors.border,
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF0C1624).withValues(alpha: 0.40),
+                          const Color(0xFF07111C).withValues(alpha: 0.56),
+                        ],
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36.w,
+                          height: 36.w,
+                          decoration: BoxDecoration(
+                            color: (hasDebt ? AppColors.red : AppColors.gold)
+                                .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(
+                              color: (hasDebt ? AppColors.red : AppColors.gold)
+                                  .withValues(alpha: 0.32),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.assured_workload_rounded,
+                            color: hasDebt ? AppColors.red : AppColors.gold,
+                            size: 18.sp,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'DEVLET KURUMLARI',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 8.sp,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              SizedBox(height: 3.h),
+                              Text(
+                                'Vergi Kurumu',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 10.w),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Borc Durumu',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 8.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 2.h),
+                            Text(
+                              hasDebt
+                                  ? AppMoney.compact(taxDebt)
+                                  : 'Borc Yok',
+                              style: TextStyle(
+                                color: hasDebt ? AppColors.red : AppColors.green,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(width: 8.w),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.textMuted,
+                          size: 18.sp,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildModuleMetricLine(String label, String value, Color valueColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -1213,7 +1338,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             children: [
               _buildFinStatItem(
                 'Gelir',
-                _formatSignedCurrencyCompact(revenue),
+                AppMoney.compact(revenue, signed: true),
                 'Bugun',
                 AppColors.green,
                 Icons.payments_rounded,
@@ -1222,7 +1347,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               _buildVerticalDivider(),
               _buildFinStatItem(
                 'Uretim',
-                _formatSignedCurrencyCompact(-productionCost),
+                AppMoney.compact(-productionCost, signed: true),
                 'Maliyet',
                 AppColors.red,
                 Icons.precision_manufacturing_rounded,
@@ -1231,7 +1356,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               _buildVerticalDivider(),
               _buildFinStatItem(
                 'Nakliye',
-                _formatSignedCurrencyCompact(-logisticsCost),
+                AppMoney.compact(-logisticsCost, signed: true),
                 'Gider',
                 AppColors.red,
                 Icons.local_shipping_rounded,
@@ -1240,7 +1365,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               _buildVerticalDivider(),
               _buildFinStatItem(
                 'Net Kar',
-                _formatSignedCurrencyCompact(netProfit),
+                AppMoney.compact(netProfit, signed: true),
                 'Bugun',
                 netProfit >= 0 ? AppColors.green : AppColors.red,
                 Icons.monetization_on_rounded,
@@ -1624,7 +1749,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             SizedBox(height: 5.h),
             Text(
-              'Tahmini deger: ${_formatSignedlessCurrencyCompact(currentValueEstimate)}',
+              'Tahmini deger: ${AppMoney.compact(currentValueEstimate)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1650,14 +1775,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Expanded(
                   child: _buildSparklineMetric(
                     'Dip',
-                    _formatSignedlessCurrencyCompact(lowValueEstimate),
+                    AppMoney.compact(lowValueEstimate),
                     AppColors.textMuted,
                   ),
                 ),
                 Expanded(
                   child: _buildSparklineMetric(
                     'Bugun',
-                    _formatSignedlessCurrencyCompact(currentValueEstimate),
+                    AppMoney.compact(currentValueEstimate),
                     AppColors.gold,
                     centered: true,
                   ),
@@ -1665,7 +1790,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Expanded(
                   child: _buildSparklineMetric(
                     'Zirve',
-                    _formatSignedlessCurrencyCompact(highValueEstimate),
+                    AppMoney.compact(highValueEstimate),
                     AppColors.blue,
                     alignEnd: true,
                   ),
@@ -1736,7 +1861,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   String _formatSignedlessCurrencyCompact(num value) {
-    return '₺${_formatCompactNumber(value)}';
+    return AppMoney.compact(value);
   }
 
   List<double> _buildCompanySparklinePoints({
@@ -1762,12 +1887,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   String _formatSignedCurrencyCompact(num value) {
-    final prefix = value > 0
-        ? '+₺'
-        : value < 0
-        ? '-₺'
-        : '₺';
-    return '$prefix${_formatCompactNumber(value.abs())}';
+    return AppMoney.compact(value, signed: true);
   }
 
   Widget _buildVerticalDivider() {

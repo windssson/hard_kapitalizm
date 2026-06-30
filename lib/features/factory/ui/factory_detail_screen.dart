@@ -20,6 +20,9 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
+import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
+    show warehouseCapacityStatusProvider;
+import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
@@ -37,11 +40,7 @@ class FactoryDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
-  static const Map<int, int> _factoryBoostStarCosts = {
-    6: 3,
-    12: 6,
-    24: 12,
-  };
+  static const Map<int, int> _factoryBoostStarCosts = {6: 3, 12: 6, 24: 12};
 
   String? get _currentBrandName =>
       ref.read(playerBrandCompanyProvider).value?.brandName;
@@ -67,7 +66,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       ref.invalidate(playerProvider);
     }
 
-    if (includeWarehouseList || (warehouseId != null && warehouseId.isNotEmpty)) {
+    if (includeWarehouseList ||
+        (warehouseId != null && warehouseId.isNotEmpty)) {
       ref.invalidate(warehouseListProvider);
     }
 
@@ -87,10 +87,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   Widget build(BuildContext context) {
     ref.watch(playerBrandCompanyProvider);
     final detailAsync = ref.watch(factoryDetailProvider(widget.factoryId));
-    final activeBoost = ref.watch(activeFactoryBoostProvider(widget.factoryId)).value;
-    final activeUpgrade = ref.watch(
-      activeFactoryUpgradeProvider(widget.factoryId),
-    ).value;
+    final activeBoost = ref
+        .watch(activeFactoryBoostProvider(widget.factoryId))
+        .value;
+    final activeUpgrade = ref
+        .watch(activeFactoryUpgradeProvider(widget.factoryId))
+        .value;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -116,7 +118,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 data: (detail) => RefreshIndicator(
                   onRefresh: () async {
                     _refreshFactoryDetail();
-                    await ref.read(factoryDetailProvider(widget.factoryId).future);
+                    await ref.read(
+                      factoryDetailProvider(widget.factoryId).future,
+                    );
                   },
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
@@ -152,12 +156,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
-                      _buildProductionCard(
-                        context,
-                        ref,
-                        detail,
-                        activeBoost,
-                      ),
+                      _buildProductionCard(context, ref, detail, activeBoost),
                       if (detail.orphanInputInventories.isNotEmpty) ...[
                         SizedBox(height: 16.h),
                         _buildSectionHeader(
@@ -306,7 +305,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   '${detail.inputInventories.fold<int>(0, (sum, item) => sum + item.quantity)}/${detail.factory.inputCapacity}',
                   AppColors.blue,
                   ratio: _safeProgress(
-                    detail.inputInventories.fold<int>(0, (sum, item) => sum + item.quantity).toDouble(),
+                    detail.inputInventories
+                        .fold<int>(0, (sum, item) => sum + item.quantity)
+                        .toDouble(),
                     detail.factory.inputCapacity.toDouble(),
                   ),
                   icon: Icons.science_outlined,
@@ -319,7 +320,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   '${detail.outputInventories.isNotEmpty ? detail.outputInventories.first.quantity : 0}/${detail.factory.outputCapacity}',
                   AppColors.green,
                   ratio: _safeProgress(
-                    (detail.outputInventories.isNotEmpty ? detail.outputInventories.first.quantity : 0).toDouble(),
+                    (detail.outputInventories.isNotEmpty
+                            ? detail.outputInventories.first.quantity
+                            : 0)
+                        .toDouble(),
                     detail.factory.outputCapacity.toDouble(),
                   ),
                   icon: Icons.agriculture_outlined,
@@ -466,7 +470,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           AppSnackbar.show(
                             context,
                             title: 'Bilgi',
-                            message: 'Uretimi baslatmadan once fabrikaya bir urun atamalisin.',
+                            message:
+                                'Uretimi baslatmadan once fabrikaya bir urun atamalisin.',
                             type: SnackbarType.info,
                           );
                         },
@@ -483,7 +488,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   Icons.flash_on_rounded,
                   canBoost ? AppColors.goldDark : AppColors.textMuted,
                   canBoost
-                      ? () => _showFactoryBoostSheet(context, ref, detail, activeBoost)
+                      ? () => _showFactoryBoostSheet(
+                          context,
+                          ref,
+                          detail,
+                          activeBoost,
+                        )
                       : () {
                           AppSnackbar.show(
                             context,
@@ -503,12 +513,18 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   Icons.upgrade_rounded,
                   canUpgrade ? AppColors.green : AppColors.textMuted,
                   canUpgrade
-                      ? () => _showFactoryUpgradeSheet(context, ref, detail, activeUpgrade)
+                      ? () => _showFactoryUpgradeSheet(
+                          context,
+                          ref,
+                          detail,
+                          activeUpgrade,
+                        )
                       : () {
                           AppSnackbar.show(
                             context,
                             title: 'Bilgi',
-                            message: 'Yukseltme baslatmak icin fabrikanin aktif olmasi gerekir.',
+                            message:
+                                'Yukseltme baslatmak icin fabrikanin aktif olmasi gerekir.',
                             type: SnackbarType.info,
                           );
                         },
@@ -630,10 +646,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             message,
             style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
           ),
-          if (action != null) ...[
-            SizedBox(height: 12.h),
-            action,
-          ],
+          if (action != null) ...[SizedBox(height: 12.h), action],
         ],
       ),
     );
@@ -711,7 +724,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   fileName: product.urunIconu,
                   fit: BoxFit.contain,
                   brandId: detail.factory.brandId,
-                  brandName: detail.factory.brandId !=
+                  brandName:
+                      detail.factory.brandId !=
                           SelectableProductionProductModel.defaultBrandId
                       ? _currentBrandName
                       : null,
@@ -1062,10 +1076,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       left: left,
                       top: 0,
                       bottom: 0,
-                      child: Container(
-                        width: width,
-                        color: segment.color,
-                      ),
+                      child: Container(width: width, color: segment.color),
                     );
                     left += width;
                     return positioned;
@@ -1109,9 +1120,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   }
 
   Widget _buildCompactInventoryRow(FactoryProductionInventoryModel inventory) {
-    final isBranded = !inventory.isInput &&
+    final isBranded =
+        !inventory.isInput &&
         inventory.brandId != SelectableProductionProductModel.defaultBrandId;
-    final title = (inventory.product?.urunAdi.isNotEmpty == true
+    final title =
+        (inventory.product?.urunAdi.isNotEmpty == true
             ? inventory.product!.urunAdi
             : inventory.productId) +
         (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
@@ -1323,9 +1336,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     FactoryProductionInventoryModel inventory, {
     bool isOrphan = false,
   }) {
-    final isBranded = !inventory.isInput &&
+    final isBranded =
+        !inventory.isInput &&
         inventory.brandId != SelectableProductionProductModel.defaultBrandId;
-    final title = (inventory.product?.urunAdi.isNotEmpty == true
+    final title =
+        (inventory.product?.urunAdi.isNotEmpty == true
             ? inventory.product!.urunAdi
             : inventory.productId) +
         (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
@@ -1361,7 +1376,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         fileName: inventory.product!.urunIconu,
                         fit: BoxFit.contain,
                         brandId: inventory.brandId,
-                        brandName: !inventory.isInput &&
+                        brandName:
+                            !inventory.isInput &&
                                 inventory.brandId !=
                                     SelectableProductionProductModel
                                         .defaultBrandId
@@ -1496,7 +1512,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
   }
 
-
   double _safeProgress(double current, double max) {
     if (max <= 0) return 0;
     return (current / max).clamp(0.0, 1.0);
@@ -1509,7 +1524,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     final product = detail.product;
     if (product == null) return '-';
     final amount = product.uretimAdedi * (activeBoost?.multiplier ?? 1);
-    return amount % 1 == 0 ? amount.toInt().toString() : amount.toStringAsFixed(1);
+    return amount % 1 == 0
+        ? amount.toInt().toString()
+        : amount.toStringAsFixed(1);
   }
 
   Widget _buildQualityStars(int qualityLevel) {
@@ -1625,7 +1642,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           context,
                           title: 'Hata',
                           message:
-                              result['message'] ?? 'Fabrika boostu baslatilamadi.',
+                              result['message'] ??
+                              'Fabrika boostu baslatilamadi.',
                           type: SnackbarType.error,
                         );
                       }
@@ -1899,9 +1917,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   ) async {
     List<SelectableProductionProductModel> products;
     try {
-      products = await ref.read(factoryActionProvider).getSelectableProducts(
-            typeId: detail.factoryType.id,
-          );
+      products = await ref
+          .read(factoryActionProvider)
+          .getSelectableProducts(typeId: detail.factoryType.id);
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -1926,7 +1944,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       final isSelling = sellingProductIds.contains(product.id);
       return ProductSelectionOption(
         id: product.id,
-        title: product.urunAdi + (selectableProduct.hasPreferredBrand ? ' (${_currentBrandName ?? 'Markali'})' : ''),
+        title:
+            product.urunAdi +
+            (selectableProduct.hasPreferredBrand
+                ? ' (${_currentBrandName ?? 'Markali'})'
+                : ''),
         subtitle: 'Saatlik ÃƒÂ¼retim: ${product.uretimAdedi}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
@@ -1956,12 +1978,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             : null,
         onTap: () async {
           Navigator.pop(context);
-          await _selectFactoryProduct(
-            context,
-            ref,
-            detail,
-            selectableProduct,
-          );
+          await _selectFactoryProduct(context, ref, detail, selectableProduct);
         },
       );
     }).toList();
@@ -1982,7 +1999,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   ) async {
     final product = selectableProduct.product;
     final qualityLevel = selectableProduct.suggestedOutputQualityLevel;
-    final result = await ref.read(factoryActionProvider).setFactoryProduct(
+    final result = await ref
+        .read(factoryActionProvider)
+        .setFactoryProduct(
           factoryId: detail.factory.id,
           productId: product.id,
           qualityLevel: qualityLevel,
@@ -1999,7 +2018,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           ? ' Eski bos kayitlardan $deletedObsoleteCount adet temizlendi.'
           : '';
       final isBranded = selectableProduct.hasPreferredBrand;
-      final productName = product.urunAdi + (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
+      final productName =
+          product.urunAdi +
+          (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
       AppSnackbar.show(
         context,
         title: 'Basarili',
@@ -2023,7 +2044,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     WidgetRef ref,
     FactoryDetailModel detail,
   ) async {
-    final result = await ref.read(factoryActionProvider).setFactoryActive(
+    final result = await ref
+        .read(factoryActionProvider)
+        .setFactoryActive(
           factoryId: detail.factory.id,
           isActive: !detail.factory.isActive,
           syncProviders: false,
@@ -2135,7 +2158,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 (slot['product'] as Map?)?['urun_iconu']?.toString(),
             qualityLevel: targetInventory.qualityLevel,
             availableQuantity: quantity,
-            unitVolume: targetInventory.product?.birimHacim ?? 0,
+            unitVolume: targetInventory.unitVolume,
             targetInventory: targetInventory,
           ),
         );
@@ -2145,7 +2168,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       final warehouseId = warehouse['id']?.toString() ?? '';
       final cityId = warehouse['city_id']?.toString() ?? '';
       final name = (warehouse['name'] ?? 'Depo').toString();
-      final cityName = (warehouse['city']?['name'] ?? detail.cityName).toString();
+      final cityName = (warehouse['city']?['name'] ?? detail.cityName)
+          .toString();
       warehouseChoices.add(
         _FactoryInboundWarehouseChoice(
           warehouseId: warehouseId,
@@ -2170,35 +2194,36 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       return;
     }
 
-    final options = warehouseChoices
-        .map(
-          (warehouse) => WarehouseSelectionOption(
-            id: warehouse.warehouseId,
-            title: warehouse.warehouseName,
-            subtitle: warehouse.cityName,
-            badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
-            infoText:
-                '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity',
-            isHighlightBadge: warehouse.isSameCity,
-            onTap: () {
-              Navigator.pop(context);
-              _showFactoryInboundSelectionSheet(
-                context: context,
-                ref: ref,
-                detail: detail,
-                warehouse: warehouse,
-                remainingInputCapacity: remainingInputCapacity,
-              );
-            },
-          ),
-        )
-        .toList()
-      ..sort((a, b) {
-        if (a.isHighlightBadge != b.isHighlightBadge) {
-          return a.isHighlightBadge ? -1 : 1;
-        }
-        return a.title.compareTo(b.title);
-      });
+    final options =
+        warehouseChoices
+            .map(
+              (warehouse) => WarehouseSelectionOption(
+                id: warehouse.warehouseId,
+                title: warehouse.warehouseName,
+                subtitle: warehouse.cityName,
+                badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
+                infoText:
+                    '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity adet',
+                isHighlightBadge: warehouse.isSameCity,
+                onTap: () {
+                  Navigator.pop(context);
+                  _showFactoryInboundSelectionSheet(
+                    context: context,
+                    ref: ref,
+                    detail: detail,
+                    warehouse: warehouse,
+                    remainingInputCapacity: remainingInputCapacity,
+                  );
+                },
+              ),
+            )
+            .toList()
+          ..sort((a, b) {
+            if (a.isHighlightBadge != b.isHighlightBadge) {
+              return a.isHighlightBadge ? -1 : 1;
+            }
+            return a.title.compareTo(b.title);
+          });
 
     await WarehouseSelectionSheet.show(
       context: context,
@@ -2231,7 +2256,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
     List<Map<String, dynamic>> warehouses;
     try {
-      warehouses = await ref.read(factoryActionProvider).getPlayerWarehousesRaw();
+      warehouses = await ref
+          .read(factoryActionProvider)
+          .getPlayerWarehousesRaw();
     } catch (e) {
       if (!context.mounted) return;
       AppSnackbar.show(
@@ -2249,7 +2276,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         (warehouse['warehouse_type'] as Map?)?['accepted_product_ids'],
       );
       final eligibleInventories = sendableInventories
-          .where((inventory) => acceptedProductIds.contains(inventory.productId))
+          .where(
+            (inventory) => acceptedProductIds.contains(inventory.productId),
+          )
           .toList();
       if (eligibleInventories.isEmpty) continue;
 
@@ -2262,17 +2291,28 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           id: warehouseOption.id,
           title: warehouseOption.name,
           subtitle: warehouseOption.cityName,
-          badgeText:
-              warehouseOption.isSameCity ? 'Anlik Transfer' : 'Lojistik Transfer',
+          badgeText: warehouseOption.isSameCity
+              ? 'Anlik Transfer'
+              : 'Lojistik Transfer',
           infoText: '${eligibleInventories.length} uygun stok secilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
-          onTap: () {
+          onTap: () async {
             Navigator.pop(context);
+            WarehouseCapacityStatusModel? capacityStatus;
+            try {
+              capacityStatus = await ref.read(
+                warehouseCapacityStatusProvider(warehouseOption.id).future,
+              );
+            } catch (_) {
+              capacityStatus = null;
+            }
+            if (!context.mounted) return;
             _showFactoryOutboundSelectionSheet(
               context: context,
               ref: ref,
               detail: detail,
               targetWarehouse: warehouseOption,
+              targetCapacityStatus: capacityStatus,
               inventories: eligibleInventories,
             );
           },
@@ -2588,8 +2628,33 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           );
           final totalVolume = selectedItems.fold<double>(
             0,
-            (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+            (sum, item) =>
+                sum +
+                (item.quantity * item.slot.unitVolume),
           );
+          final currentUsedInputCapacity =
+              (detail.factory.inputCapacity - remainingInputCapacity)
+                  .clamp(0, detail.factory.inputCapacity)
+                  .toDouble();
+          final projectedInputCapacity =
+              currentUsedInputCapacity + totalQuantity.toDouble();
+          final currentInputRatio = detail.factory.inputCapacity <= 0
+              ? 0.0
+              : (currentUsedInputCapacity / detail.factory.inputCapacity).clamp(
+                  0.0,
+                  1.0,
+                );
+          final projectedInputRatio = detail.factory.inputCapacity <= 0
+              ? 0.0
+              : (projectedInputCapacity / detail.factory.inputCapacity).clamp(
+                  0.0,
+                  1.0,
+                );
+          final projectedInputColor = projectedInputRatio >= 0.9
+              ? AppColors.red
+              : projectedInputRatio >= 0.75
+              ? Colors.orange
+              : AppColors.green;
 
           return SafeArea(
             top: false,
@@ -2609,15 +2674,280 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    '${warehouse.warehouseName} | ${warehouse.cityName}',
-                    style: TextStyle(color: AppColors.goldLight, fontSize: 12.sp),
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.035),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.borderGoldLight.withValues(
+                          alpha: 0.12,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.warehouse_rounded,
+                                        color: AppColors.blue,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            warehouse.warehouseName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            warehouse.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Kaynak Depo',
+                                            AppColors.blue,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Container(
+                              width: 30.w,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                            ),
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(10.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.green.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.precision_manufacturing_rounded,
+                                        color: AppColors.green,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            detail.factory.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            detail.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Hedef Fabrika',
+                                            AppColors.green,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Fabrika Bos: $remainingInputCapacity / ${detail.factory.inputCapacity} adet',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              '%${(projectedInputRatio * 100).round()}',
+                              style: TextStyle(
+                                color: projectedInputColor,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Container(
+                          height: 9.h,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(999.r),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(999.r),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final totalWidth = constraints.maxWidth;
+                                final currentWidth =
+                                    totalWidth * currentInputRatio;
+                                final projectedWidth =
+                                    totalWidth * projectedInputRatio;
+                                final rawAddedWidth =
+                                    (projectedWidth - currentWidth).clamp(
+                                      0.0,
+                                      totalWidth,
+                                    );
+                                final addedWidth = rawAddedWidth > 0
+                                    ? rawAddedWidth.clamp(3.0, totalWidth)
+                                    : 0.0;
+                                final baseWidth =
+                                    currentWidth.clamp(0.0, totalWidth - addedWidth);
+
+                                return Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    if (baseWidth > 0)
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Container(
+                                          width: baseWidth,
+                                          decoration: BoxDecoration(
+                                            color: projectedInputColor.withValues(
+                                              alpha: 0.75,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              999.r,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (addedWidth > 0)
+                                      Positioned(
+                                        left: baseWidth,
+                                        top: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          width: addedWidth,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.blue,
+                                            borderRadius: BorderRadius.circular(
+                                              999.r,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 6.h),
+                        Text(
+                          'Secilen: $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
                   ),
                   SizedBox(height: 16.h),
                   Expanded(
@@ -2656,8 +2986,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                   color: Colors.black.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
-                                    color: (isSelected ? AppColors.green : Colors.white10)
-                                        .withValues(alpha: 0.2),
+                                    color:
+                                        (isSelected
+                                                ? AppColors.green
+                                                : Colors.white10)
+                                            .withValues(alpha: 0.2),
                                   ),
                                 ),
                                 child: BrandedProductImage(
@@ -2715,17 +3048,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                 onPressed: maxQuantity <= 0
                                     ? null
                                     : () => openQuantityEditor(
-                                          sheetContext,
-                                          modalSetState,
-                                          slot,
-                                        ),
+                                        sheetContext,
+                                        modalSetState,
+                                        slot,
+                                      ),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: isSelected
                                       ? AppColors.green
                                       : AppColors.goldLight,
                                 ),
                                 child: Text(
-                                  isSelected ? 'Adet: $selectedQuantity' : 'Ekle',
+                                  isSelected
+                                      ? 'Adet: $selectedQuantity'
+                                      : 'Ekle',
                                 ),
                               ),
                             ],
@@ -2838,10 +3173,15 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       options: [],
       unavailableReason: null,
     );
-    final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalQuantity = items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
     final totalVolume = items.fold<double>(
       0,
-      (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+      (sum, item) =>
+          sum +
+          (item.quantity * item.slot.unitVolume),
     );
     try {
       vehicleResult = await ref
@@ -2931,6 +3271,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     required WidgetRef ref,
     required FactoryDetailModel detail,
     required ProductionLogisticsWarehouseOption targetWarehouse,
+    WarehouseCapacityStatusModel? targetCapacityStatus,
     required List<FactoryProductionInventoryModel> inventories,
   }) async {
     final selectedQuantities = <String, int>{};
@@ -2972,7 +3313,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     (item.product?.urunAdi ?? item.productId) +
                         (!item.isInput &&
                                 item.brandId !=
-                                    SelectableProductionProductModel.defaultBrandId
+                                    SelectableProductionProductModel
+                                        .defaultBrandId
                             ? ' (${_currentBrandName ?? 'Markali'})'
                             : ''),
                     textAlign: TextAlign.center,
@@ -3024,9 +3366,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       child: BrandedProductImage(
                         fileName: item.product?.urunIconu ?? 'default.webp',
                         brandId: item.brandId,
-                        brandName: !item.isInput &&
+                        brandName:
+                            !item.isInput &&
                                 item.brandId !=
-                                    SelectableProductionProductModel.defaultBrandId
+                                    SelectableProductionProductModel
+                                        .defaultBrandId
                             ? _currentBrandName
                             : null,
                         productId: item.productId,
@@ -3214,6 +3558,35 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             0,
             (sum, item) => sum + item.quantity,
           );
+          final totalVolume = selectedItems.fold<double>(
+            0,
+            (sum, item) =>
+                sum +
+                (item.quantity *
+                    _resolveFactoryInventoryUnitVolume(detail, item.inventory)),
+          );
+          final currentUsedCapacity = targetCapacityStatus == null
+              ? 0.0
+              : targetCapacityStatus.usedCapacity +
+                    targetCapacityStatus.reservedCapacity;
+          final projectedUsedCapacity = currentUsedCapacity + totalVolume;
+          final currentCapacityRatio =
+              targetCapacityStatus == null ||
+                  targetCapacityStatus.totalCapacity <= 0
+              ? 0.0
+              : (currentUsedCapacity / targetCapacityStatus.totalCapacity)
+                    .clamp(0.0, 1.0);
+          final projectedCapacityRatio =
+              targetCapacityStatus == null ||
+                  targetCapacityStatus.totalCapacity <= 0
+              ? 0.0
+              : (projectedUsedCapacity / targetCapacityStatus.totalCapacity)
+                    .clamp(0.0, 1.0);
+          final projectedCapacityColor = projectedCapacityRatio >= 0.9
+              ? AppColors.red
+              : projectedCapacityRatio >= 0.75
+              ? Colors.orange
+              : AppColors.green;
 
           return SafeArea(
             top: false,
@@ -3233,15 +3606,281 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    '${targetWarehouse.name} | ${targetWarehouse.cityName}',
-                    style: TextStyle(color: AppColors.goldLight, fontSize: 12.sp),
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.035),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.borderGoldLight.withValues(
+                          alpha: 0.12,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(10.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.precision_manufacturing_rounded,
+                                        color: AppColors.blue,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            detail.factory.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            detail.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Kaynak Fabrika',
+                                            AppColors.blue,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Container(
+                              width: 34.w,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.green.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.warehouse_rounded,
+                                        color: AppColors.green,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            targetWarehouse.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            targetWarehouse.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Hedef Depo',
+                                            AppColors.green,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (targetCapacityStatus != null) ...[
+                          SizedBox(height: 10.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Bos: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                '%${(projectedCapacityRatio * 100).round()}',
+                                style: TextStyle(
+                                  color: projectedCapacityColor,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Container(
+                            height: 9.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(999.r),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999.r),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final totalWidth = constraints.maxWidth;
+                                  final currentWidth =
+                                      totalWidth * currentCapacityRatio;
+                                  final projectedWidth =
+                                      totalWidth * projectedCapacityRatio;
+                                  final rawAddedWidth =
+                                      (projectedWidth - currentWidth).clamp(
+                                        0.0,
+                                        totalWidth,
+                                      );
+                                  final addedWidth = rawAddedWidth > 0
+                                      ? rawAddedWidth.clamp(3.0, totalWidth)
+                                      : 0.0;
+                                  final baseWidth =
+                                      currentWidth.clamp(0.0, totalWidth - addedWidth);
+
+                                  return Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      if (baseWidth > 0)
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Container(
+                                            width: baseWidth,
+                                            decoration: BoxDecoration(
+                                              color: projectedCapacityColor
+                                                  .withValues(alpha: 0.75),
+                                              borderRadius:
+                                                  BorderRadius.circular(999.r),
+                                            ),
+                                          ),
+                                        ),
+                                      if (addedWidth > 0)
+                                        Positioned(
+                                          left: baseWidth,
+                                          top: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: addedWidth,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.gold,
+                                              borderRadius:
+                                                  BorderRadius.circular(999.r),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(height: 6.h),
+                          Text(
+                            'Secilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet secildi',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.sp,
+                    ),
                   ),
                   SizedBox(height: 16.h),
                   Expanded(
@@ -3251,7 +3890,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           SizedBox(height: 10.h),
                       itemBuilder: (_, index) {
                         final item = sortedInventories[index];
-                        final selectedQuantity = selectedQuantities[item.id] ?? 0;
+                        final selectedQuantity =
+                            selectedQuantities[item.id] ?? 0;
                         final isSelected = selectedQuantity > 0;
                         return Container(
                           padding: EdgeInsets.all(10.w),
@@ -3278,14 +3918,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                   color: Colors.black.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
-                                    color: (isSelected ? AppColors.green : Colors.white10)
-                                        .withValues(alpha: 0.2),
+                                    color:
+                                        (isSelected
+                                                ? AppColors.green
+                                                : Colors.white10)
+                                            .withValues(alpha: 0.2),
                                   ),
                                 ),
                                 child: BrandedProductImage(
-                                  fileName: item.product?.urunIconu ?? 'default.webp',
+                                  fileName:
+                                      item.product?.urunIconu ?? 'default.webp',
                                   brandId: item.brandId,
-                                  brandName: !item.isInput &&
+                                  brandName:
+                                      !item.isInput &&
                                           item.brandId !=
                                               SelectableProductionProductModel
                                                   .defaultBrandId
@@ -3302,7 +3947,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      (item.product?.urunAdi ?? item.productId) +
+                                      (item.product?.urunAdi ??
+                                              item.productId) +
                                           (!item.isInput &&
                                                   item.brandId !=
                                                       SelectableProductionProductModel
@@ -3360,7 +4006,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                       : AppColors.goldLight,
                                 ),
                                 child: Text(
-                                  isSelected ? 'Adet: $selectedQuantity' : 'Ekle',
+                                  isSelected
+                                      ? 'Adet: $selectedQuantity'
+                                      : 'Ekle',
                                 ),
                               ),
                             ],
@@ -3411,7 +4059,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                   AppSnackbar.show(
                                     context,
                                     title: 'Basarili',
-                                    message: 'Secilen stoklar depoya gonderildi.',
+                                    message:
+                                        'Secilen stoklar depoya gonderildi.',
                                     type: SnackbarType.success,
                                   );
                                   return;
@@ -3460,11 +4109,16 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       options: [],
       unavailableReason: null,
     );
-    final totalQuantity = items.fold<int>(0, (sum, item) => sum + item.quantity);
+    final totalQuantity = items.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
     final totalVolume = items.fold<double>(
       0,
       (sum, item) =>
-          sum + ((item.inventory.product?.birimHacim ?? 0) * item.quantity),
+          sum +
+          (_resolveFactoryInventoryUnitVolume(detail, item.inventory) *
+              item.quantity),
     );
     try {
       vehicleResult = await ref
@@ -3653,6 +4307,21 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     return (capacity - usedAndPending.ceil()).clamp(0, capacity);
   }
 
+  double _calculateRemainingFactoryInputCapacityVolume(
+    FactoryDetailModel detail,
+    List<FactoryProductionInventoryModel> inventories,
+    int capacity,
+  ) {
+    final usedAndPending = inventories.fold<double>(
+      0,
+      (sum, inventory) =>
+          sum +
+          ((inventory.quantity + inventory.pendingQuantity) *
+              _resolveFactoryInventoryUnitVolume(detail, inventory)),
+    );
+    return (capacity - usedAndPending).clamp(0.0, capacity.toDouble());
+  }
+
   Widget _buildInlineMetaChip(String label, Color color) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
@@ -3670,6 +4339,31 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         ),
       ),
     );
+  }
+
+  double _resolveFactoryInventoryUnitVolume(
+    FactoryDetailModel detail,
+    FactoryProductionInventoryModel inventory,
+  ) {
+    if (inventory.unitVolume > 0) return inventory.unitVolume;
+    final productVolume = inventory.product?.birimHacim ?? 0;
+    if (productVolume > 0) return productVolume;
+
+    for (final candidate in detail.inventories) {
+      if (candidate.productId != inventory.productId) continue;
+      if (candidate.unitVolume > 0) return candidate.unitVolume;
+      final candidateProductVolume = candidate.product?.birimHacim ?? 0;
+      if (candidateProductVolume > 0) return candidateProductVolume;
+    }
+
+    final detailProduct = detail.product;
+    if (detailProduct != null &&
+        detailProduct.id == inventory.productId &&
+        detailProduct.birimHacim > 0) {
+      return detailProduct.birimHacim;
+    }
+
+    return 0;
   }
 
 }
@@ -3862,7 +4556,9 @@ class _ActiveFactoryUpgradeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final totalSeconds = upgrade.finishAt.difference(upgrade.startedAt).inSeconds;
+    final totalSeconds = upgrade.finishAt
+        .difference(upgrade.startedAt)
+        .inSeconds;
     final elapsedSeconds = now.difference(upgrade.startedAt).inSeconds;
     final progress = totalSeconds > 0
         ? (elapsedSeconds / totalSeconds).clamp(0.0, 1.0)
@@ -3943,9 +4639,7 @@ class _ActiveFactoryUpgradeCard extends ConsumerWidget {
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: AppColors.gold.withValues(alpha: 0.35),
-                ),
+                side: BorderSide(color: AppColors.gold.withValues(alpha: 0.35)),
                 foregroundColor: AppColors.goldLight,
               ),
               onPressed: onFinishWithGold,

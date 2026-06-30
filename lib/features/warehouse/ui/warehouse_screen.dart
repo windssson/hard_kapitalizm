@@ -25,17 +25,6 @@ class WarehouseScreen extends ConsumerStatefulWidget {
 
 class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   final int _selectedIndex = -1;
-  String _selectedFilter = 'Tumu';
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
@@ -85,8 +74,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             Expanded(
               child: warehousesAsync.when(
                 data: (warehouses) {
-                  final filtered = _applyStatusFilter(warehouses);
-
                   return RefreshIndicator(
                     onRefresh: () =>
                         ref.read(warehouseListProvider.notifier).refresh(),
@@ -100,21 +87,17 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                           ),
                         ),
                         SliverPadding(
-                          padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
-                          sliver: SliverToBoxAdapter(child: _buildFilters()),
-                        ),
-                        SliverPadding(
                           padding: EdgeInsets.fromLTRB(5.w, 16.h, 5.w, 80.h),
-                          sliver: filtered.isEmpty
+                          sliver: warehouses.isEmpty
                               ? SliverToBoxAdapter(
                                   child: _buildEmptyState(
                                     hasAnyWarehouse: warehouses.isNotEmpty,
                                   ),
                                 )
                               : SliverList.builder(
-                                  itemCount: filtered.length,
+                                  itemCount: warehouses.length,
                                   itemBuilder: (context, index) {
-                                    final warehouse = filtered[index];
+                                    final warehouse = warehouses[index];
                                     return warehouse.isUnderConstruction
                                         ? _buildConstructionCard(warehouse)
                                         : _buildWarehouseCard(
@@ -138,14 +121,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         ),
       ),
     );
-  }
-
-  List<WarehouseModel> _applyStatusFilter(List<WarehouseModel> warehouses) {
-    return warehouses.where((warehouse) {
-      if (_selectedFilter == 'Aktif') return warehouse.isActive;
-      if (_selectedFilter == 'Pasif') return !warehouse.isActive;
-      return true;
-    }).toList();
   }
 
   Widget _buildStatsHeader(List<WarehouseModel> warehouses) {
@@ -196,8 +171,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     );
   }
 
-
-
   Widget _buildStatItem(
     IconData icon,
     Color color,
@@ -236,46 +209,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     );
   }
 
-  Widget _buildFilters() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: ['Tumu', 'Aktif', 'Pasif'].map((filter) {
-          final isSelected = _selectedFilter == filter;
-          return Padding(
-            padding: EdgeInsets.only(right: 8.w),
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedFilter = filter),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.gold.withValues(alpha: 0.1)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(
-                    color: isSelected ? AppColors.gold : AppColors.border,
-                  ),
-                ),
-                child: Text(
-                  filter,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.gold : AppColors.textMuted,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                    fontSize: 12.sp,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
   Widget _buildWarehouseCard(
     WarehouseModel warehouse,
     String? currentBrandName,
@@ -290,13 +223,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                   warehouse.capacity)
               .clamp(0.0, 1.0)
         : 0.0;
-    final saleReadyCount = filledSlots
-        .where((slot) => slot.isAvailableForSale)
-        .length;
-    final availableCapacity =
-        (warehouse.capacity - usedStockCapacity - warehouse.reservedCapacity)
-            .clamp(0.0, warehouse.capacity);
-    final statusColor = warehouse.isActive ? AppColors.green : AppColors.red;
 
     return GestureDetector(
       onTap: () => context.go('/warehouses/${warehouse.id}'),
@@ -312,7 +238,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                 Container(
                   width: 90.w,
                   height: 90.w,
-                  padding: EdgeInsets.all(8.w),
+                  padding: EdgeInsets.zero,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
@@ -329,7 +255,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                   ),
                   child: CachedAssetImage(
                     fileName: warehouse.typeIcon ?? 'depolar.webp',
-                    fit: BoxFit.contain,
+                    fit: BoxFit.cover,
                   ),
                 ),
                 SizedBox(height: 8.h),
@@ -368,8 +294,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                     children: [
                       Expanded(
                         child: Text(
@@ -383,45 +307,26 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      SizedBox(width: 8.w),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildSmallBadge(
-                            warehouse.isActive ? 'Aktif' : 'Pasif',
-                            statusColor,
-                          ),
-                          SizedBox(height: 6.h),
                           _buildSmallBadge(
                             'Lv. ${warehouse.level}',
                             AppColors.gold,
+                          ),
+                          SizedBox(width: 6.w),
+                          _buildSmallBadge(
+                            warehouse.isActive ? 'Aktif' : 'Pasif',
+                            warehouse.isActive
+                                ? AppColors.green
+                                : AppColors.red,
                           ),
                         ],
                       ),
                     ],
                   ),
                   SizedBox(height: 10.h),
-                  Wrap(
-                    spacing: 6.w,
-                    runSpacing: 6.h,
-                    children: [
-                      _buildInfoPill(
-                        Icons.inventory_2_outlined,
-                        '${filledSlots.length} Slot',
-                        AppColors.blue,
-                      ),
-                      _buildInfoPill(
-                        Icons.sell_outlined,
-                        '$saleReadyCount satis',
-                        AppColors.green,
-                      ),
-                      _buildInfoPill(
-                        Icons.straighten,
-                        '${_formatCapacity(availableCapacity)} bos',
-                        AppColors.gold,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8.h),
                   _buildProgressBar(ratio),
                   SizedBox(height: 12.h),
                   filledSlots.isEmpty
@@ -556,32 +461,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
           fontSize: 10.sp,
           fontWeight: FontWeight.bold,
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoPill(IconData icon, String label, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 11.sp),
-          SizedBox(width: 4.w),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 9.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }

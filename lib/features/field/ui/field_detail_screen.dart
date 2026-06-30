@@ -23,6 +23,9 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
+import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
+    show warehouseCapacityStatusProvider;
+import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
@@ -2229,7 +2232,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 (slot['product'] as Map?)?['urun_iconu']?.toString(),
             qualityLevel: targetInventory.qualityLevel,
             availableQuantity: quantity,
-            unitVolume: targetInventory.product?.birimHacim ?? 0,
+            unitVolume: targetInventory.unitVolume,
             targetInventory: targetInventory,
           ),
         );
@@ -2274,7 +2277,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                 subtitle: warehouse.cityName,
                 badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
                 infoText:
-                    '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity',
+                    '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity adet',
                 isHighlightBadge: warehouse.isSameCity,
                 onTap: () {
                   Navigator.pop(context);
@@ -2363,13 +2366,23 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
               : 'Lojistik Transfer',
           infoText: '${eligibleInventories.length} uygun stok secilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
-          onTap: () {
+          onTap: () async {
             Navigator.pop(context);
+            WarehouseCapacityStatusModel? capacityStatus;
+            try {
+              capacityStatus = await ref.read(
+                warehouseCapacityStatusProvider(warehouseOption.id).future,
+              );
+            } catch (_) {
+              capacityStatus = null;
+            }
+            if (!context.mounted) return;
             _showFieldOutboundSelectionSheet(
               context: context,
               ref: ref,
               detail: detail,
               targetWarehouse: warehouseOption,
+              targetCapacityStatus: capacityStatus,
               inventories: eligibleInventories,
             );
           },
@@ -2685,8 +2698,28 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           );
           final totalVolume = selectedItems.fold<double>(
             0,
-            (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+            (sum, item) =>
+                sum +
+                (item.quantity * item.slot.unitVolume),
           );
+          final currentUsedInputCapacity =
+              (detail.field.inputCapacity - remainingInputCapacity)
+                  .clamp(0, detail.field.inputCapacity)
+                  .toDouble();
+          final projectedInputCapacity =
+              currentUsedInputCapacity + totalQuantity.toDouble();
+          final currentInputRatio = detail.field.inputCapacity <= 0
+              ? 0.0
+              : (currentUsedInputCapacity / detail.field.inputCapacity).clamp(
+                  0.0,
+                  1.0,
+                );
+          final projectedInputRatio = detail.field.inputCapacity <= 0
+              ? 0.0
+              : (projectedInputCapacity / detail.field.inputCapacity).clamp(
+                  0.0,
+                  1.0,
+                );
 
           return SafeArea(
             top: false,
@@ -2706,15 +2739,274 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    '${warehouse.warehouseName} | ${warehouse.cityName}',
-                    style: TextStyle(
-                      color: AppColors.goldLight,
-                      fontSize: 12.sp,
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.035),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.warehouse_rounded,
+                                        color: AppColors.blue,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            warehouse.warehouseName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            warehouse.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Kaynak Depo',
+                                            AppColors.blue,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Container(
+                              width: 30.w,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.green.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.agriculture_rounded,
+                                        color: AppColors.green,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            detail.field.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            detail.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Hedef Ciftlik',
+                                            AppColors.green,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Ciftlik Bos: $remainingInputCapacity / ${detail.field.inputCapacity} adet',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              '%${(projectedInputRatio * 100).round()}',
+                              style: TextStyle(
+                                color: projectedInputRatio >= 0.9
+                                    ? AppColors.red
+                                    : projectedInputRatio >= 0.75
+                                    ? Colors.orange
+                                    : AppColors.green,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Container(
+                          height: 9.h,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(999.r),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(999.r),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final totalWidth = constraints.maxWidth;
+                                final currentWidth = totalWidth * currentInputRatio;
+                                final projectedWidth =
+                                    totalWidth * projectedInputRatio;
+                                final rawAddedWidth =
+                                    (projectedWidth - currentWidth).clamp(
+                                      0.0,
+                                      totalWidth,
+                                    );
+                                final addedWidth = rawAddedWidth > 0
+                                    ? rawAddedWidth.clamp(3.0, totalWidth)
+                                    : 0.0;
+                                final baseWidth =
+                                    currentWidth.clamp(0.0, totalWidth - addedWidth);
+
+                                return Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    if (baseWidth > 0)
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Container(
+                                          width: baseWidth,
+                                          decoration: BoxDecoration(
+                                            color: projectedInputRatio >= 0.9
+                                                ? AppColors.red.withValues(alpha: 0.75)
+                                                : projectedInputRatio >= 0.75
+                                                ? Colors.orange.withValues(alpha: 0.75)
+                                                : AppColors.green.withValues(alpha: 0.75),
+                                            borderRadius: BorderRadius.circular(999.r),
+                                          ),
+                                        ),
+                                      ),
+                                    if (addedWidth > 0)
+                                      Positioned(
+                                        left: baseWidth,
+                                        top: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          width: addedWidth,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.blue,
+                                            borderRadius: BorderRadius.circular(999.r),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 6.h),
+                        Text(
+                          'Secilen: $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
                     style: TextStyle(
@@ -2953,7 +3245,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
     final totalVolume = items.fold<double>(
       0,
-      (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+      (sum, item) =>
+          sum +
+          (item.quantity * item.slot.unitVolume),
     );
 
     try {
@@ -3043,6 +3337,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     required WidgetRef ref,
     required FieldDetailModel detail,
     required ProductionLogisticsWarehouseOption targetWarehouse,
+    WarehouseCapacityStatusModel? targetCapacityStatus,
     required List<ProductionInventoryModel> inventories,
   }) async {
     final sortedInventories = [...inventories]
@@ -3324,6 +3619,30 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             0,
             (sum, item) => sum + item.quantity,
           );
+          final totalVolume = selectedItems.fold<double>(
+            0,
+            (sum, item) =>
+                sum +
+                (item.quantity *
+                    _resolveFieldInventoryUnitVolume(detail, item.inventory)),
+          );
+          final currentUsedCapacity = targetCapacityStatus == null
+              ? 0.0
+              : targetCapacityStatus.usedCapacity +
+                    targetCapacityStatus.reservedCapacity;
+          final projectedUsedCapacity = currentUsedCapacity + totalVolume;
+          final currentCapacityRatio =
+              targetCapacityStatus == null ||
+                  targetCapacityStatus.totalCapacity <= 0
+              ? 0.0
+              : (currentUsedCapacity / targetCapacityStatus.totalCapacity)
+                    .clamp(0.0, 1.0);
+          final projectedCapacityRatio =
+              targetCapacityStatus == null ||
+                  targetCapacityStatus.totalCapacity <= 0
+              ? 0.0
+              : (projectedUsedCapacity / targetCapacityStatus.totalCapacity)
+                    .clamp(0.0, 1.0);
 
           return SafeArea(
             top: false,
@@ -3343,17 +3662,289 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    '${targetWarehouse.name} | ${targetWarehouse.cityName}',
-                    style: TextStyle(
-                      color: AppColors.goldLight,
-                      fontSize: 12.sp,
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.035),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(10.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.agriculture_rounded,
+                                        color: AppColors.blue,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            detail.field.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            detail.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Kaynak Ciftlik',
+                                            AppColors.blue,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+                            Container(
+                              width: 34.w,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(10.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.green.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.warehouse_rounded,
+                                        color: AppColors.green,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            targetWarehouse.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            targetWarehouse.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Hedef Depo',
+                                            AppColors.green,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (targetCapacityStatus != null) ...[
+                          SizedBox(height: 10.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Bos: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                '%${(projectedCapacityRatio * 100).round()}',
+                                style: TextStyle(
+                                  color: projectedCapacityRatio >= 0.9
+                                      ? AppColors.red
+                                      : projectedCapacityRatio >= 0.75
+                                      ? Colors.orange
+                                      : AppColors.green,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Container(
+                            height: 9.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(999.r),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999.r),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final totalWidth = constraints.maxWidth;
+                                  final currentWidth =
+                                      totalWidth * currentCapacityRatio;
+                                  final projectedWidth =
+                                      totalWidth * projectedCapacityRatio;
+                                  final rawAddedWidth =
+                                      (projectedWidth - currentWidth).clamp(
+                                        0.0,
+                                        totalWidth,
+                                      );
+                                  final addedWidth = rawAddedWidth > 0
+                                      ? rawAddedWidth.clamp(3.0, totalWidth)
+                                      : 0.0;
+                                  final baseWidth =
+                                      currentWidth.clamp(0.0, totalWidth - addedWidth);
+
+                                  return Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      if (baseWidth > 0)
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Container(
+                                            width: baseWidth,
+                                            decoration: BoxDecoration(
+                                              color: projectedCapacityRatio >=
+                                                      0.9
+                                                  ? AppColors.red.withValues(
+                                                      alpha: 0.75,
+                                                    )
+                                                  : projectedCapacityRatio >=
+                                                        0.75
+                                                  ? Colors.orange.withValues(
+                                                      alpha: 0.75,
+                                                    )
+                                                  : AppColors.green.withValues(
+                                                      alpha: 0.75,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(999.r),
+                                            ),
+                                          ),
+                                        ),
+                                      if (addedWidth > 0)
+                                        Positioned(
+                                          left: baseWidth,
+                                          top: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: addedWidth,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.blue,
+                                              borderRadius:
+                                                  BorderRadius.circular(999.r),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 6.h),
+                          Text(
+                            'Secilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 8.h),
                   Text(
-                    '${selectedItems.length} stok | $totalQuantity adet secildi',
+                    '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12.sp,
@@ -3588,7 +4179,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     final totalVolume = items.fold<double>(
       0,
       (sum, item) =>
-          sum + ((item.inventory.product?.birimHacim ?? 0) * item.quantity),
+          sum +
+          (_resolveFieldInventoryUnitVolume(detail, item.inventory) *
+              item.quantity),
     );
     try {
       vehicleResult = await ref
@@ -3766,6 +4359,21 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     return (capacity - usedAndPending.ceil()).clamp(0, capacity);
   }
 
+  double _calculateRemainingInputCapacityVolume(
+    FieldDetailModel detail,
+    List<ProductionInventoryModel> inventories,
+    int capacity,
+  ) {
+    final usedAndPending = inventories.fold<double>(
+      0,
+      (sum, inventory) =>
+          sum +
+          ((inventory.quantity + inventory.pendingQuantity) *
+              _resolveFieldInventoryUnitVolume(detail, inventory)),
+    );
+    return (capacity - usedAndPending).clamp(0.0, capacity.toDouble());
+  }
+
   double _inventoryRatio(int current, int capacity) {
     if (capacity <= 0) return 0.0;
     return (current / capacity).clamp(0.0, 1.0);
@@ -3789,6 +4397,31 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       ),
     );
   }
+
+  double _resolveFieldInventoryUnitVolume(
+    FieldDetailModel detail,
+    ProductionInventoryModel inventory,
+  ) {
+    if (inventory.unitVolume > 0) return inventory.unitVolume;
+    final productVolume = inventory.product?.birimHacim ?? 0;
+    if (productVolume > 0) return productVolume;
+
+    for (final candidate in detail.inventories) {
+      if (candidate.productId != inventory.productId) continue;
+      if (candidate.unitVolume > 0) return candidate.unitVolume;
+      final candidateProductVolume = candidate.product?.birimHacim ?? 0;
+      if (candidateProductVolume > 0) return candidateProductVolume;
+    }
+
+    for (final slot in detail.slots) {
+      final slotProduct = slot.product;
+      if (slotProduct == null || slot.productId != inventory.productId) continue;
+      if (slotProduct.birimHacim > 0) return slotProduct.birimHacim;
+    }
+
+    return 0;
+  }
+
 
   Color _inputColorForProduct(String productId) {
     const palette = <Color>[

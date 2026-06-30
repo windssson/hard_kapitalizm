@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -468,40 +469,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             },
           ),
           SizedBox(height: 12.h),
-          SizedBox(
-            height: 74.h,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              children: [
-                _buildHeaderMetricCard(
-                  label: 'Dolu Slot',
-                  value: filledSlots.length.toString(),
-                  icon: Icons.inventory_2_outlined,
-                  color: AppColors.blue,
-                ),
-                _buildHeaderMetricCard(
-                  label: 'Satistaki',
-                  value: listedSlots.toString(),
-                  icon: Icons.sell_outlined,
-                  color: AppColors.green,
-                ),
-                _buildHeaderMetricCard(
-                  label: 'Toplam Adet',
-                  value: _formatValue(totalStock),
-                  icon: Icons.layers_outlined,
-                  color: AppColors.gold,
-                ),
-                _buildHeaderMetricCard(
-                  label: 'Bos Kapasite',
-                  value: '${_formatValue(availableCapacity)} m3',
-                  icon: Icons.straighten,
-                  color: AppColors.red,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 12.h),
           _buildCapacityBreakdown(
             totalCapacity: capacity,
             usedCapacity: usedCapacity,
@@ -514,7 +481,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
+                child: _buildMinimalActionButton(
                   onPressed: activeUpgrade != null || hasAnotherActiveUpgrade
                       ? null
                       : () => _showWarehouseUpgradeSheet(
@@ -522,52 +489,65 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                             ref,
                             warehouse,
                           ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: activeUpgrade != null || hasAnotherActiveUpgrade
-                        ? AppColors.textMuted
-                        : AppColors.green,
-                    side: BorderSide(
-                      color: ((activeUpgrade != null || hasAnotherActiveUpgrade)
-                              ? AppColors.textMuted
-                              : AppColors.green)
-                          .withValues(alpha: 0.35),
-                    ),
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                  ),
-                  icon: const Icon(Icons.upgrade_rounded),
-                  label: Text(
-                    activeUpgrade != null
-                        ? 'Devam Ediyor'
-                        : hasAnotherActiveUpgrade
-                        ? 'Baska Yukseltme Var'
-                        : 'Yukselt',
-                  ),
+                  icon: Icons.upgrade_rounded,
+                  label: activeUpgrade != null
+                      ? 'Devam Ediyor'
+                      : hasAnotherActiveUpgrade
+                      ? 'Baska Yukseltme Var'
+                      : 'Yukselt',
+                  color: activeUpgrade != null || hasAnotherActiveUpgrade
+                      ? AppColors.textMuted
+                      : AppColors.green,
+                  isEnabled: activeUpgrade == null && !hasAnotherActiveUpgrade,
                 ),
               ),
               SizedBox(width: 10.w),
               Expanded(
-                child: OutlinedButton.icon(
+                child: _buildMinimalActionButton(
                   onPressed: () => context.push('/warehouses/${warehouse.id}/history'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.gold,
-                    side: BorderSide(
-                      color: AppColors.gold.withValues(alpha: 0.35),
-                    ),
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                  ),
-                  icon: const Icon(Icons.history_rounded),
-                  label: const Text('Kayitlar'),
+                  icon: Icons.history_rounded,
+                  label: 'Kayitlar',
+                  color: AppColors.gold,
                 ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMinimalActionButton({
+    required VoidCallback? onPressed,
+    required IconData icon,
+    required String label,
+    required Color color,
+    bool isEnabled = true,
+  }) {
+    final accent = isEnabled ? color : AppColors.textMuted;
+
+    return TextButton.icon(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: accent,
+        backgroundColor: accent.withValues(alpha: 0.08),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(11.r),
+          side: BorderSide(
+            color: accent.withValues(alpha: 0.18),
+          ),
+        ),
+        textStyle: TextStyle(
+          fontSize: 11.sp,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      icon: Icon(icon, size: 16.sp),
+      label: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -734,59 +714,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildHeaderMetricCard({
-    required String label,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      width: 110.w,
-      margin: EdgeInsets.only(right: 10.w),
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 14.sp),
-              SizedBox(width: 5.w),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 9.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   List<WarehouseSlotModel> _sortedSlots(List<WarehouseSlotModel> slots) {
     final items = [...slots];
     items.sort((a, b) {
@@ -849,63 +776,70 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     Color? suffixColor,
   }) {
     final content = Container(
-      constraints: BoxConstraints(minHeight: 58.h),
-      padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 8.h),
+      constraints: BoxConstraints(minHeight: 48.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
+        color: Colors.white.withValues(alpha: 0.035),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: 12.sp),
-              SizedBox(width: 4.w),
-              Expanded(
-                child: Text(
+          Icon(
+            icon,
+            color: color.withValues(alpha: 0.82),
+            size: 14.sp,
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
                   label,
                   style: TextStyle(
                     color: AppColors.textMuted,
-                    fontSize: 9.sp,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 8.sp,
+                    fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 5.h),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Text(
-                  value,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (suffix != null) ...[
-                SizedBox(width: 4.w),
-                Text(
-                  suffix,
-                  style: TextStyle(
-                    color: suffixColor ?? color,
-                    fontSize: 9.sp,
-                    fontWeight: FontWeight.w800,
-                  ),
+                SizedBox(height: 2.h),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        value,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (suffix != null) ...[
+                      SizedBox(width: 4.w),
+                      Text(
+                        suffix,
+                        style: TextStyle(
+                          color: (suffixColor ?? color).withValues(alpha: 0.9),
+                          fontSize: 8.sp,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
-            ],
+            ),
           ),
         ],
       ),
@@ -914,7 +848,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (onTap == null) return content;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(14.r),
+      borderRadius: BorderRadius.circular(12.r),
       onTap: onTap,
       child: content,
     );
@@ -960,6 +894,28 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMetaChip({
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999.r),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -1278,7 +1234,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               Expanded(
                 child: _buildSlotValueTile(
                   label: 'Maliyet',
-                  value: slot.cost > 0 ? slot.cost.toStringAsFixed(1) : '-',
+                  value: slot.cost > 0 ? AppMoney.compact(slot.cost) : '-',
                   icon: Icons.payments_outlined,
                   color: AppColors.textMuted,
                 ),
@@ -1287,7 +1243,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               Expanded(
                 child: _buildSlotValueTile(
                   label: 'Satis',
-                  value: slot.price > 0 ? slot.price.toStringAsFixed(1) : '-',
+                  value: slot.price > 0 ? AppMoney.compact(slot.price) : '-',
                   suffix: marginPercent != null
                       ? '%${marginPercent.toStringAsFixed(0)}'
                       : null,
@@ -2311,6 +2267,22 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             0.0,
             availableCapacity,
           );
+          final currentUsedCapacity = capacityStatus == null
+              ? 0.0
+              : capacityStatus.usedCapacity + capacityStatus.reservedCapacity;
+          final projectedUsedCapacity = currentUsedCapacity + selectedVolume;
+          final targetTotalCapacity = capacityStatus?.totalCapacity ?? 0.0;
+          final currentCapacityRatio = targetTotalCapacity <= 0
+              ? 0.0
+              : (currentUsedCapacity / targetTotalCapacity).clamp(0.0, 1.0);
+          final projectedCapacityRatio = targetTotalCapacity <= 0
+              ? 0.0
+              : (projectedUsedCapacity / targetTotalCapacity).clamp(0.0, 1.0);
+          final projectedCapacityColor = projectedCapacityRatio >= 0.9
+              ? AppColors.red
+              : projectedCapacityRatio >= 0.75
+              ? Colors.orange
+              : AppColors.green;
 
           return SafeArea(
             top: false,
@@ -2330,15 +2302,282 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    '${(targetWarehouse['name'] ?? 'Depo').toString()} | Bos: ${_formatValue(remainingCapacity)} / ${_formatValue(availableCapacity)} m3',
-                    style: TextStyle(
-                      color: AppColors.goldLight,
-                      fontSize: 12.sp,
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.035),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.inventory_2_rounded,
+                                        color: AppColors.blue,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            sourceWarehouse.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            sourceWarehouse.cityName ?? '-',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildMetaChip(
+                                            label: 'Kaynak Depo',
+                                            color: AppColors.blue,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Container(
+                              width: 30.w,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.green.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.warehouse_rounded,
+                                        color: AppColors.green,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            (targetWarehouse['name'] ?? 'Depo').toString(),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            ((targetWarehouse['city'] as Map?)?['name'] ??
+                                                    sourceWarehouse.cityName ??
+                                                    '-')
+                                                .toString(),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildMetaChip(
+                                            label: 'Hedef Depo',
+                                            color: AppColors.green,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Hedef Bos: ${_formatValue(remainingCapacity)} / ${_formatValue(availableCapacity)} m3',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              '%${(projectedCapacityRatio * 100).round()}',
+                              style: TextStyle(
+                                color: projectedCapacityColor,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Container(
+                          height: 12.h,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(999.r),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(999.r),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final totalWidth = constraints.maxWidth;
+                                final currentWidth =
+                                    totalWidth * currentCapacityRatio;
+                                final projectedWidth =
+                                    totalWidth * projectedCapacityRatio;
+                                final rawAddedWidth =
+                                    (projectedWidth - currentWidth).clamp(
+                                      0.0,
+                                      totalWidth,
+                                    );
+                                final addedWidth = rawAddedWidth > 0
+                                    ? rawAddedWidth.clamp(6.0, totalWidth)
+                                    : 0.0;
+                                final baseWidth =
+                                    currentWidth.clamp(0.0, totalWidth - addedWidth);
+
+                                return Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    if (baseWidth > 0)
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Container(
+                                          width: baseWidth,
+                                          decoration: BoxDecoration(
+                                            color: projectedCapacityColor.withValues(
+                                              alpha: 0.75,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              999.r,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (addedWidth > 0)
+                                      Positioned(
+                                        left: baseWidth,
+                                        top: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          width: addedWidth,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.gold,
+                                            border: Border.all(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.45,
+                                              ),
+                                              width: 0.8,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              999.r,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 6.h),
+                        Text(
+                          'Secilen Hacim: ${_formatValue(selectedVolume)} m3',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} urun cesidi | $selectedQuantityTotal adet | ${_formatValue(selectedVolume)} m3 secildi',
                     style: TextStyle(

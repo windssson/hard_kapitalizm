@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 
@@ -10,11 +11,10 @@ class StoreHeroHeader extends StatelessWidget {
   const StoreHeroHeader({super.key, required this.store});
 
   String _formatValue(dynamic amount) {
-    if (amount == null) return '0';
-    double val = double.parse(amount.toString());
-    if (val >= 1000000) return '${(val / 1000000).toStringAsFixed(1)}M';
-    if (val >= 1000) return '${(val / 1000).toStringAsFixed(1)}K';
-    return val.toStringAsFixed(1);
+    return AppMoney.compact(
+      double.tryParse(amount?.toString() ?? '0') ?? 0,
+      withSymbol: false,
+    );
   }
 
   @override
@@ -143,7 +143,6 @@ class StoreHeroHeader extends StatelessWidget {
         border: Border.all(color: AppColors.border.withValues(alpha: 0.1)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildCompactMetricCol(
             title: 'Doluluk',
@@ -158,8 +157,8 @@ class StoreHeroHeader extends StatelessWidget {
             color: AppColors.blue,
           ),
           _buildCompactMetricCol(
-            title: 'Kar',
-            value: '+TL ${_formatValue(store.summary.totalStockSaleValue ?? 0)}',
+            title: 'Stok Degeri',
+            value: AppMoney.compact(store.summary.totalStockSaleValue ?? 0),
             icon: Icons.trending_up,
             color: AppColors.green,
           ),
@@ -180,15 +179,36 @@ class StoreHeroHeader extends StatelessWidget {
     required IconData icon,
     required Color color,
   }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 20.sp),
-        SizedBox(height: 6.h),
-        Text(value, style: AppTextStyles.body.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.bold), maxLines: 1),
-        SizedBox(height: 2.h),
-        Text(title, style: AppTextStyles.body.copyWith(color: AppColors.textMuted, fontSize: 9.sp), maxLines: 1),
-      ],
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 20.sp),
+          SizedBox(height: 6.h),
+          Text(
+            value,
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 11.sp,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 2.h),
+          Text(
+            title,
+            style: AppTextStyles.body.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 9.sp,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

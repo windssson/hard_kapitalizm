@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -1667,9 +1668,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }
 
   String _formatMoney(double amount) {
-    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(1)}M TL';
-    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K TL';
-    return '${amount.toStringAsFixed(0)} TL';
+    return AppMoney.compact(amount);
   }
 
   String _formatRemaining(Duration duration) {
@@ -2147,10 +2146,6 @@ class _UpgradeBottomSheet extends StatelessWidget {
   }
 
   String _formatMoney(double amount) {
-    if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)}M TL';
-    }
-    if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(0)}K TL';
-    return '${amount.toStringAsFixed(0)} TL';
+    return AppMoney.compact(amount);
   }
 }

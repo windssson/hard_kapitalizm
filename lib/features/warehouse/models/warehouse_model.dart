@@ -171,6 +171,12 @@ class WarehouseSlotModel {
         : json['product'] is Map
             ? Map<String, dynamic>.from(json['product'] as Map)
             : null;
+
+    double parseNum(dynamic value) {
+      if (value == null) return 0;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString()) ?? 0;
+    }
     
     return WarehouseSlotModel(
       id: (json['id'] ?? '').toString(),
@@ -180,7 +186,9 @@ class WarehouseSlotModel {
       productName: json['product_name'] as String? ?? productJson?['urun_adi'] as String?,
       productIcon: productJson?['urun_iconu'] as String?,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
-      unitVolume: (productJson?['birim_hacim'] as num?)?.toDouble() ?? 0.0,
+      unitVolume: parseNum(json['unit_volume']) > 0
+          ? parseNum(json['unit_volume'])
+          : parseNum(productJson?['birim_hacim']),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       cost: (json['cost'] as num?)?.toDouble() ?? 0.0,

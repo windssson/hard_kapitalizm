@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -44,16 +45,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
 
   String _formatMetricValue(String category, double value, [int? total]) {
     if (category == 'company_value') {
-      if (value >= 1000000000) {
-        return 'TL ${(value / 1000000000).toStringAsFixed(2)}B';
-      }
-      if (value >= 1000000) {
-        return 'TL ${(value / 1000000).toStringAsFixed(2)}M';
-      }
-      if (value >= 1000) {
-        return 'TL ${(value / 1000).toStringAsFixed(1)}K';
-      }
-      return 'TL ${value.toStringAsFixed(0)}';
+      return AppMoney.compact(value);
     } else if (category == 'level') {
       return 'Seviye ${value.toInt()}';
     } else if (category == 'achievement_unlocked_count') {

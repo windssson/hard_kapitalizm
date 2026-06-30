@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -903,16 +904,10 @@ class _StorePerformanceScreenState
   }
 
   String _formatCompactNumber(double value) {
-    if (value.abs() >= 1000000) {
-      return '${(value / 1000000).toStringAsFixed(1)}M';
-    }
-    if (value.abs() >= 1000) {
-      return '${(value / 1000).toStringAsFixed(1)}K';
-    }
-    return value.toStringAsFixed(value % 1 == 0 ? 0 : 1);
+    return AppMoney.compact(value, withSymbol: false);
   }
 
-  String _formatCurrency(double value) => 'TL ${_formatCompactNumber(value)}';
+  String _formatCurrency(double value) => AppMoney.compact(value);
 
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');

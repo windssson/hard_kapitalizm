@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -293,14 +294,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                           Expanded(
                             child: _buildSalesSummaryMetric(
                               'Ciro',
-                              '${result.totalRevenue.toStringAsFixed(1)} TL',
+                              AppMoney.full(result.totalRevenue, decimals: 1),
                               AppColors.green,
                             ),
                           ),
                           Expanded(
                             child: _buildSalesSummaryMetric(
                               'Kar',
-                              '${result.totalProfit.toStringAsFixed(1)} TL',
+                              AppMoney.full(result.totalProfit, decimals: 1),
                               profitColor,
                             ),
                           ),
@@ -713,16 +714,18 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               Row(
                 children: [
                   Expanded(
-                    child: _buildInfoMetricCard(
+                    child: _buildCompactMetricPill(
                       'Kapasite',
                       '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)} m3',
+                      icon: Icons.straighten,
                     ),
                   ),
                   SizedBox(width: 12.w),
                   Expanded(
-                    child: _buildInfoMetricCard(
+                    child: _buildCompactMetricPill(
                       'Urun Cesidi',
                       warehouse.slots.length.toString(),
+                      icon: Icons.category_outlined,
                     ),
                   ),
                 ],
@@ -768,31 +771,60 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
-  Widget _buildInfoMetricCard(String label, String value) {
+  Widget _buildCompactMetricPill(
+    String label,
+    String value, {
+    required IconData icon,
+  }) {
     return Container(
-      padding: EdgeInsets.all(10.w),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: AppColors.textPrimary.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 10.sp,
+          Container(
+            width: 28.w,
+            height: 28.w,
+            decoration: BoxDecoration(
+              color: AppColors.blue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(9.r),
+            ),
+            child: Icon(
+              icon,
+              color: AppColors.blue,
+              size: 15.sp,
             ),
           ),
-          SizedBox(height: 4.h),
-          Text(
-            value,
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w700,
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 9.sp,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],
@@ -1513,7 +1545,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             ),
             _buildSalesSummaryRow(
               'Yukseltme Maliyeti',
-              'TL ${_formatValue(activeUpgrade?.upgradeCost ?? upgradeCost)}',
+              AppMoney.compact(activeUpgrade?.upgradeCost ?? upgradeCost),
               valueColor: AppColors.red,
             ),
             _buildSalesSummaryRow(
@@ -1595,8 +1627,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             color: Colors.blueAccent,
           ),
           _buildCompactMetricCol(
-            title: 'Kar',
-            value: '+TL ${_formatValue(store.summary.totalStockSaleValue ?? 0)}',
+            title: 'Stok Degeri',
+            value: AppMoney.compact(store.summary.totalStockSaleValue ?? 0),
             icon: Icons.trending_up,
             color: AppColors.green,
           ),
@@ -1767,24 +1799,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                SizedBox(width: 8.w),
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 8.w,
-                                      height: 8.w,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: slot.isActive ? AppColors.green : AppColors.red,
-                                        boxShadow: [
-                                          BoxShadow(color: (slot.isActive ? AppColors.green : AppColors.red).withValues(alpha: 0.5), blurRadius: 4),
-                                        ],
-                                      ),
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    Text(slot.isActive ? 'Aktif' : 'Pasif', style: TextStyle(color: slot.isActive ? AppColors.green : AppColors.red, fontSize: 10.sp)),
-                                  ],
-                                ),
                               ],
                             ),
                             SizedBox(height: 6.h),
@@ -1913,20 +1927,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     slot.capacity > 0
                         ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
                         : 0,
-                  ),
-                  SizedBox(height: 6.h),
-                  Row(
-                    children: [
-                      _buildCapacityLegend(
-                        color: AppColors.gold,
-                        label: 'Stok',
-                      ),
-                      SizedBox(width: 12.w),
-                      _buildCapacityLegend(
-                        color: AppColors.textMuted,
-                        label: 'Bos',
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -2875,11 +2875,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   }
 
   String _formatValue(dynamic amount) {
-    if (amount == null) return '0';
-    double val = double.parse(amount.toString());
-    if (val >= 1000000) return '${(val / 1000000).toStringAsFixed(1)}M';
-    if (val >= 1000) return '${(val / 1000).toStringAsFixed(1)}K';
-    return val.toStringAsFixed(1);
+    return AppMoney.compact(
+      double.tryParse(amount?.toString() ?? '0') ?? 0,
+      withSymbol: false,
+    );
   }
 
 
@@ -3212,37 +3211,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           : null,
     );
   }
-
-  Widget _buildCapacityLegend({
-    required Color color,
-    required String label,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8.w,
-          height: 8.w,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        SizedBox(width: 4.w),
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 9.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-
-
-
 
   Widget _buildStatusPill(String label, Color accentColor) {
     return Container(

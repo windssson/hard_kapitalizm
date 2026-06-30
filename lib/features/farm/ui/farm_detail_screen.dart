@@ -23,6 +23,9 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
+import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
+    show warehouseCapacityStatusProvider;
+import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
@@ -207,9 +210,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 68.w,
-                    height: 68.w,
-                    padding: EdgeInsets.all(10.w),
+                    width: 90.w,
+                    height: 90.w,
+                    padding: EdgeInsets.all(2.w),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16.r),
@@ -422,9 +425,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     return Container(
       padding: EdgeInsets.all(8.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.18),
+        color: Colors.black.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
       ),
       child: Column(
         children: [
@@ -509,26 +512,26 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   ) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12.r),
+      borderRadius: BorderRadius.circular(11.r),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 7.h),
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: color.withValues(alpha: 0.45)),
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(11.r),
+          border: Border.all(color: color.withValues(alpha: 0.18)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 15.sp),
-            SizedBox(height: 3.h),
+            Icon(icon, color: color, size: 16.sp),
+            SizedBox(height: 4.h),
             Text(
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: color,
                 fontSize: 9.sp,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -694,28 +697,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 5.w,
-                            vertical: 2.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(4.r),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.12),
-                            ),
-                          ),
-                          child: Text(
-                            '#${slot.slotIndex}',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 9.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 6.w),
                         Expanded(
                           child: Text(
                             slotTitle,
@@ -825,7 +806,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                     SizedBox(height: 8.h),
                     if (slot.isEmpty)
                       Text(
-                        'Beklemede. Ürün seçerek üretimi başlat.',
+                        'Beklemede. Urun secerek uretimi baslat.',
                         style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 10.sp,
@@ -912,7 +893,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Üretim / Saat',
+                'Uretim / Saat',
                 style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
               ),
               SizedBox(height: 2.h),
@@ -1489,7 +1470,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             SizedBox(width: 6.w),
             Expanded(
               child: Text(
-                'Uretilen urun stogu ${inventory.quantity} adet / ${detail.farm.outputCapacity} m³',
+                'Uretilen urun stogu ${inventory.quantity} adet / ${detail.farm.outputCapacity}',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 11.sp,
@@ -1506,7 +1487,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         SizedBox(height: 6.h),
         Container(
           width: double.infinity,
-          height: 7.h,
+          height: 10.h,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(999.r),
@@ -1561,7 +1542,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$totalStock adet | ${totalPending.toStringAsFixed(1)} yolda / $capacity m³',
+            '$totalStock adet | ${totalPending.toStringAsFixed(0)} yolda / $capacity',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11.sp,
@@ -1600,7 +1581,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   }) {
     if (capacity <= 0) {
       return Container(
-        height: 8.h,
+        height: 6.h,
         decoration: BoxDecoration(
           color: Colors.black.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(999.r),
@@ -1632,7 +1613,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         var left = 0.0;
 
         return Container(
-          height: 8.h,
+          height: 6.h,
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(999.r),
@@ -2220,7 +2201,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 (slot['product'] as Map?)?['urun_iconu']?.toString(),
             qualityLevel: targetInventory.qualityLevel,
             availableQuantity: quantity,
-            unitVolume: targetInventory.product?.birimHacim ?? 0,
+            unitVolume: targetInventory.unitVolume,
             targetInventory: targetInventory,
           ),
         );
@@ -2265,7 +2246,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 subtitle: warehouse.cityName,
                 badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
                 infoText:
-                    '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity',
+                    '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity adet',
                 isHighlightBadge: warehouse.isSameCity,
                 onTap: () {
                   Navigator.pop(context);
@@ -2354,13 +2335,23 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               : 'Lojistik Transfer',
           infoText: '${eligibleInventories.length} uygun stok secilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
-          onTap: () {
+          onTap: () async {
             Navigator.pop(context);
+            WarehouseCapacityStatusModel? capacityStatus;
+            try {
+              capacityStatus = await ref.read(
+                warehouseCapacityStatusProvider(warehouseOption.id).future,
+              );
+            } catch (_) {
+              capacityStatus = null;
+            }
+            if (!context.mounted) return;
             _showFarmOutboundSelectionSheet(
               context: context,
               ref: ref,
               detail: detail,
               targetWarehouse: warehouseOption,
+              targetCapacityStatus: capacityStatus,
               inventories: eligibleInventories,
             );
           },
@@ -2676,8 +2667,28 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           );
           final totalVolume = selectedItems.fold<double>(
             0,
-            (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+            (sum, item) =>
+                sum +
+                (item.quantity * item.slot.unitVolume),
           );
+          final currentUsedInputCapacity =
+              (detail.farm.inputCapacity - remainingInputCapacity)
+                  .clamp(0, detail.farm.inputCapacity)
+                  .toDouble();
+          final projectedInputCapacity =
+              currentUsedInputCapacity + totalQuantity.toDouble();
+          final currentInputRatio = detail.farm.inputCapacity <= 0
+              ? 0.0
+              : (currentUsedInputCapacity / detail.farm.inputCapacity).clamp(
+                  0.0,
+                  1.0,
+                );
+          final projectedInputRatio = detail.farm.inputCapacity <= 0
+              ? 0.0
+              : (projectedInputCapacity / detail.farm.inputCapacity).clamp(
+                  0.0,
+                  1.0,
+                );
 
           return SafeArea(
             top: false,
@@ -2697,15 +2708,273 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    '${warehouse.warehouseName} | ${warehouse.cityName}',
-                    style: TextStyle(
-                      color: AppColors.goldLight,
-                      fontSize: 12.sp,
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.035),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.warehouse_rounded,
+                                        color: AppColors.blue,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            warehouse.warehouseName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            warehouse.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Kaynak Depo',
+                                            AppColors.blue,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Container(
+                              width: 30.w,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                            ),
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.green.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.agriculture_rounded,
+                                        color: AppColors.green,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            detail.farm.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            detail.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Hedef Tarla',
+                                            AppColors.green,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10.h),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Tarla Bos: $remainingInputCapacity / ${detail.farm.inputCapacity} adet',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              '%${(projectedInputRatio * 100).round()}',
+                              style: TextStyle(
+                                color: projectedInputRatio >= 0.9
+                                    ? AppColors.red
+                                    : projectedInputRatio >= 0.75
+                                    ? Colors.orange
+                                    : AppColors.green,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Container(
+                          height: 9.h,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(999.r),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(999.r),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final totalWidth = constraints.maxWidth;
+                                final currentWidth = totalWidth * currentInputRatio;
+                                final projectedWidth =
+                                    totalWidth * projectedInputRatio;
+                                final rawAddedWidth =
+                                    (projectedWidth - currentWidth).clamp(
+                                      0.0,
+                                      totalWidth,
+                                    );
+                                final addedWidth = rawAddedWidth > 0
+                                    ? rawAddedWidth.clamp(3.0, totalWidth)
+                                    : 0.0;
+                                final baseWidth =
+                                    currentWidth.clamp(0.0, totalWidth - addedWidth);
+
+                                return Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    if (baseWidth > 0)
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Container(
+                                          width: baseWidth,
+                                          decoration: BoxDecoration(
+                                            color: projectedInputRatio >= 0.9
+                                                ? AppColors.red.withValues(alpha: 0.75)
+                                                : projectedInputRatio >= 0.75
+                                                ? Colors.orange.withValues(alpha: 0.75)
+                                                : AppColors.green.withValues(alpha: 0.75),
+                                            borderRadius: BorderRadius.circular(999.r),
+                                          ),
+                                        ),
+                                      ),
+                                    if (addedWidth > 0)
+                                      Positioned(
+                                        left: baseWidth,
+                                        top: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          width: addedWidth,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.blue,
+                                            borderRadius: BorderRadius.circular(999.r),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 6.h),
+                        Text(
+                          'Secilen: $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
                     style: TextStyle(
@@ -2750,8 +3019,11 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                   color: Colors.black.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
-                                    color: (isSelected ? AppColors.green : Colors.white10)
-                                        .withValues(alpha: 0.2),
+                                    color:
+                                        (isSelected
+                                                ? AppColors.green
+                                                : Colors.white10)
+                                            .withValues(alpha: 0.2),
                                   ),
                                 ),
                                 child: BrandedProductImage(
@@ -2944,7 +3216,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     );
     final totalVolume = items.fold<double>(
       0,
-      (sum, item) => sum + (item.quantity * item.slot.unitVolume),
+      (sum, item) =>
+          sum +
+          (item.quantity * item.slot.unitVolume),
     );
 
     try {
@@ -3034,6 +3308,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     required WidgetRef ref,
     required FarmDetailModel detail,
     required ProductionLogisticsWarehouseOption targetWarehouse,
+    WarehouseCapacityStatusModel? targetCapacityStatus,
     required List<FarmProductionInventoryModel> inventories,
   }) async {
     final sortedInventories = [...inventories]
@@ -3073,7 +3348,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                     (item.product?.urunAdi ?? item.productId) +
                         (!item.isInput &&
                                 item.brandId !=
-                                    SelectableProductionProductModel.defaultBrandId
+                                    SelectableProductionProductModel
+                                        .defaultBrandId
                             ? ' (${_currentBrandName ?? 'Markali'})'
                             : ''),
                     textAlign: TextAlign.center,
@@ -3125,9 +3401,11 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                       child: BrandedProductImage(
                         fileName: item.product?.urunIconu ?? 'default.webp',
                         brandId: item.brandId,
-                        brandName: !item.isInput &&
+                        brandName:
+                            !item.isInput &&
                                 item.brandId !=
-                                    SelectableProductionProductModel.defaultBrandId
+                                    SelectableProductionProductModel
+                                        .defaultBrandId
                             ? _currentBrandName
                             : null,
                         productId: item.productId,
@@ -3315,6 +3593,32 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             0,
             (sum, item) => sum + item.quantity,
           );
+          final totalVolume = selectedItems.fold<double>(
+            0,
+            (sum, item) =>
+                sum +
+                (item.quantity *
+                    _resolveFarmInventoryUnitVolume(detail, item.inventory)),
+          );
+          final currentUsedCapacity = targetCapacityStatus == null
+              ? 0.0
+              : targetCapacityStatus.usedCapacity +
+                    targetCapacityStatus.reservedCapacity;
+          final projectedUsedCapacity = currentUsedCapacity + totalVolume;
+          final currentCapacityRatio =
+              targetCapacityStatus == null || targetCapacityStatus.totalCapacity <= 0
+              ? 0.0
+              : (currentUsedCapacity / targetCapacityStatus.totalCapacity).clamp(
+                  0.0,
+                  1.0,
+                );
+          final projectedCapacityRatio =
+              targetCapacityStatus == null || targetCapacityStatus.totalCapacity <= 0
+              ? 0.0
+              : (projectedUsedCapacity / targetCapacityStatus.totalCapacity).clamp(
+                  0.0,
+                  1.0,
+                );
 
           return SafeArea(
             top: false,
@@ -3334,15 +3638,286 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    '${targetWarehouse.name} | ${targetWarehouse.cityName}',
-                    style: TextStyle(
-                      color: AppColors.goldLight,
-                      fontSize: 12.sp,
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.035),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(10.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.agriculture_rounded,
+                                        color: AppColors.blue,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            detail.farm.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            detail.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Kaynak Tarla',
+                                            AppColors.blue,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+                            Container(
+                              width: 34.w,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(10.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.green.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.warehouse_rounded,
+                                        color: AppColors.green,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            targetWarehouse.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            targetWarehouse.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Hedef Depo',
+                                            AppColors.green,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (targetCapacityStatus != null) ...[
+                          SizedBox(height: 10.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Bos: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                '%${(projectedCapacityRatio * 100).round()}',
+                                style: TextStyle(
+                                  color: projectedCapacityRatio >= 0.9
+                                      ? AppColors.red
+                                      : projectedCapacityRatio >= 0.75
+                                      ? Colors.orange
+                                      : AppColors.green,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Container(
+                            height: 9.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(999.r),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999.r),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final totalWidth = constraints.maxWidth;
+                                  final currentWidth =
+                                      totalWidth * currentCapacityRatio;
+                                  final projectedWidth =
+                                      totalWidth * projectedCapacityRatio;
+                                  final rawAddedWidth =
+                                      (projectedWidth - currentWidth).clamp(
+                                        0.0,
+                                        totalWidth,
+                                      );
+                                  final addedWidth = rawAddedWidth > 0
+                                      ? rawAddedWidth.clamp(3.0, totalWidth)
+                                      : 0.0;
+                                  final baseWidth =
+                                      currentWidth.clamp(0.0, totalWidth - addedWidth);
+
+                                  return Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      if (baseWidth > 0)
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Container(
+                                            width: baseWidth,
+                                            decoration: BoxDecoration(
+                                              color: projectedCapacityRatio >=
+                                                      0.9
+                                                  ? AppColors.red.withValues(
+                                                      alpha: 0.75,
+                                                    )
+                                                  : projectedCapacityRatio >=
+                                                        0.75
+                                                  ? Colors.orange.withValues(
+                                                      alpha: 0.75,
+                                                    )
+                                                  : AppColors.green.withValues(
+                                                      alpha: 0.75,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(999.r),
+                                            ),
+                                          ),
+                                        ),
+                                      if (addedWidth > 0)
+                                        Positioned(
+                                          left: baseWidth,
+                                          top: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: addedWidth,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.gold,
+                                              borderRadius: BorderRadius.circular(999.r),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 6.h),
+                          Text(
+                            'Secilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet secildi',
                     style: TextStyle(
@@ -3386,14 +3961,19 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                   color: Colors.black.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
-                                    color: (isSelected ? AppColors.green : Colors.white10)
-                                        .withValues(alpha: 0.2),
+                                    color:
+                                        (isSelected
+                                                ? AppColors.green
+                                                : Colors.white10)
+                                            .withValues(alpha: 0.2),
                                   ),
                                 ),
                                 child: BrandedProductImage(
-                                  fileName: item.product?.urunIconu ?? 'default.webp',
+                                  fileName:
+                                      item.product?.urunIconu ?? 'default.webp',
                                   brandId: item.brandId,
-                                  brandName: !item.isInput &&
+                                  brandName:
+                                      !item.isInput &&
                                           item.brandId !=
                                               SelectableProductionProductModel
                                                   .defaultBrandId
@@ -3579,7 +4159,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     final totalVolume = items.fold<double>(
       0,
       (sum, item) =>
-          sum + ((item.inventory.product?.birimHacim ?? 0) * item.quantity),
+          sum +
+          (_resolveFarmInventoryUnitVolume(detail, item.inventory) *
+              item.quantity),
     );
     try {
       vehicleResult = await ref
@@ -3776,6 +4358,21 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     return (capacity - usedAndPending.ceil()).clamp(0, capacity);
   }
 
+  double _calculateRemainingInputCapacityVolume(
+    FarmDetailModel detail,
+    List<FarmProductionInventoryModel> inventories,
+    int capacity,
+  ) {
+    final usedAndPending = inventories.fold<double>(
+      0,
+      (sum, inventory) =>
+          sum +
+          ((inventory.quantity + inventory.pendingQuantity) *
+              _resolveFarmInventoryUnitVolume(detail, inventory)),
+    );
+    return (capacity - usedAndPending).clamp(0.0, capacity.toDouble());
+  }
+
   double _inventoryRatio(int current, int capacity) {
     if (capacity <= 0) return 0.0;
     return (current / capacity).clamp(0.0, 1.0);
@@ -3799,6 +4396,31 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       ),
     );
   }
+
+  double _resolveFarmInventoryUnitVolume(
+    FarmDetailModel detail,
+    FarmProductionInventoryModel inventory,
+  ) {
+    if (inventory.unitVolume > 0) return inventory.unitVolume;
+    final productVolume = inventory.product?.birimHacim ?? 0;
+    if (productVolume > 0) return productVolume;
+
+    for (final candidate in detail.inventories) {
+      if (candidate.productId != inventory.productId) continue;
+      if (candidate.unitVolume > 0) return candidate.unitVolume;
+      final candidateProductVolume = candidate.product?.birimHacim ?? 0;
+      if (candidateProductVolume > 0) return candidateProductVolume;
+    }
+
+    for (final slot in detail.slots) {
+      final slotProduct = slot.product;
+      if (slotProduct == null || slot.productId != inventory.productId) continue;
+      if (slotProduct.birimHacim > 0) return slotProduct.birimHacim;
+    }
+
+    return 0;
+  }
+
 
   Color _inputColorForProduct(String productId) {
     const palette = <Color>[

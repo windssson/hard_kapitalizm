@@ -42,6 +42,7 @@ import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_detail_screen.da
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_history_screen.dart';
 import 'package:hard_kapitalizm/features/arge/ui/arge_screen.dart';
 import 'package:hard_kapitalizm/features/mission/ui/mission_screen.dart';
+import 'package:hard_kapitalizm/features/tax/ui/tax_screen.dart';
 import 'package:hard_kapitalizm/features/notification/ui/notification_screen.dart';
 import 'package:hard_kapitalizm/features/notification/ui/alert_screen.dart';
 import 'package:hard_kapitalizm/features/achievement/ui/achievement_screen.dart';
@@ -339,6 +340,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/arge',
       builder: (context, state) => const ArgeScreen(),
+    ),
+    GoRoute(
+      path: '/tax',
+      builder: (context, state) => const TaxScreen(),
     ),
   ],
 );

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -591,17 +592,8 @@ class AppTopBar extends ConsumerWidget {
   }
 
   String _formatMoney(dynamic amount) {
-    if (amount == null) return '0';
-    final val = double.parse(amount.toString());
-    if (val >= 1000000000) {
-      return '${(val / 1000000000).toStringAsFixed(1)}B';
-    }
-    if (val >= 1000000) {
-      return '${(val / 1000000).toStringAsFixed(1)}M';
-    }
-    if (val >= 1000) {
-      return '${(val / 1000).toStringAsFixed(1)}K';
-    }
-    return val.toStringAsFixed(0);
+    return AppMoney.compact(
+      double.tryParse(amount?.toString() ?? '0') ?? 0,
+    );
   }
 }

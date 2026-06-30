@@ -21,6 +21,9 @@ import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
+import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
+    show warehouseCapacityStatusProvider;
+import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_detail_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
@@ -1011,6 +1014,31 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
   }
 
+  double _resolveMineInventoryUnitVolume(
+    MineDetailModel detail,
+    MineProductionInventoryModel inventory,
+  ) {
+    if (inventory.unitVolume > 0) return inventory.unitVolume;
+    final productVolume = inventory.product?.birimHacim ?? 0;
+    if (productVolume > 0) return productVolume;
+
+    for (final candidate in detail.inventories) {
+      if (candidate.productId != inventory.productId) continue;
+      if (candidate.unitVolume > 0) return candidate.unitVolume;
+      final candidateProductVolume = candidate.product?.birimHacim ?? 0;
+      if (candidateProductVolume > 0) return candidateProductVolume;
+    }
+
+    final detailProduct = detail.product;
+    if (detailProduct != null &&
+        detailProduct.id == inventory.productId &&
+        detailProduct.birimHacim > 0) {
+      return detailProduct.birimHacim;
+    }
+
+    return 0;
+  }
+
   double _safeProgress(double current, double max) {
     if (max <= 0) return 0;
     return (current / max).clamp(0.0, 1.0);
@@ -1579,13 +1607,23 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               : 'Lojistik Transfer',
           infoText: '${eligibleInventories.length} uygun stok secilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
-          onTap: () {
+          onTap: () async {
             Navigator.pop(context);
+            WarehouseCapacityStatusModel? capacityStatus;
+            try {
+              capacityStatus = await ref.read(
+                warehouseCapacityStatusProvider(warehouseOption.id).future,
+              );
+            } catch (_) {
+              capacityStatus = null;
+            }
+            if (!context.mounted) return;
             _showMineOutboundSelectionSheet(
               context: context,
               ref: ref,
               detail: detail,
               targetWarehouse: warehouseOption,
+              targetCapacityStatus: capacityStatus,
               inventories: eligibleInventories,
             );
           },
@@ -1622,6 +1660,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     required WidgetRef ref,
     required MineDetailModel detail,
     required ProductionLogisticsWarehouseOption targetWarehouse,
+    WarehouseCapacityStatusModel? targetCapacityStatus,
     required List<MineProductionInventoryModel> inventories,
   }) async {
     final selectedQuantities = <String, int>{};
@@ -1658,7 +1697,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 children: [
                   Text(
                     (item.product?.urunAdi ?? item.productId) +
-                        (item.brandId != SelectableProductionProductModel.defaultBrandId
+                        (item.brandId !=
+                                SelectableProductionProductModel.defaultBrandId
                             ? ' (${_currentBrandName ?? 'Markali'})'
                             : ''),
                     textAlign: TextAlign.center,
@@ -1710,7 +1750,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       child: BrandedProductImage(
                         fileName: item.product?.urunIconu ?? 'default.webp',
                         brandId: item.brandId,
-                        brandName: item.brandId !=
+                        brandName:
+                            item.brandId !=
                                 SelectableProductionProductModel.defaultBrandId
                             ? _currentBrandName
                             : null,
@@ -1899,6 +1940,30 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             0,
             (sum, item) => sum + item.quantity,
           );
+          final totalVolume = selectedItems.fold<double>(
+            0,
+            (sum, item) =>
+                sum +
+                (item.quantity *
+                    _resolveMineInventoryUnitVolume(detail, item.inventory)),
+          );
+          final currentUsedCapacity = targetCapacityStatus == null
+              ? 0.0
+              : targetCapacityStatus.usedCapacity +
+                    targetCapacityStatus.reservedCapacity;
+          final projectedUsedCapacity = currentUsedCapacity + totalVolume;
+          final currentCapacityRatio =
+              targetCapacityStatus == null ||
+                  targetCapacityStatus.totalCapacity <= 0
+              ? 0.0
+              : (currentUsedCapacity / targetCapacityStatus.totalCapacity)
+                    .clamp(0.0, 1.0);
+          final projectedCapacityRatio =
+              targetCapacityStatus == null ||
+                  targetCapacityStatus.totalCapacity <= 0
+              ? 0.0
+              : (projectedUsedCapacity / targetCapacityStatus.totalCapacity)
+                    .clamp(0.0, 1.0);
 
           return SafeArea(
             top: false,
@@ -1918,15 +1983,289 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 6.h),
-                  Text(
-                    '${targetWarehouse.name} | ${targetWarehouse.cityName}',
-                    style: TextStyle(
-                      color: AppColors.goldLight,
-                      fontSize: 12.sp,
+                  SizedBox(height: 10.h),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.035),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.borderGoldLight.withValues(
+                          alpha: 0.12,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.landscape_rounded,
+                                        color: AppColors.blue,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            detail.mine.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            detail.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Kaynak Maden',
+                                            AppColors.blue,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Container(
+                              width: 30.w,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.arrow_forward_rounded,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: Container(
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                    color: AppColors.green.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.22),
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                      child: Icon(
+                                        Icons.warehouse_rounded,
+                                        color: AppColors.green,
+                                        size: 16.sp,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            targetWarehouse.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 3.h),
+                                          Text(
+                                            targetWarehouse.cityName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.goldLight,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          SizedBox(height: 5.h),
+                                          _buildInlineMetaChip(
+                                            'Hedef Depo',
+                                            AppColors.green,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (targetCapacityStatus != null) ...[
+                          SizedBox(height: 10.h),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Bos: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                '%${(projectedCapacityRatio * 100).round()}',
+                                style: TextStyle(
+                                  color: projectedCapacityRatio >= 0.9
+                                      ? AppColors.red
+                                      : projectedCapacityRatio >= 0.75
+                                      ? Colors.orange
+                                      : AppColors.green,
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Container(
+                            height: 9.h,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(999.r),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999.r),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final totalWidth = constraints.maxWidth;
+                                  final currentWidth =
+                                      totalWidth * currentCapacityRatio;
+                                  final projectedWidth =
+                                      totalWidth * projectedCapacityRatio;
+                                  final rawAddedWidth =
+                                      (projectedWidth - currentWidth).clamp(
+                                        0.0,
+                                        totalWidth,
+                                      );
+                                  final addedWidth = rawAddedWidth > 0
+                                      ? rawAddedWidth.clamp(3.0, totalWidth)
+                                      : 0.0;
+                                  final baseWidth =
+                                      currentWidth.clamp(0.0, totalWidth - addedWidth);
+
+                                  return Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      if (baseWidth > 0)
+                                        Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Container(
+                                            width: baseWidth,
+                                            decoration: BoxDecoration(
+                                              color: projectedCapacityRatio >=
+                                                      0.9
+                                                  ? AppColors.red.withValues(
+                                                      alpha: 0.75,
+                                                    )
+                                                  : projectedCapacityRatio >=
+                                                        0.75
+                                                  ? Colors.orange.withValues(
+                                                      alpha: 0.75,
+                                                    )
+                                                  : AppColors.green.withValues(
+                                                      alpha: 0.75,
+                                                    ),
+                                              borderRadius:
+                                                  BorderRadius.circular(999.r),
+                                            ),
+                                          ),
+                                        ),
+                                      if (addedWidth > 0)
+                                        Positioned(
+                                          left: baseWidth,
+                                          top: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: addedWidth,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.gold,
+                                              borderRadius:
+                                                  BorderRadius.circular(999.r),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 6.h),
+                          Text(
+                            'Secilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.sp,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet secildi',
                     style: TextStyle(
@@ -1970,14 +2309,19 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   color: Colors.black.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
-                                    color: (isSelected ? AppColors.green : Colors.white10)
-                                        .withValues(alpha: 0.2),
+                                    color:
+                                        (isSelected
+                                                ? AppColors.green
+                                                : Colors.white10)
+                                            .withValues(alpha: 0.2),
                                   ),
                                 ),
                                 child: BrandedProductImage(
-                                  fileName: item.product?.urunIconu ?? 'default.webp',
+                                  fileName:
+                                      item.product?.urunIconu ?? 'default.webp',
                                   brandId: item.brandId,
-                                  brandName: item.brandId !=
+                                  brandName:
+                                      item.brandId !=
                                           SelectableProductionProductModel
                                               .defaultBrandId
                                       ? _currentBrandName
@@ -2161,7 +2505,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final totalVolume = items.fold<double>(
       0,
       (sum, item) =>
-          sum + ((item.inventory.product?.birimHacim ?? 0) * item.quantity),
+          sum +
+          (_resolveMineInventoryUnitVolume(detail, item.inventory) *
+              item.quantity),
     );
     try {
       vehicleResult = await ref

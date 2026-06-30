@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/type_product_preview.dart';
@@ -302,9 +303,7 @@ class _FieldTypeSelectionScreenState
   }
 
   String _formatMoney(double val) {
-    if (val >= 1000000) return '${(val / 1000000).toStringAsFixed(1)}M';
-    if (val >= 1000) return '${(val / 1000).toStringAsFixed(1)}K';
-    return val.toStringAsFixed(0);
+    return AppMoney.compact(val);
   }
 
   Future<void> _handleEstablish() async {

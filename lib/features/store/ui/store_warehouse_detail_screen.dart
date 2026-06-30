@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
@@ -323,7 +324,7 @@ class _StoreWarehouseSlotCard extends StatelessWidget {
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  'Maliyet: ${slot.cost.toStringAsFixed(2)}',
+                  'Maliyet: ${AppMoney.full(slot.cost, decimals: 2)}',
                   style: TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 11.sp,

@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -1906,7 +1907,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   }
 
   String _formatCurrency(double value) {
-    return '${value.toStringAsFixed(1)} TL';
+    return AppMoney.full(value, decimals: 1);
   }
 
   String _buildQualityBrandSummary({

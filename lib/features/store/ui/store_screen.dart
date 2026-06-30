@@ -25,12 +25,6 @@ class StoreScreen extends ConsumerStatefulWidget {
 class _StoreScreenState extends ConsumerState<StoreScreen> {
   static const String _defaultBrandId = '00000000-0000-0000-0000-000000000000';
   final int _selectedIndex = -1;
-  String _selectedFilter = 'Tumu';
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
@@ -79,12 +73,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             Expanded(
               child: storesAsync.when(
                 data: (stores) {
-                  final filteredStores = stores.where((s) {
-                    if (_selectedFilter == 'Aktif') return s.isActive;
-                    if (_selectedFilter == 'Pasif') return !s.isActive;
-                    return true;
-                  }).toList();
-
                   return RefreshIndicator(
                     onRefresh: () =>
                         ref.read(storesListProvider.notifier).refresh(),
@@ -98,17 +86,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                           ),
                         ),
                         SliverPadding(
-                          padding: EdgeInsets.fromLTRB(6.w, 16.h, 6.w, 0),
-                          sliver: SliverToBoxAdapter(child: _buildFilters()),
-                        ),
-                        SliverPadding(
                           padding: EdgeInsets.fromLTRB(5.w, 16.h, 5.w, 40.h),
-                          sliver: filteredStores.isEmpty
+                          sliver: stores.isEmpty
                               ? SliverToBoxAdapter(child: _buildEmptyState())
                               : SliverList.builder(
-                                  itemCount: filteredStores.length,
+                                  itemCount: stores.length,
                                   itemBuilder: (context, index) {
-                                    final store = filteredStores[index];
+                                    final store = stores[index];
                                     return TweenAnimationBuilder<double>(
                                       duration: Duration(
                                         milliseconds:
@@ -235,60 +219,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     );
   }
 
-  Widget _buildFilters() {
-    return Row(
-      children: [
-        _buildFilterChip('Tumu', null),
-        SizedBox(width: 8.w),
-        _buildFilterChip('Aktif', AppColors.green),
-        SizedBox(width: 8.w),
-        _buildFilterChip('Pasif', AppColors.red),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(String label, Color? dotColor) {
-    final isSelected = _selectedFilter == label;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedFilter = label),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.gold.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(
-            color: isSelected ? AppColors.gold : AppColors.border,
-          ),
-        ),
-        child: Row(
-          children: [
-            if (dotColor != null) ...[
-              Container(
-                width: 6.w,
-                height: 6.w,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              SizedBox(width: 6.w),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppColors.gold : AppColors.textMuted,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 13.sp,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildConstructionCard(StoreModel store) {
     final finishAt = store.finishAt;
     final starCost = finishAt == null
@@ -307,10 +237,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                width: 115.w,
-                height: 115.w,
-                decoration: BoxDecoration(
+                Container(
+                  width: 115.w,
+                  height: 115.w,
+                  decoration: BoxDecoration(
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(16.r),
                   border: Border.all(
@@ -324,10 +254,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     Opacity(
                       opacity: 0.8,
                       child: Padding(
-                        padding: EdgeInsets.all(4.w),
+                        padding: EdgeInsets.zero,
                         child: CachedAssetImage(
                           fileName: store.storeType.icon,
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
@@ -543,9 +473,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             Column(
               children: [
                 Container(
-                  width: 68.w,
-                  height: 68.w,
-                  padding: EdgeInsets.all(1.w),
+                  width: 90.w,
+                  height: 90.w,
+                  padding: EdgeInsets.zero,
                   decoration: BoxDecoration(
                     color: AppColors.cardBgLight.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12.r),
@@ -556,9 +486,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   ),
                   child: CachedAssetImage(
                     fileName: store.storeType.icon,
-                    width: 68.w,
-                    height: 68.w,
-                    fit: BoxFit.contain,
+                    width: 90.w,
+                    height: 90.w,
+                    fit: BoxFit.cover,
                   ),
                 ),
                 SizedBox(height: 4.h),
@@ -587,42 +517,18 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    store.name,
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 8.h),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Wrap(
-                          spacing: 6.w,
-                          runSpacing: 6.h,
-                          children: [
-                            _buildInfoPill(
-                              icon: Icons.grid_view_rounded,
-                              label: 'Slot',
-                              value:
-                                  '${store.currentSlotCount}/${store.maxSlotCount}',
-                              color: AppColors.gold,
-                            ),
-                            _buildInfoPill(
-                              icon: Icons.inventory_2_rounded,
-                              label: 'Doluluk',
-                              value:
-                                  '%${(store.summary.usedCapacityRatio * 100).round()}',
-                              color: store.summary.usedCapacityRatio >= 0.85
-                                  ? AppColors.red
-                                  : AppColors.green,
-                            ),
-                          ],
+                        child: Text(
+                          store.name,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       SizedBox(width: 8.w),
@@ -642,6 +548,42 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       ),
                     ],
                   ),
+                  SizedBox(height: 10.h),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999.r),
+                          child: LinearProgressIndicator(
+                            value: store.summary.usedCapacityRatio.clamp(
+                              0.0,
+                              1.0,
+                            ),
+                            minHeight: 10.h,
+                            backgroundColor: AppColors.textPrimary.withValues(
+                              alpha: 0.08,
+                            ),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              store.summary.usedCapacityRatio >= 0.85
+                                  ? AppColors.red
+                                  : AppColors.green,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10.w),
+                      Text(
+                        '%${(store.summary.usedCapacityRatio * 100).round()}',
+                        style: TextStyle(
+                          color: store.summary.usedCapacityRatio >= 0.85
+                              ? AppColors.red
+                              : AppColors.green,
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                   if (store.slots.isNotEmpty) ...[
                     SizedBox(height: 12.h),
                     SingleChildScrollView(
@@ -658,37 +600,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildInfoPill({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12.sp, color: color),
-          SizedBox(width: 4.w),
-          Text(
-            '$label: $value',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }
