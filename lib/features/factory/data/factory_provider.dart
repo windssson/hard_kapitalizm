@@ -11,6 +11,8 @@ import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
+import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
+import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
@@ -185,6 +187,16 @@ class FactoryActionNotifier {
       ProductionLogisticsService();
 
   FactoryActionNotifier(this._ref);
+
+  Future<void> _refreshAttentionNotifications() async {
+    try {
+      await _supabase.rpc('refresh_player_attention_notifications');
+    } catch (_) {
+      // Ignore attention refresh errors; primary action already succeeded.
+    }
+    _ref.invalidate(playerNotificationDashboardProvider);
+    _ref.invalidate(homeDashboardProvider);
+  }
 
   Future<Map<String, dynamic>> createFactory({
     required String cityId,
@@ -408,6 +420,7 @@ class FactoryActionNotifier {
         _ref.invalidate(factoryListProvider);
         _ref.invalidate(factoryDetailProvider(factoryId));
       }
+      await _refreshAttentionNotifications();
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -436,6 +449,7 @@ class FactoryActionNotifier {
         _ref.invalidate(factoryListProvider);
         _ref.invalidate(factoryDetailProvider(factoryId));
       }
+      await _refreshAttentionNotifications();
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -603,6 +617,7 @@ class FactoryActionNotifier {
       _ref.invalidate(factoryDetailProvider);
       _ref.invalidate(playerProvider);
     }
+    await _refreshAttentionNotifications();
     return result;
   }
 
@@ -626,6 +641,7 @@ class FactoryActionNotifier {
       _ref.invalidate(factoryDetailProvider);
       _ref.invalidate(playerProvider);
     }
+    await _refreshAttentionNotifications();
     return result;
   }
 }

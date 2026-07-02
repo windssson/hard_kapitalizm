@@ -746,7 +746,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
               ),
               SizedBox(width: 4.w),
               Text(
-                '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.factory.outputCapacity)} m³',
+                '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.factory.outputCapacity)} adet',
                 style: TextStyle(
                   color: ratio >= 0.9 ? AppColors.red : Colors.white,
                   fontSize: 10.sp,
@@ -832,7 +832,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
               ),
               SizedBox(width: 4.w),
               Text(
-                '${_formatCompact(item.inputStockQuantity)} adet / ${_formatCompact(item.factory.inputCapacity)} m³',
+                '${_formatCompact(item.inputStockQuantity)} adet / ${_formatCompact(item.factory.inputCapacity)} adet',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 10.sp,

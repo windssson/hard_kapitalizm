@@ -1164,7 +1164,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    'Hammadde kapasitesi: ${detail.farm.inputCapacity} m³ -> $nextInputCapacity m³',
+                    'Hammadde kapasitesi: ${detail.farm.inputCapacity} adet -> $nextInputCapacity adet',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12.sp,
@@ -1172,7 +1172,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    'Uretilen urun kapasitesi: ${detail.farm.outputCapacity} m³ -> $nextOutputCapacity m³',
+                    'Uretilen urun kapasitesi: ${detail.farm.outputCapacity} adet -> $nextOutputCapacity adet',
                     style: TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 12.sp,

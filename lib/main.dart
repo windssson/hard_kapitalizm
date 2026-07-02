@@ -49,6 +49,8 @@ import 'package:hard_kapitalizm/features/achievement/ui/achievement_screen.dart'
 import 'package:hard_kapitalizm/features/leaderboard/ui/leaderboard_screen.dart';
 import 'package:hard_kapitalizm/features/cash_flow/ui/cash_flow_screen.dart';
 import 'package:hard_kapitalizm/features/production_report/ui/production_report_screen.dart';
+import 'package:hard_kapitalizm/features/tender/ui/tender_center_screen.dart';
+import 'package:hard_kapitalizm/features/tender/ui/tender_detail_screen.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/navigation/app_route_observer.dart';
@@ -344,6 +346,24 @@ final _router = GoRouter(
     GoRoute(
       path: '/tax',
       builder: (context, state) => const TaxScreen(),
+    ),
+    GoRoute(
+      path: '/tenders',
+      builder: (context, state) => const TenderCenterScreen(),
+      routes: [
+        GoRoute(
+          path: 'open/:id',
+          builder: (context, state) => TenderDetailScreen(
+            tenderId: state.pathParameters['id']!,
+          ),
+        ),
+        GoRoute(
+          path: 'player/:id',
+          builder: (context, state) => TenderDetailScreen(
+            playerTenderId: state.pathParameters['id']!,
+          ),
+        ),
+      ],
     ),
   ],
 );

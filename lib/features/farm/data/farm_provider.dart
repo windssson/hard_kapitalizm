@@ -14,6 +14,8 @@ import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
+import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 
 final farmListProvider =
     FutureProvider<List<FarmListItemModel>>((ref) async {
@@ -198,6 +200,16 @@ class FarmActionNotifier {
       ProductionLogisticsService();
 
   FarmActionNotifier(this._ref);
+
+  Future<void> _refreshAttentionNotifications() async {
+    try {
+      await _supabase.rpc('refresh_player_attention_notifications');
+    } catch (_) {
+      // Ignore attention refresh errors; primary action already succeeded.
+    }
+    _ref.invalidate(playerNotificationDashboardProvider);
+    _ref.invalidate(homeDashboardProvider);
+  }
 
   Future<Map<String, dynamic>> createFarm({
     required String cityId,
@@ -459,6 +471,7 @@ class FarmActionNotifier {
           _ref.invalidate(farmDetailProvider(ownerId));
         }
       }
+      await _refreshAttentionNotifications();
       return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -494,6 +507,7 @@ class FarmActionNotifier {
           _ref.invalidate(farmDetailProvider(ownerId));
         }
       }
+      await _refreshAttentionNotifications();
       return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -527,6 +541,7 @@ class FarmActionNotifier {
           _ref.invalidate(farmDetailProvider(ownerId));
         }
       }
+      await _refreshAttentionNotifications();
       return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -619,6 +634,7 @@ class FarmActionNotifier {
       _ref.invalidate(farmDetailProvider);
       _ref.invalidate(playerProvider);
     }
+    await _refreshAttentionNotifications();
     return result;
   }
 
@@ -642,6 +658,7 @@ class FarmActionNotifier {
       _ref.invalidate(farmDetailProvider);
       _ref.invalidate(playerProvider);
     }
+    await _refreshAttentionNotifications();
     return result;
   }
 }

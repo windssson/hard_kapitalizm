@@ -19,6 +19,7 @@ import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_model.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/notification/models/player_notification_model.dart';
+import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
@@ -288,6 +289,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     _buildModuleGrid(),
                     SizedBox(height: 8.h),
                     _buildTaxInstitutionButton(),
+                    SizedBox(height: 8.h),
+                    _buildTenderInstitutionButton(),
                     SizedBox(height: 8.h),
                     _buildFinancialStats(),
                     SizedBox(height: 8.h),
@@ -1862,6 +1865,130 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   String _formatSignedlessCurrencyCompact(num value) {
     return AppMoney.compact(value);
+  }
+
+  Widget _buildTenderInstitutionButton() {
+    return Consumer(
+      builder: (context, ref, child) {
+        final tenderCenterAsync = ref.watch(tenderCenterProvider);
+        final openTenderCount = tenderCenterAsync.value?.openTenders.length ?? 0;
+        final activeTenderCount =
+            tenderCenterAsync.value?.myActiveTenders.length ?? 0;
+        final hasOpportunity = openTenderCount > 0;
+
+        return Container(
+          margin: EdgeInsets.symmetric(vertical: 4.h),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => context.push('/tenders'),
+              borderRadius: BorderRadius.circular(14.r),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14.r),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/theme/cartback.webp'),
+                    fit: BoxFit.fill,
+                  ),
+                  border: Border.all(
+                    color: hasOpportunity
+                        ? AppColors.gold.withValues(alpha: 0.5)
+                        : AppColors.border,
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF0C1624).withValues(alpha: 0.40),
+                      const Color(0xFF07111C).withValues(alpha: 0.56),
+                    ],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36.w,
+                      height: 36.w,
+                      decoration: BoxDecoration(
+                        color: (hasOpportunity ? AppColors.gold : AppColors.blue)
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(
+                          color: (hasOpportunity ? AppColors.gold : AppColors.blue)
+                              .withValues(alpha: 0.32),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.gavel_rounded,
+                        color: hasOpportunity ? AppColors.gold : AppColors.blue,
+                        size: 18.sp,
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'DEVLET KURUMLARI',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 8.sp,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(height: 3.h),
+                          Text(
+                            'Ihale Merkezi',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Acik / Aktif',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 8.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          '$openTenderCount / $activeTenderCount',
+                          style: TextStyle(
+                            color: hasOpportunity
+                                ? AppColors.goldLight
+                                : AppColors.textPrimary,
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(width: 8.w),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                      size: 18.sp,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   List<double> _buildCompanySparklinePoints({

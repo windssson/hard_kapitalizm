@@ -272,6 +272,18 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       return '/achievements';
     }
 
+    if (notification.entityKind == 'player_tender') {
+      final entityId = notification.entityId;
+      return entityId?.isNotEmpty == true
+          ? '/tenders/player/$entityId'
+          : '/tenders';
+    }
+
+    if (notification.entityKind == 'tender_bid') {
+      final tenderId = notification.meta['tender_id']?.toString();
+      return tenderId?.isNotEmpty == true ? '/tenders/open/$tenderId' : '/tenders';
+    }
+
     if (notification.entityKind == 'logistics') {
       return '/logistics';
     }
@@ -311,6 +323,18 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return Icons.science_rounded;
       case 'achievement_unlocked':
         return Icons.workspace_premium_rounded;
+      case 'tender_accepted':
+      case 'tender_won':
+      case 'tender_completed':
+        return Icons.gavel_rounded;
+      case 'tender_delivery_started':
+      case 'tender_delivery_completed':
+        return Icons.local_shipping_rounded;
+      case 'tender_failed':
+      case 'tender_lost':
+      case 'tender_cancelled':
+      case 'tender_delivery_late':
+        return Icons.warning_amber_rounded;
       default:
         return Icons.notifications_none_rounded;
     }
@@ -328,6 +352,24 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return 'AR-GE Tamam';
       case 'achievement_unlocked':
         return 'Rozet Acildi';
+      case 'tender_accepted':
+        return 'Ihale Alindi';
+      case 'tender_won':
+        return 'Ihale Kazanildi';
+      case 'tender_completed':
+        return 'Ihale Tamam';
+      case 'tender_delivery_started':
+        return 'Teslimat Basladi';
+      case 'tender_delivery_completed':
+        return 'Teslimat Ulasti';
+      case 'tender_failed':
+        return 'Ihale Basarisiz';
+      case 'tender_lost':
+        return 'Teklif Kaybetti';
+      case 'tender_cancelled':
+        return 'Ihale Iptal';
+      case 'tender_delivery_late':
+        return 'Teslimat Gecikti';
       default:
         return 'Bilgi';
     }
@@ -347,6 +389,10 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         return 'Ciftlik';
       case 'mine':
         return 'Maden';
+      case 'player_tender':
+        return 'Ihale';
+      case 'tender_bid':
+        return 'Teklif';
       case 'logistics':
         return 'Nakliye';
       default:

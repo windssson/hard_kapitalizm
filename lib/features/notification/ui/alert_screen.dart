@@ -306,6 +306,10 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
         return entityId?.isNotEmpty == true ? '/fields/$entityId' : '/fields';
       case 'mine':
         return entityId?.isNotEmpty == true ? '/mines/$entityId' : '/mines';
+      case 'player_tender':
+        return entityId?.isNotEmpty == true
+            ? '/tenders/player/$entityId'
+            : '/tenders';
       default:
         return null;
     }
@@ -321,6 +325,11 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
         return Icons.local_shipping_outlined;
       case 'inactive_reminder':
         return Icons.pause_circle_outline_rounded;
+      case 'tender_failed':
+      case 'tender_lost':
+      case 'tender_cancelled':
+      case 'tender_delivery_late':
+        return Icons.gavel_rounded;
       default:
         return Icons.notifications_active_outlined;
     }
@@ -345,6 +354,10 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
         return 'Ciftlik';
       case 'mine':
         return 'Maden';
+      case 'player_tender':
+        return 'Ihale';
+      case 'tender_bid':
+        return 'Teklif';
       case 'logistics':
         return 'Nakliye';
       default:
@@ -371,6 +384,14 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
         return 'Nakliye';
       case 'inactive_reminder':
         return 'Pasif';
+      case 'tender_failed':
+        return 'Sure Asimi';
+      case 'tender_lost':
+        return 'Teklif Kaybi';
+      case 'tender_cancelled':
+        return 'Iptal';
+      case 'tender_delivery_late':
+        return 'Gec Teslim';
       default:
         return null;
     }
