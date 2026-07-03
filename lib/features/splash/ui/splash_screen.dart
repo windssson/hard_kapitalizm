@@ -5,10 +5,12 @@ import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
+import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -44,9 +46,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
         try {
-          await Supabase.instance.client.rpc(
-            'bootstrap_game_session',
-          );
+          await Supabase.instance.client.rpc('bootstrap_game_session');
         } catch (_) {
           // Bootstrap basarisiz olsa bile asset yukleme ve giris akisina devam ediyoruz.
         }
@@ -55,6 +55,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       await ref.read(staticCatalogsProvider.future);
 
       if (user != null) {
+        try {
+          await ref.read(pushNotificationServiceProvider).initialize();
+        } catch (_) {
+          // Firebase/heartbeat registration failed, proceed anyway
+        }
         try {
           await ref.read(notificationActionProvider).refreshAttention();
         } catch (_) {
@@ -68,7 +73,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       }
 
       final assetManager = ref.read(assetManagerProvider);
-      
+
       await assetManager.prefetchAssets((current, total, fileName) {
         if (mounted) {
           setState(() {
@@ -138,12 +143,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.cardBg,
-                        AppColors.cardBgLight,
-                      ],
+                      colors: [AppColors.cardBg, AppColors.cardBgLight],
                     ),
-                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.5), width: 2),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.5),
+                      width: 2,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.gold.withValues(alpha: 0.3),
@@ -152,7 +157,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                       ),
                     ],
                   ),
-                  child: Image.asset('assets/logo.png', width: 80.sp, height: 80.sp, fit: BoxFit.contain),
+                  child: Image.asset(
+                    'assets/splashlogo.webp',
+                    width: 80.sp,
+                    height: 80.sp,
+                    fit: BoxFit.contain,
+                  ),
                 ),
                 SizedBox(height: 40.h),
                 // Title
@@ -175,7 +185,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   ),
                 ),
                 SizedBox(height: 60.h),
-                
+
                 if (_error != null) ...[
                   Icon(Icons.error_outline, color: AppColors.red, size: 40.sp),
                   SizedBox(height: 16.h),
@@ -189,15 +199,26 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.gold,
                       foregroundColor: Colors.black,
-                      padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 12.h),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 32.w,
+                        vertical: 12.h,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
                     ),
                     onPressed: () {
                       setState(() => _error = null);
                       _startDownload();
                     },
-                    child: Text('Tekrar Dene', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
-                  )
+                    child: Text(
+                      'Tekrar Dene',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                  ),
                 ] else ...[
                   // Progress Info
                   Row(
@@ -205,11 +226,18 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     children: [
                       Text(
                         progress == 1.0 ? 'Hazir!' : 'Sunucuya baglaniliyor...',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12.sp,
+                        ),
                       ),
                       Text(
                         '%${(progress * 100).toInt()}',
-                        style: TextStyle(color: AppColors.gold, fontSize: 14.sp, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: AppColors.gold,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -221,7 +249,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.cardBgLight.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(4.r),
-                      border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+                      border: Border.all(
+                        color: AppColors.borderGold.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -233,12 +263,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               width: constraints.maxWidth * progress,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [AppColors.goldDark, AppColors.goldLight],
+                                  colors: [
+                                    AppColors.goldDark,
+                                    AppColors.goldLight,
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(4.r),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.gold.withValues(alpha: 0.5),
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.5,
+                                    ),
                                     blurRadius: 8,
                                   ),
                                 ],
@@ -246,7 +281,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                             ),
                           ],
                         );
-                      }
+                      },
                     ),
                   ),
                 ],

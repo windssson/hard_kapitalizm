@@ -2560,55 +2560,55 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     ),
                   ),
                   SizedBox(height: 10.h),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 10.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: profitColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14.r),
-                      border: Border.all(
-                        color: profitColor.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSalesSummaryRow(
-                          'Kar Orani',
-                          marginRatio == null
-                              ? cost == 0
-                                    ? 'Maliyet 0'
-                                    : '-'
-                              : '%${marginRatio.toStringAsFixed(1)}',
-                          valueColor: marginRatio == null
-                              ? AppColors.gold
-                              : profitColor,
-                        ),
-                        _buildSalesSummaryRow(
-                          'Kar',
-                          marginAmount.toStringAsFixed(1),
-                          valueColor: profitColor,
-                        ),
-                        _buildSalesSummaryRow(
-                          'Talep',
-                          baseHourlyDemand > 0
-                              ? '${_describeDemandEffect(demandMultiplier)} / ${estimatedHourlyDemand.toStringAsFixed(1)} saat'
-                              : _describeDemandEffect(demandMultiplier),
-                          valueColor: demandColor,
-                        ),
-                        if (basePrice > 0)
-                          _buildSalesSummaryRow(
-                            'Piyasa Fiyatina Gore',
-                            _formatSignedPercent(vsBasePercent),
-                            valueColor: vsBasePercent <= 0
-                                ? AppColors.green
-                                : AppColors.red,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _PriceDetailMetric(
+                              label: 'BİRİM MALİYET',
+                              value: AppMoney.full(cost),
+                              color: AppColors.textSecondary,
+                            ),
                           ),
-                        SizedBox(height: 4.h),
-                        Text(
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: _PriceDetailMetric(
+                              label: 'PİYASA FİYATI',
+                              value: AppMoney.full(basePrice),
+                              subtitle: basePrice > 0 ? _formatSignedPercent(vsBasePercent) : null,
+                              color: vsBasePercent <= 0 ? AppColors.green : AppColors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _PriceDetailMetric(
+                              label: 'TAHMİNİ NET KAR',
+                              value: AppMoney.full(marginAmount),
+                              subtitle: marginRatio == null ? 'Maliyet 0' : '%${marginRatio.toStringAsFixed(1)} marj',
+                              color: profitColor,
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: _PriceDetailMetric(
+                              label: 'TAHMİNİ TALEP',
+                              value: _describeDemandEffect(demandMultiplier),
+                              subtitle: baseHourlyDemand > 0 ? '${estimatedHourlyDemand.toStringAsFixed(1)} adet/saat' : 'Talep yok',
+                              color: demandColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10.h),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4.w),
+                        child: Text(
                           averagePrice > 0
                               ? 'Piyasa ortalamasi: ${averagePrice.toStringAsFixed(1)}'
                               : basePrice > 0
@@ -2619,8 +2619,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             fontSize: 11.sp,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 10.h),
                   NumericKeyboard(
@@ -2874,12 +2874,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
-  String _formatValue(dynamic amount) {
-    return AppMoney.compact(
-      double.tryParse(amount?.toString() ?? '0') ?? 0,
-      withSymbol: false,
-    );
-  }
+
 
 
   void _startStoreTransferFlow(
@@ -3686,5 +3681,71 @@ String _formatCountdownLabel(Duration remaining) {
     return '${hours}s ${minutes}dk';
   }
   return '${remaining.inMinutes}dk';
+}
+
+class _PriceDetailMetric extends StatelessWidget {
+  const _PriceDetailMetric({
+    required this.label,
+    required this.value,
+    this.subtitle,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final String? subtitle;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 9.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          if (subtitle != null) ...[
+            SizedBox(height: 2.h),
+            Text(
+              subtitle!,
+              style: TextStyle(
+                color: color.withValues(alpha: 0.75),
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 

@@ -51,12 +51,12 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
   Future<void> _refresh() async {
     await ref.read(tenderActionProvider).refreshTenderRuntime();
     if (_isPlayerTender) {
-      await ref.refresh(
-        playerTenderDetailProvider(widget.playerTenderId!).future,
-      );
+      ref.invalidate(playerTenderDetailProvider(widget.playerTenderId!));
+      await ref.read(playerTenderDetailProvider(widget.playerTenderId!).future);
       return;
     }
-    await ref.refresh(tenderDetailProvider(widget.tenderId!).future);
+    ref.invalidate(tenderDetailProvider(widget.tenderId!));
+    await ref.read(tenderDetailProvider(widget.tenderId!).future);
   }
 
   Future<void> _submitBid(TenderDetailModel detail) async {
@@ -469,92 +469,162 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                           ],
                         ],
                         if (_isPlayerTender && hasPlayerTender && isActiveTender) ...[
-                          _WarehouseSelectionCard(
-                            detail: detail,
-                            selectedWarehouseId: _selectedWarehouseId,
-                            onSelected: (warehouseId) {
-                              setState(() {
-                                _selectedWarehouseId = warehouseId;
-                                _selectedVehicleId = null;
-                                _syncSelection(detail);
-                              });
-                            },
-                          ),
-                          if (selectedWarehouse != null) ...[
-                            if (!selectedWarehouse.sameCity) ...[
-                              SizedBox(height: 12.h),
-                              _VehicleSelectionCard(
-                                optionsAsync: vehicleOptionsAsync,
-                                selectedVehicleId: _selectedVehicleId,
-                                onSelected: (vehicleId) {
-                                  setState(() {
-                                    _selectedVehicleId = vehicleId;
-                                  });
-                                },
-                              ),
-                            ],
-                            SizedBox(height: 12.h),
-                            _QuantityCard(
-                              quantity: _selectedQuantity,
-                              maxQuantity: _resolveMaxQuantity(
-                                detail,
-                                selectedWarehouse,
-                              ),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedQuantity = value;
-                                  _selectedVehicleId = null;
-                                });
-                              },
-                            ),
-                            SizedBox(height: 14.h),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton.icon(
-                                onPressed:
-                                    _isSubmitting ||
-                                        _selectedQuantity <= 0 ||
-                                        selectedWarehouse.availableQuantity <= 0 ||
-                                        (!selectedWarehouse.sameCity &&
-                                            (_selectedVehicleId == null ||
-                                                _selectedVehicleId!.isEmpty)) ||
-                                        (selectedWarehouse.sameCity &&
-                                            selectedWarehouse.canDeliverBeforeDeadline == false)
-                                    ? null
-                                    : () => _startDelivery(detail),
-                                icon: _isSubmitting
-                                    ? SizedBox(
-                                        width: 16.w,
-                                        height: 16.w,
-                                        child: const CircularProgressIndicator(
-                                          strokeWidth: 2,
+                          Container(
+                            padding: EdgeInsets.all(14.w),
+                            decoration: AppDecorations.premiumCard(AppColors.borderGoldLight, 18.r),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sevkiyat Hazırlığı',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                SizedBox(height: 12.h),
+                                _WarehouseSelectionCard(
+                                  detail: detail,
+                                  selectedWarehouseId: _selectedWarehouseId,
+                                  onSelected: (warehouseId) {
+                                    setState(() {
+                                      _selectedWarehouseId = warehouseId;
+                                      _selectedVehicleId = null;
+                                      _syncSelection(detail);
+                                    });
+                                  },
+                                ),
+                                if (selectedWarehouse != null) ...[
+                                  if (!selectedWarehouse.sameCity) ...[
+                                    SizedBox(height: 14.h),
+                                    const Divider(color: Colors.white10, height: 1),
+                                    SizedBox(height: 14.h),
+                                    _VehicleSelectionCard(
+                                      optionsAsync: vehicleOptionsAsync,
+                                      selectedVehicleId: _selectedVehicleId,
+                                      onSelected: (vehicleId) {
+                                        setState(() {
+                                          _selectedVehicleId = vehicleId;
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                  SizedBox(height: 14.h),
+                                  const Divider(color: Colors.white10, height: 1),
+                                  SizedBox(height: 14.h),
+                                  _QuantityCard(
+                                    quantity: _selectedQuantity,
+                                    maxQuantity: _resolveMaxQuantity(
+                                      detail,
+                                      selectedWarehouse,
+                                    ),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedQuantity = value;
+                                        _selectedVehicleId = null;
+                                      });
+                                    },
+                                  ),
+                                  if (_selectedQuantity > 0) ...[
+                                    SizedBox(height: 14.h),
+                                    Builder(
+                                      builder: (context) {
+                                        double transportCost = 0.0;
+                                        if (!selectedWarehouse.sameCity &&
+                                            _selectedVehicleId != null &&
+                                            vehicleOptionsAsync != null) {
+                                          vehicleOptionsAsync.whenData((result) {
+                                            for (final opt in result.options) {
+                                              if (opt.vehicleId == _selectedVehicleId) {
+                                                transportCost = opt.transportCost;
+                                              }
+                                            }
+                                          });
+                                        }
+                                        final totalRequired = detail.playerTender?.requiredQuantity ??
+                                            detail.tender.requiredQuantity;
+                                        final totalReward = detail.tender.rewardCash;
+                                        final unitReward = totalRequired > 0
+                                            ? (totalReward / totalRequired)
+                                            : 0.0;
+
+                                        return _DeliveryProfitCalculator(
+                                          quantity: _selectedQuantity,
+                                          unitRewardCash: unitReward,
+                                          sameCity: selectedWarehouse.sameCity,
+                                          transportCost: transportCost,
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                  SizedBox(height: 14.h),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      onPressed:
+                                          _isSubmitting ||
+                                              _selectedQuantity <= 0 ||
+                                              selectedWarehouse.availableQuantity <= 0 ||
+                                              (!selectedWarehouse.sameCity &&
+                                                  (_selectedVehicleId == null ||
+                                                      _selectedVehicleId!.isEmpty)) ||
+                                              (selectedWarehouse.sameCity &&
+                                                  selectedWarehouse.canDeliverBeforeDeadline == false)
+                                          ? null
+                                          : () => _startDelivery(detail),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: AppColors.gold,
+                                        foregroundColor: Colors.black,
+                                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12.r),
                                         ),
-                                      )
-                                    : const Icon(Icons.local_shipping_rounded),
-                                label: const Text('Teslimati Baslat'),
-                              ),
+                                      ),
+                                      icon: _isSubmitting
+                                          ? SizedBox(
+                                              width: 16.w,
+                                              height: 16.w,
+                                              child: const CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.black,
+                                              ),
+                                            )
+                                          : const Icon(Icons.local_shipping_rounded),
+                                      label: const Text(
+                                        'Teslimatı Başlat',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 10.h),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: _isSubmitting
+                                          ? null
+                                          : () => _cancelTender(detail),
+                                      icon: const Icon(
+                                        Icons.cancel_outlined,
+                                        color: AppColors.red,
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: AppColors.red),
+                                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12.r),
+                                        ),
+                                      ),
+                                      label: const Text(
+                                        'İhaleyi İptal Et',
+                                        style: TextStyle(color: AppColors.red, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
-                            SizedBox(height: 10.h),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: _isSubmitting
-                                    ? null
-                                    : () => _cancelTender(detail),
-                                icon: const Icon(
-                                  Icons.cancel_outlined,
-                                  color: AppColors.red,
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.red),
-                                ),
-                                label: const Text(
-                                  'Ihaleyi Iptal Et',
-                                  style: TextStyle(color: AppColors.red),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ],
                         if (_isPlayerTender && !hasPlayerTender) ...[
                           _MissingPlayerTenderCard(),
@@ -1468,7 +1538,7 @@ String _formatDateTime(DateTime? value) {
   final month = local.month.toString().padLeft(2, '0');
   final hour = local.hour.toString().padLeft(2, '0');
   final minute = local.minute.toString().padLeft(2, '0');
-  return '$day.$month ${hour}:$minute';
+  return '$day.$month $hour:$minute';
 }
 
 String _formatDurationMinutes(int minutes) {
@@ -1624,6 +1694,133 @@ class _MissingPlayerTenderCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeliveryProfitCalculator extends StatelessWidget {
+  const _DeliveryProfitCalculator({
+    required this.quantity,
+    required this.unitRewardCash,
+    required this.sameCity,
+    required this.transportCost,
+  });
+
+  final int quantity;
+  final double unitRewardCash;
+  final bool sameCity;
+  final double transportCost;
+
+  @override
+  Widget build(BuildContext context) {
+    if (quantity <= 0) return const SizedBox.shrink();
+
+    // 60% estimate of production cost
+    final estUnitCost = unitRewardCash * 0.60;
+    final totalProdCost = quantity * estUnitCost;
+    final totalCost = totalProdCost + transportCost;
+    final estRevenue = quantity * unitRewardCash;
+    final netProfit = estRevenue - totalCost;
+    final isProfitable = netProfit > 0;
+    final profitMargin = estRevenue > 0 ? (netProfit / estRevenue * 100) : 0.0;
+
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: (isProfitable ? AppColors.green : AppColors.red).withValues(alpha: 0.3),
+          width: 1.2.w,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Sevkiyat Maliyet & Kar Analizi (Tahmini)',
+            style: TextStyle(
+              color: AppColors.gold,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Tahmini Ürün Maliyeti (Est. %60):',
+                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+              ),
+              Text(
+                AppMoney.full(totalProdCost),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 4.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Sevkiyat Yol Bedeli (Lojistik):',
+                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+              ),
+              Text(
+                sameCity ? 'Ücretsiz (Aynı Şehir)' : AppMoney.full(transportCost),
+                style: TextStyle(
+                  color: sameCity ? AppColors.green : Colors.white,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 6.h),
+          const Divider(color: Colors.white10),
+          SizedBox(height: 4.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Oransal Hak Ediş Geliri:',
+                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+              ),
+              Text(
+                AppMoney.full(estRevenue),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 4.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Tahmini Net Kar / Zarar:',
+                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+              ),
+              Text(
+                '${isProfitable ? '+' : ''}${AppMoney.full(netProfit)} (${profitMargin.toStringAsFixed(1)}%)',
+                style: TextStyle(
+                  color: isProfitable ? AppColors.green : AppColors.red,
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
         ],
       ),

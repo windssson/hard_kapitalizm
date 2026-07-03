@@ -7,6 +7,7 @@ import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
@@ -858,6 +859,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               ),
             ],
           ),
+          _buildProductionFormulaRow(product, detail.inputInventories),
           if (outputInventory != null) ...[
             SizedBox(height: 10.h),
             _buildOutputSummaryRow(context, ref, detail, outputInventory),
@@ -870,15 +872,31 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 ? _buildInlineEmptyState(
                     'Bu urun icin bagli hammadde stogu bulunmuyor.',
                   )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildSharedInputCapacityBar(detail),
-                      SizedBox(height: 8.h),
-                      ...detail.inputInventories.map(
-                        (inventory) => _buildCompactInventoryRow(inventory),
-                      ),
-                    ],
+                : Container(
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(color: AppColors.blue.withValues(alpha: 0.14)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSharedInputCapacityBar(detail),
+                        if (detail.inputInventories.isNotEmpty) ...[
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8.h),
+                            child: Divider(
+                              color: Colors.white.withValues(alpha: 0.06),
+                              height: 1.h,
+                            ),
+                          ),
+                          ...detail.inputInventories.map(
+                            (inventory) => _buildCompactInventoryRow(inventory),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
           ),
         ],
@@ -973,6 +991,130 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
   }
 
+  Widget _buildProductionFormulaRow(ProductModel product, List<dynamic> inputInventories) {
+    final List<Widget> items = [];
+
+    // 1. Labor Cost
+    if (product.iscilikMaliyeti > 0) {
+      items.add(
+        _buildFormulaItem(
+          icon: Icons.engineering_outlined,
+          color: AppColors.blue,
+          label: 'İşçilik:',
+          value: ' ${product.iscilikMaliyeti.toStringAsFixed(2)} TL',
+        ),
+      );
+    }
+
+    // 2. Raw Materials
+    final rawMaterials = [
+      (id: product.hammadde1Id, qty: product.hammadde1Miktar),
+      (id: product.hammadde2Id, qty: product.hammadde2Miktar),
+      (id: product.hammadde3Id, qty: product.hammadde3Miktar),
+    ];
+
+    for (final rm in rawMaterials) {
+      if (rm.id != null && rm.id!.isNotEmpty && rm.qty != null && rm.qty! > 0) {
+        String name = rm.id!;
+        for (final inv in inputInventories) {
+          if (inv.productId == rm.id && inv.product != null) {
+            name = inv.product!.urunAdi;
+            break;
+          }
+        }
+        items.add(
+          _buildFormulaItem(
+            icon: Icons.layers_outlined,
+            color: AppColors.gold,
+            label: '$name:',
+            value: ' ${rm.qty!.toStringAsFixed(1)} ad',
+          ),
+        );
+      }
+    }
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: EdgeInsets.only(top: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.015),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.035)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.receipt_long_outlined, color: AppColors.textMuted, size: 12.sp),
+          SizedBox(width: 6.w),
+          Text(
+            'Tarif:',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 9.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (int i = 0; i < items.length; i++) ...[
+                    items[i],
+                    if (i < items.length - 1)
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w),
+                        child: Text(
+                          '+',
+                          style: TextStyle(
+                            color: Colors.white24,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormulaItem({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 11.sp),
+        SizedBox(width: 4.w),
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 10.sp,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 10.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSharedInputCapacityBar(FactoryDetailModel detail) {
     final capacity = detail.factory.inputCapacity;
     final totalStock = detail.inputInventories.fold<int>(
@@ -984,42 +1126,34 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       (sum, inventory) => sum + inventory.pendingQuantity,
     );
 
-    return Container(
-      padding: EdgeInsets.all(10.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.blue.withValues(alpha: 0.14)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$totalStock adet | ${totalPending.toStringAsFixed(1)} yolda / $capacity adet',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w700,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$totalStock adet | ${totalPending.toStringAsFixed(1)} yolda / $capacity adet',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 11.sp,
+            fontWeight: FontWeight.w700,
           ),
-          SizedBox(height: 8.h),
-          _buildFactorySegmentedCapacityBar(detail),
-          SizedBox(height: 8.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 6.h,
-            children: [
-              ...detail.inputInventories.map(
-                (inventory) => _buildCapacityLegendChip(
-                  inventory.product?.urunAdi ?? inventory.productId,
-                  _inputColorForProduct(inventory.productId),
-                ),
+        ),
+        SizedBox(height: 8.h),
+        _buildFactorySegmentedCapacityBar(detail),
+        SizedBox(height: 8.h),
+        Wrap(
+          spacing: 8.w,
+          runSpacing: 6.h,
+          children: [
+            ...detail.inputInventories.map(
+              (inventory) => _buildCapacityLegendChip(
+                inventory.product?.urunAdi ?? inventory.productId,
+                _inputColorForProduct(inventory.productId),
               ),
-              _buildCapacityLegendChip('Yolda', AppColors.goldDark),
-            ],
-          ),
-        ],
-      ),
+            ),
+            _buildCapacityLegendChip('Yolda', AppColors.goldDark),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1130,14 +1264,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
     final color = AppColors.blue;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 6.h),
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.02),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: color.withValues(alpha: 0.1)),
-      ),
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.h),
       child: Row(
         children: [
           Container(
@@ -1193,7 +1321,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               borderRadius: BorderRadius.circular(6.r),
             ),
             child: Text(
-              '${inventory.quantity}',
+              '${inventory.quantity} ad',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 10.sp,
@@ -1279,53 +1407,69 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       detail.factory.outputCapacity.toDouble(),
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.agriculture_outlined,
-              color: AppColors.green,
-              size: 14.sp,
-            ),
-            SizedBox(width: 6.w),
-            Expanded(
-              child: Text(
-                'Uretilen urun stogu $quantity adet / ${detail.factory.outputCapacity} adet',
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.green.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.inventory_2_outlined,
+                color: AppColors.green,
+                size: 14.sp,
+              ),
+              SizedBox(width: 6.w),
+              Expanded(
+                child: Text(
+                  'Üretilen Ürün Stoğu',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (isBranded) ...[
+                _buildInlineMetaChip('Markalı', AppColors.gold),
+                SizedBox(width: 6.w),
+              ],
+              Text(
+                '$quantity / ${detail.factory.outputCapacity} ad',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.green,
                   fontSize: 11.sp,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Container(
+            width: double.infinity,
+            height: 7.h,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(999.r),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: progress.clamp(0.0, 1.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.green,
+                  borderRadius: BorderRadius.circular(999.r),
                 ),
               ),
             ),
-            if (isBranded) ...[
-              SizedBox(width: 6.w),
-              _buildInlineMetaChip('Markali', AppColors.gold),
-            ],
-          ],
-        ),
-        SizedBox(height: 6.h),
-        Container(
-          width: double.infinity,
-          height: 7.h,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(999.r),
           ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress.clamp(0.0, 1.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.green,
-                borderRadius: BorderRadius.circular(999.r),
-              ),
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -4307,20 +4451,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     return (capacity - usedAndPending.ceil()).clamp(0, capacity);
   }
 
-  double _calculateRemainingFactoryInputCapacityVolume(
-    FactoryDetailModel detail,
-    List<FactoryProductionInventoryModel> inventories,
-    int capacity,
-  ) {
-    final usedAndPending = inventories.fold<double>(
-      0,
-      (sum, inventory) =>
-          sum +
-          ((inventory.quantity + inventory.pendingQuantity) *
-              _resolveFactoryInventoryUnitVolume(detail, inventory)),
-    );
-    return (capacity - usedAndPending).clamp(0.0, capacity.toDouble());
-  }
+
 
   Widget _buildInlineMetaChip(String label, Color color) {
     return Container(

@@ -51,8 +51,7 @@ class FarmListItemModel {
   });
 
   int get totalOutputCapacity {
-    final slotCount = farm.currentSlotCount > 0 ? farm.currentSlotCount : 1;
-    return farm.outputCapacity * slotCount;
+    return farm.outputCapacity;
   }
 
   double get outputStockRatio {

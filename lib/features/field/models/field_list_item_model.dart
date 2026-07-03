@@ -51,8 +51,7 @@ class FieldListItemModel {
   });
 
   int get totalOutputCapacity {
-    final slotCount = field.currentSlotCount > 0 ? field.currentSlotCount : 1;
-    return field.outputCapacity * slotCount;
+    return field.outputCapacity;
   }
 
   double get outputStockRatio {

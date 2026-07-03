@@ -788,9 +788,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return inProgress.isNotEmpty ? inProgress.first : null;
   }
 
-  String _formatCompactNumber(num value) {
-    return AppMoney.compact(value, withSymbol: false);
-  }
+
 
   List<_HomeModuleCardData> _buildModuleCards(
     HomeModulesSummary? modules,
@@ -1863,9 +1861,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return companyValue * multiplier;
   }
 
-  String _formatSignedlessCurrencyCompact(num value) {
-    return AppMoney.compact(value);
-  }
+
 
   Widget _buildTenderInstitutionButton() {
     return Consumer(
@@ -2013,9 +2009,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
   }
 
-  String _formatSignedCurrencyCompact(num value) {
-    return AppMoney.compact(value, signed: true);
-  }
+
 
   Widget _buildVerticalDivider() {
     return Container(

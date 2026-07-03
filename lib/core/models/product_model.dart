@@ -19,6 +19,7 @@ class ProductModel {
   final double ortalamaFiyat;
   final int saticiSayisi;
   final int piyasadakiStok;
+  final double iscilikMaliyeti;
   final DateTime createdAt;
 
   ProductModel({
@@ -42,6 +43,7 @@ class ProductModel {
     required this.ortalamaFiyat,
     required this.saticiSayisi,
     required this.piyasadakiStok,
+    this.iscilikMaliyeti = 0.0,
     required this.createdAt,
   });
 
@@ -67,6 +69,7 @@ class ProductModel {
       ortalamaFiyat: (json['ortalama_fiyat'] as num?)?.toDouble() ?? 0.0,
       saticiSayisi: json['satici_sayisi'] as int? ?? 0,
       piyasadakiStok: json['piyasadaki_stok'] as int? ?? 0,
+      iscilikMaliyeti: (json['iscilik_maliyeti'] as num?)?.toDouble() ?? 0.0,
       createdAt: json['created_at'] != null 
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -95,6 +98,7 @@ class ProductModel {
       'ortalama_fiyat': ortalamaFiyat,
       'satici_sayisi': saticiSayisi,
       'piyasadaki_stok': piyasadakiStok,
+      'iscilik_maliyeti': iscilikMaliyeti,
       'created_at': createdAt.toIso8601String(),
     };
   }

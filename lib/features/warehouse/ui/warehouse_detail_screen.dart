@@ -335,14 +335,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     String? currentBrandName,
   ) {
     final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
-    final listedSlots = filledSlots
-        .where((slot) => slot.isAvailableForSale)
-        .length;
-    final totalQuantity = filledSlots.fold<int>(
-      0,
-      (sum, slot) => sum + slot.quantity,
-    );
-    final totalStock = totalQuantity.toDouble();
     final usedCapacity = filledSlots.fold<double>(
       0,
       (sum, slot) => sum + (slot.quantity * slot.unitVolume),

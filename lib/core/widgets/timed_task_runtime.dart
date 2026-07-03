@@ -18,6 +18,7 @@ import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
+import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TimedTaskRuntime extends ConsumerStatefulWidget {
@@ -59,6 +60,12 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     _lastLifecycleState = state;
     if (state == AppLifecycleState.resumed) {
       _scheduleNextRun(Duration.zero);
+      try {
+        final user = Supabase.instance.client.auth.currentUser;
+        if (user != null) {
+          ref.read(pushNotificationServiceProvider).initialize();
+        }
+      } catch (_) {}
       return;
     }
 

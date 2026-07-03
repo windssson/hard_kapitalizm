@@ -10,12 +10,7 @@ class StoreHeroHeader extends StatelessWidget {
 
   const StoreHeroHeader({super.key, required this.store});
 
-  String _formatValue(dynamic amount) {
-    return AppMoney.compact(
-      double.tryParse(amount?.toString() ?? '0') ?? 0,
-      withSymbol: false,
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {

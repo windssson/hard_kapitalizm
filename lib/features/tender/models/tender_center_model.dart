@@ -138,6 +138,7 @@ class TenderBidSummaryModel {
   final String cityName;
   final String productName;
   final String productIcon;
+  final int qualityLevel;
   final String awardType;
   final double bidAmount;
   final double bondPaid;
@@ -152,6 +153,7 @@ class TenderBidSummaryModel {
     required this.cityName,
     required this.productName,
     required this.productIcon,
+    required this.qualityLevel,
     required this.awardType,
     required this.bidAmount,
     required this.bondPaid,
@@ -168,6 +170,7 @@ class TenderBidSummaryModel {
       cityName: (json['city_name'] ?? '-').toString(),
       productName: (json['product_name'] ?? '-').toString(),
       productIcon: (json['product_icon'] ?? '').toString(),
+      qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
       awardType: (json['award_type'] ?? 'lowest_bid').toString(),
       bidAmount: (json['bid_amount'] as num?)?.toDouble() ?? 0,
       bondPaid: (json['bond_paid'] as num?)?.toDouble() ?? 0,

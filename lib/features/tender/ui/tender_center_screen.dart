@@ -26,16 +26,17 @@ class _TenderCenterScreenState extends ConsumerState<TenderCenterScreen> {
 
   Future<void> _refresh() async {
     await ref.read(tenderActionProvider).refreshTenderRuntime();
-    await ref.refresh(tenderCenterProvider.future);
+    final _ = await ref.refresh(tenderCenterProvider.future);
   }
 
   @override
   Widget build(BuildContext context) {
     final tenderCenterAsync = ref.watch(tenderCenterProvider);
-    final tickerNow = ref.watch(secondTickerProvider).valueOrNull ?? DateTime.now();
+    final tickerNow =
+        ref.watch(secondTickerProvider).asData?.value ?? DateTime.now();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -60,18 +61,18 @@ class _TenderCenterScreenState extends ConsumerState<TenderCenterScreen> {
                         child: Container(
                           padding: EdgeInsets.all(4.w),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withValues(alpha: 0.06),
-                                Colors.black.withValues(alpha: 0.18),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                            color: AppColors.cardBg,
                             borderRadius: BorderRadius.circular(18.r),
                             border: Border.all(
-                              color: AppColors.border.withValues(alpha: 0.22),
+                              color: AppColors.borderGold.withValues(alpha: 0.28),
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.24),
+                                blurRadius: 8.r,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: TabBar(
                             splashBorderRadius: BorderRadius.circular(14.r),
@@ -80,32 +81,32 @@ class _TenderCenterScreenState extends ConsumerState<TenderCenterScreen> {
                             indicator: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  AppColors.gold.withValues(alpha: 0.24),
-                                  AppColors.goldLight.withValues(alpha: 0.12),
+                                  AppColors.gold.withValues(alpha: 0.32),
+                                  AppColors.goldLight.withValues(alpha: 0.16),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(14.r),
                               border: Border.all(
-                                color: AppColors.gold.withValues(alpha: 0.28),
+                                color: AppColors.borderGoldLight.withValues(alpha: 0.4),
                               ),
                             ),
-                            labelColor: Colors.white,
-                            unselectedLabelColor: AppColors.textMuted,
+                            labelColor: AppColors.goldLight,
+                            unselectedLabelColor: AppColors.textSecondary,
                             labelStyle: TextStyle(
                               fontSize: 11.sp,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w900,
                             ),
                             unselectedLabelStyle: TextStyle(
                               fontSize: 10.sp,
                               fontWeight: FontWeight.w700,
                             ),
                             tabs: [
-                              Tab(text: 'Acik (${center.openTenders.length})'),
+                              Tab(text: 'Açık (${center.openTenders.length})'),
                               Tab(
                                 text:
-                                    'Ihalelerin (${center.myActiveTenders.length + center.myBidTenders.length})',
+                                    'İhalelerim (${center.myActiveTenders.length + center.myBidTenders.length})',
                               ),
-                              Tab(text: 'Gecmis (${center.myRecentTenders.length})'),
+                              Tab(text: 'Geçmiş (${center.myRecentTenders.length})'),
                             ],
                           ),
                         ),
@@ -299,25 +300,7 @@ class _TenderSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.22)),
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF20170B),
-            const Color(0xFF121A27),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.gold.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+      decoration: AppDecorations.premiumCard(AppColors.gold, 20.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -353,7 +336,7 @@ class _TenderSummaryCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Kamu Ihale Masasi',
+                      'Kamu İhale Masası',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 15.sp,
@@ -362,7 +345,7 @@ class _TenderSummaryCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      'Acik ihaleleri takip et, teklif ver ya da hizli davranip kap.',
+                      'Açık ihaleleri takip et, teklif ver ya da hızlı davranıp kap.',
                       style: AppTextStyles.body.copyWith(
                         fontSize: 11.sp,
                         color: AppColors.textPrimary.withValues(alpha: 0.78),
@@ -407,7 +390,7 @@ class _TenderSummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _TenderMetricTile(
-                  label: 'Acik Ihale',
+                  label: 'Açık İhale',
                   value: '${center.openTenders.length}',
                   color: AppColors.gold,
                 ),
@@ -415,7 +398,7 @@ class _TenderSummaryCard extends StatelessWidget {
               SizedBox(width: 8.w),
               Expanded(
                 child: _TenderMetricTile(
-                  label: 'Aktif Ihale',
+                  label: 'Aktif İhale',
                   value: '${center.myActiveTenders.length}',
                   color: AppColors.blue,
                 ),
@@ -431,7 +414,7 @@ class _TenderSummaryCard extends StatelessWidget {
               SizedBox(width: 8.w),
               Expanded(
                 child: _TenderMetricTile(
-                  label: 'Gecmis',
+                  label: 'Geçmiş',
                   value: '${center.myRecentTenders.length}',
                   color: AppColors.textSecondary,
                 ),
@@ -460,9 +443,16 @@ class _TenderMetricTile extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 11.h),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: AppColors.cardBgLight.withValues(alpha: 0.42),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: color.withValues(alpha: 0.24)),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,140 +542,169 @@ class _OpenTenderCard extends StatelessWidget {
         onTap: () => context.push('/tenders/open/${item.tenderId}'),
         borderRadius: BorderRadius.circular(16.r),
         child: Container(
-          padding: EdgeInsets.all(13.w),
+          padding: EdgeInsets.all(12.w),
           decoration: AppDecorations.premiumCard(AppColors.borderGoldLight, 16.r),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TenderProductArt(iconPath: item.productIcon),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.5.sp,
-                        fontWeight: FontWeight.w800,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38.w,
+                    height: 38.w,
+                    padding: EdgeInsets.all(4.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(
+                        color: AppColors.borderGold.withValues(alpha: 0.2),
                       ),
                     ),
-                    SizedBox(height: 4.h),
-                    Wrap(
-                      spacing: 6.w,
-                      runSpacing: 6.h,
+                    child: CachedAssetImage(
+                      fileName: item.productIcon,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _TenderPill(
-                          icon: item.awardType == 'first_claim'
-                              ? Icons.flash_on_rounded
-                              : Icons.gavel_rounded,
-                          text: item.awardType == 'first_claim'
-                              ? 'Ilk Alan'
-                              : 'Teklif Usulu',
-                          color: item.awardType == 'first_claim'
-                              ? AppColors.goldLight
-                              : AppColors.green,
-                        ),
-                        if (item.hasPlayerBid)
-                          const _TenderPill(
-                            icon: Icons.check_circle_outline,
-                            text: 'Teklif Verdin',
-                            color: AppColors.blue,
+                        Text(
+                          item.title,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w900,
                           ),
-                        if (item.awardType == 'lowest_bid')
-                          _TenderPill(
-                            icon: Icons.groups_2_outlined,
-                            text: '${item.bidCount} oyuncu',
-                            color: AppColors.blue,
-                          ),
-                        _TenderPill(
-                          icon: Icons.shopping_bag_outlined,
-                          text: '${item.requiredQuantity} adet',
-                          color: AppColors.gold,
                         ),
-                        _TenderPill(
-                          icon: Icons.timer_outlined,
-                          text: _formatTenderCountdown(item.acceptUntil, now),
-                          color: _countdownColor(item.acceptUntil, now),
+                        SizedBox(height: 2.h),
+                        Row(
+                          children: [
+                            Text(
+                              item.productName,
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 10.5.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 6.w),
+                            Row(
+                              children: List.generate(
+                                item.qualityLevel,
+                                (index) => Icon(
+                                  Icons.star_rounded,
+                                  color: AppColors.gold,
+                                  size: 10.sp,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    SizedBox(height: 8.h),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.05),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _TenderInfoLine(
-                              label: item.awardType == 'lowest_bid'
-                                  ? 'Tavan Odul'
-                                  : 'Odul',
-                              value: AppMoney.compact(item.rewardCash),
-                              color: AppColors.green,
-                            ),
-                          ),
-                          Expanded(
-                            child: _TenderInfoLine(
-                              label: 'Teminat',
-                              value: AppMoney.compact(item.bondAmount),
-                              color: AppColors.red,
-                            ),
-                          ),
-                          Expanded(
-                            child: _TenderInfoLine(
-                              label: item.awardType == 'lowest_bid'
-                                  ? 'En Dusuk'
-                                  : 'Tur',
-                              value: item.awardType == 'lowest_bid'
-                                  ? AppMoney.compact(item.lowestBidAmount ?? 0)
-                                  : 'Hemen Al',
-                              color: AppColors.goldLight,
-                            ),
-                          ),
-                        ],
-                      ),
+                  ),
+                  _TenderPill(
+                    icon: item.awardType == 'first_claim'
+                        ? Icons.flash_on_rounded
+                        : Icons.gavel_rounded,
+                    text: item.awardType == 'first_claim' ? 'Hemen Al' : 'Teklif',
+                    color: item.awardType == 'first_claim'
+                        ? AppColors.goldLight
+                        : AppColors.green,
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: _TenderMetricItem(
+                      label: 'TALEP MİKTAR',
+                      value: '${item.requiredQuantity} adet',
+                      color: Colors.white,
                     ),
-                    if (item.hasPlayerBid && item.playerBidAmount != null) ...[
-                      SizedBox(height: 6.h),
+                  ),
+                  Expanded(
+                    child: _TenderMetricItem(
+                      label: item.awardType == 'lowest_bid' ? 'TAVAN ÖDÜL' : 'ÖDÜL',
+                      value: AppMoney.compact(item.rewardCash),
+                      color: AppColors.green,
+                    ),
+                  ),
+                  Expanded(
+                    child: item.awardType == 'lowest_bid'
+                        ? _TenderMetricItem(
+                            label: 'EN DÜŞÜK',
+                            value: item.lowestBidAmount != null && item.lowestBidAmount! > 0
+                                ? AppMoney.compact(item.lowestBidAmount!)
+                                : '-',
+                            color: AppColors.goldLight,
+                          )
+                        : _TenderMetricItem(
+                            label: 'TEMİNAT',
+                            value: AppMoney.compact(item.bondAmount),
+                            color: AppColors.red,
+                          ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8.h),
+              const Divider(color: Colors.white10, height: 1),
+              SizedBox(height: 8.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.timer_outlined,
+                        color: _countdownColor(item.acceptUntil, now),
+                        size: 12.sp,
+                      ),
+                      SizedBox(width: 4.w),
                       Text(
-                        'Senin teklifin: ${AppMoney.compact(item.playerBidAmount!)}',
+                        _formatTenderCountdown(item.acceptUntil, now),
                         style: TextStyle(
-                          color: AppColors.blue,
+                          color: _countdownColor(item.acceptUntil, now),
                           fontSize: 10.sp,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
-                    SizedBox(height: 8.h),
+                  ),
+                  if (item.hasPlayerBid && item.playerBidAmount != null)
                     Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            'Son Kabul: ${_formatDateTime(item.acceptUntil)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: AppColors.blue,
+                          size: 12.sp,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          'Teklifin: ${AppMoney.compact(item.playerBidAmount!)}',
+                          style: TextStyle(
+                            color: AppColors.blue,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.textMuted,
-                          size: 18.sp,
-                        ),
                       ],
+                    )
+                  else if (item.awardType == 'lowest_bid')
+                    Text(
+                      '${item.bidCount} rakip teklif',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ],
           ),
@@ -714,78 +733,108 @@ class _ActiveTenderCard extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.all(12.w),
           decoration: AppDecorations.premiumCard(AppColors.blue, 16.r),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TenderProductArt(iconPath: item.productIcon),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          item.status.toUpperCase(),
-                          style: TextStyle(
-                            color: AppColors.goldLight,
-                            fontSize: 9.sp,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '${item.cityName} - ${item.productName}',
-                      style: AppTextStyles.body.copyWith(fontSize: 11.sp),
-                    ),
-                    SizedBox(height: 10.h),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999.r),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 9.h,
-                        backgroundColor: Colors.white.withValues(alpha: 0.08),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          AppColors.gold,
-                        ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38.w,
+                    height: 38.w,
+                    padding: EdgeInsets.all(4.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(
+                        color: AppColors.blue.withValues(alpha: 0.2),
                       ),
                     ),
-                    SizedBox(height: 6.h),
-                    Row(
+                    child: CachedAssetImage(
+                      fileName: item.productIcon,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            '${item.deliveredQuantity}/${item.requiredQuantity} adet teslim',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
+                        Text(
+                          item.title,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                        Text(
-                          '%${(progress * 100).round()}',
-                          style: TextStyle(
-                            color: AppColors.goldLight,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        SizedBox(height: 2.h),
+                        Row(
+                          children: [
+                            Text(
+                              item.productName,
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 10.5.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 6.w),
+                            Row(
+                              children: List.generate(
+                                item.qualityLevel,
+                                (index) => Icon(
+                                  Icons.star_rounded,
+                                  color: AppColors.gold,
+                                  size: 10.sp,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
+                  _TenderPill(
+                    icon: Icons.auto_graph_rounded,
+                    text: item.status.toUpperCase(),
+                    color: AppColors.goldLight,
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999.r),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8.h,
+                  backgroundColor: Colors.black.withValues(alpha: 0.35),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.gold,
+                  ),
                 ),
+              ),
+              SizedBox(height: 8.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${item.deliveredQuantity}/${item.requiredQuantity} adet (%${(progress * 100).round()})',
+                    style: TextStyle(
+                      color: AppColors.goldLight,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    item.cityName,
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -815,110 +864,139 @@ class _TenderBidCard extends StatelessWidget {
         onTap: () => context.push('/tenders/open/${item.tenderId}'),
         borderRadius: BorderRadius.circular(16.r),
         child: Container(
-          padding: EdgeInsets.all(13.w),
+          padding: EdgeInsets.all(12.w),
           decoration: AppDecorations.premiumCard(AppColors.green, 16.r),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TenderProductArt(iconPath: item.productIcon),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38.w,
+                    height: 38.w,
+                    padding: EdgeInsets.all(4.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(
+                        color: AppColors.green.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: CachedAssetImage(
+                      fileName: item.productIcon,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
                         Text(
-                          isLeading ? 'EN DUSUK' : 'AKTIF TEKLIF',
+                          item.title,
                           style: TextStyle(
-                            color: isLeading
-                                ? AppColors.goldLight
-                                : AppColors.blue,
-                            fontSize: 9.sp,
+                            color: Colors.white,
+                            fontSize: 13.sp,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
+                        SizedBox(height: 2.h),
+                        Row(
+                          children: [
+                            Text(
+                              item.productName,
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 10.5.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 6.w),
+                            Row(
+                              children: List.generate(
+                                item.qualityLevel,
+                                (index) => Icon(
+                                  Icons.star_rounded,
+                                  color: AppColors.gold,
+                                  size: 10.sp,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '${item.cityName} - ${item.productName}',
-                      style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                  ),
+                  _TenderPill(
+                    icon: isLeading ? Icons.check_circle_outline : Icons.gavel_rounded,
+                    text: isLeading ? 'EN DÜŞÜK' : 'TEKLİFİN',
+                    color: isLeading ? AppColors.goldLight : AppColors.blue,
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: _TenderMetricItem(
+                      label: 'TEKLİFİN',
+                      value: AppMoney.compact(item.bidAmount),
+                      color: AppColors.green,
                     ),
-                    SizedBox(height: 6.h),
-                    Wrap(
-                      spacing: 6.w,
-                      runSpacing: 6.h,
-                      children: [
-                        _TenderPill(
-                          icon: Icons.timer_outlined,
-                          text: _formatTenderCountdown(item.acceptUntil, now),
+                  ),
+                  Expanded(
+                    child: _TenderMetricItem(
+                      label: 'EN DÜŞÜK',
+                      value: item.lowestBidAmount != null && item.lowestBidAmount! > 0
+                          ? AppMoney.compact(item.lowestBidAmount!)
+                          : '-',
+                      color: AppColors.goldLight,
+                    ),
+                  ),
+                  Expanded(
+                    child: _TenderMetricItem(
+                      label: 'TEMİNAT',
+                      value: AppMoney.compact(item.bondPaid),
+                      color: AppColors.red,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8.h),
+              const Divider(color: Colors.white10, height: 1),
+              SizedBox(height: 8.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.timer_outlined,
+                        color: _countdownColor(item.acceptUntil, now),
+                        size: 12.sp,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        _formatTenderCountdown(item.acceptUntil, now),
+                        style: TextStyle(
                           color: _countdownColor(item.acceptUntil, now),
-                        ),
-                        _TenderPill(
-                          icon: Icons.groups_2_outlined,
-                          text: '${item.bidCount} oyuncu',
-                          color: AppColors.blue,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8.h),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _TenderInfoLine(
-                              label: 'Teklifin',
-                              value: AppMoney.compact(item.bidAmount),
-                              color: AppColors.green,
-                            ),
-                          ),
-                          Expanded(
-                            child: _TenderInfoLine(
-                              label: 'En Dusuk',
-                              value: AppMoney.compact(item.lowestBidAmount ?? 0),
-                              color: AppColors.goldLight,
-                            ),
-                          ),
-                          Expanded(
-                            child: _TenderInfoLine(
-                              label: 'Oyuncu',
-                              value: '${item.bidCount}',
-                              color: AppColors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
+                    ],
+                  ),
+                  Text(
+                    '${item.cityName} (${item.bidCount} oyuncu)',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(height: 6.h),
-                    Text(
-                      'Teminat: ${AppMoney.compact(item.bondPaid)}  -  Son Kabul: ${_formatDateTime(item.acceptUntil)}',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -928,26 +1006,41 @@ class _TenderBidCard extends StatelessWidget {
   }
 }
 
-class _TenderProductArt extends StatelessWidget {
-  const _TenderProductArt({required this.iconPath});
+class _TenderMetricItem extends StatelessWidget {
+  const _TenderMetricItem({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
-  final String iconPath;
+  final String label;
+  final String value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 60.w,
-      height: 60.w,
-      padding: EdgeInsets.all(8.w),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.22)),
-      ),
-      child: CachedAssetImage(
-        fileName: iconPath,
-        fit: BoxFit.contain,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 8.5.sp,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -961,7 +1054,7 @@ class _TenderHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompleted = item.status == 'completed';
     final accent = isCompleted ? AppColors.green : AppColors.red;
-    final label = isCompleted ? 'Tamamlandi' : 'Basarisiz';
+    final label = isCompleted ? 'TAMAMLANDI' : 'BAŞARISIZ';
     final date = isCompleted ? item.completedAt : item.failedAt;
     final progress = item.requiredQuantity <= 0
         ? 0.0
@@ -975,76 +1068,106 @@ class _TenderHistoryCard extends StatelessWidget {
         child: Container(
           padding: EdgeInsets.all(12.w),
           decoration: AppDecorations.premiumCard(accent, 16.r),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TenderProductArt(iconPath: item.productIcon),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 38.w,
+                    height: 38.w,
+                    padding: EdgeInsets.all(4.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(
+                        color: accent.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: CachedAssetImage(
+                      fileName: item.productIcon,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            item.title,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
                         Text(
-                          label,
+                          item.title,
                           style: TextStyle(
-                            color: accent,
-                            fontSize: 9.sp,
+                            color: Colors.white,
+                            fontSize: 13.sp,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                      ],
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '${item.cityName} - ${item.productName}',
-                      style: AppTextStyles.body.copyWith(fontSize: 11.sp),
-                    ),
-                    SizedBox(height: 8.h),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999.r),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 8.h,
-                        backgroundColor: Colors.white.withValues(alpha: 0.08),
-                        valueColor: AlwaysStoppedAnimation<Color>(accent),
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${item.deliveredQuantity}/${item.requiredQuantity} adet teslim',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w700,
+                        SizedBox(height: 2.h),
+                        Row(
+                          children: [
+                            Text(
+                              item.productName,
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 10.5.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ),
-                        Text(
-                          _formatDateTime(date),
-                          style: TextStyle(
-                            color: accent,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w800,
-                          ),
+                            SizedBox(width: 6.w),
+                            Row(
+                              children: List.generate(
+                                item.qualityLevel,
+                                (index) => Icon(
+                                  Icons.star_rounded,
+                                  color: AppColors.gold,
+                                  size: 10.sp,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
+                  _TenderPill(
+                    icon: isCompleted ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                    text: label,
+                    color: accent,
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999.r),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8.h,
+                  backgroundColor: Colors.black.withValues(alpha: 0.35),
+                  valueColor: AlwaysStoppedAnimation<Color>(accent),
                 ),
+              ),
+              SizedBox(height: 8.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${item.deliveredQuantity}/${item.requiredQuantity} adet teslim',
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    _formatDateTime(date),
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1093,43 +1216,7 @@ class _TenderPill extends StatelessWidget {
   }
 }
 
-class _TenderInfoLine extends StatelessWidget {
-  const _TenderInfoLine({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
 
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 9.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 3.h),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontSize: 11.sp,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _TenderEmptyCard extends StatelessWidget {
   const _TenderEmptyCard({
@@ -1198,7 +1285,7 @@ String _formatDateTime(DateTime? value) {
   final month = local.month.toString().padLeft(2, '0');
   final hour = local.hour.toString().padLeft(2, '0');
   final minute = local.minute.toString().padLeft(2, '0');
-  return '$day.$month ${hour}:$minute';
+  return '$day.$month $hour:$minute';
 }
 
 String _formatTenderCountdown(DateTime? target, DateTime now) {

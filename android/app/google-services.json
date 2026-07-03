@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "908945251242",
+    "project_id": "hard-kapitalizm-e1f28",
+    "storage_bucket": "hard-kapitalizm-e1f28.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:908945251242:android:00a3a072e61b84a4b769d3",
+        "android_client_info": {
+          "package_name": "com.winds.hard_kapitalizm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDytL7T5UG-5R6Eb3BHTKH1QC6eWBzMk1c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
