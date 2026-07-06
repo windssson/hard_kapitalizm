@@ -132,6 +132,7 @@ class HomeCompanySummary {
   final int totalBusinessCount;
   final String headquartersCityName;
   final String companyStatus;
+  final List<double> companyValueHistory;
 
   const HomeCompanySummary({
     required this.companyValue,
@@ -140,6 +141,7 @@ class HomeCompanySummary {
     required this.totalBusinessCount,
     required this.headquartersCityName,
     required this.companyStatus,
+    required this.companyValueHistory,
   });
 
   factory HomeCompanySummary.fromJson(Map<String, dynamic> json) {
@@ -153,6 +155,10 @@ class HomeCompanySummary {
       headquartersCityName:
           (json['headquarters_city_name'] ?? '-').toString(),
       companyStatus: (json['company_status'] ?? 'istikrarli').toString(),
+      companyValueHistory: (json['company_value_history'] as List?)
+              ?.map((item) => (item as num).toDouble())
+              .toList() ??
+          const <double>[],
     );
   }
 }

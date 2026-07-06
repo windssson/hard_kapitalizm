@@ -357,7 +357,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         productName: product.urunAdi,
         productIcon: product.urunIconu,
         unitVolume: product.birimHacim,
-        price: product.bazSatisFiyati * 1.25,
+        price: product.bazSatisFiyati * 1.02,
         cityId: cityId,
         cityName: cityName,
         cityX: cityX,

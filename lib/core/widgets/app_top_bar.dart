@@ -348,7 +348,7 @@ class AppTopBar extends ConsumerWidget {
           value: (player?.gold ?? 0).toStringAsFixed(0),
           actionIcon: Icons.add_rounded,
           actionColor: AppColors.goldLight,
-          onTap: () => context.push('/profile'),
+          onTap: () => context.push('/premium-store'),
           compact: compact,
         ),
       ],

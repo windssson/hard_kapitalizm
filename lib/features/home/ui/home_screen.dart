@@ -48,6 +48,20 @@ class _HomeModuleCardData {
   });
 }
 
+class _AdvisorInsight {
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+
+  const _AdvisorInsight({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+  });
+}
+
 class _GoogleLinkSuccessDialog extends StatelessWidget {
   const _GoogleLinkSuccessDialog({
     required this.authIdentity,
@@ -286,6 +300,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     SizedBox(height: 8.h),
                     _buildMissionHighlightCard(),
                     SizedBox(height: 8.h),
+                    _buildAdvisorInsightsCard(),
+                    SizedBox(height: 8.h),
                     _buildModuleGrid(),
                     SizedBox(height: 8.h),
                     _buildTaxInstitutionButton(),
@@ -392,6 +408,195 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
         ),
       ),
+    );
+  }
+
+  List<_AdvisorInsight> _getAdvisorInsights(HomeDashboardModel dashboard) {
+    final insights = <_AdvisorInsight>[];
+    final finance = dashboard.financeToday;
+    final modules = dashboard.modules;
+
+    // 1. Nakit Akışı Kârlılık Kontrolü
+    if (finance.netProfit < 0) {
+      insights.add(const _AdvisorInsight(
+        title: 'Mali Risk Uyarısı',
+        description: 'Bugünkü net kârınız eksiye düştü! Giderleri azaltmak için lojistik giderlerini veya pasif işletmeleri gözden geçirin.',
+        icon: Icons.trending_down_rounded,
+        color: AppColors.red,
+      ));
+    } else if (finance.netProfit > 0 && dashboard.player.cash > 0) {
+      insights.add(const _AdvisorInsight(
+        title: 'Yüksek Finansal Güç',
+        description: 'Bugün oldukça kârlısınız. Bu kazancı yeni Ar-Ge araştırmaları başlatarak veya hammadde depolarını doldurarak yatırıma dönüştürebilirsiniz.',
+        icon: Icons.insights_rounded,
+        color: AppColors.green,
+      ));
+    }
+
+    // 2. Fabrika & Mağaza Dengesi Kontrolü
+    if (modules.factories.activeCount > 0 && modules.stores.activeCount == 0) {
+      insights.add(const _AdvisorInsight(
+        title: 'Dağıtım Kanalı Eksikliği',
+        description: 'Aktif fabrikalarınız var ancak bunları satacak bir mağazanız yok. Ürettiğiniz malları satmak için acilen bir mağaza inşa edin.',
+        icon: Icons.storefront_rounded,
+        color: Colors.orange,
+      ));
+    } else if (modules.stores.activeCount > 0 && modules.factories.activeCount == 0) {
+      insights.add(const _AdvisorInsight(
+        title: 'Tedarik Bağımlılığı',
+        description: 'Aktif mağazalarınız var ancak kendi fabrikanız yok. Pazar yerine bağımlılığı azaltmak için kendi üretim tesislerinizi kurabilirsiniz.',
+        icon: Icons.precision_manufacturing_rounded,
+        color: AppColors.blue,
+      ));
+    }
+
+    // 3. Lojistik Gider Oranı Kontrolü
+    if (finance.revenue > 0 && (finance.logisticsCost / finance.revenue) > 0.3) {
+      insights.add(_AdvisorInsight(
+        title: 'Yüksek Lojistik Gideri',
+        description: 'Lojistik giderleriniz cironuzun %${((finance.logisticsCost / finance.revenue) * 100).round()}\'ine ulaştı. Verimliliği artırmak için rotaları optimize edin veya özmal araç kullanın.',
+        icon: Icons.local_shipping_rounded,
+        color: AppColors.red,
+      ));
+    }
+
+    // 4. Ar-Ge Merkezi Boşta Kontrolü
+    if (modules.arge.count > 0 && modules.arge.activeResearchCount == 0) {
+      insights.add(const _AdvisorInsight(
+        title: 'Ar-Ge Çalışmaları Boşta',
+        description: 'Ar-Ge merkezinizde şu an aktif bir araştırma bulunmuyor. Ürün kalitenizi geliştirmek ve rakiplerin önüne geçmek için yeni bir araştırma başlatın.',
+        icon: Icons.science_rounded,
+        color: AppColors.gold,
+      ));
+    }
+
+    // 5. Araç Filosu Sorunları
+    if (modules.logistics.warningCount > 0) {
+      insights.add(const _AdvisorInsight(
+        title: 'Araç Filosu Sorunları',
+        description: 'Filodaki bazı araçların yakıtı kritik seviyede veya kondisyonu düşük. Taşımaların aksamaması için araç bakım ve yakıt durumlarını kontrol edin.',
+        icon: Icons.build_rounded,
+        color: Colors.orange,
+      ));
+    }
+
+    // Eğer hiç kritik durum yoksa, genel bir taktik göster
+    if (insights.isEmpty) {
+      insights.add(const _AdvisorInsight(
+        title: 'Yönetim Tavsiyesi',
+        description: 'Ürünlerinizi mağazanızda satmadan önce Marka Reklam Kampanyası başlatmak, satış hızını ve kâr oranını %40\'a kadar artırır!',
+        icon: Icons.lightbulb_rounded,
+        color: AppColors.gold,
+      ));
+    }
+
+    return insights;
+  }
+
+  Widget _buildAdvisorInsightsCard() {
+    return Consumer(
+      builder: (context, ref, child) {
+        final dashboard = ref.watch(homeDashboardProvider).value;
+        if (dashboard == null || !dashboard.success) {
+          return const SizedBox.shrink();
+        }
+
+        final insights = _getAdvisorInsights(dashboard);
+
+        return Container(
+          decoration: AppDecorations.premiumCard(AppColors.borderGold, 14.r),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.assistant_rounded,
+                      color: AppColors.gold,
+                      size: 16.sp,
+                    ),
+                    SizedBox(width: 6.w),
+                    Text(
+                      'CEO STRATEJIK DANISMAN',
+                      style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 6.h),
+              SizedBox(
+                height: 72.h,
+                child: PageView.builder(
+                  itemCount: insights.length,
+                  itemBuilder: (context, index) {
+                    final insight = insights[index];
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 32.w,
+                            height: 32.w,
+                            decoration: BoxDecoration(
+                              color: insight.color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8.r),
+                              border: Border.all(
+                                color: insight.color.withValues(alpha: 0.32),
+                                width: 1.w,
+                              ),
+                            ),
+                            child: Icon(
+                              insight.icon,
+                              color: insight.color,
+                              size: 16.sp,
+                            ),
+                          ),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  insight.title,
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                SizedBox(height: 2.h),
+                                Text(
+                                  insight.description,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 9.sp,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -517,6 +722,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       child: SizedBox(
                         height: 104.h,
                         child: _buildCompanySparklinePanel(
+                          companyValueHistory: company?.companyValueHistory ?? const <double>[],
                           companyValue: companyValue,
                           dailyProfit: dailyProfit,
                           activeBusinessCount: activeBusinessCount,
@@ -1653,34 +1859,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
+  List<double> _normalizeCompanyValues(List<double> values) {
+    if (values.length < 2) return const <double>[];
+    final min = values.reduce((a, b) => a < b ? a : b);
+    final max = values.reduce((a, b) => a > b ? a : b);
+    if (min == max) {
+      return List<double>.filled(values.length, 0.5);
+    }
+    return values.map((val) {
+      final norm = (val - min) / (max - min);
+      return 0.15 + (norm * 0.70);
+    }).toList();
+  }
+
   Widget _buildCompanySparklinePanel({
+    required List<double> companyValueHistory,
     required double companyValue,
     required double dailyProfit,
     required int activeBusinessCount,
     required int totalBusinessCount,
   }) {
-    final points = _buildCompanySparklinePoints(
-      companyValue: companyValue,
-      dailyProfit: dailyProfit,
-      activeBusinessCount: activeBusinessCount,
-      totalBusinessCount: totalBusinessCount,
-    );
-    final minPoint = points.reduce((a, b) => a < b ? a : b);
-    final maxPoint = points.reduce((a, b) => a > b ? a : b);
-    final trendPercent = _calculateSparklineTrend(points);
+    final List<double> points;
+    final double currentValueEstimate;
+    final double lowValueEstimate;
+    final double highValueEstimate;
+    final double trendPercent;
+
+    if (companyValueHistory.length >= 2) {
+      points = _normalizeCompanyValues(companyValueHistory);
+      currentValueEstimate = companyValueHistory.last;
+      lowValueEstimate = companyValueHistory.reduce((a, b) => a < b ? a : b);
+      highValueEstimate = companyValueHistory.reduce((a, b) => a > b ? a : b);
+      trendPercent = _calculateSparklineTrend(companyValueHistory);
+    } else {
+      final mockPoints = _buildCompanySparklinePoints(
+        companyValue: companyValue,
+        dailyProfit: dailyProfit,
+        activeBusinessCount: activeBusinessCount,
+        totalBusinessCount: totalBusinessCount,
+      );
+      points = mockPoints;
+      currentValueEstimate = _estimateSparklineCurrency(
+        companyValue: companyValue,
+        normalizedPoint: mockPoints.last,
+      );
+      lowValueEstimate = _estimateSparklineCurrency(
+        companyValue: companyValue,
+        normalizedPoint: mockPoints.reduce((a, b) => a < b ? a : b),
+      );
+      highValueEstimate = _estimateSparklineCurrency(
+        companyValue: companyValue,
+        normalizedPoint: mockPoints.reduce((a, b) => a > b ? a : b),
+      );
+      trendPercent = _calculateSparklineTrend(mockPoints);
+    }
+
     final trendPositive = trendPercent >= 0;
-    final currentValueEstimate = _estimateSparklineCurrency(
-      companyValue: companyValue,
-      normalizedPoint: points.last,
-    );
-    final lowValueEstimate = _estimateSparklineCurrency(
-      companyValue: companyValue,
-      normalizedPoint: minPoint,
-    );
-    final highValueEstimate = _estimateSparklineCurrency(
-      companyValue: companyValue,
-      normalizedPoint: maxPoint,
-    );
 
     return Container(
       decoration: BoxDecoration(
@@ -1750,7 +1984,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             SizedBox(height: 5.h),
             Text(
-              'Tahmini deger: ${AppMoney.compact(currentValueEstimate)}',
+              companyValueHistory.length >= 2
+                  ? 'Guncel deger: ${AppMoney.compact(currentValueEstimate)}'
+                  : 'Tahmini deger: ${AppMoney.compact(currentValueEstimate)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

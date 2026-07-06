@@ -16,6 +16,7 @@ import 'package:hard_kapitalizm/features/store/ui/store_warehouse_detail_screen.
 import 'package:hard_kapitalizm/features/store/ui/city_selection_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/auth/ui/profile_screen.dart';
+import 'package:hard_kapitalizm/features/premium/ui/premium_store_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_detail_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_type_selection_screen.dart';
@@ -161,6 +162,7 @@ final _router = GoRouter(
       ],
     ),
     GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
+    GoRoute(path: '/premium-store', builder: (context, state) => const PremiumStoreScreen()),
     GoRoute(
       path: '/fields',
       builder: (context, state) => const FieldScreen(),
