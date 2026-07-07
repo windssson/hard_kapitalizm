@@ -38,6 +38,20 @@ class TransferVehicleOptionCard extends StatelessWidget {
     this.onTap,
   });
 
+  IconData _getVehicleIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('kurye')) {
+      return Icons.delivery_dining_rounded;
+    } else if (lower.contains('voltexpress') || lower.contains('electric') || lower.contains('elektrik')) {
+      return Icons.electric_car_rounded;
+    } else if (lower.contains('aslan')) {
+      return Icons.local_shipping_rounded;
+    } else if (lower.contains('trans') || lower.contains('tır') || lower.contains('kıtalar')) {
+      return Icons.speed_rounded;
+    }
+    return Icons.local_shipping_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     final accentColor = !canSelect
@@ -83,7 +97,7 @@ class TransferVehicleOptionCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: Icon(
-                    Icons.local_shipping_rounded,
+                    _getVehicleIcon(vehicleName),
                     color: accentColor,
                     size: 20.sp,
                   ),
@@ -166,9 +180,18 @@ class TransferVehicleOptionCard extends StatelessWidget {
               runSpacing: 8.h,
               children: [
                 _buildStatChip('Kapasite', '$capacity'),
-                _buildStatChip('Hiz', '$speedKmh km/h'),
+                _buildStatChip('Hız', '$speedKmh km/h'),
                 _buildStatChip('Mesafe', '${distanceKm.toStringAsFixed(0)} km'),
-                _buildStatChip('Sure', durationLabel),
+                _buildStatChip('Süre', durationLabel),
+                if (isRental) ...[
+                  _buildStatChip(
+                    'Kira Oranı',
+                    '${(rentalCost / (distanceKm > 0 ? distanceKm : 1)).toStringAsFixed(1)} TL/km',
+                  ),
+                ] else ...[
+                  _buildStatChip('Yakıt', '${fuelNeeded.toStringAsFixed(1)} L'),
+                  _buildStatChip('Yıpranma', '-%${conditionNeeded.toStringAsFixed(0)}'),
+                ],
               ],
             ),
             if (!canSelect && disabledReason != null) ...[
