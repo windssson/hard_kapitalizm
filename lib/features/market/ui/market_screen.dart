@@ -49,6 +49,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   final List<_MarketCartItem> _cartItems = [];
   String? _lockedSourceCityId;
   bool _cityCatalogEnabled = false;
+  bool _onlyLocalListings = false;
   String _productSearchQuery = '';
   String _warehouseCityFilter = '';
   late String _selectedProductId;
@@ -477,22 +478,65 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             ],
           ),
           SizedBox(height: 8.h),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _resetWarehouseSelection,
-              icon: Icon(Icons.edit, size: 12.sp, color: AppColors.gold),
-              label: Text(
-                'Depo Degistir',
-                style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w700),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _onlyLocalListings = !_onlyLocalListings;
+                  });
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                  decoration: BoxDecoration(
+                    color: _onlyLocalListings
+                        ? AppColors.gold.withValues(alpha: 0.16)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: _onlyLocalListings
+                          ? AppColors.gold
+                          : AppColors.borderGold.withValues(alpha: 0.25),
+                      width: 1.w,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _onlyLocalListings ? Icons.location_on : Icons.location_on_outlined,
+                        color: _onlyLocalListings ? AppColors.gold : AppColors.textMuted,
+                        size: 12.sp,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        'Sadece Yerel İlanlar',
+                        style: TextStyle(
+                          color: _onlyLocalListings ? AppColors.gold : AppColors.textMuted,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.gold,
-                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              TextButton.icon(
+                onPressed: _resetWarehouseSelection,
+                icon: Icon(Icons.edit, size: 12.sp, color: AppColors.gold),
+                label: Text(
+                  'Depo Degistir',
+                  style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w700),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.gold,
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -1625,12 +1669,27 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           final filteredListings = _applyCartCityRules(
                             baseListings,
                           );
+                          var finalMarketListings = filteredListings;
+                          if (_onlyLocalListings && buyerWarehouseAsync.value != null) {
+                            final targetCityId = buyerWarehouseAsync.value!.cityId;
+                            finalMarketListings = finalMarketListings
+                                .where((l) => l.cityId == targetCityId)
+                                .toList();
+                          }
+
+                          MarketListingModel? cheapestListing;
+                          if (finalMarketListings.isNotEmpty) {
+                            cheapestListing = finalMarketListings.reduce(
+                              (curr, next) => curr.price < next.price ? curr : next,
+                            );
+                          }
 
                           return _buildListingsSliver(
-                            listings: filteredListings,
+                            listings: finalMarketListings,
                             buyer: buyerWarehouseAsync.value,
                             fallbackCity: fallbackCityAsync.value,
                             product: productAsync.value,
+                            cheapestListingId: cheapestListing?.listingId,
                           );
                         },
                         loading: () =>
@@ -1655,6 +1714,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     required MarketBuyerWarehouseModel? buyer,
     required Map<String, dynamic>? fallbackCity,
     required ProductModel? product,
+    String? cheapestListingId,
   }) {
     if (listings.isEmpty) {
       return SliverToBoxAdapter(child: _buildEmptyState());
@@ -1663,7 +1723,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return SliverList(
       delegate: SliverChildListDelegate.fixed([
         ...listings.map(
-          (listing) => _buildListingCard(listing, buyer, fallbackCity, product),
+          (listing) => _buildListingCard(
+            listing,
+            buyer,
+            fallbackCity,
+            product,
+            isCheapest: listing.listingId == cheapestListingId,
+          ),
         ),
       ]),
     );
@@ -1673,8 +1739,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     MarketListingModel listing,
     MarketBuyerWarehouseModel? buyer,
     Map<String, dynamic>? fallbackCity,
-    ProductModel? product,
-  ) {
+    ProductModel? product, {
+    bool isCheapest = false,
+  }) {
     final capacityStatus = _activeWarehouseId.isNotEmpty
         ? ref.read(warehouseCapacityStatusProvider(_activeWarehouseId)).value
         : null;
@@ -1722,7 +1789,20 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
+        border: Border.all(
+          color: isCheapest
+              ? AppColors.gold.withValues(alpha: 0.65)
+              : AppColors.borderGold.withValues(alpha: 0.15),
+          width: isCheapest ? 1.3.w : 1.w,
+        ),
+        boxShadow: [
+          if (isCheapest)
+            BoxShadow(
+              color: AppColors.gold.withValues(alpha: 0.08),
+              blurRadius: 8.r,
+              spreadRadius: 0.5.r,
+            ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18.r),
@@ -1790,15 +1870,47 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        listing.sellerPlayerName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.sp,
-                                          fontWeight: FontWeight.w800,
-                                        ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              listing.sellerPlayerName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 13.sp,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ),
+                                          if (isCheapest) ...[
+                                            SizedBox(width: 6.w),
+                                            Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 5.w,
+                                                vertical: 1.5.h,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.gold.withValues(alpha: 0.16),
+                                                borderRadius: BorderRadius.circular(6.r),
+                                                border: Border.all(
+                                                  color: AppColors.gold.withValues(alpha: 0.65),
+                                                  width: 0.8.w,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'En Ucuz',
+                                                style: TextStyle(
+                                                  color: AppColors.gold,
+                                                  fontSize: 8.sp,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                       SizedBox(height: 2.h),
                                       Text(
@@ -2341,7 +2453,16 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     ),
                   ),
                 ),
-                SizedBox(width: 10.w),
+                SizedBox(width: 8.w),
+                IconButton(
+                  icon: Icon(Icons.delete_sweep_rounded, color: AppColors.red, size: 20.sp),
+                  tooltip: 'Sepeti Temizle',
+                  onPressed: () {
+                    _clearCart();
+                    Navigator.of(sheetContext).pop();
+                  },
+                ),
+                SizedBox(width: 4.w),
                 _buildCartIconsRow(),
               ],
             ),
@@ -3189,20 +3310,6 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   }
 
   Future<void> _showIntercityMarketVehiclePicker() async {
-    List<LogisticsVehicleModel> vehicles = const [];
-    try {
-      vehicles = await ref.read(logisticsVehicleListProvider.future);
-    } catch (e) {
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        title: 'Araclar Alinamadi',
-        message: e.toString(),
-        type: SnackbarType.error,
-      );
-      return;
-    }
-
     final cities = await ref.read(activeCitiesProvider.future);
     final sourceCity = _findCityById(cities, _lockedSourceCityId!);
     final targetCity = _findCityById(cities, _activeCityId);
@@ -3218,65 +3325,26 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       return;
     }
 
-    final distanceKm = _calculateDistanceKm(
-      sourceCity.mapPositionX,
-      sourceCity.mapPositionY,
-      targetCity.mapPositionX,
-      targetCity.mapPositionY,
-    );
-
-    final options = vehicles
-        .where((vehicle) => vehicle.status == 'idle')
-        .map((vehicle) {
-          final fuelNeeded = _round2(distanceKm * vehicle.fuelRate);
-          final conditionNeeded = _calculateConditionLoss(distanceKm);
-          final transportCost = _round2(fuelNeeded * vehicle.fuelCost);
-          final durationSeconds = _calculateDurationSeconds(
-            distanceKm: distanceKm,
-            speedKmh: vehicle.speedKmh,
+    final TransferVehicleOptionsResult<MarketTransferVehicleOptionModel> vehicleResult;
+    try {
+      vehicleResult = await ref
+          .read(marketActionProvider)
+          .getIntercityVehicleOptions(
+            sourceCityId: _lockedSourceCityId!,
+            targetCityId: _activeCityId,
+            totalVolume: _cartTotalVolume,
           );
-          final canSelect =
-              vehicle.capacity >= _cartTotalVolume.ceil() &&
-              vehicle.speedKmh > 0 &&
-              vehicle.currentFuel >= fuelNeeded.ceil() &&
-              vehicle.condition > 0;
-
-          String? disabledReason;
-          if (vehicle.capacity < _cartTotalVolume.ceil()) {
-            disabledReason = 'Kapasite yetersiz';
-          } else if (vehicle.speedKmh <= 0) {
-            disabledReason = 'Arac hizi gecersiz';
-          } else if (vehicle.currentFuel < fuelNeeded.ceil()) {
-            disabledReason = 'Yeterli yakit yok';
-          } else if (vehicle.condition <= 0) {
-            disabledReason = 'Bakim gerekli';
-          }
-
-          return MarketTransferVehicleOptionModel(
-            vehicleId: vehicle.id,
-            vehicleOwnerPlayerId: vehicle.playerId,
-            vehicleName:
-                'Arac ${vehicle.logisticsVehicleTypeId.length <= 4 ? vehicle.logisticsVehicleTypeId : vehicle.logisticsVehicleTypeId.substring(0, 4)}',
-            isRental: false,
-            capacity: vehicle.capacity,
-            speedKmh: vehicle.speedKmh,
-            currentFuel: vehicle.currentFuel,
-            fuelCapacity: vehicle.fuelCapacity,
-            fuelRate: vehicle.fuelRate,
-            condition: vehicle.condition,
-            rentalPrice: 0,
-            distanceKm: distanceKm,
-            fuelNeeded: fuelNeeded,
-            conditionNeeded: conditionNeeded.toDouble(),
-            rentalCost: 0,
-            fuelCost: transportCost,
-            transportCost: transportCost,
-            estimatedDurationSeconds: durationSeconds,
-            canSelect: canSelect,
-            disabledReason: disabledReason,
-          );
-        })
-        .toList();
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Arac Secim Hatasi',
+        message: 'Arac secenekleri alinamadi: ${e.toString()}',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+    final options = vehicleResult.options;
 
     if (options.isEmpty) {
       if (!mounted) return;
