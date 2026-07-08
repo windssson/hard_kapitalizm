@@ -1325,10 +1325,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 10.h,
-                crossAxisSpacing: 10.w,
-                childAspectRatio: 0.9,
+                crossAxisCount: 2,
+                mainAxisSpacing: 8.h,
+                crossAxisSpacing: 8.w,
+                childAspectRatio: 2.2,
               ),
               itemCount: filteredProducts.length,
               itemBuilder: (context, index) {
@@ -1371,7 +1371,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
         decoration: isSelected
             ? AppDecorations.glowingAction(AppColors.gold, 14.r)
             : BoxDecoration(
@@ -1381,149 +1381,107 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   color: AppColors.border.withValues(alpha: 0.5),
                 ),
               ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 36.w,
-                  height: 36.w,
-                  padding: EdgeInsets.all(2.w),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.gold.withValues(alpha: 0.15)
-                        : Colors.black.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10.r),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.gold.withValues(alpha: 0.3)
-                          : AppColors.border.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: CachedAssetImage(fileName: product.urunIconu),
+            // Sol Taraf: Büyük Ürün İkonu
+            Container(
+              width: 38.w,
+              height: 38.w,
+              padding: EdgeInsets.all(2.w),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.gold.withValues(alpha: 0.15)
+                    : Colors.black.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.gold.withValues(alpha: 0.3)
+                      : AppColors.border.withValues(alpha: 0.3),
                 ),
-                if (isSellingInStore)
-                  Positioned(
-                    top: -8.h,
-                    right: -18.w,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 5.w,
-                        vertical: 2.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.green.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(999.r),
-                        border: Border.all(
-                          color: AppColors.green.withValues(alpha: 0.45),
-                        ),
-                      ),
-                      child: Text(
-                        needCount > 0 ? 'Satışta ($needCount)' : 'Satışta',
-                        style: TextStyle(
-                          color: AppColors.green,
-                          fontSize: 7.sp,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  )
-                else if (needCount > 0)
-                  Positioned(
-                    top: -8.h,
-                    right: -18.w,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 5.w,
-                        vertical: 2.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(999.r),
-                        border: Border.all(
-                          color: AppColors.gold.withValues(alpha: 0.45),
-                        ),
-                      ),
-                      child: Text(
-                        'İhtiyaç: $needCount',
-                        style: TextStyle(
-                          color: AppColors.goldLight,
-                          fontSize: 7.sp,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                if (prodNeedCount > 0)
-                  Positioned(
-                    bottom: -8.h,
-                    left: -18.w,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 5.w,
-                        vertical: 2.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.blue.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(999.r),
-                        border: Border.all(
-                          color: AppColors.blue.withValues(alpha: 0.45),
-                        ),
-                      ),
-                      child: Text(
-                        'Üretim ($prodNeedCount)',
-                        style: TextStyle(
-                          color: AppColors.blue,
-                          fontSize: 7.sp,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  )
-                else if (isProductionInput)
-                  Positioned(
-                    bottom: -8.h,
-                    left: -18.w,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 5.w,
-                        vertical: 2.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.blue.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(999.r),
-                        border: Border.all(
-                          color: AppColors.blue.withValues(alpha: 0.45),
-                        ),
-                      ),
-                      child: Text(
-                        'Üretim',
-                        style: TextStyle(
-                          color: AppColors.blue,
-                          fontSize: 7.sp,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+              ),
+              child: CachedAssetImage(fileName: product.urunIconu),
             ),
-            SizedBox(height: 6.h),
-            Text(
-              product.urunAdi,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isSelected ? AppColors.gold : Colors.white,
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w700,
-                height: 1.1,
+            SizedBox(width: 10.w),
+            // Sağ Taraf: Detaylar (Başlık, Baz Fiyat, Mini Etiketler)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    product.urunAdi,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isSelected ? AppColors.gold : Colors.white,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 3.h),
+                  Text(
+                    '${product.bazSatisFiyati.toStringAsFixed(0)} TL',
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 9.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (isSellingInStore || needCount > 0 || prodNeedCount > 0 || isProductionInput) ...[
+                    SizedBox(height: 4.h),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: Row(
+                        children: [
+                          if (isSellingInStore)
+                            _buildMiniChip(
+                              needCount > 0 ? 'Satış ($needCount)' : 'Satışta',
+                              AppColors.green,
+                            ),
+                          if (!isSellingInStore && needCount > 0)
+                            _buildMiniChip(
+                              'İhtiyaç: $needCount',
+                              AppColors.gold,
+                            ),
+                          if (prodNeedCount > 0)
+                            _buildMiniChip(
+                              'Üretim ($prodNeedCount)',
+                              AppColors.blue,
+                            )
+                          else if (isProductionInput)
+                            _buildMiniChip(
+                              'Üretim',
+                              AppColors.blue,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniChip(String label, Color color) {
+    return Container(
+      margin: EdgeInsets.only(right: 4.w),
+      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4.r),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 0.5.w),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 7.sp,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
