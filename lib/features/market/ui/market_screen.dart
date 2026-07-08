@@ -1328,7 +1328,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 crossAxisCount: 2,
                 mainAxisSpacing: 8.h,
                 crossAxisSpacing: 8.w,
-                childAspectRatio: 2.2,
+                childAspectRatio: 2.0,
               ),
               itemCount: filteredProducts.length,
               itemBuilder: (context, index) {
@@ -1385,14 +1385,14 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           children: [
             // Sol Taraf: Büyük Ürün İkonu
             Container(
-              width: 38.w,
-              height: 38.w,
+              width: 48.w,
+              height: 48.w,
               padding: EdgeInsets.all(2.w),
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.gold.withValues(alpha: 0.15)
                     : Colors.black.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10.r),
+                borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(
                   color: isSelected
                       ? AppColors.gold.withValues(alpha: 0.3)
