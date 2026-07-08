@@ -12,12 +12,14 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
+import 'package:hard_kapitalizm/core/widgets/price_sparkline.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
-import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
-    show warehouseCapacityStatusProvider;
+import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
@@ -83,6 +85,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar: AppBottomNav(
+        selectedIndex: -1,
+        onItemSelected: (_) {},
+      ),
       floatingActionButton: warehouseAsync.maybeWhen(
         data: (warehouse) => FloatingActionButton.extended(
           onPressed: () => _showProductSelection(context, warehouse),
@@ -1380,6 +1386,96 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Consumer(
+                          builder: (context, ref, _) {
+                            final productAsync = ref.watch(marketProductProvider(slot.productId ?? ''));
+                            return productAsync.when(
+                              loading: () => const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: CircularProgressIndicator(color: AppColors.gold, strokeWidth: 2),
+                                ),
+                              ),
+                              error: (err, _) => const SizedBox.shrink(),
+                              data: (product) {
+                                if (product == null) return const SizedBox.shrink();
+                                return Padding(
+                                  padding: EdgeInsets.only(bottom: 12.h),
+                                  child: Container(
+                                    padding: EdgeInsets.all(10.w),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.cardBgLight,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      border: Border.all(color: AppColors.border),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Guncel Piyasa Analizi 📈',
+                                              style: TextStyle(
+                                                color: AppColors.gold,
+                                                fontSize: 10.sp,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            Consumer(
+                                              builder: (context, ref, _) {
+                                                final historyAsync = ref.watch(productPriceHistoryProvider(slot.productId ?? ''));
+                                                return historyAsync.maybeWhen(
+                                                  data: (history) {
+                                                    if (history == null || history.prices.isEmpty) return const SizedBox.shrink();
+                                                    return PriceSparkline(
+                                                      prices: history.prices,
+                                                      width: 80.w,
+                                                      height: 20.h,
+                                                    );
+                                                  },
+                                                  orElse: () => const SizedBox.shrink(),
+                                                );
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 8.h),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: _buildPriceInfoTile(
+                                                'En Dusuk',
+                                                product.enDusukFiyat > 0 ? AppMoney.compact(product.enDusukFiyat) : '-',
+                                                AppColors.green,
+                                              ),
+                                            ),
+                                            SizedBox(width: 6.w),
+                                            Expanded(
+                                              child: _buildPriceInfoTile(
+                                                'Ortalama',
+                                                product.ortalamaFiyat > 0 ? AppMoney.compact(product.ortalamaFiyat) : '-',
+                                                AppColors.gold,
+                                              ),
+                                            ),
+                                            SizedBox(width: 6.w),
+                                            Expanded(
+                                              child: _buildPriceInfoTile(
+                                                'En Yuksek',
+                                                product.enYuksekFiyat > 0 ? AppMoney.compact(product.enYuksekFiyat) : '-',
+                                                AppColors.red,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
                         Container(
                           width: double.infinity,
                           padding: EdgeInsets.symmetric(
@@ -3185,6 +3281,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           if (result['success'] == true) {
                             await _refreshWarehouseEcosystem();
                             if (!context.mounted) return;
+                            FloatingFeedback.show(
+                              context,
+                              amount: upgradeCost,
+                              type: FloatingFeedbackType.cashRemove,
+                            );
                             AppSnackbar.show(
                               context,
                               title: 'Basarili',

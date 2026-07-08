@@ -947,7 +947,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                 SizedBox(height: 2.h),
                 Text(
                   hasProduct
-                      ? 'Kalite ${factory.qualityLevel} | Saatlik ${product!.uretimAdedi} | Hammadde ${_formatCompact(item.inputStockQuantity)}'
+                      ? 'Kalite ${factory.qualityLevel} | Saatlik ${(product!.uretimAdedi * (1.0 + (factory.qualityLevel - 1) * 0.20)).toInt()} | Hammadde ${_formatCompact(item.inputStockQuantity)}'
                       : 'Detay ekranindan urun secerek uretimi baslat.',
                   style: TextStyle(
                     color: AppColors.textMuted,

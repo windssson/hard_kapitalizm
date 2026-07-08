@@ -11,6 +11,7 @@ import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -107,26 +108,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     }
   }
 
-  void _onNavSelected(int index) {
-    if (index == -1) return;
-    switch (index) {
-      case 0:
-        context.go('/home');
-        break;
-      case 1:
-        context.go('/company');
-        break;
-      case 2:
-        context.go('/transfer-map');
-        break;
-      case 3:
-        context.go('/market');
-        break;
-      case 4:
-        context.go('/profile');
-        break;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +117,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       backgroundColor: Colors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: -1,
-        onItemSelected: _onNavSelected,
+        onItemSelected: (_) {},
       ),
       body: SafeArea(
         child: storeAsync.when(
@@ -1582,6 +1563,11 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             refreshPlayer: true,
                           );
                           if (!context.mounted) return;
+                          FloatingFeedback.show(
+                            context,
+                            amount: upgradeCost,
+                            type: FloatingFeedbackType.cashRemove,
+                          );
                           _showSuccess(
                             context,
                             'Magaza yukseltmesi baslatildi.',

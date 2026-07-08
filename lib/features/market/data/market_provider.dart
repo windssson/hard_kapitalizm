@@ -6,6 +6,7 @@ import 'package:hard_kapitalizm/features/market/models/market_buyer_warehouse_mo
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
+import 'package:hard_kapitalizm/features/market/models/product_price_history_model.dart';
 
 final marketProductProvider =
     FutureProvider.family<ProductModel?, String>((ref, productId) async {
@@ -157,3 +158,36 @@ class MarketActionNotifier {
 }
 
 final marketActionProvider = Provider((ref) => MarketActionNotifier());
+
+final playerMarketListingsProvider =
+    FutureProvider.family<List<MarketListingModel>, String>((
+      ref,
+      playerId,
+    ) async {
+      final supabase = Supabase.instance.client;
+
+      final response = await supabase.rpc(
+        'get_market_listings_for_player',
+        params: {'p_player_id': playerId},
+      );
+
+      return (response as List<dynamic>)
+          .map(
+            (json) =>
+                MarketListingModel.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    });
+
+final productPriceHistoryProvider =
+    FutureProvider.family<ProductPriceHistoryModel?, String>((ref, productId) async {
+  final supabase = Supabase.instance.client;
+  final response = await supabase
+      .from('product_price_history')
+      .select()
+      .eq('product_id', productId)
+      .maybeSingle();
+
+  if (response == null) return null;
+  return ProductPriceHistoryModel.fromJson(response);
+});

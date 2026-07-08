@@ -67,22 +67,7 @@ class TransferVehicleOptionCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16.r),
       child: Container(
         padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage('assets/theme/cartback.webp'),
-            fit: BoxFit.fill,
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.cardBg.withValues(alpha: isSelected ? 0.34 : 0.42),
-              AppColors.cardBgLight.withValues(alpha: isSelected ? 0.48 : 0.58),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: accentColor.withValues(alpha: 0.38)),
-        ),
+        decoration: AppDecorations.premiumCard(accentColor, 16.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

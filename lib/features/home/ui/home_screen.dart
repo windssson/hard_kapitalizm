@@ -23,6 +23,8 @@ import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
+import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
+import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
 
 class _HomeModuleCardData {
   final String title;
@@ -304,10 +306,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     SizedBox(height: 8.h),
                     _buildModuleGrid(),
                     SizedBox(height: 8.h),
-                    _buildTaxInstitutionButton(),
-                    SizedBox(height: 8.h),
-                    _buildTenderInstitutionButton(),
-                    SizedBox(height: 8.h),
                     _buildFinancialStats(),
                     SizedBox(height: 8.h),
                     _buildActiveProductionsCard(),
@@ -329,7 +327,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     context.go('/home');
                     break;
                   case 1:
-                    context.go('/company');
+                    context.go('/chat');
                     break;
                   case 2:
                     context.go('/transfer-map');
@@ -615,31 +613,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             : '$activeBusinessCount';
 
         return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18.r),
-            image: const DecorationImage(
-              image: AssetImage('assets/theme/cartback.webp'),
-              fit: BoxFit.fill,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF09111D).withValues(alpha: 0.36),
-                const Color(0xFF050B14).withValues(alpha: 0.52),
-              ],
-            ),
-            border: Border.all(
-              color: AppColors.borderGoldLight.withValues(alpha: 0.55),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.32),
-                blurRadius: 14.r,
-                offset: Offset(0, 6.h),
-              ),
-            ],
-          ),
+          decoration: AppDecorations.premiumCard(AppColors.borderGoldLight.withValues(alpha: 0.55), 18.r),
           child: Padding(
             padding: EdgeInsets.all(10.w),
             child: Column(
@@ -819,26 +793,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     horizontal: 12.w,
                     vertical: 10.h,
                   ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14.r),
-                    image: const DecorationImage(
-                      image: AssetImage('assets/theme/cartback.webp'),
-                      fit: BoxFit.fill,
-                    ),
-                    border: Border.all(
-                      color: isClaimable
-                          ? AppColors.gold.withValues(alpha: 0.5)
-                          : AppColors.border,
-                    ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF0C1624).withValues(alpha: 0.40),
-                        const Color(0xFF07111C).withValues(alpha: 0.56),
-                      ],
-                    ),
-                  ),
+                  decoration: AppDecorations.premiumCard(isClaimable ? AppColors.gold.withValues(alpha: 0.5) : AppColors.border, 14.r),
                   child: Row(
                     children: [
                       Container(
@@ -998,8 +953,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   List<_HomeModuleCardData> _buildModuleCards(
     HomeModulesSummary? modules,
-    Set<String> alertedModules,
-  ) {
+    Set<String> alertedModules, {
+    required double taxDebt,
+    required int openTenders,
+    required int activeTenders,
+    required BrandCompanyModel? brandCompany,
+  }) {
     return [
       _HomeModuleCardData(
         title: 'Magazalar',
@@ -1136,6 +1095,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             alertedModules.contains('arge') ||
             (modules?.arge.warningCount ?? 0) > 0,
       ),
+      _HomeModuleCardData(
+        title: 'Vergi',
+        image: 'banka.webp',
+        accentColor: taxDebt > 0 ? AppColors.red : AppColors.gold,
+        primaryLabel: 'Borç',
+        primaryValue: taxDebt > 0 ? AppMoney.compact(taxDebt) : '0',
+        secondaryLabel: 'Durum',
+        secondaryValue: taxDebt > 0 ? 'Odenmemis' : 'Temiz',
+        badgeText: taxDebt > 0 ? 'Borc var' : 'Stabil',
+        hasAlert: taxDebt > 0,
+      ),
+      _HomeModuleCardData(
+        title: 'Ihale',
+        image: 'pazar.webp',
+        accentColor: openTenders > 0 ? AppColors.gold : AppColors.blue,
+        primaryLabel: 'Acik',
+        primaryValue: '$openTenders',
+        secondaryLabel: 'Aktif',
+        secondaryValue: '$activeTenders',
+        badgeText: openTenders > 0 ? 'Ihale' : 'Yok',
+        hasAlert: openTenders > 0,
+      ),
+      _HomeModuleCardData(
+        title: 'Marka',
+        image: brandCompany != null ? brandCompany.logoId : 'logo1.webp',
+        accentColor: AppColors.diamond,
+        primaryLabel: 'Seviye',
+        primaryValue: brandCompany != null ? '${brandCompany.brandLevel}' : '1',
+        secondaryLabel: 'XP',
+        secondaryValue: brandCompany != null ? '${brandCompany.brandXp}' : '0',
+        badgeText: brandCompany != null ? 'Sv. ${brandCompany.brandLevel}' : 'Sv. 1',
+        hasAlert: false,
+      ),
     ];
   }
 
@@ -1184,7 +1176,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       builder: (context, ref, child) {
         final dashboard = ref.watch(homeDashboardProvider).value;
         final alertedModules = _collectAlertedModules(dashboard);
-        final modules = _buildModuleCards(dashboard?.modules, alertedModules);
+        
+        final taxDebt = ref.watch(taxDebtProvider).value ?? 0.0;
+        
+        final tenderCenter = ref.watch(tenderCenterProvider).value;
+        final openTenders = tenderCenter?.openTenders.length ?? 0;
+        final activeTenders = tenderCenter?.myActiveTenders.length ?? 0;
+        
+        final brandCompany = ref.watch(playerBrandCompanyProvider).value;
+
+        final modules = _buildModuleCards(
+          dashboard?.modules,
+          alertedModules,
+          taxDebt: taxDebt,
+          openTenders: openTenders,
+          activeTenders: activeTenders,
+          brandCompany: brandCompany,
+        );
 
         return GridView.builder(
           shrinkWrap: true,
@@ -1211,35 +1219,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16.r),
-                        image: const DecorationImage(
-                          image: AssetImage('assets/theme/cartback.webp'),
-                          fit: BoxFit.fill,
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            const Color(0xFF08121D).withValues(alpha: 0.42),
-                            const Color(0xFF050D16).withValues(alpha: 0.54),
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.22),
-                            blurRadius: 10.r,
-                            offset: Offset(0, 5.h),
-                          ),
-                        ],
-                      ),
-                      foregroundDecoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(
-                          color: AppColors.borderGold.withValues(alpha: 0.48),
-                          width: 1.1,
-                        ),
-                      ),
+                      decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.48), 16.r),
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(5.w, 3.h, 5.w, 4.h),
                         child: Column(
@@ -1299,134 +1279,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildTaxInstitutionButton() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final taxDebtAsync = ref.watch(taxDebtProvider);
-        return taxDebtAsync.when(
-          loading: () => const SizedBox.shrink(),
-          error: (_, _) => const SizedBox.shrink(),
-          data: (taxDebt) {
-            final hasDebt = taxDebt > 0;
-            return Container(
-              margin: EdgeInsets.symmetric(vertical: 4.h),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => context.push('/tax'),
-                  borderRadius: BorderRadius.circular(14.r),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 14.w,
-                      vertical: 12.h,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14.r),
-                      image: const DecorationImage(
-                        image: AssetImage('assets/theme/cartback.webp'),
-                        fit: BoxFit.fill,
-                      ),
-                      border: Border.all(
-                        color: hasDebt
-                            ? AppColors.red.withValues(alpha: 0.5)
-                            : AppColors.border,
-                      ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF0C1624).withValues(alpha: 0.40),
-                          const Color(0xFF07111C).withValues(alpha: 0.56),
-                        ],
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36.w,
-                          height: 36.w,
-                          decoration: BoxDecoration(
-                            color: (hasDebt ? AppColors.red : AppColors.gold)
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10.r),
-                            border: Border.all(
-                              color: (hasDebt ? AppColors.red : AppColors.gold)
-                                  .withValues(alpha: 0.32),
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.assured_workload_rounded,
-                            color: hasDebt ? AppColors.red : AppColors.gold,
-                            size: 18.sp,
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'DEVLET KURUMLARI',
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 8.sp,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              SizedBox(height: 3.h),
-                              Text(
-                                'Vergi Kurumu',
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: 10.w),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'Borc Durumu',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 8.sp,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(height: 2.h),
-                            Text(
-                              hasDebt
-                                  ? AppMoney.compact(taxDebt)
-                                  : 'Borc Yok',
-                              style: TextStyle(
-                                color: hasDebt ? AppColors.red : AppColors.green,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(width: 8.w),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.textMuted,
-                          size: 18.sp,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
   Widget _buildModuleMetricLine(String label, String value, Color valueColor) {
     return Row(
@@ -1507,6 +1359,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case 'AR-GE':
         context.go('/arge');
         return;
+      case 'Vergi':
+        context.push('/tax');
+        return;
+      case 'Ihale':
+        context.push('/tenders');
+        return;
+      case 'Marka':
+        context.push('/company');
+        return;
     }
   }
 
@@ -1522,24 +1383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
         return Container(
           padding: EdgeInsets.symmetric(vertical: 14.h),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14.r),
-            image: const DecorationImage(
-              image: AssetImage('assets/theme/cartback.webp'),
-              fit: BoxFit.fill,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF0C1624).withValues(alpha: 0.42),
-                const Color(0xFF07111C).withValues(alpha: 0.58),
-              ],
-            ),
-            border: Border.all(
-              color: AppColors.borderGold.withValues(alpha: 0.34),
-            ),
-          ),
+          decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.34), 14.r),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -1598,24 +1442,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
         return Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14.r),
-            image: const DecorationImage(
-              image: AssetImage('assets/theme/cartback.webp'),
-              fit: BoxFit.fill,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF0C1624).withValues(alpha: 0.42),
-                const Color(0xFF07111C).withValues(alpha: 0.58),
-              ],
-            ),
-            border: Border.all(
-              color: AppColors.borderGold.withValues(alpha: 0.34),
-            ),
-          ),
+          decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.34), 14.r),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2099,129 +1926,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
 
-  Widget _buildTenderInstitutionButton() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final tenderCenterAsync = ref.watch(tenderCenterProvider);
-        final openTenderCount = tenderCenterAsync.value?.openTenders.length ?? 0;
-        final activeTenderCount =
-            tenderCenterAsync.value?.myActiveTenders.length ?? 0;
-        final hasOpportunity = openTenderCount > 0;
 
-        return Container(
-          margin: EdgeInsets.symmetric(vertical: 4.h),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => context.push('/tenders'),
-              borderRadius: BorderRadius.circular(14.r),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14.r),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/theme/cartback.webp'),
-                    fit: BoxFit.fill,
-                  ),
-                  border: Border.all(
-                    color: hasOpportunity
-                        ? AppColors.gold.withValues(alpha: 0.5)
-                        : AppColors.border,
-                  ),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFF0C1624).withValues(alpha: 0.40),
-                      const Color(0xFF07111C).withValues(alpha: 0.56),
-                    ],
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36.w,
-                      height: 36.w,
-                      decoration: BoxDecoration(
-                        color: (hasOpportunity ? AppColors.gold : AppColors.blue)
-                            .withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10.r),
-                        border: Border.all(
-                          color: (hasOpportunity ? AppColors.gold : AppColors.blue)
-                              .withValues(alpha: 0.32),
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.gavel_rounded,
-                        color: hasOpportunity ? AppColors.gold : AppColors.blue,
-                        size: 18.sp,
-                      ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'DEVLET KURUMLARI',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 8.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          SizedBox(height: 3.h),
-                          Text(
-                            'Ihale Merkezi',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Acik / Aktif',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 8.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          '$openTenderCount / $activeTenderCount',
-                          style: TextStyle(
-                            color: hasOpportunity
-                                ? AppColors.goldLight
-                                : AppColors.textPrimary,
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(width: 8.w),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.textMuted,
-                      size: 18.sp,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   List<double> _buildCompanySparklinePoints({
     required double companyValue,
@@ -2352,24 +2057,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     VoidCallback? onHeaderTap,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14.r),
-        image: const DecorationImage(
-          image: AssetImage('assets/theme/cartback.webp'),
-          fit: BoxFit.fill,
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF0C1624).withValues(alpha: 0.42),
-            const Color(0xFF07111C).withValues(alpha: 0.58),
-          ],
-        ),
-        border: Border.all(
-          color: headerIconColor.withValues(alpha: compact ? 0.22 : 0.28),
-        ),
-      ),
+      decoration: AppDecorations.premiumCard(headerIconColor.withValues(alpha: compact ? 0.22 : 0.28), 14.r),
       child: Column(
         children: [
           InkWell(
@@ -2449,24 +2137,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         }
 
         return Container(
-          decoration: BoxDecoration(
-            image: const DecorationImage(
-              image: AssetImage('assets/theme/cartback.webp'),
-              fit: BoxFit.fill,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF0C1624).withValues(alpha: 0.42),
-                const Color(0xFF07111C).withValues(alpha: 0.58),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(
-              color: AppColors.borderGold.withValues(alpha: 0.34),
-            ),
-          ),
+          decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.34), 12.r),
           child: Padding(
             padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 12.h),
             child: Column(

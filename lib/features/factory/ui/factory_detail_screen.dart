@@ -17,6 +17,8 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
@@ -97,6 +99,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar: AppBottomNav(
+        selectedIndex: -1,
+        onItemSelected: (_) {},
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -1667,7 +1673,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   ) {
     final product = detail.product;
     if (product == null) return '-';
-    final amount = product.uretimAdedi * (activeBoost?.multiplier ?? 1);
+    final qualityMultiplier = 1.0 + (detail.factory.qualityLevel - 1) * 0.20;
+    final amount = product.uretimAdedi * (activeBoost?.multiplier ?? 1) * qualityMultiplier;
     return amount % 1 == 0
         ? amount.toInt().toString()
         : amount.toStringAsFixed(1);
@@ -1989,6 +1996,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             if (result['success'] == true) {
                               await _refreshFactoryEcosystem();
                               if (!context.mounted) return;
+                              FloatingFeedback.show(
+                                context,
+                                amount: upgradeCost.toDouble(),
+                                type: FloatingFeedbackType.cashRemove,
+                              );
                               AppSnackbar.show(
                                 context,
                                 title: 'Basarili',
@@ -2093,7 +2105,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             (selectableProduct.hasPreferredBrand
                 ? ' (${_currentBrandName ?? 'Markali'})'
                 : ''),
-        subtitle: 'Saatlik ÃƒÂ¼retim: ${product.uretimAdedi}',
+        subtitle: 'Saatlik uretim: ${(product.uretimAdedi * (1.0 + (detail.factory.qualityLevel - 1) * 0.20)).toInt()}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
             '${selectableProduct.hasPreferredBrand ? ' Ã¢â‚¬Â¢ Marka Hazir' : ''}',

@@ -77,33 +77,7 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
-          decoration: BoxDecoration(
-            image: const DecorationImage(
-              image: AssetImage('assets/theme/cartback.webp'),
-              fit: BoxFit.fill,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.cardBg.withValues(alpha: 0.42),
-                AppColors.cardBgLight.withValues(alpha: 0.58),
-              ],
-            ),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-            border: Border.all(
-              color: AppColors.borderGold.withValues(alpha: 0.26),
-              width: 1.w,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.32),
-                blurRadius: 18,
-                spreadRadius: 2,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
+          decoration: AppDecorations.panelGlass(24.r),
           padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 24.h),
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.78,

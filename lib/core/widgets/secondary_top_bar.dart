@@ -1,172 +1,130 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
-class SecondaryTopBar extends ConsumerWidget {
-  final String? title;
-  final bool showStats;
+class SecondaryTopBar extends ConsumerWidget implements PreferredSizeWidget {
+  final String title;
+  final VoidCallback? onBackPressed;
+  final List<Widget>? actions;
 
-  const SecondaryTopBar({super.key, this.title, this.showStats = true});
+  const SecondaryTopBar({
+    super.key,
+    required this.title,
+    this.onBackPressed,
+    this.actions,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final playerAsyncValue = ref.watch(playerProvider);
-    final player = playerAsyncValue.value;
+    final player = ref.watch(playerProvider).value;
 
     return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 10.r,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-            decoration: BoxDecoration(
-              image: const DecorationImage(
-                image: AssetImage('assets/theme/cartback.webp'),
-                fit: BoxFit.fill,
-              ),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.cardBg.withValues(alpha: 0.42),
-                  AppColors.navBg.withValues(alpha: 0.58),
-                ],
-              ),
-              border: Border(
-                bottom: BorderSide(
-                  color: AppColors.borderGold.withValues(alpha: 0.4),
-                  width: 1.5.h,
-                ),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Back Button
-                GestureDetector(
-                  onTap: () {
+      color: AppColors.background,
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+          decoration: AppDecorations.secondaryTopBar(0),
+          child: Row(
+            children: [
+              // Back Button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onBackPressed ?? () {
                     if (context.canPop()) {
                       context.pop();
                     } else {
                       context.go('/home');
                     }
                   },
+                  borderRadius: BorderRadius.circular(999.r),
                   child: Container(
-                    padding: EdgeInsets.all(6.w),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardBg,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.borderGoldLight.withValues(alpha: 0.4),
-                      ),
+                    width: 38.w,
+                    height: 38.w,
+                    decoration: AppDecorations.badge(
+                      bgColor: AppColors.cardBg,
+                      borderColor: AppColors.borderGoldLight.withValues(alpha: 0.3),
+                      isCircle: true,
                     ),
-                    child: Icon(
-                      Icons.arrow_back,
+                    child: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
                       color: AppColors.gold,
-                      size: 20.sp,
+                      size: 16,
                     ),
                   ),
                 ),
-                SizedBox(width: 12.w),
-
-                // Title or Player Info
-                Expanded(
-                  child: title != null
-                      ? Text(
-                          title!.toUpperCase(),
-                          style: TextStyle(
-                            color: AppColors.goldLight,
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.1,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              player != null ? player.playerName : '...',
-                              style: TextStyle(
-                                color: AppColors.goldLight,
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            Text(
-                              player != null ? player.companyName : '...',
-                              style: TextStyle(
-                                color: AppColors.gold,
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
+              ),
+              SizedBox(width: 12.w),
+              // Title
+              Expanded(
+                child: Text(
+                  title.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.title.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.2,
+                  ),
                 ),
-
-                // Right side stats
-                if (showStats) ...[
-                  _buildCompactCurrency(
-                    Icons.payments_rounded,
-                    _formatMoney(player?.cash ?? 0),
-                    AppColors.green,
-                  ),
-                  SizedBox(width: 6.w),
-                  _buildCompactCurrency(
-                    Icons.star_rounded,
-                    player?.gold.toInt().toString() ?? '0',
-                    AppColors.goldLight,
-                  ),
-                ],
+              ),
+              SizedBox(width: 8.w),
+              // Player Wealth Display
+              if (player != null) ...[
+                _buildCompactCurrencyBox(
+                  icon: Icons.payments_rounded,
+                  value: AppMoney.compact(player.cash),
+                  color: AppColors.green,
+                ),
+                SizedBox(width: 6.w),
+                _buildCompactCurrencyBox(
+                  icon: Icons.star_rounded,
+                  value: player.gold.toStringAsFixed(0),
+                  color: AppColors.gold,
+                ),
               ],
-            ),
+              if (actions != null) ...[
+                SizedBox(width: 8.w),
+                ...actions!,
+              ],
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCompactCurrency(IconData icon, String value, Color color) {
+  Widget _buildCompactCurrencyBox({
+    required IconData icon,
+    required String value,
+    required Color color,
+  }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: AppColors.background.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+      decoration: AppDecorations.badge(
+        bgColor: AppColors.background.withValues(alpha: 0.4),
+        borderColor: color.withValues(alpha: 0.15),
+        radius: 12.r,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 14.sp),
+          Icon(
+            icon,
+            color: color,
+            size: 12.sp,
+          ),
           SizedBox(width: 4.w),
           Text(
             value,
             style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12.sp,
+              color: Colors.white,
+              fontSize: 10.5.sp,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -175,9 +133,6 @@ class SecondaryTopBar extends ConsumerWidget {
     );
   }
 
-  String _formatMoney(dynamic amount) {
-    return AppMoney.compact(
-      double.tryParse(amount?.toString() ?? '0') ?? 0,
-    );
-  }
+  @override
+  Size get preferredSize => Size.fromHeight(58.h);
 }

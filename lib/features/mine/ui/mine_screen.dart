@@ -771,7 +771,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
             children: [
               if (hasProduct)
                 _buildSmallBadge(
-                  'Saatlik ${product!.uretimAdedi}',
+                  'Saatlik ${(product!.uretimAdedi * (1.0 + (mine.qualityLevel - 1) * 0.20)).toInt()}',
                   Colors.lightBlueAccent,
                 ),
               if (mine.boostMultiplier > 1.0) ...[

@@ -441,31 +441,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20.r),
-          image: const DecorationImage(
-            image: AssetImage('assets/theme/cartback.webp'),
-            fit: BoxFit.fill,
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0C1624).withValues(alpha: 0.42),
-              const Color(0xFF07111C).withValues(alpha: 0.58),
-            ],
-          ),
-          border: Border.all(
-            color: AppColors.borderGold.withValues(alpha: 0.34),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.28),
-              blurRadius: 14.r,
-              offset: Offset(0, 6.h),
-            ),
-          ],
-        ),
+        decoration: AppDecorations.premiumCard(AppColors.borderGold, 20.r),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

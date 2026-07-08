@@ -7,6 +7,7 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
 import 'package:hard_kapitalizm/features/tender/models/tender_center_model.dart';
 
@@ -37,6 +38,10 @@ class _TenderCenterScreenState extends ConsumerState<TenderCenterScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar: AppBottomNav(
+        selectedIndex: 3,
+        onItemSelected: (_) {},
+      ),
       body: SafeArea(
         child: Column(
           children: [

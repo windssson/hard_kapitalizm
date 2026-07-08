@@ -34,3 +34,15 @@ class PlayerActionNotifier {
 final playerActionProvider = Provider<PlayerActionNotifier>((ref) {
   return PlayerActionNotifier(ref);
 });
+
+final publicProfileProvider =
+    FutureProvider.family<PlayerModel?, String>((ref, playerId) async {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.rpc(
+        'get_player_profile',
+        params: {'p_player_id': playerId},
+      );
+
+      if (response == null) return null;
+      return PlayerModel.fromJson(response as Map<String, dynamic>);
+    });

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 
 class AppBottomNav extends StatelessWidget {
@@ -26,23 +27,42 @@ class AppBottomNav extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavItem(0, Icons.home, 'Ana Sayfa'),
-            _buildNavItem(1, Icons.apartment_rounded, 'Marka'),
-            _buildNavItem(2, Icons.map, 'Harita'),
-            _buildNavItem(3, Icons.storefront, 'Pazar'),
-            _buildNavItem(4, Icons.person, 'Profil'),
+            _buildNavItem(context, 0, Icons.home, 'Ana Sayfa'),
+            _buildNavItem(context, 1, Icons.chat_bubble_rounded, 'Sohbet'),
+            _buildNavItem(context, 2, Icons.map, 'Harita'),
+            _buildNavItem(context, 3, Icons.storefront, 'Pazar'),
+            _buildNavItem(context, 4, Icons.person, 'Profil'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
     final isSelected = selectedIndex == index;
     final color = isSelected ? AppColors.gold : AppColors.textSecondary;
 
     return GestureDetector(
-      onTap: () => onItemSelected(index),
+      onTap: () {
+        if (index == selectedIndex) return;
+        switch (index) {
+          case 0:
+            context.go('/home');
+            break;
+          case 1:
+            context.go('/chat');
+            break;
+          case 2:
+            context.go('/transfer-map');
+            break;
+          case 3:
+            context.go('/market');
+            break;
+          case 4:
+            context.go('/profile');
+            break;
+        }
+      },
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: 70.w,

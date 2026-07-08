@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
-import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/auth/models/experience_gain_model.dart';
 
 Future<void> showExperienceFeedbackFromResult(
@@ -66,11 +66,10 @@ Future<void> showExperienceFeedbackFromResult(
     return;
   }
 
-  AppSnackbar.show(
+  FloatingFeedback.show(
     context,
-    title: 'XP Kazanildi',
-    message: '+${experience.amount} XP',
-    type: SnackbarType.success,
+    amount: experience.amount.toDouble(),
+    type: FloatingFeedbackType.xp,
   );
 }
 

@@ -6,6 +6,8 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 
@@ -73,6 +75,11 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
       });
 
       if (result['success'] == true) {
+        FloatingFeedback.show(
+          context,
+          amount: amount,
+          type: FloatingFeedbackType.cashRemove,
+        );
         AppSnackbar.show(context, message: result['message'] ?? 'Odeme basarili.', type: SnackbarType.success);
         _customAmountController.clear();
       } else {
@@ -89,6 +96,10 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar: AppBottomNav(
+        selectedIndex: 3,
+        onItemSelected: (_) {},
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -152,34 +163,9 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
   Widget _buildTaxSummaryCard(double taxDebt, bool hasDebt) {
     return Container(
       padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20.r),
-        image: const DecorationImage(
-          image: AssetImage('assets/theme/cartback.webp'),
-          fit: BoxFit.fill,
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF0C1624).withValues(alpha: 0.50),
-            const Color(0xFF07111C).withValues(alpha: 0.66),
-          ],
-        ),
-        border: Border.all(
-          color: hasDebt
-              ? AppColors.red.withValues(alpha: 0.45)
-              : AppColors.borderGold.withValues(alpha: 0.45),
-          width: 1.5.r,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (hasDebt ? AppColors.red : AppColors.gold)
-                .withValues(alpha: 0.1),
-            blurRadius: 20.r,
-            spreadRadius: 2.r,
-          ),
-        ],
+      decoration: AppDecorations.premiumCard(
+        hasDebt ? AppColors.red : AppColors.borderGold,
+        20.r,
       ),
       child: Column(
         children: [

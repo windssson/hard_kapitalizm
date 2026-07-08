@@ -20,6 +20,8 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
@@ -97,6 +99,10 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar: AppBottomNav(
+        selectedIndex: -1,
+        onItemSelected: (_) {},
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -1341,6 +1347,11 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   if (result['success'] == true) {
                     await _refreshFarmEcosystem();
                     if (!context.mounted) return;
+                    FloatingFeedback.show(
+                      context,
+                      amount: upgradeCost,
+                      type: FloatingFeedbackType.cashRemove,
+                    );
                     AppSnackbar.show(
                       context,
                       title: 'Basarili',
@@ -2177,7 +2188,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             (selectableProduct.hasPreferredBrand
                 ? ' (${_currentBrandName ?? 'Markali'})'
                 : ''),
-        subtitle: 'Saatlik üretim: ${product.uretimAdedi}',
+        subtitle: 'Saatlik üretim: ${(product.uretimAdedi * (1.0 + (slot.qualityLevel - 1) * 0.20)).toInt()}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
             '${selectableProduct.hasPreferredBrand ? ' • Marka Hazir' : ''}',
@@ -4604,7 +4615,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   ) {
     final product = slot.product;
     if (product == null) return '0';
-    final perHour = product.uretimAdedi * (activeBoost?.multiplier ?? 1);
+    final qualityMultiplier = 1.0 + (slot.qualityLevel - 1) * 0.20;
+    final perHour = product.uretimAdedi * (activeBoost?.multiplier ?? 1) * qualityMultiplier;
     return perHour.toStringAsFixed(perHour >= 10 ? 0 : 1);
   }
 

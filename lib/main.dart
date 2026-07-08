@@ -16,6 +16,7 @@ import 'package:hard_kapitalizm/features/store/ui/store_warehouse_detail_screen.
 import 'package:hard_kapitalizm/features/store/ui/city_selection_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/auth/ui/profile_screen.dart';
+import 'package:hard_kapitalizm/features/auth/ui/public_profile_screen.dart';
 import 'package:hard_kapitalizm/features/premium/ui/premium_store_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_detail_screen.dart';
@@ -52,6 +53,7 @@ import 'package:hard_kapitalizm/features/cash_flow/ui/cash_flow_screen.dart';
 import 'package:hard_kapitalizm/features/production_report/ui/production_report_screen.dart';
 import 'package:hard_kapitalizm/features/tender/ui/tender_center_screen.dart';
 import 'package:hard_kapitalizm/features/tender/ui/tender_detail_screen.dart';
+import 'package:hard_kapitalizm/features/chat/ui/chat_screen.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/navigation/app_route_observer.dart';
@@ -90,10 +92,7 @@ final _router = GoRouter(
       path: '/notifications',
       builder: (context, state) => const NotificationScreen(),
     ),
-    GoRoute(
-      path: '/alerts',
-      builder: (context, state) => const AlertScreen(),
-    ),
+    GoRoute(path: '/alerts', builder: (context, state) => const AlertScreen()),
     GoRoute(
       path: '/achievements',
       builder: (context, state) => const AchievementScreen(),
@@ -101,6 +100,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/leaderboard',
       builder: (context, state) => const LeaderboardScreen(),
+    ),
+    GoRoute(
+      path: '/chat',
+      builder: (context, state) => const ChatScreen(),
     ),
     GoRoute(
       path: '/cash-history',
@@ -135,21 +138,18 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: ':id',
-          builder: (context, state) => StoreDetailScreen(
-            storeId: state.pathParameters['id']!,
-          ),
+          builder: (context, state) =>
+              StoreDetailScreen(storeId: state.pathParameters['id']!),
           routes: [
             GoRoute(
               path: 'history',
-              builder: (context, state) => StoreHistoryScreen(
-                storeId: state.pathParameters['id']!,
-              ),
+              builder: (context, state) =>
+                  StoreHistoryScreen(storeId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'report',
-              builder: (context, state) => StorePerformanceScreen(
-                storeId: state.pathParameters['id']!,
-              ),
+              builder: (context, state) =>
+                  StorePerformanceScreen(storeId: state.pathParameters['id']!),
             ),
             GoRoute(
               path: 'warehouse',
@@ -161,15 +161,29 @@ final _router = GoRouter(
         ),
       ],
     ),
-    GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
-    GoRoute(path: '/premium-store', builder: (context, state) => const PremiumStoreScreen()),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
+      routes: [
+        GoRoute(
+          path: 'public/:id',
+          builder: (context, state) =>
+              PublicProfileScreen(playerId: state.pathParameters['id']!),
+        ),
+      ],
+    ),
+    GoRoute(
+      path: '/premium-store',
+      builder: (context, state) => const PremiumStoreScreen(),
+    ),
     GoRoute(
       path: '/fields',
       builder: (context, state) => const FieldScreen(),
       routes: [
         GoRoute(
           path: 'new/city',
-          builder: (context, state) => const CitySelectionScreen(buildingKind: 'field'),
+          builder: (context, state) =>
+              const CitySelectionScreen(buildingKind: 'field'),
         ),
         GoRoute(
           path: 'new/type',
@@ -191,7 +205,8 @@ final _router = GoRouter(
       routes: [
         GoRoute(
           path: 'new/city',
-          builder: (context, state) => const CitySelectionScreen(buildingKind: 'farm'),
+          builder: (context, state) =>
+              const CitySelectionScreen(buildingKind: 'farm'),
         ),
         GoRoute(
           path: 'new/type',
@@ -213,7 +228,8 @@ final _router = GoRouter(
       routes: [
         GoRoute(
           path: 'new/city',
-          builder: (context, state) => const CitySelectionScreen(buildingKind: 'factory'),
+          builder: (context, state) =>
+              const CitySelectionScreen(buildingKind: 'factory'),
         ),
         GoRoute(
           path: 'new/type',
@@ -224,9 +240,8 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: ':id',
-          builder: (context, state) => FactoryDetailScreen(
-            factoryId: state.pathParameters['id']!,
-          ),
+          builder: (context, state) =>
+              FactoryDetailScreen(factoryId: state.pathParameters['id']!),
         ),
       ],
     ),
@@ -236,7 +251,8 @@ final _router = GoRouter(
       routes: [
         GoRoute(
           path: 'new/city',
-          builder: (context, state) => const CitySelectionScreen(buildingKind: 'mine'),
+          builder: (context, state) =>
+              const CitySelectionScreen(buildingKind: 'mine'),
         ),
         GoRoute(
           path: 'new/type',
@@ -247,9 +263,8 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: ':id',
-          builder: (context, state) => MineDetailScreen(
-            mineId: state.pathParameters['id']!,
-          ),
+          builder: (context, state) =>
+              MineDetailScreen(mineId: state.pathParameters['id']!),
         ),
       ],
     ),
@@ -315,7 +330,8 @@ final _router = GoRouter(
       routes: [
         GoRoute(
           path: 'new/city',
-          builder: (context, state) => const CitySelectionScreen(buildingKind: 'warehouse'),
+          builder: (context, state) =>
+              const CitySelectionScreen(buildingKind: 'warehouse'),
         ),
         GoRoute(
           path: 'new/type',
@@ -341,29 +357,21 @@ final _router = GoRouter(
         ),
       ],
     ),
-    GoRoute(
-      path: '/arge',
-      builder: (context, state) => const ArgeScreen(),
-    ),
-    GoRoute(
-      path: '/tax',
-      builder: (context, state) => const TaxScreen(),
-    ),
+    GoRoute(path: '/arge', builder: (context, state) => const ArgeScreen()),
+    GoRoute(path: '/tax', builder: (context, state) => const TaxScreen()),
     GoRoute(
       path: '/tenders',
       builder: (context, state) => const TenderCenterScreen(),
       routes: [
         GoRoute(
           path: 'open/:id',
-          builder: (context, state) => TenderDetailScreen(
-            tenderId: state.pathParameters['id']!,
-          ),
+          builder: (context, state) =>
+              TenderDetailScreen(tenderId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: 'player/:id',
-          builder: (context, state) => TenderDetailScreen(
-            playerTenderId: state.pathParameters['id']!,
-          ),
+          builder: (context, state) =>
+              TenderDetailScreen(playerTenderId: state.pathParameters['id']!),
         ),
       ],
     ),
@@ -400,10 +408,7 @@ class HardKapitalizmApp extends StatelessWidget {
                   Positioned.fill(
                     child: Opacity(
                       opacity: 0.06,
-                      child: Image.asset(
-                        'assets/back.png',
-                        fit: BoxFit.cover,
-                      ),
+                      child: Image.asset('assets/back.png', fit: BoxFit.cover),
                     ),
                   ),
                   materialChild!,

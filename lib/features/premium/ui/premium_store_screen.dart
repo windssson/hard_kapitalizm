@@ -64,11 +64,6 @@ class PremiumStoreScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFF030A14),
       body: Container(
         decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/theme/cartback.webp'),
-            fit: BoxFit.cover,
-            opacity: 0.15,
-          ),
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,

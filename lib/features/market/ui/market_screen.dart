@@ -14,6 +14,7 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_warehouse_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
@@ -24,6 +25,9 @@ import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart'
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
+import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
+import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
+import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 
@@ -49,7 +53,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   final List<_MarketCartItem> _cartItems = [];
   String? _lockedSourceCityId;
   bool _cityCatalogEnabled = false;
-  bool _onlyLocalListings = false;
   String _productSearchQuery = '';
   String _warehouseCityFilter = '';
   late String _selectedProductId;
@@ -228,13 +231,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     });
   }
 
-  Future<void> _enableCityCatalogMode() async {
-    if (_lockedSourceCityId == null) return;
-    setState(() {
-      _cityCatalogEnabled = true;
-    });
-  }
-
   List<MarketListingModel> _applyCartCityRules(
     List<MarketListingModel> listings,
   ) {
@@ -269,6 +265,133 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
+  Widget _buildLojistikKilitBanner() {
+    if (_lockedSourceCityId == null) return const SizedBox.shrink();
+
+    final cityName = _resolveLockedCityName();
+
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(top: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: AppColors.blue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(
+          color: AppColors.blue.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.local_shipping_outlined, color: AppColors.blue, size: 12.sp),
+          SizedBox(width: 6.w),
+          Text(
+            'Lojistik Rotası:',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(width: 4.w),
+          Text(
+            cityName,
+            style: TextStyle(
+              color: AppColors.blue,
+              fontSize: 10.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(width: 4.w),
+          GestureDetector(
+            onTap: _showLojistikBilgiDialog,
+            child: Icon(
+              Icons.help_outline,
+              color: AppColors.blue,
+              size: 13.sp,
+            ),
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: _clearCart,
+            child: Text(
+              'Sıfırla',
+              style: TextStyle(
+                color: AppColors.red,
+                fontSize: 9.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLojistikBilgiDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.35)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.local_shipping, color: AppColors.blue, size: 16.sp),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Lojistik Taşıma Kuralları',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Text(
+                'Sepete ilk eklediğiniz ürünün bulunduğu şehir çıkış noktası olarak kilitlenir. '
+                'Tek bir transfer seferinde lojistik araçları sadece aynı şehirden kalkan ürünleri birleştirebilir. '
+                'Farklı bir şehirden ürün eklemek istiyorsanız sepeti sıfırlamanız gerekir.',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11.sp,
+                  height: 1.4,
+                ),
+              ),
+              SizedBox(height: 14.h),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: Text(
+                    'Anladım',
+                    style: TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTypeBadge(String label, Color color) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
@@ -280,35 +403,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       child: Text(
         label,
         style: AppTextStyles.body.copyWith(color: color, fontSize: 9.sp),
-      ),
-    );
-  }
-
-  Widget _buildInlineStat(String label, String value) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
-            ),
-            TextSpan(
-              text: value,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10.sp,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -441,104 +535,244 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     _cityCatalogEnabled = false;
   }
 
-  Widget _buildCompactSelectionBar({
+  Widget _buildUnifiedSelectionCard({
     required ProductModel? product,
+    required List<ProductModel> products,
+    required Set<String> sellingProductIds,
+    required Map<String, int> productNeedById,
+    required Set<String> activeProductionIngredients,
+    required Map<String, int> productionNeedById,
     required MarketBuyerWarehouseModel? buyerWarehouse,
     required WarehouseCapacityStatusModel? capacity,
   }) {
     final String targetName = buyerWarehouse?.warehouseName ?? 'Merkez Depo';
-    final String cityName = buyerWarehouse?.cityName ?? 'Sehir';
-    final String capacityText =
-        'Bos ${capacity?.availableCapacity.toStringAsFixed(1) ?? '0'} m3';
+    final String cityName = buyerWarehouse?.cityName ?? 'Şehir';
+
+    final double totalCap = capacity?.totalCapacity ?? 0.0;
+    final double usedCap = capacity?.usedCapacity ?? 0.0;
+    final double cartVolume = _cartTotalVolume;
+
+    final String capacityLabel = cartVolume > 0
+        ? '${usedCap.toStringAsFixed(1)} + ${cartVolume.toStringAsFixed(1)} / ${totalCap.toStringAsFixed(0)} m³'
+        : '${usedCap.toStringAsFixed(1)} / ${totalCap.toStringAsFixed(0)} m³';
+
+    final needCount = product != null ? (productNeedById[product.id] ?? 0) : 0;
+    final prodNeedCount = product != null ? (productionNeedById[product.id] ?? 0) : 0;
+    final isProductionInput = product != null ? activeProductionIngredients.contains(product.id) : false;
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-      decoration: AppDecorations.premiumCard(
-        AppColors.borderGold.withValues(alpha: 0.35),
-        14.r,
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            product?.urunAdi ?? 'Urun Sec',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
-          ),
-          SizedBox(height: 8.h),
-          Wrap(
-            spacing: 6.w,
-            runSpacing: 6.h,
-            children: [
-              _buildInlineStat('Hedef', targetName),
-              _buildInlineStat('Sehir', cityName),
-              _buildInlineStat('Kapasite', capacityText),
-            ],
-          ),
-          SizedBox(height: 8.h),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _onlyLocalListings = !_onlyLocalListings;
-                  });
-                },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                  decoration: BoxDecoration(
-                    color: _onlyLocalListings
-                        ? AppColors.gold.withValues(alpha: 0.16)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10.r),
-                    border: Border.all(
-                      color: _onlyLocalListings
-                          ? AppColors.gold
-                          : AppColors.borderGold.withValues(alpha: 0.25),
-                      width: 1.w,
-                    ),
-                  ),
+              // Sol Kısım: Depo Seçimi
+              Expanded(
+                child: GestureDetector(
+                  onTap: _resetWarehouseSelection,
+                  behavior: HitTestBehavior.opaque,
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        _onlyLocalListings ? Icons.location_on : Icons.location_on_outlined,
-                        color: _onlyLocalListings ? AppColors.gold : AppColors.textMuted,
-                        size: 12.sp,
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        'Sadece Yerel İlanlar',
-                        style: TextStyle(
-                          color: _onlyLocalListings ? AppColors.gold : AppColors.textMuted,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.bold,
+                      Icon(Icons.warehouse_outlined, color: AppColors.gold, size: 16.sp),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              targetName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 2.h),
+                            Row(
+                              children: [
+                                Text(
+                                  cityName,
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 9.sp,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 4.w),
+                                Icon(Icons.swap_horiz, size: 10.sp, color: AppColors.gold),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              TextButton.icon(
-                onPressed: _resetWarehouseSelection,
-                icon: Icon(Icons.edit, size: 12.sp, color: AppColors.gold),
-                label: Text(
-                  'Depo Degistir',
-                  style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.w700),
+              // Dikey Bölücü
+              Container(
+                height: 32.h,
+                width: 1.w,
+                color: AppColors.borderGold.withValues(alpha: 0.15),
+                margin: EdgeInsets.symmetric(horizontal: 10.w),
+              ),
+              // Sağ Kısım: Ürün Seçimi
+              Expanded(
+                child: product == null
+                    ? const SizedBox.shrink()
+                    : GestureDetector(
+                        onTap: () => _openProductSelectionSheet(
+                          products: products,
+                          sellingProductIds: sellingProductIds,
+                          productNeedById: productNeedById,
+                          activeProductionIngredients: activeProductionIngredients,
+                          productionNeedById: productionNeedById,
+                        ),
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 26.w,
+                              height: 26.w,
+                              padding: EdgeInsets.all(2.w),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(6.r),
+                              ),
+                              child: CachedAssetImage(fileName: product.urunIconu),
+                            ),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product.urunAdi,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: AppColors.goldLight,
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2.h),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          needCount > 0
+                                              ? 'İhtiyaç: $needCount'
+                                              : (prodNeedCount > 0
+                                                  ? 'İhtiyaç: $prodNeedCount (Üretim)'
+                                                  : (isProductionInput ? 'Üretim' : 'Değiştir')),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: needCount > 0
+                                                ? AppColors.gold
+                                                : (prodNeedCount > 0 || isProductionInput
+                                                    ? AppColors.blue
+                                                    : AppColors.textMuted),
+                                            fontSize: 9.sp,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(width: 2.w),
+                                      Icon(Icons.swap_horiz, size: 10.sp, color: AppColors.gold),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          // Kapasite Bilgisi & İlerleme Çubuğu
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Kapasite Doluluğu',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 9.sp,
+                  fontWeight: FontWeight.w600,
                 ),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.gold,
-                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              Text(
+                capacityLabel,
+                style: TextStyle(
+                  color: cartVolume > 0 ? AppColors.goldLight : Colors.white70,
+                  fontSize: 9.sp,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
+          SizedBox(height: 4.h),
+          _buildCapacityProgressBar(total: totalCap, used: usedCap, cart: cartVolume),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCapacityProgressBar({
+    required double total,
+    required double used,
+    required double cart,
+  }) {
+    if (total <= 0) return const SizedBox.shrink();
+
+    final double usedProgress = (used / total).clamp(0.0, 1.0);
+    final double cartProgress = (cart / total).clamp(0.0, 1.0 - usedProgress);
+    final double remainingProgress = (1.0 - usedProgress - cartProgress).clamp(0.0, 1.0);
+
+    return Container(
+      height: 6.h,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(3.r),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(3.r),
+        child: Row(
+          children: [
+            if (usedProgress > 0)
+              Expanded(
+                flex: (usedProgress * 1000).toInt(),
+                child: Container(
+                  color: AppColors.blue,
+                ),
+              ),
+            if (cartProgress > 0)
+              Expanded(
+                flex: (cartProgress * 1000).toInt(),
+                child: Container(
+                  color: AppColors.gold,
+                ),
+              ),
+            if (remainingProgress > 0)
+              Spacer(
+                flex: (remainingProgress * 1000).toInt(),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -596,185 +830,81 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return scopedProducts;
   }
 
-  Widget _buildHorizontalProductSelector({
+
+
+  void _openProductSelectionSheet({
     required List<ProductModel> products,
     required Set<String> sellingProductIds,
     required Map<String, int> productNeedById,
+    required Set<String> activeProductionIngredients,
+    required Map<String, int> productionNeedById,
   }) {
-    final lockedCityName = _lockedSourceCityId == null
-        ? null
-        : _resolveLockedCityName();
+    final sortedProductsList = [...products];
+    sortedProductsList.sort((a, b) {
+      final aSelling = sellingProductIds.contains(a.id);
+      final bSelling = sellingProductIds.contains(b.id);
+      final aProd = activeProductionIngredients.contains(a.id);
+      final bProd = activeProductionIngredients.contains(b.id);
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBgLight.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.tune, size: 14.sp, color: AppColors.gold),
-              SizedBox(width: 6.w),
-              Expanded(
-                child: Text(
-                  lockedCityName == null
-                      ? 'Urun Sec'
-                      : 'Sepet Sehri: $lockedCityName',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (_lockedSourceCityId != null && !_cityCatalogEnabled)
-                TextButton(
-                  onPressed: _enableCityCatalogMode,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.gold,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 8.w,
-                      vertical: 2.h,
-                    ),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    'Tum Urunler',
-                    style: TextStyle(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          SizedBox(height: 8.h),
-          SizedBox(
-            height: 44.h,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: products.length,
-              separatorBuilder: (_, _) => SizedBox(width: 8.w),
-              itemBuilder: (context, index) {
-                final product = products[index];
-                final isSelected = product.id == _activeProductId;
-                final isSellingInStore = sellingProductIds.contains(product.id);
-                final productNeed = productNeedById[product.id] ?? 0;
-                return GestureDetector(
-                  onTap: () {
-                    if (isSelected) return;
-                    setState(() {
-                      _selectedProductId = product.id;
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 6.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.gold.withValues(alpha: 0.18)
-                          : Colors.black.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(999.r),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.gold
-                            : AppColors.border.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 24.w,
-                          height: 24.w,
-                          padding: EdgeInsets.all(3.w),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(999.r),
-                          ),
-                          child: CachedAssetImage(fileName: product.urunIconu),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          product.urunAdi,
-                          style: TextStyle(
-                            color: isSelected
-                                ? AppColors.goldLight
-                                : Colors.white,
-                            fontSize: 11.sp,
-                            fontWeight: isSelected
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                          ),
-                        ),
-                        if (isSellingInStore) ...[
-                          SizedBox(width: 6.w),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 5.w,
-                              vertical: 2.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.green.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(999.r),
-                              border: Border.all(
-                                color: AppColors.green.withValues(alpha: 0.45),
-                              ),
-                            ),
-                            child: Text(
-                              'Satista',
-                              style: TextStyle(
-                                color: AppColors.green,
-                                fontSize: 8.sp,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (productNeed > 0) ...[
-                          SizedBox(width: 6.w),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 5.w,
-                              vertical: 2.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.gold.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(999.r),
-                              border: Border.all(
-                                color: AppColors.gold.withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Text(
-                              'Ihtiyac: $productNeed adet',
-                              style: TextStyle(
-                                color: AppColors.goldLight,
-                                fontSize: 8.sp,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+      final aPriority = (aSelling || aProd) ? 1 : 0;
+      final bPriority = (bSelling || bProd) ? 1 : 0;
+
+      if (aPriority != bPriority) {
+        return bPriority.compareTo(aPriority);
+      }
+      return a.urunAdi.compareTo(b.urunAdi);
+    });
+
+    final options = sortedProductsList.map((product) {
+      final isSelling = sellingProductIds.contains(product.id);
+      final needCount = productNeedById[product.id] ?? 0;
+      final prodNeedCount = productionNeedById[product.id] ?? 0;
+      final isProductionInput = activeProductionIngredients.contains(product.id);
+      
+      String? badge;
+      if (isSelling) {
+        if (needCount > 0) {
+          badge = 'Satışta (İhtiyaç: $needCount)';
+        } else {
+          badge = 'Satışta';
+        }
+      } else if (needCount > 0) {
+        badge = 'İhtiyaç: $needCount';
+      }
+
+      if (prodNeedCount > 0) {
+        if (badge != null) {
+          badge = '$badge • İhtiyaç: $prodNeedCount (Üretim)';
+        } else {
+          badge = 'İhtiyaç: $prodNeedCount (Üretim)';
+        }
+      } else if (isProductionInput) {
+        if (badge != null) {
+          badge = '$badge • Üretim';
+        } else {
+          badge = 'Üretim';
+        }
+      }
+
+      return ProductSelectionOption(
+        id: product.id,
+        title: product.urunAdi,
+        subtitle: '${product.bazSatisFiyati.toStringAsFixed(0)} TL Baz Fiyat',
+        iconPath: product.urunIconu,
+        badgeText: badge,
+        onTap: () {
+          Navigator.pop(context);
+          setState(() {
+            _selectedProductId = product.id;
+          });
+        },
+      );
+    }).toList();
+
+    ProductSelectionSheet.show(
+      context: context,
+      title: 'Ürün Seçin',
+      options: options,
     );
   }
 
@@ -782,6 +912,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     List<ProductModel> products,
     List<WarehouseModel> warehouses,
     List<StoreModel> stores,
+    Map<String, int> productionNeedById,
+    Set<String> activeProductionIngredients,
   ) {
     final activeWarehouses =
         warehouses.where((warehouse) => warehouse.isActive).toList()
@@ -794,6 +926,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       warehouse: selectedWarehouse,
     );
     final sellingProductIds = _sellingProductIdsForStore(selectedStore);
+    final productNeedById = _neededCapacityByProductForStore(selectedStore);
+
     final acceptedProductIds = _acceptedProductIdsForWarehouse(
       selectedWarehouse,
     );
@@ -805,6 +939,23 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             if (acceptedProductIds.isEmpty) return true;
             return acceptedProductIds.contains(product.id.toUpperCase());
           }).toList();
+
+    if (selectedWarehouse != null) {
+      warehouseScopedProducts.sort((a, b) {
+        final aSelling = sellingProductIds.contains(a.id);
+        final bSelling = sellingProductIds.contains(b.id);
+        final aProd = activeProductionIngredients.contains(a.id);
+        final bProd = activeProductionIngredients.contains(b.id);
+
+        final aPriority = (aSelling || aProd) ? 1 : 0;
+        final bPriority = (bSelling || bProd) ? 1 : 0;
+
+        if (aPriority != bPriority) {
+          return bPriority.compareTo(aPriority);
+        }
+        return a.urunAdi.compareTo(b.urunAdi);
+      });
+    }
     final filteredProducts = warehouseScopedProducts.where((product) {
       final query = _productSearchQuery.trim().toLowerCase();
       if (query.isEmpty) return true;
@@ -1187,6 +1338,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   product: product,
                   isSelected: isSelected,
                   isSellingInStore: sellingProductIds.contains(product.id),
+                  isProductionInput: activeProductionIngredients.contains(product.id),
+                  needCount: productNeedById[product.id] ?? 0,
+                  prodNeedCount: productionNeedById[product.id] ?? 0,
                   onTap: () {
                     setState(() {
                       _selectedProductId = product.id;
@@ -1208,6 +1362,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     required ProductModel product,
     required bool isSelected,
     required bool isSellingInStore,
+    required bool isProductionInput,
+    required int needCount,
+    required int prodNeedCount,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -1233,7 +1390,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 Container(
                   width: 36.w,
                   height: 36.w,
-                  padding: EdgeInsets.all(5.w),
+                  padding: EdgeInsets.all(2.w),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.gold.withValues(alpha: 0.15)
@@ -1264,9 +1421,87 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         ),
                       ),
                       child: Text(
-                        'Satista',
+                        needCount > 0 ? 'Satışta ($needCount)' : 'Satışta',
                         style: TextStyle(
                           color: AppColors.green,
+                          fontSize: 7.sp,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  )
+                else if (needCount > 0)
+                  Positioned(
+                    top: -8.h,
+                    right: -18.w,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 5.w,
+                        vertical: 2.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Text(
+                        'İhtiyaç: $needCount',
+                        style: TextStyle(
+                          color: AppColors.goldLight,
+                          fontSize: 7.sp,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (prodNeedCount > 0)
+                  Positioned(
+                    bottom: -8.h,
+                    left: -18.w,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 5.w,
+                        vertical: 2.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999.r),
+                        border: Border.all(
+                          color: AppColors.blue.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Text(
+                        'Üretim ($prodNeedCount)',
+                        style: TextStyle(
+                          color: AppColors.blue,
+                          fontSize: 7.sp,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  )
+                else if (isProductionInput)
+                  Positioned(
+                    bottom: -8.h,
+                    left: -18.w,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 5.w,
+                        vertical: 2.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999.r),
+                        border: Border.all(
+                          color: AppColors.blue.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Text(
+                        'Üretim',
+                        style: TextStyle(
+                          color: AppColors.blue,
                           fontSize: 7.sp,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1542,6 +1777,68 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final horizontalProductNeedById = _neededCapacityByProductForStore(
       selectedStore,
     );
+
+    final factories = ref.watch(factoryListProvider).value ?? const [];
+    final farms = ref.watch(farmListProvider).value ?? const [];
+    final fields = ref.watch(fieldListProvider).value ?? const [];
+
+    final productionNeedById = <String, int>{};
+    final allProducts = productsAsync.value ?? const [];
+
+    void addBuildingNeeds(String buildingId, int inputCapacity, int inputStockQuantity, Set<String> inputProductIds) {
+      final freeCapacity = inputCapacity - inputStockQuantity;
+      if (freeCapacity <= 0) return;
+      for (final inputId in inputProductIds) {
+        productionNeedById.update(
+          inputId,
+          (value) => value + freeCapacity,
+          ifAbsent: () => freeCapacity,
+        );
+      }
+    }
+
+    for (final f in factories) {
+      final pId = f.selectedProduct?.id;
+      if (pId != null && pId.isNotEmpty) {
+        final product = allProducts.where((p) => p.id == pId).firstOrNull;
+        if (product != null) {
+          addBuildingNeeds(f.factory.id, f.factory.inputCapacity, f.inputStockQuantity, product.inputProductIds);
+        }
+      }
+    }
+
+    for (final f in farms) {
+      final activeSlotsProductIds = <String>{};
+      for (final slot in f.slots) {
+        if (slot.isActive && slot.productId != null && slot.productId!.isNotEmpty) {
+          activeSlotsProductIds.add(slot.productId!);
+        }
+      }
+      for (final pId in activeSlotsProductIds) {
+        final product = allProducts.where((p) => p.id == pId).firstOrNull;
+        if (product != null) {
+          addBuildingNeeds(f.farm.id, f.farm.inputCapacity, f.inputStockQuantity, product.inputProductIds);
+        }
+      }
+    }
+
+    for (final f in fields) {
+      final activeSlotsProductIds = <String>{};
+      for (final slot in f.slots) {
+        if (slot.isActive && slot.productId != null && slot.productId!.isNotEmpty) {
+          activeSlotsProductIds.add(slot.productId!);
+        }
+      }
+      for (final pId in activeSlotsProductIds) {
+        final product = allProducts.where((p) => p.id == pId).firstOrNull;
+        if (product != null) {
+          addBuildingNeeds(f.field.id, f.field.inputCapacity, f.inputStockQuantity, product.inputProductIds);
+        }
+      }
+    }
+
+    final activeProductionIngredients = productionNeedById.keys.toSet();
+
     final productAsync = _activeProductId.isNotEmpty
         ? ref.watch(marketProductProvider(_activeProductId))
         : const AsyncValue<ProductModel?>.data(null);
@@ -1589,7 +1886,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(
                         5.w,
-                        12.h,
+                        _requiresInitialSelection ? 12.h : 4.h,
                         5.w,
                         _hasCart ? 92.h : 32.h,
                       ),
@@ -1599,10 +1896,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             productsAsync.when(
                               data: (products) => warehousesAsync.when(
                                 data: (warehouses) => storesAsync.when(
-                                  data: (stores) => _buildInitialSelectionCard(
+                                   data: (stores) => _buildInitialSelectionCard(
                                     products,
                                     warehouses,
                                     stores,
+                                    productionNeedById,
+                                    activeProductionIngredients,
                                   ),
                                   loading: _buildLoadingCard,
                                   error: (e, s) => _buildErrorCard(
@@ -1620,28 +1919,25 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             SizedBox(height: 8.h),
                           ],
                           if (!_requiresInitialSelection) ...[
-                            _buildCompactSelectionBar(
+                            _buildUnifiedSelectionCard(
                               product: productAsync.value,
+                              products: scopedProducts,
+                              sellingProductIds: horizontalSellingProductIds,
+                              productNeedById: horizontalProductNeedById,
+                              activeProductionIngredients: activeProductionIngredients,
+                              productionNeedById: productionNeedById,
                               buyerWarehouse: buyerWarehouseAsync.value,
                               capacity: capacityAsync.value,
                             ),
+                            _buildLojistikKilitBanner(),
                           ],
                           if (capacityBannerMessage != null) ...[
-                            SizedBox(height: 8.h),
+                            SizedBox(height: 4.h),
                             _buildInfoBox(
                               capacityBannerMessage,
                               capacityBannerMessage.contains('Dikkat')
                                   ? AppColors.gold
                                   : AppColors.red,
-                            ),
-                          ],
-                          if (!_requiresInitialSelection &&
-                              scopedProducts.isNotEmpty) ...[
-                            SizedBox(height: 8.h),
-                            _buildHorizontalProductSelector(
-                              products: scopedProducts,
-                              sellingProductIds: horizontalSellingProductIds,
-                              productNeedById: horizontalProductNeedById,
                             ),
                           ],
                         ]),
@@ -1669,13 +1965,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           final filteredListings = _applyCartCityRules(
                             baseListings,
                           );
-                          var finalMarketListings = filteredListings;
-                          if (_onlyLocalListings && buyerWarehouseAsync.value != null) {
-                            final targetCityId = buyerWarehouseAsync.value!.cityId;
-                            finalMarketListings = finalMarketListings
-                                .where((l) => l.cityId == targetCityId)
-                                .toList();
-                          }
+                          final finalMarketListings = filteredListings;
 
                           MarketListingModel? cheapestListing;
                           if (finalMarketListings.isNotEmpty) {
@@ -1927,58 +2217,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                 ),
                               ],
                             ),
-                            SizedBox(height: 10.h),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 34.w,
-                                  height: 34.w,
-                                  padding: EdgeInsets.all(6.w),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.cardBgLight,
-                                    borderRadius: BorderRadius.circular(10.r),
-                                    border: Border.all(
-                                      color: AppColors.border.withValues(
-                                        alpha: 0.45,
-                                      ),
-                                    ),
-                                  ),
-                                  child: CachedAssetImage(
-                                    fileName: listing.productIcon,
-                                  ),
-                                ),
-                                SizedBox(width: 8.w),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        listing.productName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: AppColors.goldLight,
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      SizedBox(height: 2.h),
-                                      Text(
-                                        'Birim Hacim: ${listing.unitVolume.toStringAsFixed(1)} m3',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: AppTextStyles.body.copyWith(
-                                          fontSize: 9.sp,
-                                          color: AppColors.textMuted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10.h),
+                            SizedBox(height: 8.h),
                             Wrap(
                               spacing: 10.w,
                               runSpacing: 4.h,
@@ -1995,6 +2234,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                   qualityLevel: listing.qualityLevel,
                                   color: AppColors.gold,
                                 ),
+                                _buildInlineMetric(
+                                  icon: Icons.square_foot_outlined,
+                                  label: 'Birim Hacim',
+                                  value: '${listing.unitVolume.toStringAsFixed(1)} m3',
+                                  color: AppColors.textSecondary,
+                                ),
                                 if (listing.isNpc)
                                   _buildTypeBadge(
                                     'NPC / Kalite 1',
@@ -2002,8 +2247,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                   ),
                                 _buildTypeBadge(
                                   isInstantDelivery
-                                      ? 'Ayni sehir / Aninda'
-                                      : 'Sehirler arasi / Arac',
+                                      ? 'Aynı sehir / Anında'
+                                      : 'Sehirler arası / Araç',
                                   isInstantDelivery
                                       ? AppColors.green
                                       : AppColors.gold,
@@ -3476,10 +3721,18 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
       }
     }
 
+    final totalCost = _cartItems.fold<double>(0.0, (sum, item) => sum + (item.listing.price * item.quantity));
     await _refreshAfterPurchase(isInstant: isInstant);
     _clearCart();
 
     if (!mounted) return;
+    if (totalCost > 0) {
+      FloatingFeedback.show(
+        context,
+        amount: totalCost,
+        type: FloatingFeedbackType.cashRemove,
+      );
+    }
     AppSnackbar.show(
       context,
       title: 'Basarili',
