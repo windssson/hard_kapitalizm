@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -54,7 +55,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
     final historyAsync = ref.watch(storeHistoryProvider(widget.storeId));
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -62,15 +63,18 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
             _buildFilterBar(),
             Expanded(
               child: historyAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => Center(
                   child: Padding(
                     padding: EdgeInsets.all(20.w),
                     child: Text(
                       error.toString(),
-                      style: TextStyle(color: AppColors.red, fontSize: 13.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                        fontSize: AppTypography.bodyLarge,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -158,9 +162,11 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
                   child: Center(
                     child: Text(
                       filter.label,
-                      style: TextStyle(
-                        color: isSelected ? AppColors.gold : Colors.white,
-                        fontSize: 12.sp,
+                      style: AppTextStyles.label.standardCopyWith(
+                        color: isSelected
+                            ? AppColors.gold
+                            : AppColors.textPrimary,
+                        fontSize: AppTypography.body,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -176,9 +182,9 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
           padding: EdgeInsets.only(left: 18.w, right: 18.w, bottom: 6.h),
           child: Text(
             'Tamamlanan anlik ve sureli magaza hareketleri burada listelenir.',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 11.sp,
+              fontSize: AppTypography.bodySmall,
             ),
           ),
         ),
@@ -209,18 +215,18 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
         children: [
           Text(
             _selectedFilter.label,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14.sp,
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.bold,
             ),
           ),
           SizedBox(height: 4.h),
           Text(
             '${items.length} kayit icin hizli ozet',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 11.sp,
+              fontSize: AppTypography.bodySmall,
             ),
           ),
           SizedBox(height: 12.h),
@@ -236,7 +242,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
               _buildSummaryChip(
                 'Miktar',
                 _formatCompactNumber(totalQuantity.toDouble()),
-                Colors.white,
+                AppColors.white,
               ),
               _buildSummaryChip(
                 'Toplam Tutar',
@@ -285,13 +291,13 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
       decoration: AppDecorations.premiumCard(AppColors.border, 20.r),
       child: Column(
         children: [
-          Icon(Icons.history, color: AppColors.textMuted, size: 52.sp),
+          Icon(AppIcons.history, color: AppColors.textMuted, size: AppIconSizes.hero),
           SizedBox(height: 16.h),
           Text(
             'Henuz gecmis kaydi yok.',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16.sp,
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.titleLarge,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -299,7 +305,10 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
           Text(
             description,
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.body,
+            ),
           ),
         ],
       ),
@@ -314,10 +323,10 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
             : AppColors.blue;
     final statusColor = _statusColor(item.status);
     final icon = item.isSale
-        ? Icons.point_of_sale
+        ? AppIcons.pointOfSale
         : item.isIncomingTransfer
-            ? Icons.south_west
-            : Icons.north_east;
+            ? AppIcons.southWest
+            : AppIcons.northEast;
 
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -334,7 +343,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
                   color: accentColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(icon, color: accentColor, size: 20.sp),
+                child: Icon(icon, color: accentColor, size: AppIconSizes.medium),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -343,18 +352,18 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
                   children: [
                     Text(
                       item.title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
+                      style: AppTextStyles.title.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       item.subtitle,
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                       ),
                     ),
                   ],
@@ -362,9 +371,9 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
               ),
               Text(
                 _formatDate(item.happenedAt),
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                 ),
               ),
             ],
@@ -385,9 +394,9 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
           SizedBox(height: 10.h),
           Text(
             item.productName,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -419,15 +428,15 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: AppFx.softOverlay(0.05),
         borderRadius: BorderRadius.circular(10.r),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
       ),
       child: Text(
         '$label: $value',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 11.sp,
+        style: AppTextStyles.body.standardCopyWith(
+          color: AppColors.textPrimary,
+          fontSize: AppTypography.bodySmall,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -444,9 +453,9 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: accentColor,
-          fontSize: 10.sp,
+          fontSize: AppTypography.label,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -493,17 +502,17 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 10.sp,
+              fontSize: AppTypography.label,
             ),
           ),
           SizedBox(height: 2.h),
           Text(
             value,
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: accentColor,
-              fontSize: 11.sp,
+              fontSize: AppTypography.bodySmall,
               fontWeight: FontWeight.w700,
             ),
           ),

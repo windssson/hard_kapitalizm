@@ -32,26 +32,26 @@ class AppSnackbar {
     switch (type) {
       case SnackbarType.success:
         mainColor = AppColors.green;
-        icon = Icons.check_circle_outline;
+        icon = AppIcons.checkCircleOutline;
         break;
       case SnackbarType.error:
         mainColor = AppColors.red;
-        icon = Icons.error_outline;
+        icon = AppIcons.errorOutline;
         break;
       case SnackbarType.warning:
-        mainColor = Colors.orange;
-        icon = Icons.warning_amber_rounded;
+        mainColor = AppColors.warning;
+        icon = AppIcons.warningAmberRounded;
         break;
       case SnackbarType.info:
         mainColor = AppColors.gold;
-        icon = Icons.info_outline;
+        icon = AppIcons.infoOutline;
         break;
     }
 
     scaffoldMessenger.showSnackBar(
       SnackBar(
         duration: duration,
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,
         padding: EdgeInsets.zero,
@@ -73,7 +73,7 @@ class AppSnackbar {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: AppFx.shadow(0.5),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -109,7 +109,7 @@ class AppSnackbar {
                       color: mainColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(icon, color: mainColor, size: 24.sp),
+                    child: Icon(icon, color: mainColor, size: AppIconSizes.large),
                   ),
                   SizedBox(width: 16.w),
                   Expanded(
@@ -125,18 +125,18 @@ class AppSnackbar {
                           if (title != null)
                             Text(
                               title.toUpperCase(),
-                              style: TextStyle(
+                              style: AppTextStyles.label.standardCopyWith(
                                 color: mainColor,
-                                fontSize: 12.sp,
+                                fontSize: AppTypography.body,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.2,
                               ),
                             ),
                           Text(
                             displayMessage,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 14.sp,
+                            style: AppTextStyles.body.standardCopyWith(
+                              color: AppColors.textPrimary.withValues(alpha: 0.9),
+                              fontSize: AppTypography.title,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -147,9 +147,9 @@ class AppSnackbar {
                   IconButton(
                     onPressed: () => scaffoldMessenger.hideCurrentSnackBar(),
                     icon: Icon(
-                      Icons.close,
-                      color: Colors.white24,
-                      size: 18.sp,
+                      AppIcons.close,
+                      color: AppFx.softOverlay(0.24),
+                      size: AppIconSizes.regular,
                     ),
                     splashRadius: 20,
                   ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
@@ -86,7 +87,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     }
   }
 
-  Color _parseHexColor(String hex, {Color fallback = AppColors.gold}) {
+  Color _parseHexColor(String hex, {Color? fallback}) {
     try {
       var hexColor = hex.replaceAll('#', '');
       if (hexColor.length == 6) {
@@ -96,7 +97,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
         return Color(int.parse(hexColor, radix: 16));
       }
     } catch (_) {}
-    return fallback;
+    return fallback ?? AppColors.gold;
   }
 
   Future<void> _createCompany() async {
@@ -207,7 +208,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     final productsAsync = ref.watch(playerBrandCompanyProductsProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: 1,
         onItemSelected: _onNavSelected,
@@ -218,9 +219,8 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             const SecondaryTopBar(title: 'Marka'),
             Expanded(
               child: companyAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
-                ),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (error, _) => _buildError(error.toString()),
                 data: (company) {
                   if (company == null) {
@@ -228,8 +228,8 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   }
 
                   return productsAsync.when(
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: AppColors.gold),
+                    loading: () => Center(
+                      child: AppLoadingIndicator(color: AppColors.gold),
                     ),
                     error: (error, _) => _buildError(error.toString()),
                     data: (products) =>
@@ -250,7 +250,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
         padding: EdgeInsets.all(20.w),
         child: Text(
           message,
-          style: TextStyle(color: AppColors.red, fontSize: 13.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.red,
+            fontSize: AppTypography.bodyLarge,
+          ),
           textAlign: TextAlign.center,
         ),
       ),
@@ -271,9 +274,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             children: [
               Text(
                 'Marka Şirketi Kur',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20.sp,
+                style: AppTextStyles.h1.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.displaySmall,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
@@ -281,9 +284,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               SizedBox(height: 8.h),
               Text(
                 'Kendi markanı oluşturarak ürettiğin Kalite 2 ürünleri patentleyebilir, markalı mağaza satışlarında fiyat ve hız bonusları kazanabilirsin.',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textSecondary,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   height: 1.4,
                 ),
               ),
@@ -292,10 +295,12 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               // Brand Name Input
               TextField(
                 controller: _brandNameController,
-                style: const TextStyle(color: Colors.white),
+                style: AppTextStyles.input,
                 decoration: InputDecoration(
                   labelText: 'Marka Adı',
-                  labelStyle: TextStyle(color: AppColors.textSecondary),
+                  labelStyle: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textSecondary,
+                  ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12.r),
                     borderSide: BorderSide(color: AppColors.border),
@@ -311,9 +316,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               // Logo Selector
               Text(
                 'Marka Logosu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.sp,
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.title,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -334,7 +339,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                         height: 54.w,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.black26,
+                          color: AppFx.panelWash(0.26),
                           border: Border.all(
                             color: isSelected
                                 ? themeColor
@@ -357,10 +362,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                             fileName: logo,
                             fit: BoxFit.contain,
                             placeholder: const SizedBox.shrink(),
-                            errorWidget: const Icon(
-                              Icons.star,
+                            errorWidget: Icon(
+                              AppIcons.star,
                               color: AppColors.gold,
-                              size: 20,
+                              size: AppIconSizes.medium,
                             ),
                           ),
                         ),
@@ -374,9 +379,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               // Color Selector
               Text(
                 'Marka Rengi',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.sp,
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.title,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -404,8 +409,8 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                             color: color,
                             border: Border.all(
                               color: isSelected
-                                  ? Colors.white
-                                  : Colors.transparent,
+                                  ? AppColors.textPrimary
+                                  : AppColors.transparent,
                               width: 2.5,
                             ),
                             boxShadow: isSelected
@@ -431,7 +436,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   onPressed: _isSubmitting ? null : _createCompany,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeColor,
-                    foregroundColor: Colors.black,
+                    foregroundColor: AppColors.textOnAccent,
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12.r),
@@ -441,8 +446,8 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   ),
                   child: Text(
                     _isSubmitting ? 'Kuruluyor...' : 'Marka Şirketini Kur',
-                    style: TextStyle(
-                      fontSize: 14.sp,
+                    style: AppTextStyles.button.standardCopyWith(
+                      fontSize: AppTypography.title,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5,
                     ),
@@ -477,7 +482,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 height: 52.w,
                 padding: EdgeInsets.all(6.w),
                 decoration: BoxDecoration(
-                  color: Colors.black38,
+                  color: AppFx.panelWash(0.38),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: brandColor.withValues(alpha: 0.45),
@@ -496,7 +501,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                     fileName: company.logoId,
                     fit: BoxFit.contain,
                     placeholder: const SizedBox.shrink(),
-                    errorWidget: const Icon(Icons.star, color: AppColors.gold),
+                    errorWidget: Icon(AppIcons.star, color: AppColors.gold),
                   ),
                 ),
               ),
@@ -511,9 +516,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                       children: [
                         Text(
                           company.brandName,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18.sp,
+                          style: AppTextStyles.h1.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: AppTypography.headline,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -529,9 +534,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                           ),
                           child: Text(
                             'LVL ${company.brandLevel}',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 9.sp,
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.textOnAccent,
+                              fontSize: AppTypography.caption,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -541,9 +546,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                     SizedBox(height: 6.h),
                     Text(
                       'Aktif Markalı Ürün: ${brandedProducts.length}',
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textSecondary,
-                        fontSize: 12.sp,
+                        fontSize: AppTypography.body,
                       ),
                     ),
                   ],
@@ -576,9 +581,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                     children: [
                       Text(
                         'Marka Tecrübesi (XP)',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11.sp,
+                        style: AppTextStyles.body.standardCopyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -586,51 +591,24 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                         currentLvl >= 5
                             ? 'MAX LEVEL ($currentXp XP)'
                             : '$currentXp / $nextLvlXp XP',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: brandColor,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                   SizedBox(height: 6.h),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10.r),
-                    child: Stack(
-                      children: [
-                        Container(
-                          height: 8.h,
-                          width: double.infinity,
-                          color: Colors.white10,
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: lvlProgress,
-                          child: Container(
-                            height: 8.h,
-                            decoration: BoxDecoration(
-                              color: brandColor,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: brandColor.withValues(alpha: 0.5),
-                                  blurRadius: 4,
-                                  spreadRadius: 1,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  AppProgressBar(value: lvlProgress, color: brandColor),
                   SizedBox(height: 6.h),
                   Text(
                     currentLvl >= 5
                         ? 'En yüksek marka prestijine ulaştın! Mağaza satış hızı (+%35) ve taban fiyat toleransı bonusu maksimumda.'
                         : 'Bir sonraki seviye için ${(nextLvlXp - currentXp).clamp(0, nextLvlXp)} XP gerekiyor. Mağazalarında markalı ürün sattıkça yada başkası sizin ürününüzü sattıkça tecrübe kazanırsın.',
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 10.sp,
+                      fontSize: AppTypography.label,
                       height: 1.3,
                     ),
                   ),
@@ -648,7 +626,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
-        color: Colors.black38,
+        color: AppFx.panelWash(0.38),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Row(
@@ -661,7 +639,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 decoration: BoxDecoration(
                   color: _selectedTab == 0
                       ? brandColor.withValues(alpha: 0.18)
-                      : Colors.transparent,
+                      : AppColors.transparent,
                   borderRadius: BorderRadius.circular(8.r),
                   border: _selectedTab == 0
                       ? Border.all(color: brandColor.withValues(alpha: 0.35))
@@ -670,9 +648,11 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 child: Text(
                   'Patentler & Ürünler',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _selectedTab == 0 ? brandColor : Colors.white70,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: _selectedTab == 0
+                        ? brandColor
+                        : AppColors.textSecondary,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -687,7 +667,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 decoration: BoxDecoration(
                   color: _selectedTab == 1
                       ? brandColor.withValues(alpha: 0.18)
-                      : Colors.transparent,
+                      : AppColors.transparent,
                   borderRadius: BorderRadius.circular(8.r),
                   border: _selectedTab == 1
                       ? Border.all(color: brandColor.withValues(alpha: 0.35))
@@ -696,9 +676,11 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 child: Text(
                   'Pazarlama',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _selectedTab == 1 ? brandColor : Colors.white70,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: _selectedTab == 1
+                        ? brandColor
+                        : AppColors.textSecondary,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -714,10 +696,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     final activeCampaignsAsync = ref.watch(activeMarketingCampaignsProvider);
 
     return activeCampaignsAsync.when(
-      loading: () => const Center(
+      loading: () => Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(color: AppColors.gold),
+          child: AppLoadingIndicator(color: AppColors.gold),
         ),
       ),
       error: (err, _) => _buildError(err.toString()),
@@ -756,18 +738,18 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 children: [
                   Text(
                     'Pazarlama Stratejisi',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13.sp,
+                    style: AppTextStyles.title.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.bodyLarge,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   SizedBox(height: 6.h),
                   Text(
                     'Nakit harcayarak mağazalarındaki satış hızını ve fiyat toleransını geçici olarak artırabilirsin. Her reklam türünden aynı anda en fazla bir adet aktif olabilir.',
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 11.sp,
+                      fontSize: AppTypography.bodySmall,
                       height: 1.4,
                     ),
                   ),
@@ -852,9 +834,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
+                      style: AppTextStyles.title.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -874,9 +856,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                         ),
                         child: Text(
                           'AKTİF',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: brandColor,
-                            fontSize: 9.sp,
+                            fontSize: AppTypography.caption,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -887,17 +869,17 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 SizedBox(height: 6.h),
                 Text(
                   'Maliyet: $cost₺  •  Süre: $duration',
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textSecondary,
-                    fontSize: 11.sp,
+                    fontSize: AppTypography.bodySmall,
                   ),
                 ),
                 SizedBox(height: 4.h),
                 Text(
                   effects,
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: brandColor.withValues(alpha: 0.85),
-                    fontSize: 11.sp,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -905,13 +887,17 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   SizedBox(height: 6.h),
                   Row(
                     children: [
-                      Icon(Icons.timer_outlined, color: brandColor, size: 12.w),
+                      Icon(
+                        AppIcons.timerOutlined,
+                        color: brandColor,
+                        size: 12.w,
+                      ),
                       SizedBox(width: 4.w),
                       Text(
                         remainingText,
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 10.sp,
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: AppTypography.label,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -927,8 +913,8 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                 ? null
                 : () => _startCampaign(type),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isActive ? Colors.grey.shade800 : brandColor,
-              foregroundColor: Colors.black,
+              backgroundColor: isActive ? AppColors.textMuted : brandColor,
+              foregroundColor: AppColors.textOnAccent,
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10.r),
@@ -936,7 +922,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             ),
             child: Text(
               isActive ? 'Aktif' : 'Başlat',
-              style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+              style: AppTextStyles.button.standardCopyWith(
+                fontSize: AppTypography.body,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -1045,7 +1034,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
-                icon: const Icon(Icons.palette_outlined),
+                icon: const Icon(AppIcons.paletteOutlined),
                 label: const Text('Marka Tasarimini Duzelt'),
               ),
             ),
@@ -1059,9 +1048,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 16.sp,
+      style: AppTextStyles.title.standardCopyWith(
+        color: AppColors.textPrimary,
+        fontSize: AppTypography.titleLarge,
         fontWeight: FontWeight.bold,
       ),
     );
@@ -1073,7 +1062,10 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
       decoration: AppDecorations.panelGlass(),
       child: Text(
         message,
-        style: TextStyle(color: AppColors.textSecondary, fontSize: 12.sp),
+        style: AppTextStyles.body.standardCopyWith(
+          color: AppColors.textSecondary,
+          fontSize: AppTypography.body,
+        ),
       ),
     );
   }
@@ -1096,7 +1088,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
             height: 50.w,
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.16),
+              color: AppFx.panelWash(0.16),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: BrandedProductImage(
@@ -1115,18 +1107,18 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               children: [
                 Text(
                   item.productName,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.title,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 SizedBox(height: 4.h),
                 Text(
                   'Maks kalite: ${item.maxQualityLevel}',
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textSecondary,
-                    fontSize: 11.sp,
+                    fontSize: AppTypography.bodySmall,
                   ),
                 ),
               ],
@@ -1154,7 +1146,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               backgroundColor: readOnly
                   ? brandColor.withValues(alpha: 0.16)
                   : brandColor,
-              foregroundColor: readOnly ? brandColor : Colors.black,
+              foregroundColor: readOnly ? brandColor : AppColors.textOnAccent,
               side: readOnly
                   ? BorderSide(color: brandColor.withValues(alpha: 0.35))
                   : null,

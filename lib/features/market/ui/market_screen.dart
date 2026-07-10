@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart'
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -26,8 +27,11 @@ import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
+import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
+import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
+import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 
@@ -54,7 +58,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   String? _lockedSourceCityId;
   bool _cityCatalogEnabled = false;
   String _productSearchQuery = '';
-  String _warehouseCityFilter = '';
   late String _selectedProductId;
   late String _selectedWarehouseId;
   late String _selectedCityId;
@@ -65,7 +68,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     _selectedProductId = widget.productId;
     _selectedWarehouseId = widget.warehouseId;
     _selectedCityId = widget.cityId;
-    _warehouseCityFilter = widget.cityId;
   }
 
   String get _activeProductId => _selectedProductId;
@@ -163,7 +165,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       context: context,
       barrierDismissible: true,
       builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 520.w),
@@ -260,7 +262,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ),
       child: Text(
         message,
-        style: AppTextStyles.body.copyWith(color: color, fontSize: 12.sp),
+        style: AppTextStyles.body.standardCopyWith(color: color, fontSize: AppTypography.body),
       ),
     );
   }
@@ -284,22 +286,22 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.local_shipping_outlined, color: AppColors.blue, size: 12.sp),
+          Icon(AppIcons.localShippingOutlined, color: AppColors.blue, size: AppIconSizes.xSmall),
           SizedBox(width: 6.w),
           Text(
             'Lojistik Rotası:',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 10.sp,
+              fontSize: AppTypography.label,
               fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(width: 4.w),
           Text(
             cityName,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.blue,
-              fontSize: 10.sp,
+              fontSize: AppTypography.label,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -307,9 +309,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           GestureDetector(
             onTap: _showLojistikBilgiDialog,
             child: Icon(
-              Icons.help_outline,
+              AppIcons.helpOutline,
               color: AppColors.blue,
-              size: 13.sp,
+              size: AppIconSizes.small,
             ),
           ),
           const Spacer(),
@@ -317,9 +319,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             onTap: _clearCart,
             child: Text(
               'Sıfırla',
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.red,
-                fontSize: 9.sp,
+                fontSize: AppTypography.caption,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -333,7 +335,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         child: Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
@@ -347,14 +349,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.local_shipping, color: AppColors.blue, size: 16.sp),
+                  Icon(AppIcons.localShipping, color: AppColors.blue, size: AppIconSizes.compact),
                   SizedBox(width: 8.w),
                   Text(
                     'Lojistik Taşıma Kuralları',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.bold,
+                    style: AppTextStyles.titleBold.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.bodyLarge,
                     ),
                   ),
                 ],
@@ -364,9 +365,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 'Sepete ilk eklediğiniz ürünün bulunduğu şehir çıkış noktası olarak kilitlenir. '
                 'Tek bir transfer seferinde lojistik araçları sadece aynı şehirden kalkan ürünleri birleştirebilir. '
                 'Farklı bir şehirden ürün eklemek istiyorsanız sepeti sıfırlamanız gerekir.',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   height: 1.4,
                 ),
               ),
@@ -377,10 +378,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   onPressed: () => Navigator.pop(dialogContext),
                   child: Text(
                     'Anladım',
-                    style: TextStyle(
+                    style: AppTextStyles.label.standardCopyWith(
                       color: AppColors.gold,
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.bold,
+                      fontSize: AppTypography.bodySmall,
                     ),
                   ),
                 ),
@@ -402,7 +402,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ),
       child: Text(
         label,
-        style: AppTextStyles.body.copyWith(color: color, fontSize: 9.sp),
+        style: AppTextStyles.body.standardCopyWith(color: color, fontSize: AppTypography.caption),
       ),
     );
   }
@@ -580,7 +580,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   behavior: HitTestBehavior.opaque,
                   child: Row(
                     children: [
-                      Icon(Icons.warehouse_outlined, color: AppColors.gold, size: 16.sp),
+                      Icon(AppIcons.warehouseOutlined, color: AppColors.gold, size: AppIconSizes.compact),
                       SizedBox(width: 8.w),
                       Expanded(
                         child: Column(
@@ -590,10 +590,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                               targetName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.bold,
+                              style: AppTextStyles.body.standardCopyWith(
+                                color: AppColors.textPrimary,
+                                fontSize: AppTypography.bodySmall,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                             SizedBox(height: 2.h),
@@ -601,14 +601,14 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                               children: [
                                 Text(
                                   cityName,
-                                  style: TextStyle(
+                                  style: AppTextStyles.caption.standardCopyWith(
                                     color: AppColors.textMuted,
-                                    fontSize: 9.sp,
+                                    fontSize: AppTypography.caption,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 SizedBox(width: 4.w),
-                                Icon(Icons.swap_horiz, size: 10.sp, color: AppColors.gold),
+                                Icon(AppIcons.swapHoriz, size: AppIconSizes.xxSmall, color: AppColors.gold),
                               ],
                             ),
                           ],
@@ -641,12 +641,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         child: Row(
                           children: [
                             Container(
-                              width: 26.w,
-                              height: 26.w,
+                              width: 34.w,
+                              height: 34.w,
                               padding: EdgeInsets.all(2.w),
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6.r),
+                                color: AppFx.panelWash(0.2),
+                                borderRadius: BorderRadius.circular(8.r),
                               ),
                               child: CachedAssetImage(fileName: product.urunIconu),
                             ),
@@ -659,9 +659,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                     product.urunAdi,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
+                                    style: AppTextStyles.body.standardCopyWith(
                                       color: AppColors.goldLight,
-                                      fontSize: 11.sp,
+                                      fontSize: AppTypography.bodySmall,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -677,19 +677,19 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                                   : (isProductionInput ? 'Üretim' : 'Değiştir')),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
+                                          style: AppTextStyles.caption.standardCopyWith(
                                             color: needCount > 0
                                                 ? AppColors.gold
                                                 : (prodNeedCount > 0 || isProductionInput
                                                     ? AppColors.blue
                                                     : AppColors.textMuted),
-                                            fontSize: 9.sp,
+                                            fontSize: AppTypography.caption,
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),
                                       ),
                                       SizedBox(width: 2.w),
-                                      Icon(Icons.swap_horiz, size: 10.sp, color: AppColors.gold),
+                                      Icon(AppIcons.swapHoriz, size: AppIconSizes.xxSmall, color: AppColors.gold),
                                     ],
                                   ),
                                 ],
@@ -708,17 +708,19 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             children: [
               Text(
                 'Kapasite Doluluğu',
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 9.sp,
+                  fontSize: AppTypography.caption,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               Text(
                 capacityLabel,
-                style: TextStyle(
-                  color: cartVolume > 0 ? AppColors.goldLight : Colors.white70,
-                  fontSize: 9.sp,
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: cartVolume > 0
+                      ? AppColors.goldLight
+                      : AppColors.textSecondary,
+                  fontSize: AppTypography.caption,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -746,7 +748,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       height: 6.h,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: AppFx.softOverlay(0.08),
         borderRadius: BorderRadius.circular(3.r),
       ),
       child: ClipRRect(
@@ -781,7 +783,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     setState(() {
       _selectedWarehouseId = '';
       _selectedCityId = '';
-      _warehouseCityFilter = '';
       _selectedProductId = '';
       _productSearchQuery = '';
       _resetCartState();
@@ -915,6 +916,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     Map<String, int> productionNeedById,
     Set<String> activeProductionIngredients,
   ) {
+    final factories = ref.watch(factoryListProvider).value ?? const [];
+    final farms = ref.watch(farmListProvider).value ?? const [];
+    final fields = ref.watch(fieldListProvider).value ?? const [];
+
     final activeWarehouses =
         warehouses.where((warehouse) => warehouse.isActive).toList()
           ..sort((a, b) => a.name.compareTo(b.name));
@@ -964,19 +969,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final selectedProduct = sortedProducts
         .where((product) => product.id == _activeProductId)
         .firstOrNull;
-    final cityGroups = <String, List<WarehouseModel>>{};
-    for (final warehouse in activeWarehouses) {
-      final cityName = (warehouse.cityName ?? 'Bilinmeyen Şehir').trim();
-      cityGroups.putIfAbsent(cityName, () => []).add(warehouse);
-    }
-    final sortedCityNames = cityGroups.keys.toList()..sort();
-    final visibleCityNames = _warehouseCityFilter.isEmpty
-        ? sortedCityNames
-        : sortedCityNames.where((cityName) {
-            final firstWarehouse = cityGroups[cityName]!.first;
-            return firstWarehouse.cityId == _warehouseCityFilter;
-          }).toList();
-
     // Step 1: Warehouse Selection Mode
     if (selectedWarehouse == null) {
       return Container(
@@ -991,129 +983,45 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.warehouse, color: AppColors.gold, size: 18.sp),
+                Icon(AppIcons.warehouse, color: AppColors.gold, size: AppIconSizes.regular),
                 SizedBox(width: 8.w),
                 Text(
                   'Hedef Depo Seçin',
-                  style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
+                  style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.title),
                 ),
               ],
             ),
-            SizedBox(height: 12.h),
-            if (sortedCityNames.isNotEmpty)
-              SizedBox(
-                height: 38.h,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: sortedCityNames.length + 1,
-                  separatorBuilder: (context, index) => SizedBox(width: 8.w),
-                  itemBuilder: (context, index) {
-                    final isAll = index == 0;
-                    final cityName = isAll
-                        ? 'Tüm Şehirler'
-                        : sortedCityNames[index - 1];
-                    final cityId = isAll
-                        ? ''
-                        : cityGroups[cityName]!.first.cityId;
-                    final isSelected = _warehouseCityFilter == cityId;
-                    return GestureDetector(
+            SizedBox(height: 16.h),
+            if (activeWarehouses.isNotEmpty)
+              ...activeWarehouses.map(
+                (warehouse) {
+                  final cityFactories = factories.where((f) => f.factory.cityId == warehouse.cityId).toList();
+                  final cityFarms = farms.where((f) => f.farm.cityId == warehouse.cityId).toList();
+                  final cityFields = fields.where((f) => f.field.cityId == warehouse.cityId).toList();
+                  final cityStores = stores.where((s) => s.cityId == warehouse.cityId).toList();
+
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: 10.h),
+                    child: _buildSelectableWarehouseCard(
+                      warehouse: warehouse,
+                      isSelected: warehouse.id == _activeWarehouseId,
+                      cityFactories: cityFactories,
+                      cityFarms: cityFarms,
+                      cityFields: cityFields,
+                      cityStores: cityStores,
                       onTap: () {
                         setState(() {
-                          _warehouseCityFilter = cityId;
+                          _selectedWarehouseId = warehouse.id;
+                          _selectedCityId = warehouse.cityId;
+                          _selectedProductId = '';
+                          _productSearchQuery = '';
+                          _resetCartState();
                         });
                       },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16.w,
-                          vertical: 8.h,
-                        ),
-                        decoration: isSelected
-                            ? BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppColors.gold.withValues(alpha: 0.25),
-                                    AppColors.goldDark.withValues(alpha: 0.1),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(20.r),
-                                border: Border.all(
-                                  color: AppColors.gold,
-                                  width: 1.2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.gold.withValues(
-                                      alpha: 0.12,
-                                    ),
-                                    blurRadius: 6,
-                                    spreadRadius: 0.5,
-                                  ),
-                                ],
-                              )
-                            : BoxDecoration(
-                                color: AppColors.cardBgLight.withValues(
-                                  alpha: 0.4,
-                                ),
-                                borderRadius: BorderRadius.circular(20.r),
-                                border: Border.all(
-                                  color: AppColors.border.withValues(
-                                    alpha: 0.5,
-                                  ),
-                                ),
-                              ),
-                        child: Center(
-                          child: Text(
-                            cityName,
-                            style: TextStyle(
-                              color: isSelected ? AppColors.gold : Colors.white,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
-            if (sortedCityNames.isNotEmpty) SizedBox(height: 12.h),
-            if (activeWarehouses.isNotEmpty)
-              ...visibleCityNames.expand((cityName) {
-                final warehousesInCity = cityGroups[cityName]!
-                  ..sort((a, b) => a.name.compareTo(b.name));
-                return [
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 8.h, top: 4.h),
-                    child: Text(
-                      cityName,
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.gold,
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  ...warehousesInCity.map(
-                    (warehouse) => Padding(
-                      padding: EdgeInsets.only(bottom: 10.h),
-                      child: _buildSelectableWarehouseCard(
-                        warehouse: warehouse,
-                        isSelected: warehouse.id == _activeWarehouseId,
-                        onTap: () {
-                          setState(() {
-                            _selectedWarehouseId = warehouse.id;
-                            _selectedCityId = warehouse.cityId;
-                            _warehouseCityFilter = warehouse.cityId;
-                            _selectedProductId = '';
-                            _productSearchQuery = '';
-                            _resetCartState();
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                ];
-              }),
             if (activeWarehouses.isEmpty) ...[
               SizedBox(height: 12.h),
               _buildInfoBox(
@@ -1174,9 +1082,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     ),
                   ),
                   child: Icon(
-                    Icons.warehouse_outlined,
+                    AppIcons.warehouseOutlined,
                     color: AppColors.blue,
-                    size: 18.sp,
+                    size: AppIconSizes.regular,
                   ),
                 ),
                 SizedBox(width: 12.w),
@@ -1186,11 +1094,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     children: [
                       Text(
                         'HEDEF DEPO SEÇİLDİ',
-                        style: TextStyle(
+                        style: AppTextStyles.overline.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
+                          fontSize: AppTypography.caption,
                         ),
                       ),
                       SizedBox(height: 2.h),
@@ -1198,9 +1104,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         selectedWarehouse.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13.sp,
+                        style: AppTextStyles.title.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: AppTypography.bodyLarge,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1219,9 +1125,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           Expanded(
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(2.r),
-                              child: LinearProgressIndicator(
+                              child: AppProgressBar(
                                 value: fillPercent,
-                                backgroundColor: Colors.white10,
+                                backgroundColor: AppFx.softOverlay(0.10),
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   fillPercent > 0.9
                                       ? AppColors.red
@@ -1236,9 +1142,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           SizedBox(width: 8.w),
                           Text(
                             '${availableCapacity.toStringAsFixed(0)} m3 bos',
-                            style: TextStyle(
+                            style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textSecondary,
-                              fontSize: 9.sp,
+                              fontSize: AppTypography.caption,
                             ),
                           ),
                         ],
@@ -1250,14 +1156,14 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 TextButton.icon(
                   onPressed: _resetWarehouseSelection,
                   icon: Icon(
-                    Icons.swap_horiz,
-                    size: 14.sp,
+                    AppIcons.swapHoriz,
+                    size: AppIconSizes.small,
                     color: AppColors.gold,
                   ),
                   label: Text(
                     'Değiştir',
-                    style: TextStyle(
-                      fontSize: 10.sp,
+                    style: AppTextStyles.label.standardCopyWith(
+                      fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1281,14 +1187,17 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 _productSearchQuery = value;
               });
             },
-            style: const TextStyle(color: Colors.white),
+            style: AppTextStyles.body.standardCopyWith(color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'Ürün ara...',
-              hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+              hintStyle: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.body,
+              ),
               prefixIcon: Icon(
-                Icons.search,
+                AppIcons.search,
                 color: AppColors.gold.withValues(alpha: 0.6),
-                size: 18.sp,
+                size: AppIconSizes.regular,
               ),
               contentPadding: EdgeInsets.symmetric(
                 vertical: 10.h,
@@ -1304,16 +1213,16 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
-                borderSide: const BorderSide(color: AppColors.gold, width: 1.5),
+                borderSide: BorderSide(color: AppColors.gold, width: 1.5),
               ),
             ),
           ),
           SizedBox(height: 14.h),
           Text(
             'Ürün Seçin',
-            style: AppTextStyles.body.copyWith(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textSecondary,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1391,7 +1300,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.gold.withValues(alpha: 0.15)
-                    : Colors.black.withValues(alpha: 0.2),
+                    : AppFx.panelWash(0.2),
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(
                   color: isSelected
@@ -1412,18 +1321,20 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     product.urunAdi,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isSelected ? AppColors.gold : Colors.white,
-                      fontSize: 11.sp,
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: isSelected
+                          ? AppColors.gold
+                          : AppColors.textPrimary,
+                      fontSize: AppTypography.bodySmall,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   SizedBox(height: 3.h),
                   Text(
                     '${product.bazSatisFiyati.toStringAsFixed(0)} TL',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 9.sp,
+                      fontSize: AppTypography.caption,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1478,9 +1389,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 7.sp,
+          fontSize: AppTypography.micro,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -1502,7 +1413,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             height: 36.w,
             padding: EdgeInsets.all(6.w),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.25),
+              color: AppFx.panelWash(0.25),
               borderRadius: BorderRadius.circular(10.r),
               border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
@@ -1515,9 +1426,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               children: [
                 Text(
                   'Seçili Ürün',
-                  style: AppTextStyles.body.copyWith(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1526,10 +1437,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   product.urunAdi,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.body,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -1537,9 +1448,35 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           ),
           Text(
             '${product.bazSatisFiyati.toStringAsFixed(1)} TL',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.gold,
-              fontSize: 11.sp,
+              fontSize: AppTypography.bodySmall,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessMiniChip(IconData icon, String name, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(color: color.withValues(alpha: 0.28), width: 0.5.w),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: AppIconSizes.xxSmall, color: color),
+          SizedBox(width: 3.w),
+          Text(
+            _truncateBusinessName(name),
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.micro,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1548,9 +1485,20 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
+  String _truncateBusinessName(String name) {
+    if (name.length > 14) {
+      return '${name.substring(0, 13)}…';
+    }
+    return name;
+  }
+
   Widget _buildSelectableWarehouseCard({
     required WarehouseModel warehouse,
     required bool isSelected,
+    required List<FactoryListItemModel> cityFactories,
+    required List<FarmListItemModel> cityFarms,
+    required List<FieldListItemModel> cityFields,
+    required List<StoreModel> cityStores,
     required VoidCallback onTap,
   }) {
     final availableCapacity = (warehouse.capacity - warehouse.reservedCapacity)
@@ -1583,28 +1531,51 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 ),
               ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 42.w,
-              height: 42.w,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.blue.withValues(alpha: 0.15)
-                    : Colors.black.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.blue.withValues(alpha: 0.3)
-                      : Colors.transparent,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 38.w,
+                  height: 38.w,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.blue.withValues(alpha: 0.15)
+                        : AppFx.panelWash(0.18),
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.blue.withValues(alpha: 0.3)
+                          : AppColors.transparent,
+                    ),
+                  ),
+                  child: Icon(
+                    warehouse.warehouseKind == 'store'
+                        ? AppIcons.storefrontOutlined
+                        : AppIcons.warehouseOutlined,
+                    color: isSelected ? AppColors.blue : AppColors.gold,
+                    size: AppIconSizes.regular,
+                  ),
                 ),
-              ),
-              child: Icon(
-                warehouse.warehouseKind == 'store'
-                    ? Icons.storefront_outlined
-                    : Icons.warehouse_outlined,
-                color: isSelected ? AppColors.blue : AppColors.gold,
-                size: 20.sp,
-              ),
+                SizedBox(height: 4.h),
+                SizedBox(
+                  width: 54.w,
+                  child: Text(
+                    warehouse.cityName ?? 'Bilinmeyen Şehir',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: isSelected
+                          ? AppColors.blue
+                          : AppColors.goldLight,
+                      fontSize: AppTypography.micro,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
             ),
             SizedBox(width: 12.w),
             Expanded(
@@ -1615,63 +1586,54 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     warehouse.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.sp,
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.body,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 6.h),
+                  SizedBox(height: 4.h),
                   Wrap(
                     spacing: 6.w,
                     runSpacing: 4.h,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(
-                        warehouse.cityName ?? 'Bilinmeyen Sehir',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 10.sp,
-                        ),
-                      ),
                       Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: 6.w,
                           vertical: 2.h,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              (warehouse.warehouseKind == 'store'
-                                      ? AppColors.blue
-                                      : AppColors.gold)
-                                  .withValues(alpha: 0.12),
+                          color: (warehouse.warehouseKind == 'store'
+                                  ? AppColors.blue
+                                  : AppColors.gold)
+                              .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(999.r),
                           border: Border.all(
-                            color:
-                                (warehouse.warehouseKind == 'store'
-                                        ? AppColors.blue
-                                        : AppColors.gold)
-                                    .withValues(alpha: 0.28),
+                            color: (warehouse.warehouseKind == 'store'
+                                    ? AppColors.blue
+                                    : AppColors.gold)
+                                .withValues(alpha: 0.28),
                           ),
                         ),
                         child: Text(
                           warehouse.warehouseKind == 'store'
-                              ? 'Magaza'
+                              ? 'Mağaza'
                               : 'Normal',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: warehouse.warehouseKind == 'store'
                                 ? AppColors.blue
                                 : AppColors.goldLight,
-                            fontSize: 8.sp,
+                            fontSize: AppTypography.micro,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                       Text(
-                        '${availableCapacity.toStringAsFixed(0)} m3 bos',
-                        style: TextStyle(
+                        '${availableCapacity.toStringAsFixed(0)} m³ boş',
+                        style: AppTextStyles.label.standardCopyWith(
                           color: capacityColor,
-                          fontSize: 10.sp,
+                          fontSize: AppTypography.label,
                           fontWeight: availableCapacity <= 0
                               ? FontWeight.w700
                               : FontWeight.w500,
@@ -1682,9 +1644,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   SizedBox(height: 6.h),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4.r),
-                    child: LinearProgressIndicator(
+                    child: AppProgressBar(
                       value: fillPercent,
-                      backgroundColor: Colors.white10,
+                      backgroundColor: AppFx.softOverlay(0.10),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         fillPercent > 0.9
                             ? AppColors.red
@@ -1695,12 +1657,36 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       minHeight: 4.h,
                     ),
                   ),
+                  if (warehouse.warehouseKind != 'store' &&
+                      (cityFactories.isNotEmpty ||
+                          cityFarms.isNotEmpty ||
+                          cityFields.isNotEmpty ||
+                          cityStores.isNotEmpty)) ...[
+                    SizedBox(height: 8.h),
+                    Wrap(
+                      spacing: 4.w,
+                      runSpacing: 4.h,
+                      children: [
+                        ...cityFactories.map((f) =>
+                            _buildBusinessMiniChip(AppIcons.factoryOutlined, f.factory.name, AppColors.blue)),
+                        ...cityFarms.map((f) =>
+                            _buildBusinessMiniChip(AppIcons.agricultureOutlined, f.farm.name, AppColors.gold)),
+                        ...cityFields.map((f) =>
+                            _buildBusinessMiniChip(AppIcons.grass, f.field.name, AppColors.teal)),
+                        ...cityStores.map((s) =>
+                            _buildBusinessMiniChip(AppIcons.storefront, s.name, AppColors.green)),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
             SizedBox(width: 12.w),
             if (isSelected)
-              Icon(Icons.check_circle, color: AppColors.blue, size: 20.sp),
+              Padding(
+                padding: EdgeInsets.only(top: 8.h),
+                child: Icon(AppIcons.checkCircle, color: AppColors.blue, size: AppIconSizes.medium),
+              ),
           ],
         ),
       ),
@@ -1822,7 +1808,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       floatingActionButton: _hasCart ? _buildCartLauncherButton() : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       bottomNavigationBar: AppBottomNav(
@@ -2027,8 +2013,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final distanceColor = distanceKm < 250
         ? AppColors.green
         : (distanceKm < 750 ? AppColors.gold : AppColors.red);
-    final isInstantDelivery =
-        _activeCityId.isNotEmpty && _activeCityId == listing.cityId;
     final priceDeltaPercent = _resolvePriceDeltaPercent(product, listing.price);
     final priceDeltaBadge = _buildPriceDeltaBadge(priceDeltaPercent);
 
@@ -2126,9 +2110,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                               listing.sellerPlayerName,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 13.sp,
+                                              style: AppTextStyles.title.standardCopyWith(
+                                                color: AppColors.textPrimary,
+                                                fontSize: AppTypography.bodyLarge,
                                                 fontWeight: FontWeight.w800,
                                               ),
                                             ),
@@ -2150,9 +2134,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                               ),
                                               child: Text(
                                                 'En Ucuz',
-                                                style: TextStyle(
+                                                style: AppTextStyles.caption.standardCopyWith(
                                                   color: AppColors.gold,
-                                                  fontSize: 8.sp,
+                                                  fontSize: AppTypography.micro,
                                                   fontWeight: FontWeight.w900,
                                                 ),
                                               ),
@@ -2165,8 +2149,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                         '${listing.warehouseName} • ${listing.cityName}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: AppTextStyles.body.copyWith(
-                                          fontSize: 10.sp,
+                                        style: AppTextStyles.body.standardCopyWith(
+                                          fontSize: AppTypography.label,
                                           color: AppColors.textMuted,
                                         ),
                                       ),
@@ -2182,34 +2166,16 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                               crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 _buildInlineMetric(
-                                  icon: Icons.inventory_2_outlined,
+                                  icon: AppIcons.inventory2Outlined,
                                   label: 'Stok',
                                   value: listing.quantity.toString(),
                                   color: AppColors.blue,
+                                  isProminent: true,
                                 ),
                                 _buildInlineQualityMetric(
                                   label: 'Kalite',
                                   qualityLevel: listing.qualityLevel,
                                   color: AppColors.gold,
-                                ),
-                                _buildInlineMetric(
-                                  icon: Icons.square_foot_outlined,
-                                  label: 'Birim Hacim',
-                                  value: '${listing.unitVolume.toStringAsFixed(1)} m3',
-                                  color: AppColors.textSecondary,
-                                ),
-                                if (listing.isNpc)
-                                  _buildTypeBadge(
-                                    'NPC / Kalite 1',
-                                    AppColors.blue,
-                                  ),
-                                _buildTypeBadge(
-                                  isInstantDelivery
-                                      ? 'Aynı sehir / Anında'
-                                      : 'Sehirler arası / Araç',
-                                  isInstantDelivery
-                                      ? AppColors.green
-                                      : AppColors.gold,
                                 ),
                                 if (priceDeltaBadge != null)
                                   _buildTypeBadge(
@@ -2241,9 +2207,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             ),
                             child: Text(
                               '₺${listing.price.toStringAsFixed(1)}',
-                              style: TextStyle(
+                              style: AppTextStyles.body.standardCopyWith(
                                 color: AppColors.green,
-                                fontSize: 11.sp,
+                                fontSize: AppTypography.bodySmall,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -2263,9 +2229,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             ),
                             child: Text(
                               '${distanceKm.toStringAsFixed(0)} km',
-                              style: TextStyle(
+                              style: AppTextStyles.label.standardCopyWith(
                                 color: distanceColor,
-                                fontSize: 10.sp,
+                                fontSize: AppTypography.label,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -2286,10 +2252,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                               ),
                               child: Text(
                                 'EKLE',
-                                style: TextStyle(
-                                  color: Colors.black,
+                                style: AppTextStyles.button.standardCopyWith(
+                                  color: AppColors.textOnAccent,
                                   fontWeight: FontWeight.w900,
-                                  fontSize: 11.sp,
+                                  fontSize: AppTypography.bodySmall,
                                 ),
                               ),
                             ),
@@ -2301,9 +2267,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                               child: Text(
                                 'Kapasite yetersiz',
                                 textAlign: TextAlign.right,
-                                style: TextStyle(
+                                style: AppTextStyles.caption.standardCopyWith(
                                   color: AppColors.red,
-                                  fontSize: 9.sp,
+                                  fontSize: AppTypography.caption,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -2327,27 +2293,32 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     required String label,
     required String value,
     required Color color,
+    bool isProminent = false,
   }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: color, size: 12.sp),
+        Icon(icon, color: color, size: isProminent ? AppIconSizes.small : AppIconSizes.xSmall),
         SizedBox(width: 4.w),
         Text(
           '$label:',
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 10.sp,
+          style: AppTextStyles.body.standardCopyWith(
+            color: isProminent
+                ? AppColors.textSecondary
+                : AppColors.textMuted,
+            fontSize: isProminent ? 11.sp : 10.sp,
             fontWeight: FontWeight.w700,
           ),
         ),
         SizedBox(width: 4.w),
         Text(
           value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 11.sp,
-            fontWeight: FontWeight.w800,
+          style: AppTextStyles.body.standardCopyWith(
+            color: isProminent
+                ? AppColors.goldLight
+                : AppColors.textPrimary,
+            fontSize: isProminent ? 12.sp : 11.sp,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ],
@@ -2362,13 +2333,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.stars, color: color, size: 12.sp),
+        Icon(AppIcons.stars, color: color, size: AppIconSizes.xSmall),
         SizedBox(width: 4.w),
         Text(
           '$label:',
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: 10.sp,
+            fontSize: AppTypography.label,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -2380,9 +2351,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             return Padding(
               padding: EdgeInsets.only(right: 1.w),
               child: Icon(
-                filled ? Icons.star : Icons.star_border,
-                color: filled ? color : Colors.white24,
-                size: 10.sp,
+                filled ? AppIcons.star : AppIcons.starBorder,
+                color: filled ? color : AppFx.softOverlay(0.24),
+                size: AppIconSizes.xxSmall,
               ),
             );
           }),
@@ -2397,12 +2368,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       children: [
         Text(
           title,
-          style: AppTextStyles.titleGold.copyWith(letterSpacing: 1.2),
+          style: AppTextStyles.titleGold.standardCopyWith(letterSpacing: 1.2),
         ),
         Text(
           subtitle,
-          style: AppTextStyles.body.copyWith(
-            fontSize: 10.sp,
+          style: AppTextStyles.body.standardCopyWith(
+            fontSize: AppTypography.label,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -2422,14 +2393,14 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       child: Column(
         children: [
           Icon(
-            Icons.storefront_outlined,
+            AppIcons.storefrontOutlined,
             color: AppColors.textMuted,
-            size: 48.sp,
+            size: AppIconSizes.hero,
           ),
           SizedBox(height: 16.h),
           Text(
             'Satis Noktasi Bulunamadi',
-            style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+            style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.titleLarge),
           ),
           SizedBox(height: 8.h),
           Text(
@@ -2448,8 +2419,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       color: AppColors.cardBg,
       borderRadius: BorderRadius.circular(20.r),
     ),
-    child: const Center(
-      child: CircularProgressIndicator(color: AppColors.gold),
+    child: Center(
+      child: AppLoadingIndicator(color: AppColors.gold),
     ),
   );
 
@@ -2459,7 +2430,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       color: AppColors.red.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(16.r),
     ),
-    child: Text(message, style: TextStyle(color: AppColors.red)),
+    child: Text(
+      message,
+      style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
+    ),
   );
 
   double _calculateDistanceKm(
@@ -2525,52 +2499,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return largest;
   }
 
-  Widget _buildCartIconsRow() {
-    final previewItems = _cartItems.take(4).toList();
-    return Row(
-      children: [
-        ...previewItems.map(
-          (item) => Container(
-            width: 28.w,
-            height: 28.w,
-            margin: EdgeInsets.only(right: 6.w),
-            padding: EdgeInsets.all(4.w),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(8.r),
-              border: Border.all(
-                color: AppColors.borderGold.withValues(alpha: 0.25),
-              ),
-            ),
-            child: CachedAssetImage(fileName: item.listing.productIcon),
-          ),
-        ),
-        if (_cartItems.length > previewItems.length)
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-            decoration: BoxDecoration(
-              color: AppColors.cardBgLight.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(8.r),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Text(
-              '+${_cartItems.length - previewItems.length}',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
 
   Future<void> _showCartSheet() async {
     if (!_hasCart) return;
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) => _buildCartSummaryBar(
@@ -2593,30 +2527,30 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.shopping_bag_outlined,
-                color: Colors.white,
-                size: 18.sp,
+                AppIcons.shoppingBagOutlined,
+                color: AppColors.textPrimary,
+                size: AppIconSizes.regular,
               ),
               SizedBox(width: 8.w),
               Text(
                 'Sepet • $_cartTotalQuantity',
-                style: AppTextStyles.body.copyWith(
-                  color: Colors.white,
-                  fontSize: 11.sp,
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               SizedBox(width: 8.w),
               Text(
                 '${_cartTotalProductCost.toStringAsFixed(1)} TL',
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.gold,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               SizedBox(width: 8.w),
-              Icon(Icons.expand_less, color: Colors.white70, size: 18.sp),
+              Icon(AppIcons.expandLess, color: AppColors.textSecondary, size: AppIconSizes.regular),
             ],
           ),
         ),
@@ -2628,10 +2562,15 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     required BuildContext sheetContext,
     required void Function(void Function()) refreshSheet,
   }) {
-    final currentAvailableCapacity = _currentTargetAvailableCapacity();
-    final remainingAfterCart = (currentAvailableCapacity - _cartTotalVolume)
-        .clamp(-999999, 999999);
-    final capacityOk = _cartFitsCurrentCapacity;
+    final capacityStatus = _activeWarehouseId.isNotEmpty
+        ? ref.read(warehouseCapacityStatusProvider(_activeWarehouseId)).value
+        : null;
+
+    final double totalCap = capacityStatus?.totalCapacity ?? 0.0;
+    final double usedCap = capacityStatus?.usedCapacity ?? 0.0;
+    final double cartVolume = _cartTotalVolume;
+    final double remainingAfterCart = (totalCap - usedCap - cartVolume);
+    final capacityOk = usedCap + cartVolume <= totalCap;
     final capacityColor = capacityOk ? AppColors.green : AppColors.red;
     final largestItem = _largestCartItemByVolume;
 
@@ -2644,64 +2583,111 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Üst Kısım: Başlık ve Temizle Butonu
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    'Sepet • $_cartTotalQuantity adet • ${_cartTotalProductCost.toStringAsFixed(1)} TL',
-                    style: AppTextStyles.body.copyWith(
-                      color: Colors.white,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                Text(
+                  'Alışveriş Sepeti',
+                  style: AppTextStyles.h1.standardCopyWith(fontSize: AppTypography.headline),
                 ),
-                SizedBox(width: 8.w),
-                IconButton(
-                  icon: Icon(Icons.delete_sweep_rounded, color: AppColors.red, size: 20.sp),
-                  tooltip: 'Sepeti Temizle',
+                TextButton.icon(
                   onPressed: () {
                     _clearCart();
                     Navigator.of(sheetContext).pop();
                   },
+                  icon: Icon(AppIcons.deleteSweepRounded, color: AppColors.red, size: AppIconSizes.compact),
+                  label: Text(
+                    'Temizle',
+                    style: AppTextStyles.label.standardCopyWith(
+                      color: AppColors.red,
+                      fontSize: AppTypography.bodySmall,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
-                SizedBox(width: 4.w),
-                _buildCartIconsRow(),
               ],
             ),
-            SizedBox(height: 4.h),
-            Text(
-              'Şehir: ${_resolveLockedCityName()} - Hacim: ${_cartTotalVolume.toStringAsFixed(1)} m³',
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 10.sp,
-              ),
+            SizedBox(height: 12.h),
+
+            // Şehir & Toplam Hacim Satırı
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(AppIcons.locationOnOutlined, color: AppColors.gold, size: AppIconSizes.small),
+                    SizedBox(width: 4.w),
+                    Text(
+                      'Şehir: ${_resolveLockedCityName()}',
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.bodySmall,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  'Sepet Hacmi: ${cartVolume.toStringAsFixed(1)} m³',
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.goldLight,
+                    fontSize: AppTypography.bodySmall,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 10.h),
+
+            // Kapasite Progress Bar
+            _buildCapacityProgressBar(total: totalCap, used: usedCap, cart: cartVolume),
+            SizedBox(height: 6.h),
+
+            // Kapasite Durumu Text
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Hedef Depo Kapasitesi:',
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.label,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  capacityOk
+                      ? 'Uygun (Kalan Boş: ${remainingAfterCart.toStringAsFixed(1)} m³)'
+                      : 'Aşıldı (Eksik: ${(-remainingAfterCart).toStringAsFixed(1)} m³)',
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: capacityColor,
+                    fontSize: AppTypography.label,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
             if (largestItem != null) ...[
-              SizedBox(height: 4.h),
+              SizedBox(height: 8.h),
               Text(
                 'En çok yer kaplayan: ${largestItem.listing.productName} • ${largestItem.totalVolume.toStringAsFixed(1)} m³',
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.gold,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w700,
+                  fontSize: AppTypography.label,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
-            SizedBox(height: 6.h),
-            Text(
-              capacityOk
-                  ? 'Hedef kapasite uygun • Kalan: ${remainingAfterCart.toStringAsFixed(1)} m3'
-                  : 'Kapasite aşıldı • Eksik: ${(-remainingAfterCart).toStringAsFixed(1)} m3',
-              style: AppTextStyles.body.copyWith(
-                color: capacityColor,
-                fontSize: 10.sp,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            SizedBox(height: 10.h),
+            SizedBox(height: 12.h),
+
+            // Sepet Ürünleri Listesi
             SizedBox(
-              height: 56.h,
+              height: 54.h,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _cartItems.length,
@@ -2723,9 +2709,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 },
               ),
             ),
-            SizedBox(height: 12.h),
+            SizedBox(height: 14.h),
+
+            // Satın Alma Butonu
             SizedBox(
               width: double.infinity,
+              height: 42.h,
               child: ElevatedButton(
                 onPressed: capacityOk
                     ? () {
@@ -2735,9 +2724,18 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
+                  foregroundColor: AppColors.textOnAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
                 ),
-                child: const Text('Alımı Tamamla'),
+                child: Text(
+                  'ALIMI TAMAMLA (${_cartTotalProductCost.toStringAsFixed(1)} TL)',
+                  style: AppTextStyles.button.standardCopyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: AppTypography.body,
+                  ),
+                ),
               ),
             ),
           ],
@@ -2762,7 +2760,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             height: 34.w,
             padding: EdgeInsets.all(5.w),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.18),
+              color: AppFx.panelWash(0.18),
               borderRadius: BorderRadius.circular(8.r),
             ),
             child: CachedAssetImage(fileName: item.listing.productIcon),
@@ -2777,16 +2775,19 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   item.listing.productName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.label,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 SizedBox(height: 2.h),
                 Text(
                   '${item.quantity} adet • ${item.totalVolume.toStringAsFixed(1)} m³',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.caption,
+                  ),
                 ),
               ],
             ),
@@ -2800,7 +2801,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 color: AppColors.red.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(6.r),
               ),
-              child: Icon(Icons.close, size: 13.sp, color: AppColors.red),
+              child: Icon(AppIcons.close, size: AppIconSizes.small, color: AppColors.red),
             ),
           ),
         ],
@@ -2883,7 +2884,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => Container(
         padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 20.h),
@@ -2896,16 +2897,19 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           children: [
             Text(
               'Araç Seçin',
-              style: TextStyle(
+              style: AppTextStyles.h1.standardCopyWith(
                 color: AppColors.textPrimary,
-                fontSize: 18.sp,
+                fontSize: AppTypography.headline,
                 fontWeight: FontWeight.bold,
               ),
             ),
             SizedBox(height: 6.h),
             Text(
               '${sourceCity.name} -> ${targetCity.name} | ${_cartTotalVolume.toStringAsFixed(1)} m³',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
             SizedBox(height: 16.h),
             Expanded(
@@ -3102,12 +3106,12 @@ class _AddToCartSheet extends ConsumerStatefulWidget {
 
 class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
   late final TextEditingController _quantityController;
-  int _quantity = 1;
+  int _quantity = 0;
 
   @override
   void initState() {
     super.initState();
-    _quantityController = TextEditingController(text: '1');
+    _quantityController = TextEditingController(text: '');
   }
 
   @override
@@ -3147,16 +3151,23 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
   }
 
   void _updateQuantity(int maxQuantity, String value) {
-    if (value.trim().isEmpty) {
+    final cleanValue = value.trim();
+    if (cleanValue.isEmpty || cleanValue == '0') {
       setState(() {
         _quantity = 0;
       });
+      if (_quantityController.text != '') {
+        _quantityController.value = const TextEditingValue(
+          text: '',
+          selection: TextSelection.collapsed(offset: 0),
+        );
+      }
       return;
     }
 
-    final parsed = int.tryParse(value) ?? 0;
-    final safe = maxQuantity <= 0 ? 0 : parsed.clamp(1, maxQuantity);
-    final safeText = safe.toString();
+    final parsed = int.tryParse(cleanValue) ?? 0;
+    final safe = maxQuantity <= 0 ? 0 : parsed.clamp(0, maxQuantity);
+    final safeText = safe == 0 ? '' : safe.toString();
 
     if (_quantityController.text != safeText) {
       _quantityController.value = TextEditingValue(
@@ -3198,7 +3209,7 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
     }
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: Container(
         padding: EdgeInsets.fromLTRB(
           16.w,
@@ -3216,53 +3227,18 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
                 Expanded(
                   child: Text(
                     'Sepete Ekle',
-                    style: AppTextStyles.h1.copyWith(fontSize: 20.sp),
+                    style: AppTextStyles.h1.standardCopyWith(fontSize: AppTypography.headline),
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: Icon(
-                    Icons.close,
+                    AppIcons.close,
                     color: AppColors.textMuted,
-                    size: 20.sp,
+                    size: AppIconSizes.medium,
                   ),
                 ),
               ],
-            ),
-            SizedBox(height: 6.h),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-              decoration: BoxDecoration(
-                color: AppColors.cardBgLight.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Wrap(
-                spacing: 8.w,
-                runSpacing: 6.h,
-                children: [
-                  Text(
-                    'Sehir: ${widget.listing.cityName}',
-                    style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-                  ),
-                  Text(
-                    'Fiyat: ${widget.listing.price.toStringAsFixed(1)}',
-                    style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-                  ),
-                  Text(
-                    'Kalite: Lv.${widget.listing.qualityLevel}',
-                    style: AppTextStyles.body.copyWith(fontSize: 10.sp),
-                  ),
-                  Text(
-                    'Maksimum: $maxQuantity',
-                    style: AppTextStyles.body.copyWith(
-                      fontSize: 10.sp,
-                      color: AppColors.gold,
-                    ),
-                  ),
-                ],
-              ),
             ),
             SizedBox(height: 10.h),
             TextField(
@@ -3270,26 +3246,28 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
               readOnly: true,
               showCursor: true,
               enableInteractiveSelection: false,
-              style: const TextStyle(color: Colors.white),
+              style: AppTextStyles.input,
               decoration: InputDecoration(
                 labelText: 'Miktar',
-                labelStyle: TextStyle(color: AppColors.textMuted),
-                helperText: maxQuantity > 0
-                    ? '1 - $maxQuantity adet arasi girebilirsiniz'
-                    : 'Yeterli nakit veya kapasite yok',
-                helperStyle: TextStyle(
+                labelStyle: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 10.sp,
+                ),
+                helperText: maxQuantity > 0
+                    ? 'En fazla $maxQuantity adet ekleyebilirsiniz'
+                    : 'Yeterli nakit veya kapasite yok',
+                helperStyle: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.label,
                 ),
                 filled: true,
                 fillColor: AppColors.cardBg,
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.r),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: AppColors.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.r),
-                  borderSide: const BorderSide(color: AppColors.gold),
+                  borderSide: BorderSide(color: AppColors.gold),
                 ),
               ),
             ),
@@ -3308,7 +3286,7 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
                             .toString(),
                 ),
                 NumericKeyboardShortcut(
-                  label: 'Yari',
+                  label: 'Yarı',
                   value: maxQuantity <= 0
                       ? '0'
                       : (maxQuantity / 2)
@@ -3317,40 +3295,36 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
                             .toString(),
                 ),
                 NumericKeyboardShortcut(
-                  label: 'Tamami',
+                  label: 'Tamamı',
                   value: maxQuantity.toString(),
                 ),
               ],
             ),
-            SizedBox(height: 12.h),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(10.w),
-              decoration: BoxDecoration(
-                color: AppColors.cardBg,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
+            SizedBox(height: 14.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4.w),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Urun Bedeli', style: AppTextStyles.body),
-                      Text(
-                        totalPrice.toStringAsFixed(1),
-                        style: TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'Toplam Tutar:',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    '₺${totalPrice.toStringAsFixed(1)}',
+                    style: AppTextStyles.title.standardCopyWith(
+                      color: AppColors.green,
+                      fontSize: AppTypography.title,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: 12.h),
+            SizedBox(height: 14.h),
             SizedBox(
               width: double.infinity,
               height: 42.h,
@@ -3367,16 +3341,16 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
+                  foregroundColor: AppColors.textOnAccent,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
                 child: Text(
                   'SEPETE EKLE',
-                  style: TextStyle(
+                  style: AppTextStyles.button.standardCopyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 12.sp,
+                    fontSize: AppTypography.body,
                   ),
                 ),
               ),
@@ -3392,7 +3366,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: Container(
         padding: EdgeInsets.fromLTRB(
           14.w,
@@ -3416,15 +3390,15 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 Expanded(
                   child: Text(
                     'Tekli Alim Kapali',
-                    style: AppTextStyles.h1.copyWith(fontSize: 20.sp),
+                    style: AppTextStyles.h1.standardCopyWith(fontSize: AppTypography.displaySmall),
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
                   icon: Icon(
-                    Icons.close,
+                    AppIcons.close,
                     color: AppColors.textMuted,
-                    size: 20.sp,
+                    size: AppIconSizes.medium,
                   ),
                 ),
               ],
@@ -3441,7 +3415,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
+                  foregroundColor: AppColors.textOnAccent,
                 ),
                 child: const Text('Kapat'),
               ),
@@ -3470,18 +3444,18 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
           children: [
             Text(
               'Sepet: ${_cartItems.length} kalem • $_cartTotalQuantity adet • ₺${_cartTotalProductCost.toStringAsFixed(1)}',
-              style: AppTextStyles.body.copyWith(
-                color: Colors.white,
-                fontSize: 12.sp,
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.body,
                 fontWeight: FontWeight.bold,
               ),
             ),
             SizedBox(height: 4.h),
             Text(
               'Sehir: ${_resolveLockedCityName()} • Hacim: ${_cartTotalVolume.toStringAsFixed(1)} m3',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 10.sp,
+                fontSize: AppTypography.label,
               ),
             ),
             SizedBox(height: 10.h),
@@ -3491,7 +3465,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
                 onPressed: _openCartCheckout,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
+                  foregroundColor: AppColors.textOnAccent,
                 ),
                 child: const Text('Alimi Tamamla'),
               ),
@@ -3578,16 +3552,19 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
           children: [
             Text(
               'Arac Secin',
-              style: TextStyle(
+              style: AppTextStyles.h1.standardCopyWith(
                 color: AppColors.textPrimary,
-                fontSize: 18.sp,
+                fontSize: AppTypography.headline,
                 fontWeight: FontWeight.bold,
               ),
             ),
             SizedBox(height: 6.h),
             Text(
               '${sourceCity.name} -> ${targetCity.name} | ${_cartTotalVolume.toStringAsFixed(1)} m3',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
             SizedBox(height: 16.h),
             Expanded(
@@ -3797,10 +3774,7 @@ double _resolvePriceDeltaPercent(ProductModel? product, double listingPrice) {
   if (deltaPercent <= -8) {
     return ('Ort. alti', AppColors.green);
   }
-  if (deltaPercent >= 8) {
-    return ('Ort. ustu', AppColors.red);
-  }
-  return ('Ort. yakin', AppColors.gold);
+  return null;
 }
 
 extension<T> on Iterable<T> {

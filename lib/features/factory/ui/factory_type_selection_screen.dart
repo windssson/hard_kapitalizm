@@ -6,6 +6,7 @@ import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -36,7 +37,7 @@ class _FactoryTypeSelectionScreenState
     final catalogsAsync = ref.watch(staticCatalogsProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -53,24 +54,24 @@ class _FactoryTypeSelectionScreenState
                       (player?.cash ?? 0).toDouble(),
                       player?.level ?? 1,
                     ),
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: AppColors.gold),
+                    loading: () => Center(
+                      child: AppLoadingIndicator(color: AppColors.gold),
                     ),
                     error: (error, stack) => Center(
                       child: Text(
                         'Hata: $error',
-                        style: const TextStyle(color: AppColors.red),
+                        style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                       ),
                     ),
                   ),
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppColors.gold),
+                  loading: () => Center(
+                    child: AppLoadingIndicator(color: AppColors.gold),
                   ),
                   error: (error, stack) =>
                       const Center(child: Text('Urun katalogu yuklenemedi.')),
                 ),
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, stack) =>
                     const Center(child: Text('Oyuncu bilgisi alinamadi.')),
@@ -146,13 +147,13 @@ class _FactoryTypeSelectionScreenState
                           width: 65.w,
                           height: 65.w,
                           decoration: BoxDecoration(
-                            color: Colors.black45,
+                            color: AppFx.panelWash(0.45),
                             borderRadius: BorderRadius.circular(12.r),
                           ),
                           child: Icon(
-                            Icons.lock,
+                            AppIcons.lock,
                             color: AppColors.gold,
-                            size: 24.sp,
+                            size: AppIconSizes.large,
                           ),
                         ),
                     ],
@@ -164,9 +165,9 @@ class _FactoryTypeSelectionScreenState
                       children: [
                         Text(
                           (type['name'] ?? 'Bilinmeyen Fabrika').toString(),
-                          style: TextStyle(
-                            color: isSelected ? AppColors.gold : Colors.white,
-                            fontSize: 16.sp,
+                          style: AppTextStyles.h2.standardCopyWith(
+                            color: isSelected ? AppColors.gold : AppColors.white,
+                            fontSize: AppTypography.titleLarge,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -176,21 +177,21 @@ class _FactoryTypeSelectionScreenState
                           runSpacing: 4.h,
                           children: [
                             _buildDetailChip(
-                              Icons.monetization_on,
+                              AppIcons.monetizationOn,
                               _formatMoney((type['cost'] ?? 0).toDouble()),
                               cashLocked ? AppColors.red : AppColors.gold,
                             ),
                             _buildDetailChip(
-                              Icons.inventory_2_outlined,
+                              AppIcons.inventory2Outlined,
                               '${type['output_capacity'] ?? 0} Kap.',
                               AppColors.blue,
                             ),
                             _buildDetailChip(
-                              Icons.stars,
+                              AppIcons.stars,
                               'Lv. ${type['required_level'] ?? 1}',
                               levelLocked
                                   ? AppColors.red
-                                  : Colors.blueAccent,
+                                  : AppColors.info,
                             ),
                           ],
                         ),
@@ -207,9 +208,9 @@ class _FactoryTypeSelectionScreenState
                   ),
                   if (isSelected)
                     Icon(
-                      Icons.check_circle,
+                      AppIcons.checkCircle,
                       color: AppColors.gold,
-                      size: 24.sp,
+                      size: AppIconSizes.large,
                     ),
                 ],
               ),
@@ -224,11 +225,14 @@ class _FactoryTypeSelectionScreenState
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: color, size: 10.sp),
+        Icon(icon, color: color, size: AppIconSizes.xxSmall),
         SizedBox(width: 4.w),
         Text(
           label,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.label,
+          ),
         ),
       ],
     );
@@ -241,8 +245,12 @@ class _FactoryTypeSelectionScreenState
         color: AppColors.cardBg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-        boxShadow: const [
-          BoxShadow(color: Colors.black54, blurRadius: 20, offset: Offset(0, -5)),
+        boxShadow: [
+          BoxShadow(
+            color: AppFx.shadow(0.54),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
         ],
       ),
       child: Column(
@@ -251,7 +259,10 @@ class _FactoryTypeSelectionScreenState
           if (_selectedType != null) ...[
             Text(
               '${widget.selectedCity.name} sehrinde ${_selectedType!['name']} insa edilecek.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodySmall,
+              ),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 12.h),
@@ -272,20 +283,22 @@ class _FactoryTypeSelectionScreenState
                 ),
               ),
               child: _isProcessing
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.black,
+                      child: AppLoadingIndicator(
+                        color: AppColors.textOnAccent,
                         strokeWidth: 2,
                       ),
                     )
                   : Text(
                       'FABRIKAYI INSA ET',
-                      style: TextStyle(
+                      style: AppTextStyles.button.standardCopyWith(
                         color:
-                            _selectedType != null ? Colors.black : Colors.white30,
-                        fontSize: 14.sp,
+                            _selectedType != null
+                                ? AppColors.textOnAccent
+                                : AppColors.white.withValues(alpha: 0.30),
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

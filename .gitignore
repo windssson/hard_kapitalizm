@@ -49,3 +49,9 @@ app.*.map.json
 
 # Supabase local temp metadata
 supabase/.temp/
+
+# Gradle
+.gradle/
+**/android/.gradle/
+**/.gradle/
+

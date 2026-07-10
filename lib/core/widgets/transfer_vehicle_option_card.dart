@@ -41,26 +41,26 @@ class TransferVehicleOptionCard extends StatelessWidget {
   IconData _getVehicleIcon(String name) {
     final lower = name.toLowerCase();
     if (lower.contains('kurye')) {
-      return Icons.delivery_dining_rounded;
+      return AppIcons.deliveryDiningRounded;
     } else if (lower.contains('voltexpress') || lower.contains('electric') || lower.contains('elektrik')) {
-      return Icons.electric_car_rounded;
+      return AppIcons.electricCarRounded;
     } else if (lower.contains('aslan')) {
-      return Icons.local_shipping_rounded;
+      return AppIcons.localShippingRounded;
     } else if (lower.contains('trans') || lower.contains('tır') || lower.contains('kıtalar')) {
-      return Icons.speed_rounded;
+      return AppIcons.speedRounded;
     }
-    return Icons.local_shipping_rounded;
+    return AppIcons.localShippingRounded;
   }
 
   @override
   Widget build(BuildContext context) {
     final accentColor = !canSelect
-        ? AppColors.red
+        ? AppColors.danger
         : isSelected
         ? AppColors.gold
         : isRental
-        ? Colors.orange
-        : AppColors.green;
+        ? AppColors.warning
+        : AppColors.success;
 
     return InkWell(
       onTap: canSelect ? onTap : null,
@@ -84,7 +84,7 @@ class TransferVehicleOptionCard extends StatelessWidget {
                   child: Icon(
                     _getVehicleIcon(vehicleName),
                     color: accentColor,
-                    size: 20.sp,
+                    size: AppIconSizes.medium,
                   ),
                 ),
                 SizedBox(width: 10.w),
@@ -94,9 +94,9 @@ class TransferVehicleOptionCard extends StatelessWidget {
                     children: [
                       Text(
                         vehicleName,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
+                        style: AppTextStyles.title.standardCopyWith(
+                          color: AppColors.white,
+                          fontSize: AppTypography.title,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -112,9 +112,9 @@ class TransferVehicleOptionCard extends StatelessWidget {
                         ),
                         child: Text(
                           isRental ? 'Kiralik' : 'Ozmal',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: accentColor,
-                            fontSize: 10.sp,
+                            fontSize: AppTypography.label,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -139,18 +139,18 @@ class TransferVehicleOptionCard extends StatelessWidget {
                     children: [
                       Text(
                         'Nakliye',
-                        style: TextStyle(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 9.sp,
+                          fontSize: AppTypography.caption,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       SizedBox(height: 2.h),
                       Text(
                         '${transportCost.toStringAsFixed(0)} TL',
-                        style: TextStyle(
+                        style: AppTextStyles.metric.standardCopyWith(
                           color: AppColors.gold,
-                          fontSize: 15.sp,
+                          fontSize: AppTypography.titleLarge,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -183,9 +183,9 @@ class TransferVehicleOptionCard extends StatelessWidget {
               SizedBox(height: 8.h),
               Text(
                 disabledReason!,
-                style: TextStyle(
-                  color: AppColors.red,
-                  fontSize: 11.sp,
+                style: AppTextStyles.label.standardCopyWith(
+                  color: AppColors.danger,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -200,26 +200,26 @@ class TransferVehicleOptionCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.16),
+        color: AppFx.panelWash(0.16),
         borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: AppFx.softOverlay(0.06)),
       ),
       child: RichText(
         text: TextSpan(
           children: [
             TextSpan(
               text: '$label: ',
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 10.sp,
+                fontSize: AppTypography.label,
                 fontWeight: FontWeight.w600,
               ),
             ),
             TextSpan(
               text: value,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10.sp,
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.white,
+                fontSize: AppTypography.label,
                 fontWeight: FontWeight.w700,
               ),
             ),

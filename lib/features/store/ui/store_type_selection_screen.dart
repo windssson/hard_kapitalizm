@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -37,7 +38,7 @@ class _StoreTypeSelectionScreenState
     final catalogsAsync = ref.watch(staticCatalogsProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -52,33 +53,33 @@ class _StoreTypeSelectionScreenState
                       player?.cash ?? 0,
                       player?.level ?? 1,
                     ),
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: AppColors.gold),
+                    loading: () => Center(
+                      child: AppLoadingIndicator(color: AppColors.gold),
                     ),
                     error: (error, stack) => Center(
                       child: Text(
                         'Hata: $error',
-                        style: TextStyle(color: AppColors.red),
+                        style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                       ),
                     ),
                   ),
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppColors.gold),
+                  loading: () => Center(
+                    child: AppLoadingIndicator(color: AppColors.gold),
                   ),
                   error: (error, stack) => Center(
                     child: Text(
                       'Urun katalogu yuklenemedi.',
-                      style: TextStyle(color: AppColors.red),
+                      style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                     ),
                   ),
                 ),
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, stack) => Center(
                   child: Text(
                     'Oyuncu bilgisi alinamadi.',
-                    style: TextStyle(color: AppColors.red),
+                    style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                   ),
                 ),
               ),
@@ -163,14 +164,14 @@ class _StoreTypeSelectionScreenState
                                 height: 84.w,
                                 fit: BoxFit.contain,
                                 placeholder: Icon(
-                                  Icons.storefront_rounded,
+                                  AppIcons.storefrontRounded,
                                   color: AppColors.gold.withValues(alpha: 0.7),
-                                  size: 48.sp,
+                                  size: AppIconSizes.hero,
                                 ),
                                 errorWidget: Icon(
-                                  Icons.storefront_rounded,
+                                  AppIcons.storefrontRounded,
                                   color: AppColors.gold,
-                                  size: 48.sp,
+                                  size: AppIconSizes.hero,
                                 ),
                               ),
                             ),
@@ -179,13 +180,13 @@ class _StoreTypeSelectionScreenState
                                 width: 84.w,
                                 height: 84.w,
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.4),
+                                  color: AppFx.panelWash(0.4),
                                   borderRadius: BorderRadius.circular(12.r),
                                 ),
                                 child: Icon(
-                                  Icons.lock,
+                                  AppIcons.lock,
                                   color: AppColors.gold,
-                                  size: 24.sp,
+                                  size: AppIconSizes.large,
                                 ),
                               ),
                           ],
@@ -197,11 +198,11 @@ class _StoreTypeSelectionScreenState
                             children: [
                               Text(
                                 type.name,
-                                style: TextStyle(
+                                style: AppTextStyles.h2.standardCopyWith(
                                   color: isSelected
                                       ? AppColors.gold
-                                      : Colors.white,
-                                  fontSize: 17.sp,
+                                      : AppColors.white,
+                                  fontSize: AppTypography.headline,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -211,16 +212,16 @@ class _StoreTypeSelectionScreenState
                                 runSpacing: 6.h,
                                 children: [
                                   _buildDetailChip(
-                                    Icons.monetization_on,
+                                    AppIcons.monetizationOn,
                                     _formatMoney(type.cost.toDouble()),
                                     cashLocked ? AppColors.red : AppColors.gold,
                                   ),
                                   _buildDetailChip(
-                                    Icons.stars,
+                                    AppIcons.stars,
                                     'Lv. ${type.requiredLevel}',
                                     levelLocked
                                         ? AppColors.red
-                                        : Colors.blueAccent,
+                                        : AppColors.info,
                                   ),
                                 ],
                               ),
@@ -230,9 +231,9 @@ class _StoreTypeSelectionScreenState
                                   levelLocked
                                       ? 'Yetersiz Seviye'
                                       : 'Yetersiz Para',
-                                  style: TextStyle(
+                                  style: AppTextStyles.caption.standardCopyWith(
                                     color: AppColors.red,
-                                    fontSize: 10.sp,
+                                    fontSize: AppTypography.label,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -244,9 +245,9 @@ class _StoreTypeSelectionScreenState
                           Padding(
                             padding: EdgeInsets.only(left: 8.w),
                             child: Icon(
-                              Icons.check_circle,
+                              AppIcons.checkCircle,
                               color: AppColors.gold,
-                              size: 24.sp,
+                              size: AppIconSizes.large,
                             ),
                           ),
                       ],
@@ -273,11 +274,14 @@ class _StoreTypeSelectionScreenState
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: color, size: 12.sp),
+        Icon(icon, color: color, size: AppIconSizes.xSmall),
         SizedBox(width: 4.w),
         Text(
           label,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.bodySmall,
+          ),
         ),
       ],
     );
@@ -293,7 +297,10 @@ class _StoreTypeSelectionScreenState
           if (_selectedType != null) ...[
             Text(
               '${widget.selectedCity.name} sehrinde ${_selectedType!.name} kurmak uzeresin.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.body,
+              ),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 16.h),
@@ -314,21 +321,21 @@ class _StoreTypeSelectionScreenState
                 elevation: _selectedType != null ? 8 : 0,
               ),
               child: _isProcessing
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.black,
+                      child: AppLoadingIndicator(
+                        color: AppColors.textOnAccent,
                         strokeWidth: 2,
                       ),
                     )
                   : Text(
                       'MAĞAZAYI KUR',
-                      style: TextStyle(
+                      style: AppTextStyles.button.standardCopyWith(
                         color: _selectedType != null
-                            ? Colors.black
-                            : Colors.white.withValues(alpha: 0.2),
-                        fontSize: 16.sp,
+                            ? AppColors.textOnAccent
+                            : AppColors.white.withValues(alpha: 0.2),
+                        fontSize: AppTypography.titleLarge,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -44,7 +45,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
     }
   }
 
-  Color _parseHexColor(String hex, {Color fallback = AppColors.gold}) {
+  Color _parseHexColor(String hex, {Color? fallback}) {
     try {
       var hexColor = hex.replaceAll('#', '');
       if (hexColor.length == 6) {
@@ -54,7 +55,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
         return Color(int.parse(hexColor, radix: 16));
       }
     } catch (_) {}
-    return fallback;
+    return fallback ?? AppColors.gold;
   }
 
   void _syncSelections({
@@ -72,15 +73,15 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
     final companyAsync = ref.watch(playerBrandCompanyProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
             const SecondaryTopBar(title: 'Marka Tasarimi'),
             Expanded(
               child: companyAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => _buildErrorState(error.toString()),
                 data: (company) {
@@ -133,7 +134,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                                 padding: EdgeInsets.all(7.w),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.black26,
+                                  color: AppFx.panelWash(0.26),
                                   border: Border.all(
                                     color: isSelected
                                         ? brandColor
@@ -159,8 +160,8 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                                     fileName: logo,
                                     fit: BoxFit.contain,
                                     placeholder: const SizedBox.shrink(),
-                                    errorWidget: const Icon(
-                                      Icons.star,
+                                    errorWidget: Icon(
+                                      AppIcons.star,
                                       color: AppColors.gold,
                                     ),
                                   ),
@@ -190,8 +191,8 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                                 color: color,
                                 border: Border.all(
                                   color: isSelected
-                                      ? Colors.white
-                                      : Colors.transparent,
+                                      ? AppColors.textPrimary
+                                      : AppColors.transparent,
                                   width: 2.5,
                                 ),
                                 boxShadow: isSelected
@@ -221,7 +222,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                               : () => _saveBrandDesign(selectedLogo, selectedColor),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: brandColor,
-                            foregroundColor: Colors.black,
+                            foregroundColor: AppColors.textOnAccent,
                             padding: EdgeInsets.symmetric(vertical: 14.h),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.r),
@@ -231,8 +232,8 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                           ),
                           child: Text(
                             _isSaving ? 'Kaydediliyor...' : 'Tasarimi Kaydet',
-                            style: TextStyle(
-                              fontSize: 14.sp,
+                            style: AppTextStyles.button.standardCopyWith(
+                              fontSize: AppTypography.title,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,
                             ),
@@ -263,9 +264,9 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
         children: [
           Text(
             'Canli Onizleme',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16.sp,
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.titleLarge,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -277,7 +278,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                 height: 66.w,
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: Colors.black38,
+                  color: AppFx.panelWash(0.38),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: brandColor.withValues(alpha: 0.55),
@@ -296,8 +297,8 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                     fileName: selectedLogo,
                     fit: BoxFit.contain,
                     placeholder: const SizedBox.shrink(),
-                    errorWidget: const Icon(
-                      Icons.star,
+                    errorWidget: Icon(
+                      AppIcons.star,
                       color: AppColors.gold,
                     ),
                   ),
@@ -310,9 +311,9 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                   children: [
                     Text(
                       brandName,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18.sp,
+                      style: AppTextStyles.h1.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.headline,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -331,9 +332,9 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                       ),
                       child: Text(
                         'Tasarim Rengi Aktif',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: brandColor,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -351,9 +352,9 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 15.sp,
+      style: AppTextStyles.title.standardCopyWith(
+        color: AppColors.textPrimary,
+        fontSize: AppTypography.titleLarge,
         fontWeight: FontWeight.bold,
       ),
     );
@@ -365,9 +366,9 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
       decoration: AppDecorations.premiumCard(null, 14.r),
       child: Text(
         text,
-        style: TextStyle(
+        style: AppTextStyles.body.standardCopyWith(
           color: AppColors.textSecondary,
-          fontSize: 11.sp,
+          fontSize: AppTypography.bodySmall,
           height: 1.45,
         ),
       ),
@@ -381,7 +382,10 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.red, fontSize: 13.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.red,
+            fontSize: AppTypography.bodyLarge,
+          ),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -25,7 +26,7 @@ class _BrandProductDesignScreenState
   bool _didInitialize = false;
   bool _isSaving = false;
 
-  Color _parseHexColor(String hex, {Color fallback = AppColors.gold}) {
+  Color _parseHexColor(String hex, {Color? fallback}) {
     try {
       var hexColor = hex.replaceAll('#', '');
       if (hexColor.length == 6) {
@@ -35,7 +36,7 @@ class _BrandProductDesignScreenState
         return Color(int.parse(hexColor, radix: 16));
       }
     } catch (_) {}
-    return fallback;
+    return fallback ?? AppColors.gold;
   }
 
   void _syncSelection(String? currentWatermark) {
@@ -75,15 +76,15 @@ class _BrandProductDesignScreenState
     final productsAsync = ref.watch(playerBrandCompanyProductsProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
             const SecondaryTopBar(title: 'Urun Tasarimi'),
             Expanded(
               child: companyAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => _buildErrorState(error.toString()),
                 data: (company) {
@@ -94,8 +95,8 @@ class _BrandProductDesignScreenState
                   final brandColor = _parseHexColor(company.themeColor);
 
                   return productsAsync.when(
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: AppColors.gold),
+                    loading: () => Center(
+                      child: AppLoadingIndicator(color: AppColors.gold),
                     ),
                     error: (error, _) => _buildErrorState(error.toString()),
                     data: (products) {
@@ -130,9 +131,9 @@ class _BrandProductDesignScreenState
                               children: [
                                 Text(
                                   product.productName,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18.sp,
+                                  style: AppTextStyles.h1.standardCopyWith(
+                                    color: AppColors.textPrimary,
+                                    fontSize: AppTypography.headline,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -142,7 +143,7 @@ class _BrandProductDesignScreenState
                                   height: 160.w,
                                   padding: EdgeInsets.all(16.w),
                                   decoration: BoxDecoration(
-                                    color: Colors.black26,
+                                    color: AppFx.panelWash(0.26),
                                     borderRadius: BorderRadius.circular(24.r),
                                     border: Border.all(
                                       color: brandColor.withValues(alpha: 0.25),
@@ -164,9 +165,9 @@ class _BrandProductDesignScreenState
                                 Text(
                                   'Bu sayfa urune atanacak filigrani duzenlemek icin hazirlandi.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(
+                                  style: AppTextStyles.body.standardCopyWith(
                                     color: AppColors.textSecondary,
-                                    fontSize: 11.sp,
+                                    fontSize: AppTypography.bodySmall,
                                     height: 1.4,
                                   ),
                                 ),
@@ -197,7 +198,7 @@ class _BrandProductDesignScreenState
                                     width: 72.w,
                                     height: 72.h,
                                     decoration: BoxDecoration(
-                                      color: Colors.black26,
+                                      color: AppFx.panelWash(0.26),
                                       borderRadius: BorderRadius.circular(12.r),
                                       border: Border.all(
                                         color: isSelected
@@ -228,20 +229,18 @@ class _BrandProductDesignScreenState
                                                     MainAxisAlignment.center,
                                                 children: [
                                                   Icon(
-                                                    Icons.block,
+                                                    AppIcons.block,
                                                     color:
                                                         AppColors.textSecondary,
-                                                    size: 20.sp,
+                                                    size: AppIconSizes.medium,
                                                   ),
                                                   SizedBox(height: 4.h),
                                                   Text(
                                                     'Yok',
-                                                    style: TextStyle(
-                                                      color: AppColors
-                                                          .textSecondary,
-                                                      fontSize: 10.sp,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                                    style: AppTextStyles.caption.standardCopyWith(
+                                                      color: AppColors.textSecondary,
+                                                      fontSize: AppTypography.label,
+                                                      fontWeight: FontWeight.bold,
                                                     ),
                                                   ),
                                                 ],
@@ -251,7 +250,7 @@ class _BrandProductDesignScreenState
                                               fit: StackFit.expand,
                                               children: [
                                                 Container(
-                                                  color: Colors.black38,
+                                                  color: AppFx.panelWash(0.38),
                                                 ),
                                                 Opacity(
                                                   opacity: 0.7,
@@ -260,9 +259,9 @@ class _BrandProductDesignScreenState
                                                     fit: BoxFit.cover,
                                                     placeholder:
                                                         const SizedBox.shrink(),
-                                                    errorWidget: const Icon(
-                                                      Icons.broken_image,
-                                                      color: Colors.grey,
+                                                    errorWidget: Icon(
+                                                      AppIcons.brokenImage,
+                                                      color: AppColors.textMuted,
                                                     ),
                                                   ),
                                                 ),
@@ -275,16 +274,15 @@ class _BrandProductDesignScreenState
                                                         EdgeInsets.symmetric(
                                                           vertical: 2.h,
                                                         ),
-                                                    color: Colors.black54,
+                                                    color: AppFx.panelWash(0.54),
                                                     child: Text(
                                                       'Filigran $index',
                                                       textAlign:
                                                           TextAlign.center,
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 9.sp,
-                                                        fontWeight:
-                                                            FontWeight.w600,
+                                                      style: AppTextStyles.caption.standardCopyWith(
+                                                        color: AppColors.textPrimary,
+                                                        fontSize: AppTypography.caption,
+                                                        fontWeight: FontWeight.w600,
                                                       ),
                                                     ),
                                                   ),
@@ -306,7 +304,7 @@ class _BrandProductDesignScreenState
                                   : () => _saveWatermark(product!.productId),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: brandColor,
-                                foregroundColor: Colors.black,
+                                foregroundColor: AppColors.textOnAccent,
                                 padding: EdgeInsets.symmetric(vertical: 14.h),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12.r),
@@ -318,8 +316,8 @@ class _BrandProductDesignScreenState
                                 _isSaving
                                     ? 'Kaydediliyor...'
                                     : 'Filigrani Kaydet',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
+                                style: AppTextStyles.button.standardCopyWith(
+                                  fontSize: AppTypography.title,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 0.5,
                                 ),
@@ -342,9 +340,9 @@ class _BrandProductDesignScreenState
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 15.sp,
+      style: AppTextStyles.title.standardCopyWith(
+        color: AppColors.textPrimary,
+        fontSize: AppTypography.titleLarge,
         fontWeight: FontWeight.bold,
       ),
     );
@@ -357,7 +355,10 @@ class _BrandProductDesignScreenState
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.red, fontSize: 13.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.red,
+            fontSize: AppTypography.bodyLarge,
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
@@ -67,15 +68,18 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
             const SecondaryTopBar(title: 'Bildirimler'),
             Expanded(
               child: dashboardAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => Center(
                   child: Padding(
                     padding: EdgeInsets.all(20.w),
                     child: Text(
                       error.toString(),
-                      style: TextStyle(color: AppColors.red, fontSize: 12.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                        fontSize: AppTypography.body,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -100,7 +104,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                               alignment: Alignment.centerRight,
                               child: TextButton.icon(
                                 onPressed: _markAllRead,
-                                icon: const Icon(Icons.done_all_rounded),
+                                icon: const Icon(AppIcons.doneAllRounded),
                                 label: const Text('Tumunu Okundu Yap'),
                               ),
                             ),
@@ -131,7 +135,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     final route = _targetRoute(notification);
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(
         onTap: () => _openNotification(notification),
         borderRadius: BorderRadius.circular(14.r),
@@ -151,7 +155,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                 child: Icon(
                   _notificationIcon(notification),
                   color: accent,
-                  size: 20.sp,
+                  size: AppIconSizes.medium,
                 ),
               ),
               SizedBox(width: 10.w),
@@ -175,22 +179,22 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                     SizedBox(height: 8.h),
                     Text(
                       notification.title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.sp,
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.bodyLarge,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       notification.message,
-                      style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                      style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
                     ),
                     SizedBox(height: 6.h),
                     Text(
                       _relativeTime(notification.createdAt),
-                      style: AppTextStyles.body.copyWith(
-                        fontSize: 10.sp,
+                      style: AppTextStyles.body.standardCopyWith(
+                        fontSize: AppTypography.label,
                         color: AppColors.textMuted,
                       ),
                     ),
@@ -198,7 +202,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                       SizedBox(height: 10.h),
                       FilledButton.tonalIcon(
                         onPressed: () => _openNotification(notification),
-                        icon: const Icon(Icons.open_in_new_rounded),
+                        icon: const Icon(AppIcons.openInNewRounded),
                         label: const Text('Module Git'),
                       ),
                     ],
@@ -222,9 +226,9 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 9.sp,
+          fontSize: AppTypography.caption,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -237,15 +241,15 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         child: Column(
           children: [
             Icon(
-              Icons.notifications_off_rounded,
+              AppIcons.notificationsOffRounded,
               color: AppColors.textMuted,
-              size: 28.sp,
+              size: AppIconSizes.xLarge,
             ),
             SizedBox(height: 8.h),
             Text(
               'Goruntulenecek okunmamis bildirim yok.',
               textAlign: TextAlign.center,
-              style: AppTextStyles.body.copyWith(fontSize: 12.sp),
+              style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.body),
             ),
           ],
         ),
@@ -314,29 +318,29 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
   IconData _notificationIcon(PlayerNotificationModel item) {
     switch (item.category) {
       case 'construction_completed':
-        return Icons.construction_rounded;
+        return AppIcons.constructionRounded;
       case 'upgrade_completed':
-        return Icons.trending_up_rounded;
+        return AppIcons.trendingUpRounded;
       case 'transfer_completed':
-        return Icons.local_shipping_rounded;
+        return AppIcons.localShippingRounded;
       case 'arge_completed':
-        return Icons.science_rounded;
+        return AppIcons.scienceRounded;
       case 'achievement_unlocked':
-        return Icons.workspace_premium_rounded;
+        return AppIcons.workspacePremiumRounded;
       case 'tender_accepted':
       case 'tender_won':
       case 'tender_completed':
-        return Icons.gavel_rounded;
+        return AppIcons.gavelRounded;
       case 'tender_delivery_started':
       case 'tender_delivery_completed':
-        return Icons.local_shipping_rounded;
+        return AppIcons.localShippingRounded;
       case 'tender_failed':
       case 'tender_lost':
       case 'tender_cancelled':
       case 'tender_delivery_late':
-        return Icons.warning_amber_rounded;
+        return AppIcons.warningAmberRounded;
       default:
-        return Icons.notifications_none_rounded;
+        return AppIcons.notificationsNoneRounded;
     }
   }
 
@@ -405,7 +409,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       case 'success':
         return AppColors.green;
       case 'warning':
-        return Colors.orange;
+        return AppColors.warning;
       default:
         return AppColors.blue;
     }

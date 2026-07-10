@@ -54,7 +54,7 @@ class BrandedProductImage extends ConsumerWidget {
       brandId!.trim().isNotEmpty &&
       brandId!.trim() != defaultBrandId;
 
-  Color _parseHexColor(String hex, {Color fallback = AppColors.gold}) {
+  Color _parseHexColor(String hex, {Color? fallback}) {
     try {
       var hexColor = hex.replaceAll('#', '');
       if (hexColor.length == 6) {
@@ -64,7 +64,7 @@ class BrandedProductImage extends ConsumerWidget {
         return Color(int.parse(hexColor, radix: 16));
       }
     } catch (_) {}
-    return fallback;
+    return fallback ?? AppColors.gold;
   }
 
   @override
@@ -174,19 +174,19 @@ class BrandedProductImage extends ConsumerWidget {
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white,
+                          style: AppTextStyles.label.standardCopyWith(
+                            color: AppColors.white,
                             fontSize: (fontSizeValue * 0.85).clamp(8.0, 12.0),
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.5 * scale,
                             shadows: [
                               Shadow(
-                                color: Colors.black.withValues(alpha: 0.95),
+                                color: AppFx.panelWash(0.95),
                                 blurRadius: 4,
                                 offset: const Offset(0, 1),
                               ),
                               Shadow(
-                                color: Colors.black.withValues(alpha: 0.8),
+                                color: AppFx.panelWash(0.8),
                                 blurRadius: 2,
                                 offset: const Offset(0, 0),
                               ),
@@ -205,7 +205,7 @@ class BrandedProductImage extends ConsumerWidget {
                       height: badgeSize,
                       padding: EdgeInsets.all(badgePadding),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
+                        color: AppFx.panelWash(0.45),
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: themeColor.withValues(alpha: 0.4),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -45,10 +46,12 @@ class _StorePerformanceScreenState
 
   @override
   Widget build(BuildContext context) {
-    final performanceAsync = ref.watch(storePerformanceProvider(widget.storeId));
+    final performanceAsync = ref.watch(
+      storePerformanceProvider(widget.storeId),
+    );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -56,8 +59,8 @@ class _StorePerformanceScreenState
             _buildTabBar(),
             Expanded(
               child: performanceAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => _buildErrorState(context, ref, error),
                 data: (data) => RefreshIndicator(
@@ -73,7 +76,10 @@ class _StorePerformanceScreenState
                         SizedBox(height: 12.h),
                         _buildKpiGrid(data.summary),
                         SizedBox(height: 12.h),
-                        _buildTopProductsList(data.rows, data.summary.totalProfit),
+                        _buildTopProductsList(
+                          data.rows,
+                          data.summary.totalProfit,
+                        ),
                       ] else if (_selectedTabIndex == 1) ...[
                         _buildProductsTab(data.rows, data.summary.totalProfit),
                       ] else ...[
@@ -104,9 +110,9 @@ class _StorePerformanceScreenState
       ),
       child: Row(
         children: [
-          _buildTabItem(0, 'Ozet', Icons.bar_chart_rounded),
-          _buildTabItem(1, 'Urunler', Icons.category_rounded),
-          _buildTabItem(2, 'Gunluk', Icons.calendar_month_rounded),
+          _buildTabItem(0, 'Ozet', AppIcons.barChartRounded),
+          _buildTabItem(1, 'Urunler', AppIcons.categoryRounded),
+          _buildTabItem(2, 'Gunluk', AppIcons.calendarMonthRounded),
         ],
       ),
     );
@@ -128,12 +134,12 @@ class _StorePerformanceScreenState
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.gold.withValues(alpha: 0.12)
-                : Colors.transparent,
+                : AppColors.transparent,
             borderRadius: BorderRadius.circular(10.r),
             border: Border.all(
               color: isSelected
                   ? AppColors.gold.withValues(alpha: 0.35)
-                  : Colors.transparent,
+                  : AppColors.transparent,
               width: 1,
             ),
           ),
@@ -143,14 +149,16 @@ class _StorePerformanceScreenState
               Icon(
                 icon,
                 color: isSelected ? AppColors.gold : AppColors.textMuted,
-                size: 13.sp,
+                size: AppIconSizes.small,
               ),
               SizedBox(width: 6.w),
               Text(
                 label,
-                style: TextStyle(
-                  color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
-                  fontSize: 11.sp,
+                style: AppTextStyles.label.standardCopyWith(
+                  color: isSelected
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -178,16 +186,16 @@ class _StorePerformanceScreenState
                 Row(
                   children: [
                     Icon(
-                      Icons.insights_rounded,
+                      AppIcons.insightsRounded,
                       color: AppColors.gold,
-                      size: 14.sp,
+                      size: AppIconSizes.small,
                     ),
                     SizedBox(width: 6.w),
                     Text(
                       'TOPLAM NET KAR',
-                      style: TextStyle(
+                      style: AppTextStyles.overline.standardCopyWith(
                         color: AppColors.textSecondary,
-                        fontSize: 9.sp,
+                        fontSize: AppTypography.caption,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
                       ),
@@ -197,9 +205,9 @@ class _StorePerformanceScreenState
                 SizedBox(height: 6.h),
                 Text(
                   _formatCurrency(summary.totalProfit),
-                  style: TextStyle(
+                  style: AppTextStyles.largeTitle.standardCopyWith(
                     color: AppColors.gold,
-                    fontSize: 22.sp,
+                    fontSize: AppTypography.display,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.5,
                   ),
@@ -207,9 +215,9 @@ class _StorePerformanceScreenState
                 SizedBox(height: 4.h),
                 Text(
                   'Son 14 Gunluk Toplam Kazancli Bakiye',
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                   ),
                 ),
               ],
@@ -233,18 +241,20 @@ class _StorePerformanceScreenState
                 children: [
                   Text(
                     '%${profitMargin.toStringAsFixed(1)}',
-                    style: TextStyle(
-                      color: profitMargin >= 20 ? AppColors.green : AppColors.gold,
-                      fontSize: 11.sp,
+                    style: AppTextStyles.label.standardCopyWith(
+                      color: profitMargin >= 20
+                          ? AppColors.green
+                          : AppColors.gold,
+                      fontSize: AppTypography.bodySmall,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   SizedBox(height: 1.h),
                   Text(
                     'Marj',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 8.sp,
+                      fontSize: AppTypography.micro,
                       fontWeight: FontWeight.w600,
                     ),
                     textAlign: TextAlign.center,
@@ -275,25 +285,25 @@ class _StorePerformanceScreenState
           'Toplam Ciro',
           _formatCurrency(summary.totalRevenue),
           AppColors.green,
-          Icons.payments_rounded,
+          AppIcons.paymentsRounded,
         ),
         _buildGridKpiCard(
           'Satilan Adet',
           summary.totalSoldQuantity.toString(),
-          Colors.white,
-          Icons.inventory_rounded,
+          AppColors.white,
+          AppIcons.inventoryRounded,
         ),
         _buildGridKpiCard(
           'Satis Islemi',
           summary.totalSaleEvents.toString(),
           AppColors.blue,
-          Icons.receipt_long_rounded,
+          AppIcons.receiptLongRounded,
         ),
         _buildGridKpiCard(
           'Islem Basi Ciro',
           _formatCurrency(avgRevenuePerEvent),
           AppColors.textSecondary,
-          Icons.trending_up_rounded,
+          AppIcons.trendingUpRounded,
         ),
       ],
     );
@@ -314,13 +324,13 @@ class _StorePerformanceScreenState
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 13.sp),
+              Icon(icon, color: color, size: AppIconSizes.small),
               SizedBox(width: 6.w),
               Text(
                 label,
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 10.sp,
+                  fontSize: AppTypography.label,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -329,9 +339,9 @@ class _StorePerformanceScreenState
           SizedBox(height: 6.h),
           Text(
             value,
-            style: TextStyle(
+            style: AppTextStyles.title.standardCopyWith(
               color: color,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -340,7 +350,10 @@ class _StorePerformanceScreenState
     );
   }
 
-  Widget _buildTopProductsList(List<StorePerformanceRowModel> rows, double totalProfit) {
+  Widget _buildTopProductsList(
+    List<StorePerformanceRowModel> rows,
+    double totalProfit,
+  ) {
     final aggregated = _getAggregatedProducts(rows);
     final topProducts = aggregated.take(3).toList();
 
@@ -357,13 +370,17 @@ class _StorePerformanceScreenState
         children: [
           Row(
             children: [
-              Icon(Icons.star_rounded, color: AppColors.gold, size: 14.sp),
+              Icon(
+                AppIcons.starRounded,
+                color: AppColors.gold,
+                size: AppIconSizes.small,
+              ),
               SizedBox(width: 6.w),
               Text(
                 'En Karli Urunler (Top 3)',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 13.sp,
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.white,
+                  fontSize: AppTypography.bodyLarge,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -397,8 +414,13 @@ class _StorePerformanceScreenState
                 ),
               );
 
-              final contributionRatio = totalProfit > 0 ? (item.profit / totalProfit) : 0.0;
-              final contributionPercent = (contributionRatio * 100).clamp(0.0, 100.0);
+              final contributionRatio = totalProfit > 0
+                  ? (item.profit / totalProfit)
+                  : 0.0;
+              final contributionPercent = (contributionRatio * 100).clamp(
+                0.0,
+                100.0,
+              );
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,18 +439,18 @@ class _StorePerformanceScreenState
                       Expanded(
                         child: Text(
                           item.productName,
-                          style: TextStyle(
+                          style: AppTextStyles.label.standardCopyWith(
                             color: AppColors.textPrimary,
-                            fontSize: 11.sp,
+                            fontSize: AppTypography.bodySmall,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                       Text(
                         _formatCurrency(item.profit),
-                        style: TextStyle(
+                        style: AppTextStyles.label.standardCopyWith(
                           color: AppColors.gold,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -440,10 +462,12 @@ class _StorePerformanceScreenState
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4.r),
-                          child: LinearProgressIndicator(
+                          child: AppProgressBar(
                             value: contributionRatio.clamp(0.0, 1.0),
                             backgroundColor: AppColors.border,
-                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.gold,
+                            ),
                             minHeight: 5.h,
                           ),
                         ),
@@ -453,9 +477,9 @@ class _StorePerformanceScreenState
                         width: 32.w,
                         child: Text(
                           '%${contributionPercent.toStringAsFixed(1)}',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textSecondary,
-                            fontSize: 9.sp,
+                            fontSize: AppTypography.caption,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.end,
@@ -472,7 +496,10 @@ class _StorePerformanceScreenState
     );
   }
 
-  Widget _buildProductsTab(List<StorePerformanceRowModel> rows, double totalProfit) {
+  Widget _buildProductsTab(
+    List<StorePerformanceRowModel> rows,
+    double totalProfit,
+  ) {
     final aggregated = _getAggregatedProducts(rows);
     if (aggregated.isEmpty) return _buildEmptyState();
 
@@ -506,8 +533,12 @@ class _StorePerformanceScreenState
           ),
         );
 
-        final avgPrice = item.soldQuantity > 0 ? item.revenue / item.soldQuantity : 0.0;
-        final margin = item.revenue > 0 ? (item.profit / item.revenue) * 100 : 0.0;
+        final avgPrice = item.soldQuantity > 0
+            ? item.revenue / item.soldQuantity
+            : 0.0;
+        final margin = item.revenue > 0
+            ? (item.profit / item.revenue) * 100
+            : 0.0;
 
         return Container(
           padding: EdgeInsets.all(12.w),
@@ -531,18 +562,18 @@ class _StorePerformanceScreenState
                       children: [
                         Text(
                           item.productName,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13.sp,
+                          style: AppTextStyles.title.standardCopyWith(
+                            color: AppColors.white,
+                            fontSize: AppTypography.bodyLarge,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         SizedBox(height: 2.h),
                         Text(
                           'Toplam ${item.saleEventCount} islemde satildi',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 10.sp,
+                            fontSize: AppTypography.label,
                           ),
                         ),
                       ],
@@ -553,18 +584,18 @@ class _StorePerformanceScreenState
                     children: [
                       Text(
                         'Kar: ${_formatCurrency(item.profit)}',
-                        style: TextStyle(
+                        style: AppTextStyles.title.standardCopyWith(
                           color: AppColors.gold,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       SizedBox(height: 2.h),
                       Text(
                         'Ciro: ${_formatCurrency(item.revenue)}',
-                        style: TextStyle(
+                        style: AppTextStyles.label.standardCopyWith(
                           color: AppColors.green,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -573,15 +604,24 @@ class _StorePerformanceScreenState
                 ],
               ),
               SizedBox(height: 10.h),
-              const Divider(color: AppColors.border, thickness: 0.5),
+              Divider(color: AppColors.border, thickness: 0.5),
               SizedBox(height: 6.h),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildMiniMetric('Satilan Adet', item.soldQuantity.toString()),
+                  _buildMiniMetric(
+                    'Satilan Adet',
+                    item.soldQuantity.toString(),
+                  ),
                   _buildMiniMetric('Ort. Fiyat', _formatCurrency(avgPrice)),
-                  _buildMiniMetric('Kar Marji', '%${margin.toStringAsFixed(1)}'),
-                  _buildMiniMetric('Kar Payi', '%${(totalProfit > 0 ? (item.profit / totalProfit * 100) : 0).toStringAsFixed(1)}'),
+                  _buildMiniMetric(
+                    'Kar Marji',
+                    '%${margin.toStringAsFixed(1)}',
+                  ),
+                  _buildMiniMetric(
+                    'Kar Payi',
+                    '%${(totalProfit > 0 ? (item.profit / totalProfit * 100) : 0).toStringAsFixed(1)}',
+                  ),
                 ],
               ),
             ],
@@ -615,9 +655,7 @@ class _StorePerformanceScreenState
         }
 
         return Theme(
-          data: Theme.of(context).copyWith(
-            dividerColor: Colors.transparent,
-          ),
+          data: Theme.of(context).copyWith(dividerColor: AppColors.transparent),
           child: Container(
             decoration: AppDecorations.premiumCard(null, 14.r),
             child: ExpansionTile(
@@ -625,16 +663,16 @@ class _StorePerformanceScreenState
               title: Row(
                 children: [
                   Icon(
-                    Icons.calendar_today_rounded,
+                    AppIcons.calendarTodayRounded,
                     color: AppColors.textSecondary,
-                    size: 13.sp,
+                    size: AppIconSizes.small,
                   ),
                   SizedBox(width: 8.w),
                   Text(
                     _formatDate(date),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.sp,
+                    style: AppTextStyles.title.standardCopyWith(
+                      color: AppColors.white,
+                      fontSize: AppTypography.body,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -646,32 +684,32 @@ class _StorePerformanceScreenState
                   children: [
                     Text(
                       'Ciro: ',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 10.sp,
+                        fontSize: AppTypography.label,
                       ),
                     ),
                     Text(
                       _formatCompactNumber(dayRevenue),
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.green,
-                        fontSize: 10.sp,
+                        fontSize: AppTypography.label,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(width: 12.w),
                     Text(
                       'Kar: ',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 10.sp,
+                        fontSize: AppTypography.label,
                       ),
                     ),
                     Text(
                       _formatCompactNumber(dayProfit),
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.gold,
-                        fontSize: 10.sp,
+                        fontSize: AppTypography.label,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -730,67 +768,67 @@ class _StorePerformanceScreenState
                           children: [
                             Text(
                               row.productName,
-                              style: TextStyle(
-                                color: Colors.white,
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 2.h),
-                              Text(
-                                'Slot ${row.slotIndex} | Q${row.qualityLevel}',
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 9.sp,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '+${row.soldQuantity} Adet',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10.sp,
+                              style: AppTextStyles.label.standardCopyWith(
+                                color: AppColors.white,
+                                fontSize: AppTypography.bodySmall,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             SizedBox(height: 2.h),
-                            Row(
-                              children: [
-                                Text(
-                                  'Ciro: ${_formatCompactNumber(row.revenue)}',
-                                  style: TextStyle(
-                                    color: AppColors.green,
-                                    fontSize: 9.sp,
-                                  ),
-                                ),
-                                SizedBox(width: 6.w),
-                                Text(
-                                  'Kar: ${_formatCompactNumber(row.profit)}',
-                                  style: TextStyle(
-                                    color: AppColors.gold,
-                                    fontSize: 9.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              'Slot ${row.slotIndex} | Q${row.qualityLevel}',
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: AppColors.textMuted,
+                                fontSize: AppTypography.caption,
+                              ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '+${row.soldQuantity} Adet',
+                            style: AppTextStyles.label.standardCopyWith(
+                              color: AppColors.white,
+                              fontSize: AppTypography.label,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Row(
+                            children: [
+                              Text(
+                                'Ciro: ${_formatCompactNumber(row.revenue)}',
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.green,
+                                  fontSize: AppTypography.caption,
+                                ),
+                              ),
+                              SizedBox(width: 6.w),
+                              Text(
+                                'Kar: ${_formatCompactNumber(row.profit)}',
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.gold,
+                                  fontSize: AppTypography.caption,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
-          );
-        },
-      );
-    }
+          ),
+        );
+      },
+    );
+  }
 
   Widget _buildMiniMetric(String label, String value) {
     return Column(
@@ -798,14 +836,17 @@ class _StorePerformanceScreenState
       children: [
         Text(
           label,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.label,
+          ),
         ),
         SizedBox(height: 3.h),
         Text(
           value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 11.sp,
+          style: AppTextStyles.label.standardCopyWith(
+            color: AppColors.white,
+            fontSize: AppTypography.bodySmall,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -820,9 +861,9 @@ class _StorePerformanceScreenState
       child: Center(
         child: Text(
           'Son 14 gunde performans kaydi yok.',
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: 13.sp,
+            fontSize: AppTypography.bodyLarge,
           ),
           textAlign: TextAlign.center,
         ),
@@ -837,13 +878,17 @@ class _StorePerformanceScreenState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.bar_chart, color: AppColors.red, size: 48),
+            Icon(
+              AppIcons.barChart,
+              color: AppColors.red,
+              size: AppIconSizes.hero,
+            ),
             SizedBox(height: 14.h),
             Text(
               'Magaza raporu yuklenemedi.',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 15.sp,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.white,
+                fontSize: AppTypography.titleLarge,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
@@ -851,7 +896,10 @@ class _StorePerformanceScreenState
             SizedBox(height: 8.h),
             Text(
               error.toString(),
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.body,
+              ),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 14.h),
@@ -865,7 +913,9 @@ class _StorePerformanceScreenState
     );
   }
 
-  List<AggregatedProductPerformance> _getAggregatedProducts(List<StorePerformanceRowModel> rows) {
+  List<AggregatedProductPerformance> _getAggregatedProducts(
+    List<StorePerformanceRowModel> rows,
+  ) {
     final Map<String, AggregatedProductPerformance> map = {};
     for (final row in rows) {
       map.putIfAbsent(
@@ -886,10 +936,16 @@ class _StorePerformanceScreenState
     return list;
   }
 
-  Map<DateTime, List<StorePerformanceRowModel>> _getRowsByDate(List<StorePerformanceRowModel> rows) {
+  Map<DateTime, List<StorePerformanceRowModel>> _getRowsByDate(
+    List<StorePerformanceRowModel> rows,
+  ) {
     final Map<DateTime, List<StorePerformanceRowModel>> map = {};
     for (final row in rows) {
-      final day = DateTime(row.performanceDate.year, row.performanceDate.month, row.performanceDate.day);
+      final day = DateTime(
+        row.performanceDate.year,
+        row.performanceDate.month,
+        row.performanceDate.day,
+      );
       map.putIfAbsent(day, () => []);
       map[day]!.add(row);
     }

@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -52,7 +53,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final storesAsync = ref.watch(storesListProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: _selectedIndex,
         onItemSelected: _onNavSelected,
@@ -60,10 +61,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/store/new/city'),
         backgroundColor: AppColors.gold,
-        icon: const Icon(Icons.add_business, color: Colors.black),
-        label: const Text(
+        icon: Icon(AppIcons.addBusiness, color: AppColors.textOnAccent),
+        label: Text(
           'Magaza Kur',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: AppTextStyles.button.standardCopyWith(
+            color: AppColors.textOnAccent,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: SafeArea(
@@ -120,10 +124,16 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     ),
                   );
                 },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
+                error: (error, stack) => Center(
+                  child: Text(
+                    'Hata: $error',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.red,
+                    ),
+                  ),
                 ),
-                error: (error, stack) => Center(child: Text('Hata: $error')),
               ),
             ),
           ],
@@ -151,7 +161,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _buildStatItem(
-            Icons.store,
+            AppIcons.store,
             AppColors.gold,
             'Toplam',
             stores.length.toString(),
@@ -159,7 +169,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           ),
           Container(width: 1, height: 40.h, color: AppColors.border),
           _buildStatItem(
-            Icons.trending_up,
+            AppIcons.trendingUp,
             AppColors.green,
             'Aktif',
             activeCount.toString(),
@@ -167,8 +177,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           ),
           Container(width: 1, height: 40.h, color: AppColors.border),
           _buildStatItem(
-            Icons.inventory_2,
-            Colors.blueAccent,
+            AppIcons.inventory2,
+            AppColors.info,
             'Kapasite',
             formattedCapacity,
             AppColors.textPrimary,
@@ -194,7 +204,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             color: iconColor.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: iconColor, size: 20.sp),
+          child: Icon(icon, color: iconColor, size: AppIconSizes.medium),
         ),
         SizedBox(width: 8.w),
         Column(
@@ -203,13 +213,16 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           children: [
             Text(
               label,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.label,
+              ),
             ),
             Text(
               value,
-              style: TextStyle(
+              style: AppTextStyles.h2.standardCopyWith(
                 color: valueColor,
-                fontSize: 16.sp,
+                fontSize: AppTypography.titleLarge,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -237,11 +250,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-                Container(
-                  width: 115.w,
-                  height: 115.w,
-                  decoration: BoxDecoration(
-                  color: Colors.transparent,
+              Container(
+                width: 115.w,
+                height: 115.w,
+                decoration: BoxDecoration(
+                  color: AppColors.transparent,
                   borderRadius: BorderRadius.circular(16.r),
                   border: Border.all(
                     color: AppColors.gold.withValues(alpha: 0.3),
@@ -262,9 +275,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       ),
                     ),
                     Icon(
-                      Icons.construction,
+                      AppIcons.construction,
                       color: AppColors.gold,
-                      size: 38.sp,
+                      size: AppIconSizes.displayLarge,
                     ),
                     Positioned(
                       top: 0,
@@ -272,7 +285,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       child: Container(
                         width: 12.w,
                         height: 12.w,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.gold,
                           shape: BoxShape.circle,
                         ),
@@ -293,17 +306,17 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                         children: [
                           TextSpan(
                             text: store.name,
-                            style: TextStyle(
+                            style: AppTextStyles.h1.standardCopyWith(
                               color: AppColors.textPrimary,
-                              fontSize: 16.sp,
+                              fontSize: AppTypography.titleLarge,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           TextSpan(
                             text: ' - ${store.cityName ?? "Bilinmeyen"}',
-                            style: TextStyle(
+                            style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.gold.withValues(alpha: 0.7),
-                              fontSize: 13.sp,
+                              fontSize: AppTypography.bodyLarge,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -331,9 +344,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     else
                       Text(
                         'Insaat verisi guncelleniyor...',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                         ),
                       ),
                   ],
@@ -367,32 +380,38 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         backgroundColor: AppColors.cardBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.r),
-          side: const BorderSide(color: AppColors.borderGold),
+          side: BorderSide(color: AppColors.borderGold),
         ),
         title: Text(
           'Insaati Bitir',
-          style: TextStyle(
+          style: AppTextStyles.title.standardCopyWith(
             color: AppColors.goldLight,
-            fontSize: 16.sp,
+            fontSize: AppTypography.titleLarge,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           '$starCost ⭐ yildiz kullanarak insaati aninda tamamlamak istiyor musunuz?',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+            fontSize: AppTypography.bodyLarge,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Iptal',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
-              foregroundColor: Colors.black,
+              foregroundColor: AppColors.textOnAccent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.r),
               ),
@@ -400,7 +419,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               'Tamamla',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+              style: AppTextStyles.button.standardCopyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
           ),
         ],
@@ -471,13 +493,17 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.location_on, color: AppColors.gold, size: 10.sp),
+                    Icon(
+                      AppIcons.locationOn,
+                      color: AppColors.gold,
+                      size: AppIconSizes.xxSmall,
+                    ),
                     SizedBox(width: 2.w),
                     Text(
                       store.cityName ?? 'Bilinmiyor',
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.gold,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                         fontWeight: FontWeight.bold,
                       ),
                       maxLines: 1,
@@ -498,9 +524,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       Expanded(
                         child: Text(
                           store.name,
-                          style: TextStyle(
+                          style: AppTextStyles.title.standardCopyWith(
                             color: AppColors.textPrimary,
-                            fontSize: 14.sp,
+                            fontSize: AppTypography.title,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -530,7 +556,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(999.r),
-                          child: LinearProgressIndicator(
+                          child: AppProgressBar(
                             value: store.summary.usedCapacityRatio.clamp(
                               0.0,
                               1.0,
@@ -550,11 +576,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       SizedBox(width: 10.w),
                       Text(
                         '%${(store.summary.usedCapacityRatio * 100).round()}',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: store.summary.usedCapacityRatio >= 0.85
                               ? AppColors.red
                               : AppColors.green,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -581,15 +607,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildSlotItem(StoreSlotModel slot) {
-    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
+    final currentBrandName = ref
+        .watch(playerBrandCompanyProvider)
+        .value
+        ?.brandName;
     final double fillRatio = slot.capacity > 0
         ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
         : 0.0;
-
-    // Color transitions from red to green based on fill ratio
-    final Color progressColor =
-        Color.lerp(AppColors.red, AppColors.green, fillRatio) ??
-        AppColors.green;
 
     return Container(
       margin: EdgeInsets.only(right: 8.w),
@@ -599,26 +623,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         alignment: Alignment.center,
         children: [
           if (!slot.isEmpty && slot.isActive) ...[
-            SizedBox(
-              width: 48.w,
-              height: 48.w,
-              child: CircularProgressIndicator(
-                value: 1.0,
-                strokeWidth: 2.5.w,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  AppColors.borderGoldLight.withValues(alpha: 0.18),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: 48.w,
-              height: 48.w,
-              child: CircularProgressIndicator(
-                value: fillRatio,
-                strokeWidth: 2.5.w,
-                backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              ),
+            AppProgressRing.stock(
+              value: fillRatio,
+              diameter: 48.w,
+              strokeWidth: 2.5.w,
+              semanticsLabel: 'Slot stok dolulugu',
             ),
           ] else
             Container(
@@ -641,9 +650,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
             child: slot.isEmpty
                 ? Icon(
-                    Icons.add,
+                    AppIcons.add,
                     color: AppColors.textMuted.withValues(alpha: 0.3),
-                    size: 18.sp,
+                    size: AppIconSizes.regular,
                   )
                 : BrandedProductImage(
                     fileName: slot.productIcon ?? 'default.webp',
@@ -662,11 +671,15 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               width: 48.w,
               height: 48.w,
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.62),
+                color: AppFx.panelWash(0.62),
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Icon(Icons.pause, color: AppColors.red, size: 18.sp),
+                child: Icon(
+                  AppIcons.pause,
+                  color: AppColors.red,
+                  size: AppIconSizes.regular,
+                ),
               ),
             ),
         ],
@@ -684,9 +697,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 8.sp,
+          fontSize: AppTypography.micro,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -698,11 +711,17 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       child: Column(
         children: [
           SizedBox(height: 60.h),
-          Icon(Icons.store_outlined, color: AppColors.textMuted, size: 80.sp),
+          Icon(
+            AppIcons.storeOutlined,
+            color: AppColors.textMuted,
+            size: AppIconSizes.showcase,
+          ),
           SizedBox(height: 16.h),
-          const Text(
+          Text(
             'Henuz bir magazan yok.',
-            style: TextStyle(color: AppColors.textPrimary),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+            ),
           ),
         ],
       ),
@@ -768,12 +787,10 @@ class _ConstructionCountdownState
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(6.r),
-                child: LinearProgressIndicator(
+                child: AppProgressBar(
                   value: progress,
                   backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppColors.gold,
-                  ),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
                   minHeight: 8.h,
                 ),
               ),
@@ -781,9 +798,9 @@ class _ConstructionCountdownState
             SizedBox(width: 12.w),
             Text(
               '%${(progress * 100).toInt()}',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.gold,
-                fontSize: 12.sp,
+                fontSize: AppTypography.body,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -792,17 +809,24 @@ class _ConstructionCountdownState
         SizedBox(height: 8.h),
         Row(
           children: [
-            Icon(Icons.timer_outlined, color: AppColors.textMuted, size: 14.sp),
+            Icon(
+              AppIcons.timerOutlined,
+              color: AppColors.textMuted,
+              size: AppIconSizes.small,
+            ),
             SizedBox(width: 6.w),
             Text(
               'Kalan: ',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.body,
+              ),
             ),
             Text(
               timeStr,
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textPrimary,
-                fontSize: 13.sp,
+                fontSize: AppTypography.bodyLarge,
                 fontWeight: FontWeight.w600,
               ),
             ),

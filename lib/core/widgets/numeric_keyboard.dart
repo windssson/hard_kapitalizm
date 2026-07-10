@@ -70,7 +70,7 @@ class NumericKeyboard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.65),
+            color: AppFx.shadow(0.65),
             blurRadius: 20,
             spreadRadius: 2,
             offset: const Offset(0, -6),
@@ -145,7 +145,7 @@ class NumericKeyboard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
+              color: AppFx.shadow(0.2),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -154,15 +154,15 @@ class NumericKeyboard extends StatelessWidget {
         child: Center(
           child: isIcon
               ? Icon(
-                  Icons.backspace_outlined,
-                  size: 18.sp,
+                  AppIcons.backspaceOutlined,
+                  size: AppIconSizes.regular,
                   color: color,
                 )
               : Text(
                   label,
-                  style: TextStyle(
+                  style: AppTextStyles.title.standardCopyWith(
                     color: color,
-                    fontSize: 16.sp,
+                    fontSize: AppTypography.titleLarge,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -193,7 +193,7 @@ class NumericKeyboard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
+              color: AppFx.shadow(0.15),
               blurRadius: 3,
               offset: const Offset(0, 1.5),
             ),
@@ -202,9 +202,9 @@ class NumericKeyboard extends StatelessWidget {
         child: Center(
           child: Text(
             shortcut.label,
-            style: TextStyle(
+            style: AppTextStyles.label.standardCopyWith(
               color: AppColors.gold,
-              fontSize: 11.sp,
+              fontSize: AppTypography.bodySmall,
               fontWeight: FontWeight.w800,
             ),
           ),

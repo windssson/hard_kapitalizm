@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
@@ -105,7 +106,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       height: 48.w,
       padding: EdgeInsets.all(8.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: AppFx.panelWash(0.3),
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: accentColor.withValues(alpha: 0.3)),
       ),
@@ -115,9 +116,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               children: [
                 Center(
                   child: Icon(
-                    Icons.inventory_2_outlined,
+                    AppIcons.inventory2Outlined,
                     color: accentColor,
-                    size: 22.sp,
+                    size: AppIconSizes.mediumLarge,
                   ),
                 ),
                 Positioned(
@@ -134,9 +135,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     ),
                     child: Text(
                       '$itemCount',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 9.sp,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textOnAccent,
+                        fontSize: AppTypography.caption,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -156,7 +157,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   }
 
   Future<void> _showTransferInfo(TransferMapItemModel transfer) async {
-    final accentColor = transfer.isRental ? Colors.orange : AppColors.gold;
+    final accentColor = transfer.isRental ? AppColors.warning : AppColors.gold;
     final routeDistanceKm = _estimateRouteDistanceKm(
       transfer.sellerWarehouse.city,
       transfer.buyerWarehouse.city,
@@ -199,8 +200,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                           ),
                           child: Icon(
                             transfer.isRental
-                                ? Icons.local_shipping
-                                : Icons.directions_car,
+                                ? AppIcons.localShipping
+                                : AppIcons.directionsCar,
                             color: accentColor,
                           ),
                         ),
@@ -215,14 +216,14 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                   productName: transfer.product.name,
                                   itemCount: transfer.itemCount,
                                 ),
-                                style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
+                                style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.headline),
                               ),
                               SizedBox(height: 4.h),
                               Text(
                                 'Transfer Detaylari',
-                                style: TextStyle(
+                                style: AppTextStyles.body.standardCopyWith(
                                   color: AppColors.textMuted,
-                                  fontSize: 12.sp,
+                                  fontSize: AppTypography.body,
                                 ),
                               ),
                             ],
@@ -231,9 +232,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
                           icon: Icon(
-                            Icons.close_rounded,
+                            AppIcons.closeRounded,
                             color: AppColors.textMuted,
-                            size: 20.sp,
+                            size: AppIconSizes.medium,
                           ),
                           splashRadius: 20.r,
                         ),
@@ -249,25 +250,25 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                             Container(
                               padding: EdgeInsets.all(14.w),
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.2),
+                                color: AppFx.panelWash(0.2),
                                 borderRadius: BorderRadius.circular(16.r),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.05),
+                                  color: AppFx.softOverlay(0.05),
                                 ),
                               ),
                               child: Column(
                                 children: [
                                   _buildDialogInfoRow(
-                                    Icons.my_location,
+                                    AppIcons.myLocation,
                                     'Cikis (${transfer.sellerKindLabel})',
                                     '${transfer.sellerWarehouse.name} | ${transfer.sellerWarehouse.city.name}',
                                   ),
                                   Divider(
-                                    color: Colors.white.withValues(alpha: 0.1),
+                                    color: AppFx.softOverlay(0.1),
                                     height: 22.h,
                                   ),
                                   _buildDialogInfoRow(
-                                    Icons.location_on,
+                                    AppIcons.locationOn,
                                     'Varis (${transfer.buyerKindLabel})',
                                     '${transfer.buyerWarehouse.name} | ${transfer.buyerWarehouse.city.name}',
                                   ),
@@ -349,18 +350,18 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    Icons.timer_outlined,
+                                    AppIcons.timerOutlined,
                                     color: accentColor,
-                                    size: 16.sp,
+                                    size: AppIconSizes.compact,
                                   ),
                                   SizedBox(width: 8.w),
                                   Flexible(
                                     child: Text(
                                       'Kalan Sure: ${_formatRemaining(remaining)}',
                                       textAlign: TextAlign.center,
-                                      style: TextStyle(
+                                      style: AppTextStyles.body.standardCopyWith(
                                         color: accentColor,
-                                        fontSize: 14.sp,
+                                        fontSize: AppTypography.title,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -426,32 +427,44 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         ),
         title: Row(
           children: [
-            Icon(Icons.star_rounded, color: AppColors.gold, size: 24.sp),
+            Icon(AppIcons.starRounded, color: AppColors.gold, size: AppIconSizes.large),
             SizedBox(width: 8.w),
-            const Text('Hemen Bitir', style: TextStyle(color: Colors.white)),
+            Text(
+              'Hemen Bitir',
+              style: AppTextStyles.body.standardCopyWith(color: AppColors.textPrimary),
+            ),
           ],
         ),
         content: Text(
           'Bu transferi $starCost ⭐ harcayarak anında tamamlamak istiyor musunuz?\n\nMevcut Yıldızınız: ${currentGold.toInt()}',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.title,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
               'Vazgeç',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.title,
+              ),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
-              foregroundColor: Colors.black,
+              foregroundColor: AppColors.textOnAccent,
             ),
             child: Text(
               'Tamamla',
-              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+              style: AppTextStyles.body.standardCopyWith(
+                fontSize: AppTypography.title,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -465,8 +478,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(
+      builder: (context) => Center(
+        child: AppLoadingIndicator(
           color: AppColors.gold,
         ),
       ),
@@ -542,12 +555,15 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.gold, size: 16.sp),
+        Icon(icon, color: AppColors.gold, size: AppIconSizes.compact),
         SizedBox(width: 12.w),
         Expanded(
           child: Text(
             label,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.bodyLarge,
+            ),
           ),
         ),
         SizedBox(width: 12.w),
@@ -555,9 +571,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -575,7 +591,10 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
           ),
           SizedBox(width: 12.w),
@@ -583,11 +602,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-              ),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.title,
+              fontWeight: FontWeight.w600,
+            ),
             ),
           ),
         ],
@@ -600,7 +619,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     final transfersAsync = ref.watch(buyerTransferMapProvider);
     final historyAsync = ref.watch(buyerTransferHistoryProvider);
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: _selectedIndex,
         onItemSelected: _onNavSelected,
@@ -719,13 +738,13 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                 ),
                         );
                       },
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(color: AppColors.gold),
+                      loading: () => Center(
+                        child: AppLoadingIndicator(color: AppColors.gold),
                       ),
                       error: (error, stack) => Center(
                         child: Text(
                           'Hata: ${error.toString()}',
-                          style: AppTextStyles.body.copyWith(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.red,
                           ),
                         ),
@@ -769,13 +788,13 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                               ),
                         );
                       },
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(color: AppColors.gold),
+                      loading: () => Center(
+                        child: AppLoadingIndicator(color: AppColors.gold),
                       ),
                       error: (error, stack) => Center(
                         child: Text(
                           'Hata: ${error.toString()}',
-                          style: AppTextStyles.body.copyWith(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.red,
                           ),
                         ),
@@ -799,14 +818,14 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.notifications_active, color: AppColors.gold, size: 16.sp),
+          Icon(AppIcons.notificationsActive, color: AppColors.gold, size: AppIconSizes.compact),
           SizedBox(width: 6.w),
           Expanded(
             child: Text(
               '$dueCount transfer teslimata hazir. Otomatik tamamlanacak.',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10.sp,
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.label,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -850,12 +869,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     return Container(
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: AppFx.panelWash(0.3),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: AppFx.panelWash(0.2),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -867,7 +886,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               child: _buildModeButton(
                 index: 0,
                 label: 'Aktif',
-                icon: Icons.route,
+                icon: AppIcons.route,
               ),
             ),
             SizedBox(width: 6.w),
@@ -875,7 +894,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               child: _buildModeButton(
                 index: 1,
                 label: 'Gecmis',
-                icon: Icons.history,
+                icon: AppIcons.history,
               ),
             ),
         ],
@@ -910,12 +929,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   end: Alignment.bottomCenter,
                 )
               : null,
-          color: isSelected ? null : Colors.transparent,
+          color: isSelected ? null : AppColors.transparent,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color: isSelected
                 ? AppColors.gold.withValues(alpha: 0.5)
-                : Colors.transparent,
+                : AppColors.transparent,
           ),
           boxShadow: isSelected
               ? [
@@ -932,15 +951,15 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           children: [
             Icon(
               icon,
-              size: 16.sp,
+              size: AppIconSizes.compact,
               color: isSelected ? AppColors.gold : AppColors.textMuted,
             ),
             SizedBox(width: 6.w),
             Text(
               label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textMuted,
-                fontSize: 12.sp,
+              style: AppTextStyles.body.standardCopyWith(
+                color: isSelected ? AppColors.textPrimary : AppColors.textMuted,
+                fontSize: AppTypography.body,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
             ),
@@ -987,7 +1006,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: AppFx.panelWash(0.2),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -1004,8 +1023,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.white.withValues(alpha: 0.05),
-                      Colors.transparent,
+                      AppFx.softOverlay(0.05),
+                      AppColors.transparent,
                     ],
                   ),
                 ),
@@ -1035,17 +1054,17 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                       SizedBox(width: 8.w),
                       Text(
                         'Canli Takip',
-                        style: AppTextStyles.h2.copyWith(
-                          fontSize: 13.sp,
+                        style: AppTextStyles.h2.standardCopyWith(
+                          fontSize: AppTypography.bodyLarge,
                           color: AppColors.gold,
                         ),
                       ),
                       const Spacer(),
                       Text(
                         '${transfers.length} sevkiyat',
-                        style: TextStyle(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 10.sp,
+                          fontSize: AppTypography.label,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1078,7 +1097,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                   image: const AssetImage('assets/backmap.webp'),
                                   fit: BoxFit.fill,
                                   colorFilter: ColorFilter.mode(
-                                    Colors.black.withValues(alpha: 0.5),
+                                    AppFx.panelWash(0.5),
                                     BlendMode.darken,
                                   ),
                                 ),
@@ -1114,7 +1133,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                           color: AppColors.gold,
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: Colors.white,
+                                            color: AppColors.textPrimary,
                                             width: 2,
                                           ),
                                           boxShadow: [
@@ -1143,9 +1162,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                           ),
                                           child: Text(
                                             '${cityTransferCounts[city.id] ?? 0}',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 8.sp,
+                                            style: AppTextStyles.caption.standardCopyWith(
+                                              color: AppColors.textPrimary,
+                                              fontSize: AppTypography.micro,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
@@ -1160,9 +1179,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                       vertical: 2.h,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.8,
-                                      ),
+                                      color: AppFx.panelWash(0.8),
                                       borderRadius: BorderRadius.circular(12.r),
                                       border: Border.all(
                                         color: AppColors.gold.withValues(
@@ -1172,9 +1189,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                     ),
                                     child: Text(
                                       city.name,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 8.sp,
+                                      style: AppTextStyles.caption.standardCopyWith(
+                                        color: AppColors.textPrimary,
+                                        fontSize: AppTypography.micro,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -1239,7 +1256,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     TransferMapItemModel transfer, {
     bool isSelected = false,
   }) {
-    final accentColor = transfer.isRental ? Colors.orange : AppColors.gold;
+    final accentColor = transfer.isRental ? AppColors.warning : AppColors.gold;
     final sameCity = _isSameCityTransfer(transfer);
     final routeDistanceKm = _estimateRouteDistanceKm(
       transfer.sellerWarehouse.city,
@@ -1278,9 +1295,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: (isSelected ? AppColors.blue : Colors.black).withValues(
-                alpha: isSelected ? 0.16 : 0.2,
-              ),
+              color: isSelected
+                  ? AppColors.blue.withValues(alpha: 0.16)
+                  : AppFx.panelWash(0.2),
               blurRadius: isSelected ? 14 : 8,
               offset: const Offset(0, 4),
             ),
@@ -1315,7 +1332,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                 productName: transfer.product.name,
                                 itemCount: transfer.itemCount,
                               ),
-                              style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
+                              style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.title),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -1329,9 +1346,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                       SizedBox(height: 4.h),
                       Text(
                         '${transfer.sellerWarehouse.city.name} ➔ ${transfer.buyerWarehouse.city.name}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12.sp,
+                        style: AppTextStyles.body.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: AppTypography.body,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1364,9 +1381,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                       final remaining = transfer.finishAt.difference(now);
                       return Text(
                         _formatRemaining(remaining),
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: accentColor,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.bold,
                         ),
                       );
@@ -1379,7 +1396,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             // Expanded view details
             if (isSelected) ...[
               Divider(
-                color: Colors.white.withValues(alpha: 0.08),
+                color: AppFx.softOverlay(0.08),
                 height: 16.h,
               ),
               
@@ -1390,9 +1407,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   targetName: transfer.buyerWarehouse.name,
                   targetKind: transfer.buyerKindLabel,
                 ),
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                 ),
                 maxLines: 2,
               ),
@@ -1412,7 +1429,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         qualityLevel: transfer.qualityLevel,
                         hasBrand: transfer.hasBrand,
                       ),
-                      Colors.white,
+                      AppColors.textPrimary,
                     ),
                   _buildInlineMetaChip(
                     '${routeDistanceKm.toStringAsFixed(0)} km',
@@ -1440,30 +1457,30 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               SizedBox(height: 10.h),
               
               _buildCompactMetaRow(
-                leftIcon: Icons.inventory_2_outlined,
+                leftIcon: AppIcons.inventory2Outlined,
                 leftText: _transferQuantitySummary(
                   quantity: transfer.displayQuantity,
                   isMultiItem: transfer.isMultiItem,
                   itemCount: transfer.itemCount,
                 ),
-                rightIcon: Icons.payments_outlined,
+                rightIcon: AppIcons.paymentsOutlined,
                 rightText: _formatCurrency(transfer.totalPrice),
               ),
               SizedBox(height: 6.h),
               _buildCompactMetaRow(
-                leftIcon: Icons.local_shipping_outlined,
+                leftIcon: AppIcons.localShippingOutlined,
                 leftText: _formatCurrency(transfer.transportCost + transfer.rentalCost),
                 rightIcon: transfer.isRental
-                    ? Icons.local_shipping_outlined
-                    : Icons.directions_car_outlined,
+                    ? AppIcons.localShippingOutlined
+                    : AppIcons.directionsCarOutlined,
                 rightText: logisticsLabel,
               ),
               if (transfer.isMultiItem) ...[
                 SizedBox(height: 6.h),
                 _buildCompactMetaRow(
-                  leftIcon: Icons.payments_outlined,
+                  leftIcon: AppIcons.paymentsOutlined,
                   leftText: _formatCurrency(totalCost),
-                  rightIcon: Icons.list_alt_outlined,
+                  rightIcon: AppIcons.listAltOutlined,
                   rightText: '${transfer.itemCount} kalem',
                 ),
               ],
@@ -1484,10 +1501,13 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 children: [
                   TextButton.icon(
                     onPressed: () => _showTransferInfo(transfer),
-                    icon: Icon(Icons.open_in_full, size: 14.sp, color: AppColors.gold),
+                    icon: Icon(AppIcons.openInFull, size: AppIconSizes.small, color: AppColors.gold),
                     label: Text(
                       'Tüm İrsaliye Detayları',
-                      style: TextStyle(color: AppColors.gold, fontSize: 12.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.gold,
+                        fontSize: AppTypography.body,
+                      ),
                     ),
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.symmetric(horizontal: 8.w),
@@ -1526,15 +1546,15 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   Widget _buildMetaLine(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.textMuted, size: 12.sp),
+        Icon(icon, color: AppColors.textMuted, size: AppIconSizes.xSmall),
         SizedBox(width: 6.w),
         Expanded(
           child: Text(
             text,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 11.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.bodySmall,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1553,9 +1573,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 10.sp,
+          fontSize: AppTypography.label,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -1572,7 +1592,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: AppFx.panelWash(0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1583,24 +1603,24 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           Container(
             padding: EdgeInsets.all(20.w),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: AppFx.softOverlay(0.05),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.route_outlined,
+              AppIcons.routeOutlined,
               color: AppColors.gold.withValues(alpha: 0.5),
-              size: 54.sp,
+              size: AppIconSizes.hero,
             ),
           ),
           SizedBox(height: 20.h),
           Text(
             'Aktif Transfer Yok',
-            style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
+            style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.headline),
           ),
           SizedBox(height: 12.h),
           Text(
             'Marketten satın aldığınız ürünler yola çıktığında veya bir satışa gönderdiğinizde burada canlı olarak takip edebilirsiniz.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+            style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1618,7 +1638,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: AppFx.panelWash(0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1629,24 +1649,24 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           Container(
             padding: EdgeInsets.all(20.w),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: AppFx.softOverlay(0.05),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.history_outlined,
+              AppIcons.historyOutlined,
               color: AppColors.gold.withValues(alpha: 0.5),
-              size: 54.sp,
+              size: AppIconSizes.hero,
             ),
           ),
           SizedBox(height: 20.h),
           Text(
             'Geçmiş Kayıt Bulunamadı',
-            style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
+            style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.headline),
           ),
           SizedBox(height: 12.h),
           Text(
             'Tamamlanan veya iptal edilen tüm sevkiyatlarınız burada loglanacaktır.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+            style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1658,7 +1678,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     final isExpanded = item.id == _expandedHistoryId;
     final statusColor = item.status == 'completed'
         ? AppColors.green
-        : Colors.orange;
+        : AppColors.warning;
     final completedText = item.completedAt == null
         ? '-'
         : _formatDateTime(item.completedAt!);
@@ -1689,7 +1709,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
+              color: AppFx.panelWash(0.15),
               blurRadius: isExpanded ? 12 : 8,
               offset: const Offset(0, 4),
             ),
@@ -1723,7 +1743,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                 productName: item.product.name,
                                 itemCount: item.itemCount,
                               ),
-                              style: AppTextStyles.h2.copyWith(fontSize: 14.sp),
+                              style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.title),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -1734,9 +1754,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                       SizedBox(height: 4.h),
                       Text(
                         '${item.sellerWarehouse.city.name} ➔ ${item.buyerWarehouse.city.name}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12.sp,
+                        style: AppTextStyles.body.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: AppTypography.body,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1755,17 +1775,17 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 children: [
                   Text(
                     'Süre: $totalMinutes dk',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 11.sp,
+                      fontSize: AppTypography.bodySmall,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     'Tamamlandı: $completedText',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 11.sp,
+                      fontSize: AppTypography.bodySmall,
                     ),
                   ),
                 ],
@@ -1775,7 +1795,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             // Expanded view details
             if (isExpanded) ...[
               Divider(
-                color: Colors.white.withValues(alpha: 0.08),
+                color: AppFx.softOverlay(0.08),
                 height: 16.h,
               ),
               
@@ -1786,9 +1806,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   targetName: item.buyerWarehouse.name,
                   targetKind: item.buyerKind,
                 ),
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                 ),
                 maxLines: 2,
               ),
@@ -1808,7 +1828,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         qualityLevel: item.qualityLevel,
                         hasBrand: item.hasBrand,
                       ),
-                      Colors.white,
+                      AppColors.textPrimary,
                     ),
                   _buildInlineMetaChip('$totalMinutes dk', statusColor),
                 ],
@@ -1816,22 +1836,22 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               SizedBox(height: 12.h),
               
               _buildCompactMetaRow(
-                leftIcon: Icons.inventory_2_outlined,
+                leftIcon: AppIcons.inventory2Outlined,
                 leftText: _transferQuantitySummary(
                   quantity: item.displayQuantity,
                   isMultiItem: item.isMultiItem,
                   itemCount: item.itemCount,
                 ),
-                rightIcon: Icons.payments_outlined,
+                rightIcon: AppIcons.paymentsOutlined,
                 rightText: _formatCurrency(item.totalPrice),
               ),
               SizedBox(height: 6.h),
               _buildCompactMetaRow(
-                leftIcon: Icons.local_shipping_outlined,
+                leftIcon: AppIcons.localShippingOutlined,
                 leftText: _formatCurrency(item.transportCost + item.rentalCost),
                 rightIcon: item.isRental
-                    ? Icons.local_shipping_outlined
-                    : Icons.directions_car_outlined,
+                    ? AppIcons.localShippingOutlined
+                    : AppIcons.directionsCarOutlined,
                 rightText: item.isRental
                     ? '${_formatCurrency(unitLogisticsCost)} / adet'
                     : 'Ozmal transfer',
@@ -1839,14 +1859,14 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               if (item.isMultiItem) ...[
                 SizedBox(height: 6.h),
                 _buildCompactMetaRow(
-                  leftIcon: Icons.payments_outlined,
+                  leftIcon: AppIcons.paymentsOutlined,
                   leftText: _formatCurrency(totalCost),
-                  rightIcon: Icons.list_alt_outlined,
+                  rightIcon: AppIcons.listAltOutlined,
                   rightText: '${item.itemCount} kalem',
                 ),
               ],
               SizedBox(height: 8.h),
-              _buildMetaLine(Icons.event_outlined, 'Bitiş Tarihi: $completedText'),
+              _buildMetaLine(AppIcons.eventOutlined, 'Bitiş Tarihi: $completedText'),
             ],
           ],
         ),
@@ -1928,9 +1948,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 10.sp,
+          fontSize: AppTypography.label,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -1959,23 +1979,23 @@ class _TransferLiveMeta extends ConsumerWidget {
 
     return Row(
       children: [
-        Icon(Icons.schedule, color: accentColor, size: 16.sp),
+        Icon(AppIcons.schedule, color: accentColor, size: AppIconSizes.compact),
         SizedBox(width: 8.w),
         Expanded(
           child: Text(
             'Kalan Sure: ${formatRemaining(remaining)}',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w700,
             ),
           ),
         ),
         Text(
           'Varis ${formatDateTime(transfer.finishAt)}',
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: 10.sp,
+            fontSize: AppTypography.label,
           ),
         ),
       ],
@@ -2001,9 +2021,9 @@ class _TransferProgressBar extends ConsumerWidget {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
     final progress = calculateProgress(transfer, now: now);
 
-    return LinearProgressIndicator(
+    return AppProgressBar(
       value: progress,
-      backgroundColor: Colors.black.withValues(alpha: 0.3),
+      backgroundColor: AppFx.panelWash(0.3),
       valueColor: AlwaysStoppedAnimation<Color>(accentColor),
       minHeight: 6.h,
     );
@@ -2034,7 +2054,7 @@ class _TransferMapMovingMarker extends StatelessWidget {
     final color = isSelected
         ? AppColors.blue
         : transfer.isRental
-        ? Colors.orange
+        ? AppColors.warning
         : AppColors.gold;
 
     return Positioned(
@@ -2065,9 +2085,9 @@ class _TransferMapMovingMarker extends StatelessWidget {
             children: [
               Center(
                 child: Icon(
-                  transfer.isRental ? Icons.local_shipping : Icons.directions_car,
-                  color: transfer.isRental ? Colors.orange : AppColors.gold,
-                  size: 15.sp,
+                  transfer.isRental ? AppIcons.localShipping : AppIcons.directionsCar,
+                  color: transfer.isRental ? AppColors.warning : AppColors.gold,
+                  size: AppIconSizes.small,
                 ),
               ),
               if (transfer.isMultiItem)
@@ -2085,9 +2105,9 @@ class _TransferMapMovingMarker extends StatelessWidget {
                     ),
                     child: Text(
                       '${transfer.itemCount}',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 8.sp,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textOnAccent,
+                        fontSize: AppTypography.micro,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -2139,7 +2159,7 @@ class _TransferMapPainter extends CustomPainter {
         ..color = isSelected
             ? AppColors.blue.withValues(alpha: 0.85)
             : transfer.isRental
-            ? Colors.orange.withValues(alpha: 0.6)
+            ? AppColors.warning.withValues(alpha: 0.6)
             : AppColors.gold.withValues(alpha: 0.6)
         ..strokeWidth = isSelected ? 4 : 2.5;
 

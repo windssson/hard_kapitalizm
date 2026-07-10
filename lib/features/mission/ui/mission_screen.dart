@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
@@ -69,8 +70,8 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       final rewardMap = result['reward'] is Map<String, dynamic>
           ? result['reward'] as Map<String, dynamic>
           : result['reward'] is Map
-              ? Map<String, dynamic>.from(result['reward'] as Map)
-              : const <String, dynamic>{};
+          ? Map<String, dynamic>.from(result['reward'] as Map)
+          : const <String, dynamic>{};
 
       final cash = (rewardMap['cash'] as num?)?.toDouble() ?? 0;
       final gold = (rewardMap['gold'] as num?)?.toInt() ?? 0;
@@ -108,9 +109,8 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             const SecondaryTopBar(title: 'Görevler'),
             Expanded(
               child: dashboardAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
-                ),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (error, _) => _buildErrorState(error.toString()),
                 data: (dashboard) {
                   if (!dashboard.success || !dashboard.hasAnyMission) {
@@ -118,10 +118,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                   }
 
                   if (_selectedTab == null) {
-                    final hasActiveMain = dashboard.mainMission != null &&
+                    final hasActiveMain =
+                        dashboard.mainMission != null &&
                         !dashboard.mainMission!.isClaimed;
-                    _selectedTab =
-                        hasActiveMain ? _MissionTab.main : _MissionTab.daily;
+                    _selectedTab = hasActiveMain
+                        ? _MissionTab.main
+                        : _MissionTab.daily;
                   }
 
                   return RefreshIndicator(
@@ -173,24 +175,20 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           Stack(
             alignment: Alignment.center,
             children: [
-              SizedBox(
-                width: 44.w,
-                height: 44.w,
-                child: CircularProgressIndicator(
-                  value: ratio,
-                  strokeWidth: 4.w,
-                  backgroundColor: Colors.black.withValues(alpha: 0.3),
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
-                ),
+              AppProgressRing(
+                value: ratio,
+                diameter: 44.w,
+                strokeWidth: 4.w,
+                semanticsLabel: 'Gorev tamamlama orani',
               ),
               Icon(
                 dashboard.claimableCount > 0
-                    ? Icons.card_giftcard_rounded
-                    : Icons.emoji_events_rounded,
+                    ? AppIcons.cardGiftcardRounded
+                    : AppIcons.emojiEventsRounded,
                 color: dashboard.claimableCount > 0
                     ? AppColors.green
                     : AppColors.gold,
-                size: 20.sp,
+                size: AppIconSizes.medium,
               ),
             ],
           ),
@@ -201,18 +199,18 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               children: [
                 Text(
                   'Görev İlerlemesi',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 SizedBox(height: 3.h),
                 Text(
                   'Toplam $completed / $total görev tamamlandı',
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                   ),
                 ),
               ],
@@ -224,7 +222,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               decoration: BoxDecoration(
                 color: AppColors.green.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20.r),
-                border: Border.all(color: AppColors.green.withValues(alpha: 0.35)),
+                border: Border.all(
+                  color: AppColors.green.withValues(alpha: 0.35),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.green.withValues(alpha: 0.1),
@@ -235,14 +235,17 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle_rounded,
-                      color: AppColors.green, size: 12.sp),
+                  Icon(
+                    AppIcons.checkCircleRounded,
+                    color: AppColors.green,
+                    size: AppIconSizes.xSmall,
+                  ),
                   SizedBox(width: 4.w),
                   Text(
                     '${dashboard.claimableCount} Ödül',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.green,
-                      fontSize: 10.sp,
+                      fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -258,13 +261,14 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     final mainBadge = (dashboard.mainMission?.claimable == true) ? 1 : 0;
     final dailyBadge = dashboard.dailyClaimableCount;
     final weeklyBadge = dashboard.weeklyClaimableCount;
-    final achievementBadge =
-        dashboard.sideMissions.where((m) => m.claimable).length;
+    final achievementBadge = dashboard.sideMissions
+        .where((m) => m.claimable)
+        .length;
 
     return Container(
       height: 42.h,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: AppFx.panelWash(0.3),
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
       ),
@@ -291,12 +295,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.gold.withValues(alpha: 0.15)
-                      : Colors.transparent,
+                      : AppColors.transparent,
                   borderRadius: BorderRadius.circular(10.r),
                   border: Border.all(
                     color: isSelected
                         ? AppColors.gold.withValues(alpha: 0.4)
-                        : Colors.transparent,
+                        : AppColors.transparent,
                   ),
                 ),
                 child: Row(
@@ -304,26 +308,32 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                   children: [
                     Text(
                       tab.label,
-                      style: TextStyle(
-                        color: isSelected ? AppColors.gold : AppColors.textSecondary,
-                        fontSize: 11.sp,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: isSelected
+                            ? AppColors.gold
+                            : AppColors.textSecondary,
+                        fontSize: AppTypography.bodySmall,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                     if (badgeCount > 0) ...[
                       SizedBox(width: 5.w),
                       Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 5.w,
+                          vertical: 2.h,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.green,
                           borderRadius: BorderRadius.circular(10.r),
                         ),
                         child: Text(
                           '$badgeCount',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 8.sp,
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textOnAccent,
+                            fontSize: AppTypography.micro,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -365,8 +375,12 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         ];
 
       case _MissionTab.daily:
-        final active = dashboard.dailyMissions.where((m) => !m.isClaimed).toList();
-        final claimed = dashboard.dailyMissions.where((m) => m.isClaimed).toList();
+        final active = dashboard.dailyMissions
+            .where((m) => !m.isClaimed)
+            .toList();
+        final claimed = dashboard.dailyMissions
+            .where((m) => m.isClaimed)
+            .toList();
 
         return [
           if (active.isEmpty)
@@ -376,13 +390,18 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           _buildCollapsibleCompletedSection(
             claimed,
             _dailyClaimedExpanded,
-            () => setState(() => _dailyClaimedExpanded = !_dailyClaimedExpanded),
+            () =>
+                setState(() => _dailyClaimedExpanded = !_dailyClaimedExpanded),
           ),
         ];
 
       case _MissionTab.weekly:
-        final active = dashboard.weeklyMissions.where((m) => !m.isClaimed).toList();
-        final claimed = dashboard.weeklyMissions.where((m) => m.isClaimed).toList();
+        final active = dashboard.weeklyMissions
+            .where((m) => !m.isClaimed)
+            .toList();
+        final claimed = dashboard.weeklyMissions
+            .where((m) => m.isClaimed)
+            .toList();
 
         return [
           if (active.isEmpty)
@@ -392,13 +411,19 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           _buildCollapsibleCompletedSection(
             claimed,
             _weeklyClaimedExpanded,
-            () => setState(() => _weeklyClaimedExpanded = !_weeklyClaimedExpanded),
+            () => setState(
+              () => _weeklyClaimedExpanded = !_weeklyClaimedExpanded,
+            ),
           ),
         ];
 
       case _MissionTab.achievements:
-        final active = dashboard.sideMissions.where((m) => !m.isClaimed).toList();
-        final claimed = dashboard.sideMissions.where((m) => m.isClaimed).toList();
+        final active = dashboard.sideMissions
+            .where((m) => !m.isClaimed)
+            .toList();
+        final claimed = dashboard.sideMissions
+            .where((m) => m.isClaimed)
+            .toList();
 
         return [
           if (active.isEmpty && claimed.isEmpty)
@@ -411,7 +436,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             claimed,
             _achievementsClaimedExpanded,
             () => setState(
-                () => _achievementsClaimedExpanded = !_achievementsClaimedExpanded),
+              () =>
+                  _achievementsClaimedExpanded = !_achievementsClaimedExpanded,
+            ),
           ),
         ];
     }
@@ -424,27 +451,42 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     final accentColor = mission.claimable
         ? AppColors.green
         : mission.isClaimed
-            ? AppColors.textMuted
-            : AppColors.gold;
+        ? AppColors.textMuted
+        : AppColors.gold;
 
     final borderAccent = mission.claimable
         ? AppColors.green.withValues(alpha: 0.4)
         : featured
-            ? AppColors.gold.withValues(alpha: 0.3)
-            : AppColors.border.withValues(alpha: 0.5);
+        ? AppColors.gold.withValues(alpha: 0.3)
+        : AppColors.border.withValues(alpha: 0.5);
 
     final List<Widget> rewards = [];
     if (mission.reward.xp > 0) {
-      rewards.add(_buildRewardItem(
-          Icons.star_border_rounded, '+${mission.reward.xp} XP', AppColors.blue));
+      rewards.add(
+        _buildRewardItem(
+          AppIcons.starBorderRounded,
+          '+${mission.reward.xp} XP',
+          AppColors.blue,
+        ),
+      );
     }
     if (mission.reward.cash > 0) {
-      rewards.add(_buildRewardItem(Icons.payments_outlined,
-          '+${_formatMoney(mission.reward.cash)} TL', AppColors.green));
+      rewards.add(
+        _buildRewardItem(
+          AppIcons.paymentsOutlined,
+          '+${_formatMoney(mission.reward.cash)} TL',
+          AppColors.green,
+        ),
+      );
     }
     if (mission.reward.gold > 0) {
-      rewards.add(_buildRewardItem(
-          Icons.star_rounded, '+${mission.reward.gold} Altın', AppColors.gold));
+      rewards.add(
+        _buildRewardItem(
+          AppIcons.starRounded,
+          '+${mission.reward.gold} Altın',
+          AppColors.gold,
+        ),
+      );
     }
 
     final isLoading = _claimingMissionIds.contains(mission.id);
@@ -489,7 +531,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                 child: Icon(
                   _iconForMission(mission.iconKey),
                   color: accentColor,
-                  size: 16.sp,
+                  size: AppIconSizes.compact,
                 ),
               ),
               SizedBox(width: 10.w),
@@ -499,40 +541,43 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                   children: [
                     Text(
                       mission.title,
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: mission.isClaimed
                             ? AppColors.textMuted
-                            : Colors.white,
-                        fontSize: 12.sp,
+                            : AppColors.textPrimary,
+                        fontSize: AppTypography.body,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 2.h),
                     Text(
                       mission.description,
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 10.sp,
+                        fontSize: AppTypography.label,
                       ),
                     ),
                   ],
                 ),
               ),
               if (mission.isClaimed)
-                Icon(Icons.check_circle_rounded,
-                    color: AppColors.textMuted, size: 16.sp)
+                Icon(
+                  AppIcons.checkCircleRounded,
+                  color: AppColors.textMuted,
+                  size: AppIconSizes.compact,
+                )
               else if (!mission.claimable)
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.2),
+                    color: AppFx.panelWash(0.2),
                     borderRadius: BorderRadius.circular(6.r),
                   ),
                   child: Text(
                     '${mission.progressCount}/${mission.targetCount}',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 9.sp,
+                      fontSize: AppTypography.caption,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -543,10 +588,10 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             SizedBox(height: 10.h),
             ClipRRect(
               borderRadius: BorderRadius.circular(3.r),
-              child: LinearProgressIndicator(
+              child: AppProgressBar(
                 value: mission.progressRatio.clamp(0, 1),
                 minHeight: 4.h,
-                backgroundColor: Colors.black.withValues(alpha: 0.3),
+                backgroundColor: AppFx.panelWash(0.3),
                 valueColor: AlwaysStoppedAnimation<Color>(accentColor),
               ),
             ),
@@ -556,23 +601,21 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Wrap(
-                  spacing: 6.w,
-                  runSpacing: 4.h,
-                  children: rewards,
-                ),
+                child: Wrap(spacing: 6.w, runSpacing: 4.h, children: rewards),
               ),
               if (mission.claimable || isLoading)
                 SizedBox(
                   height: 26.h,
                   child: ElevatedButton(
-                    onPressed:
-                        canClaim ? () => _claimMissionReward(mission) : null,
+                    onPressed: canClaim
+                        ? () => _claimMissionReward(mission)
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.green,
-                      foregroundColor: Colors.black,
-                      disabledBackgroundColor:
-                          AppColors.green.withValues(alpha: 0.35),
+                      foregroundColor: AppColors.textOnAccent,
+                      disabledBackgroundColor: AppColors.green.withValues(
+                        alpha: 0.35,
+                      ),
                       padding: EdgeInsets.symmetric(horizontal: 12.w),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -583,15 +626,15 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                         ? SizedBox(
                             width: 10.w,
                             height: 10.h,
-                            child: const CircularProgressIndicator(
+                            child: AppLoadingIndicator(
                               strokeWidth: 2,
-                              color: Colors.black,
+                              color: AppColors.textOnAccent,
                             ),
                           )
                         : Text(
                             'Ödülü Al',
-                            style: TextStyle(
-                              fontSize: 10.sp,
+                            style: AppTextStyles.caption.standardCopyWith(
+                              fontSize: AppTypography.label,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -600,9 +643,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               else if (mission.isClaimed)
                 Text(
                   'Alındı',
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -634,18 +677,18 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               children: [
                 Text(
                   'Tamamlanan Görevler (${claimedMissions.length})',
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 11.sp,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Icon(
                   isExpanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
+                      ? AppIcons.keyboardArrowUp
+                      : AppIcons.keyboardArrowDown,
                   color: AppColors.textMuted,
-                  size: 16.sp,
+                  size: AppIconSizes.compact,
                 ),
               ],
             ),
@@ -670,13 +713,13 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 12.sp),
+          Icon(icon, color: color, size: AppIconSizes.xSmall),
           SizedBox(width: 4.w),
           Text(
             value,
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: color,
-              fontSize: 9.sp,
+              fontSize: AppTypography.caption,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -686,27 +729,35 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   Widget _buildEmptyState() => Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.flag_outlined, color: AppColors.textMuted, size: 54.sp),
-              SizedBox(height: 14.h),
-              Text(
-                'Aktif Görev Bulunmadı',
-                style: AppTextStyles.h2.copyWith(fontSize: 17.sp),
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                'Yeni görevler oluştukça burada ilerleme paneli açılacak.',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body.copyWith(fontSize: 12.sp),
-              ),
-            ],
+    child: Padding(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            AppIcons.flagOutlined,
+            color: AppColors.textMuted,
+            size: AppIconSizes.hero,
           ),
-        ),
-      );
+          SizedBox(height: 14.h),
+          Text(
+            'Aktif Görev Bulunmadı',
+            style: AppTextStyles.h2.standardCopyWith(
+              fontSize: AppTypography.headline,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Yeni görevler oluştukça burada ilerleme paneli açılacak.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body.standardCopyWith(
+              fontSize: AppTypography.body,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _buildMainMissionEmptyState() {
     return Center(
@@ -715,22 +766,26 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 48.sp),
+            Icon(
+              AppIcons.emojiEventsRounded,
+              color: AppColors.gold,
+              size: AppIconSizes.hero,
+            ),
             SizedBox(height: 12.h),
             Text(
               'Tebrikler!',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.sp,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.title,
                 fontWeight: FontWeight.bold,
               ),
             ),
             SizedBox(height: 4.h),
             Text(
               'Mevcut tüm ana hedefleri tamamladın.',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
               ),
               textAlign: TextAlign.center,
             ),
@@ -747,13 +802,17 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.task_alt_rounded, color: AppColors.green, size: 48.sp),
+            Icon(
+              AppIcons.taskAltRounded,
+              color: AppColors.green,
+              size: AppIconSizes.hero,
+            ),
             SizedBox(height: 12.h),
             Text(
               hasClaimedMissions ? 'Harika İş!' : 'Günlük Görev Yok',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.sp,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.title,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -762,9 +821,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               hasClaimedMissions
                   ? 'Bugünün tüm günlük görevlerini tamamladın.\nYarın yeni görevler gelecek!'
                   : 'Bugün için atanmış bir günlük görev bulunmuyor.',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
               ),
               textAlign: TextAlign.center,
             ),
@@ -781,13 +840,17 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.task_alt_rounded, color: AppColors.green, size: 48.sp),
+            Icon(
+              AppIcons.taskAltRounded,
+              color: AppColors.green,
+              size: AppIconSizes.hero,
+            ),
             SizedBox(height: 12.h),
             Text(
               hasClaimedMissions ? 'Harika İş!' : 'Haftalık Görev Yok',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.sp,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.title,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -796,9 +859,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               hasClaimedMissions
                   ? 'Bu haftanın tüm haftalık görevlerini tamamladın.\nGelecek hafta yeni görevler gelecek!'
                   : 'Bu hafta için atanmış bir haftalık görev bulunmuyor.',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
               ),
               textAlign: TextAlign.center,
             ),
@@ -815,22 +878,26 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 48.sp),
+            Icon(
+              AppIcons.emojiEventsRounded,
+              color: AppColors.gold,
+              size: AppIconSizes.hero,
+            ),
             SizedBox(height: 12.h),
             Text(
               'Mükemmel!',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.sp,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.title,
                 fontWeight: FontWeight.bold,
               ),
             ),
             SizedBox(height: 4.h),
             Text(
               'Tüm başarımları ve yan görevleri tamamladın.',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
               ),
               textAlign: TextAlign.center,
             ),
@@ -841,46 +908,54 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   Widget _buildErrorState(String message) => Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, color: AppColors.red, size: 48.sp),
-              SizedBox(height: 12.h),
-              Text(
-                'Görevler yüklenemedi',
-                style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                message,
-                style: AppTextStyles.body.copyWith(fontSize: 11.sp),
-                textAlign: TextAlign.center,
-              ),
-            ],
+    child: Padding(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            AppIcons.errorOutline,
+            color: AppColors.red,
+            size: AppIconSizes.hero,
           ),
-        ),
-      );
+          SizedBox(height: 12.h),
+          Text(
+            'Görevler yüklenemedi',
+            style: AppTextStyles.h2.standardCopyWith(
+              fontSize: AppTypography.titleLarge,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            message,
+            style: AppTextStyles.body.standardCopyWith(
+              fontSize: AppTypography.bodySmall,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    ),
+  );
 
   IconData _iconForMission(String? iconKey) {
     switch (iconKey) {
       case 'store':
-        return Icons.storefront;
+        return AppIcons.storefront;
       case 'warehouse':
-        return Icons.warehouse_rounded;
+        return AppIcons.warehouseRounded;
       case 'factory':
-        return Icons.precision_manufacturing;
+        return AppIcons.precisionManufacturing;
       case 'upgrade':
-        return Icons.trending_up;
+        return AppIcons.trendingUp;
       case 'sell':
-        return Icons.point_of_sale;
+        return AppIcons.pointOfSale;
       case 'transfer':
-        return Icons.local_shipping_rounded;
+        return AppIcons.localShippingRounded;
       case 'research':
-        return Icons.science_rounded;
+        return AppIcons.scienceRounded;
       default:
-        return Icons.flag_rounded;
+        return AppIcons.flagRounded;
     }
   }
 

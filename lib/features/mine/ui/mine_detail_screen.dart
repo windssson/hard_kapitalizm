@@ -10,6 +10,7 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
@@ -95,7 +96,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         .value;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: -1,
         onItemSelected: (_) {},
@@ -106,15 +107,17 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             const SecondaryTopBar(title: 'Maden Yonetimi'),
             Expanded(
               child: detailAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
-                ),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (error, _) => Center(
                   child: Padding(
                     padding: EdgeInsets.all(20.w),
                     child: Text(
                       error.toString(),
-                      style: TextStyle(color: AppColors.red, fontSize: 13.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                        fontSize: AppTypography.bodyLarge,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -154,7 +157,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       _buildSectionHeader(
                         'Uretim Hatti',
                         'Madende secili kaynagi, stok durumunu ve depoya sevkleri buradan yonetebilirsin.',
-                        icon: Icons.hardware_rounded,
+                        icon: AppIcons.hardwareRounded,
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
@@ -189,7 +192,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     height: 68.w,
                     padding: EdgeInsets.all(10.w),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: AppFx.panelWash(0.3),
                       borderRadius: BorderRadius.circular(16.r),
                       border: Border.all(
                         color: AppColors.gold.withValues(alpha: 0.35),
@@ -207,9 +210,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       fileName: detail.mineType.icon,
                       fit: BoxFit.contain,
                       errorWidget: Icon(
-                        Icons.diamond_rounded,
+                        AppIcons.diamondRounded,
                         color: AppColors.gold,
-                        size: 30.sp,
+                        size: AppIconSizes.xLarge,
                       ),
                     ),
                   ),
@@ -224,9 +227,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             children: [
                               Text(
                                 detail.mine.name,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18.sp,
+                                style: AppTextStyles.h2.standardCopyWith(
+                                  color: AppColors.textPrimary,
+                                  fontSize: AppTypography.headline,
                                   fontWeight: FontWeight.bold,
                                 ),
                                 maxLines: 2,
@@ -235,9 +238,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               SizedBox(height: 4.h),
                               Text(
                                 detail.mineType.name,
-                                style: TextStyle(
+                                style: AppTextStyles.caption.standardCopyWith(
                                   color: AppColors.gold,
-                                  fontSize: 10.sp,
+                                  fontSize: AppTypography.label,
                                   fontWeight: FontWeight.w700,
                                 ),
                                 maxLines: 1,
@@ -247,19 +250,20 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               Row(
                                 children: [
                                   Icon(
-                                    Icons.location_on,
+                                    AppIcons.locationOn,
                                     color: AppColors.gold,
-                                    size: 14.sp,
+                                    size: AppIconSizes.small,
                                   ),
                                   SizedBox(width: 4.w),
                                   Expanded(
                                     child: Text(
                                       detail.cityName,
-                                      style: TextStyle(
-                                        color: AppColors.textMuted,
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                      style: AppTextStyles.caption
+                                          .standardCopyWith(
+                                            color: AppColors.textMuted,
+                                            fontSize: AppTypography.bodySmall,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -293,7 +297,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     outputQty.toDouble(),
                     detail.mine.outputCapacity.toDouble(),
                   ),
-                  icon: Icons.inventory_2_outlined,
+                  icon: AppIcons.inventory2Outlined,
                 ),
               ),
             ],
@@ -313,7 +317,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.16),
+        color: AppFx.panelWash(0.16),
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
@@ -322,7 +326,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 14.sp),
+              Icon(icon, color: color, size: AppIconSizes.small),
               SizedBox(width: 7.w),
               Expanded(
                 child: Column(
@@ -333,9 +337,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 9.sp,
+                        fontSize: AppTypography.caption,
                       ),
                     ),
                     SizedBox(height: 2.h),
@@ -343,9 +347,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       value,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11.sp,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.bodySmall,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -355,23 +359,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             ],
           ),
           SizedBox(height: 7.h),
-          Container(
-            height: 5.h,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(999.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: ratio.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(999.r),
-                ),
-              ),
-            ),
-          ),
+          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );
@@ -398,9 +386,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     return Container(
       padding: EdgeInsets.all(8.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.18),
+        color: AppFx.panelWash(0.18),
         borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppFx.softOverlay(0.05)),
       ),
       child: Column(
         children: [
@@ -409,7 +397,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               Expanded(
                 child: _buildActionButton(
                   'Urun Gonder',
-                  Icons.local_shipping_rounded,
+                  AppIcons.localShippingRounded,
                   AppColors.blue,
                   () => _startMineSendFlow(context, ref, detail),
                 ),
@@ -419,8 +407,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 child: _buildActionButton(
                   detail.mine.isActive ? 'Durdur' : 'Baslat',
                   detail.mine.isActive
-                      ? Icons.stop_circle_outlined
-                      : Icons.play_circle_outline,
+                      ? AppIcons.stopCircleOutlined
+                      : AppIcons.playCircleOutline,
                   detail.mine.isActive ? AppColors.red : AppColors.green,
                   hasProduct
                       ? () => _toggleMineActive(context, ref, detail)
@@ -443,7 +431,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               Expanded(
                 child: _buildActionButton(
                   'Boost',
-                  Icons.flash_on_rounded,
+                  AppIcons.flashOnRounded,
                   canBoost ? AppColors.goldDark : AppColors.textMuted,
                   canBoost
                       ? () => _showMineBoostSheet(
@@ -468,7 +456,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               Expanded(
                 child: _buildActionButton(
                   'Yukselt',
-                  Icons.upgrade_rounded,
+                  AppIcons.upgradeRounded,
                   canUpgrade ? AppColors.green : AppColors.textMuted,
                   canUpgrade
                       ? () => _showMineUpgradeSheet(
@@ -492,7 +480,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               Expanded(
                 child: _buildActionButton(
                   'Rapor',
-                  Icons.query_stats_rounded,
+                  AppIcons.queryStatsRounded,
                   AppColors.blue,
                   () => context.push(
                     '/production-report/mine/${detail.mine.id}?name=${Uri.encodeComponent(detail.mine.name)}',
@@ -525,14 +513,14 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 15.sp),
+            Icon(icon, color: color, size: AppIconSizes.small),
             SizedBox(height: 3.h),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: color,
-                fontSize: 9.sp,
+                fontSize: AppTypography.caption,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -560,15 +548,15 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(9.r),
               ),
-              child: Icon(icon, color: color, size: 16.sp),
+              child: Icon(icon, color: color, size: AppIconSizes.compact),
             ),
             SizedBox(width: 8.w),
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.sp,
+                style: AppTextStyles.h2.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.titleLarge,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -578,9 +566,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         SizedBox(height: 6.h),
         Text(
           subtitle,
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: 11.sp,
+            fontSize: AppTypography.bodySmall,
             height: 1.45,
           ),
         ),
@@ -598,9 +586,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 10.sp,
+          fontSize: AppTypography.label,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -612,16 +600,19 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: AppFx.softOverlay(0.03),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppFx.softOverlay(0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             message,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.body,
+            ),
           ),
           if (action != null) ...[SizedBox(height: 12.h), action],
         ],
@@ -642,7 +633,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           alignment: Alignment.centerLeft,
           child: FilledButton.icon(
             onPressed: () => _showProductDialog(context, ref, detail),
-            icon: const Icon(Icons.category_outlined),
+            icon: const Icon(AppIcons.categoryOutlined),
             label: const Text('Kaynak Sec'),
           ),
         ),
@@ -674,7 +665,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 height: 70.w,
                 padding: EdgeInsets.all(2.w),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: AppFx.panelWash(0.3),
                   borderRadius: BorderRadius.circular(14.r),
                   border: Border.all(
                     color: AppColors.green.withValues(alpha: 0.3),
@@ -705,9 +696,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                 (isBranded
                                     ? ' (${_currentBrandName ?? 'Markali'})'
                                     : ''),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14.sp,
+                            style: AppTextStyles.title.standardCopyWith(
+                              color: AppColors.textPrimary,
+                              fontSize: AppTypography.title,
                               fontWeight: FontWeight.bold,
                             ),
                             maxLines: 1,
@@ -739,16 +730,16 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           child: Container(
                             padding: EdgeInsets.all(5.w),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
+                              color: AppFx.softOverlay(0.05),
                               borderRadius: BorderRadius.circular(8.r),
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.06),
+                                color: AppFx.softOverlay(0.06),
                               ),
                             ),
                             child: Icon(
-                              Icons.more_vert,
+                              AppIcons.moreVert,
                               color: AppColors.textMuted,
-                              size: 16.sp,
+                              size: AppIconSizes.compact,
                             ),
                           ),
                           onSelected: (value) {
@@ -764,16 +755,16 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               child: Row(
                                 children: [
                                   Icon(
-                                    Icons.category,
+                                    AppIcons.category,
                                     color: AppColors.gold,
-                                    size: 18.sp,
+                                    size: AppIconSizes.regular,
                                   ),
                                   SizedBox(width: 8.w),
                                   Text(
                                     'Kaynak Degistir',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13.sp,
+                                    style: AppTextStyles.body.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.bodyLarge,
                                     ),
                                   ),
                                 ],
@@ -785,21 +776,21 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                 children: [
                                   Icon(
                                     detail.mine.isActive
-                                        ? Icons.stop_circle
-                                        : Icons.play_circle,
+                                        ? AppIcons.stopCircle
+                                        : AppIcons.playCircle,
                                     color: detail.mine.isActive
                                         ? AppColors.red
                                         : AppColors.green,
-                                    size: 18.sp,
+                                    size: AppIconSizes.regular,
                                   ),
                                   SizedBox(width: 8.w),
                                   Text(
                                     detail.mine.isActive
                                         ? 'Uretimi Durdur'
                                         : 'Uretime Basla',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13.sp,
+                                    style: AppTextStyles.body.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.bodyLarge,
                                     ),
                                   ),
                                 ],
@@ -829,9 +820,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     if (qualityLevel <= 0) {
       return Text(
         'Kalite yok',
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: AppColors.textMuted,
-          fontSize: 10.sp,
+          fontSize: AppTypography.label,
           fontWeight: FontWeight.w500,
         ),
       );
@@ -843,9 +834,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         return Padding(
           padding: EdgeInsets.only(right: 2.w),
           child: Icon(
-            index < qualityLevel ? Icons.star : Icons.star_border,
+            index < qualityLevel ? AppIcons.star : AppIcons.starBorder,
             color: index < qualityLevel ? AppColors.gold : AppColors.textMuted,
-            size: 14.sp,
+            size: AppIconSizes.small,
           ),
         );
       }),
@@ -860,9 +851,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.02),
+        color: AppFx.softOverlay(0.02),
         borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+        border: Border.all(color: AppFx.softOverlay(0.04)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -872,35 +863,41 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             children: [
               Text(
                 'Kalite',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.micro,
+                ),
               ),
               SizedBox(height: 2.h),
               _buildQualityStars(detail.mine.qualityLevel),
             ],
           ),
-          Container(width: 1.w, height: 18.h, color: Colors.white10),
+          Container(width: 1.w, height: 18.h, color: AppFx.softOverlay(0.10)),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Birim Maliyet',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.micro,
+                ),
               ),
               SizedBox(height: 2.h),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.payments_outlined,
+                    AppIcons.paymentsOutlined,
                     color: AppColors.gold,
-                    size: 11.sp,
+                    size: AppIconSizes.xSmall,
                   ),
                   SizedBox(width: 3.w),
                   Text(
                     '${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10.sp,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -908,25 +905,32 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               ),
             ],
           ),
-          Container(width: 1.w, height: 18.h, color: Colors.white10),
+          Container(width: 1.w, height: 18.h, color: AppFx.softOverlay(0.10)),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Üretim / Saat',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.micro,
+                ),
               ),
               SizedBox(height: 2.h),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.schedule, color: AppColors.green, size: 11.sp),
+                  Icon(
+                    AppIcons.schedule,
+                    color: AppColors.green,
+                    size: AppIconSizes.xSmall,
+                  ),
                   SizedBox(width: 3.w),
                   Text(
                     _estimateProductionPerHour(detail, activeBoost),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10.sp,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -939,14 +943,17 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
   }
 
-  Widget _buildProductionFormulaRow(ProductModel product, List<dynamic> inputInventories) {
+  Widget _buildProductionFormulaRow(
+    ProductModel product,
+    List<dynamic> inputInventories,
+  ) {
     final List<Widget> items = [];
 
     // 1. Labor Cost
     if (product.iscilikMaliyeti > 0) {
       items.add(
         _buildFormulaItem(
-          icon: Icons.engineering_outlined,
+          icon: AppIcons.engineeringOutlined,
           color: AppColors.blue,
           label: 'İşçilik:',
           value: ' ${product.iscilikMaliyeti.toStringAsFixed(2)} TL',
@@ -972,7 +979,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         }
         items.add(
           _buildFormulaItem(
-            icon: Icons.layers_outlined,
+            icon: AppIcons.layersOutlined,
             color: AppColors.gold,
             label: '$name:',
             value: ' ${rm.qty!.toStringAsFixed(1)} ad',
@@ -987,19 +994,23 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       margin: EdgeInsets.only(top: 8.h),
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.015),
+        color: AppFx.softOverlay(0.015),
         borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.035)),
+        border: Border.all(color: AppFx.softOverlay(0.035)),
       ),
       child: Row(
         children: [
-          Icon(Icons.receipt_long_outlined, color: AppColors.textMuted, size: 12.sp),
+          Icon(
+            AppIcons.receiptLongOutlined,
+            color: AppColors.textMuted,
+            size: AppIconSizes.xSmall,
+          ),
           SizedBox(width: 6.w),
           Text(
             'Tarif:',
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 9.sp,
+              fontSize: AppTypography.caption,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1016,9 +1027,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         padding: EdgeInsets.symmetric(horizontal: 8.w),
                         child: Text(
                           '+',
-                          style: TextStyle(
-                            color: Colors.white24,
-                            fontSize: 10.sp,
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppFx.softOverlay(0.24),
+                            fontSize: AppTypography.label,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1042,20 +1053,20 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: color, size: 11.sp),
+        Icon(icon, color: color, size: AppIconSizes.xSmall),
         SizedBox(width: 4.w),
         Text(
           label,
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textSecondary,
-            fontSize: 10.sp,
+            fontSize: AppTypography.label,
           ),
         ),
         Text(
           value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 10.sp,
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textPrimary,
+            fontSize: AppTypography.label,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1081,7 +1092,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: AppFx.softOverlay(0.03),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppColors.green.withValues(alpha: 0.14)),
       ),
@@ -1091,17 +1102,17 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           Row(
             children: [
               Icon(
-                Icons.inventory_2_outlined,
+                AppIcons.inventory2Outlined,
                 color: AppColors.green,
-                size: 14.sp,
+                size: AppIconSizes.small,
               ),
               SizedBox(width: 6.w),
               Expanded(
                 child: Text(
                   'Üretilen Ürün Stoğu',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.sp,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1112,33 +1123,16 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               ],
               Text(
                 '$quantity / ${detail.mine.outputCapacity} ad',
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.green,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
           SizedBox(height: 8.h),
-          Container(
-            width: double.infinity,
-            height: 7.h,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(999.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.green,
-                  borderRadius: BorderRadius.circular(999.r),
-                ),
-              ),
-            ),
-          ),
+          AppProgressBar(value: progress, kind: AppProgressKind.positive),
         ],
       ),
     );
@@ -1154,9 +1148,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 9.sp,
+          fontSize: AppTypography.caption,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -1200,7 +1194,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final product = detail.product;
     if (product == null) return '-';
     final qualityMultiplier = 1.0 + (detail.mine.qualityLevel - 1) * 0.20;
-    final amount = product.uretimAdedi * (activeBoost?.multiplier ?? 1) * qualityMultiplier;
+    final amount =
+        product.uretimAdedi *
+        (activeBoost?.multiplier ?? 1) *
+        qualityMultiplier;
     return amount % 1 == 0
         ? amount.toInt().toString()
         : amount.toStringAsFixed(1);
@@ -1242,9 +1239,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           children: [
             Text(
               'Maden Boostu',
-              style: TextStyle(
+              style: AppTextStyles.h2.standardCopyWith(
                 color: AppColors.textPrimary,
-                fontSize: 18.sp,
+                fontSize: AppTypography.headline,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1253,9 +1250,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               activeBoost != null
                   ? 'Bu madende zaten aktif bir boost var. Sure dolana kadar uretim x${activeBoost.multiplier.toStringAsFixed(1)} hizla calisir.'
                   : 'Boost basladiginda madenin uretim hizi sure boyunca 2 katina cikar.',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 12.sp,
+                fontSize: AppTypography.body,
                 height: 1.45,
               ),
             ),
@@ -1316,9 +1313,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                             child: Icon(
-                              Icons.flash_on_rounded,
+                              AppIcons.flashOnRounded,
                               color: AppColors.goldDark,
-                              size: 18.sp,
+                              size: AppIconSizes.regular,
                             ),
                           ),
                           SizedBox(width: 12.w),
@@ -1328,18 +1325,18 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               children: [
                                 Text(
                                   '${entry.key} Saat',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13.sp,
+                                  style: AppTextStyles.title.standardCopyWith(
+                                    color: AppColors.textPrimary,
+                                    fontSize: AppTypography.bodyLarge,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 SizedBox(height: 2.h),
                                 Text(
                                   'Katsayi x2.0',
-                                  style: TextStyle(
+                                  style: AppTextStyles.caption.standardCopyWith(
                                     color: AppColors.textMuted,
-                                    fontSize: 11.sp,
+                                    fontSize: AppTypography.bodySmall,
                                   ),
                                 ),
                               ],
@@ -1348,16 +1345,16 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           Row(
                             children: [
                               Icon(
-                                Icons.star_rounded,
+                                AppIcons.starRounded,
                                 color: AppColors.gold,
-                                size: 16.sp,
+                                size: AppIconSizes.compact,
                               ),
                               SizedBox(width: 4.w),
                               Text(
                                 '${entry.value}',
-                                style: TextStyle(
+                                style: AppTextStyles.title.standardCopyWith(
                                   color: AppColors.gold,
-                                  fontSize: 13.sp,
+                                  fontSize: AppTypography.bodyLarge,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1406,9 +1403,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             children: [
               Text(
                 'Maden Yukseltmesi',
-                style: TextStyle(
+                style: AppTextStyles.h2.standardCopyWith(
                   color: AppColors.textPrimary,
-                  fontSize: 18.sp,
+                  fontSize: AppTypography.headline,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1417,9 +1414,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 activeUpgrade != null
                     ? 'Bu madende zaten devam eden bir yukseltme var.'
                     : 'Her seviye artisinda cikti kapasitesi 2 katina cikar.',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   height: 1.45,
                 ),
               ),
@@ -1428,7 +1425,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 Container(
                   padding: EdgeInsets.all(14.w),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.03),
+                    color: AppFx.softOverlay(0.03),
                     borderRadius: BorderRadius.circular(16.r),
                     border: Border.all(
                       color: AppColors.green.withValues(alpha: 0.22),
@@ -1439,34 +1436,34 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     children: [
                       Text(
                         'Seviye ${detail.mine.level} -> $nextLevel',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
+                        style: AppTextStyles.title.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: AppTypography.title,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 10.h),
                       Text(
                         'Cikti kapasitesi: ${detail.mine.outputCapacity} -> $nextOutputCapacity',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                         ),
                       ),
                       SizedBox(height: 6.h),
                       Text(
                         'Sure: $durationMinutes dk',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                         ),
                       ),
                       SizedBox(height: 6.h),
                       Text(
                         'Maliyet: $upgradeCost TL',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                         ),
                       ),
                       SizedBox(height: 14.h),
@@ -1508,7 +1505,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               );
                             }
                           },
-                          icon: const Icon(Icons.upgrade_rounded),
+                          icon: const Icon(AppIcons.upgradeRounded),
                           label: const Text('Yukseltmeyi Baslat'),
                         ),
                       ),
@@ -1591,7 +1588,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             (selectableProduct.hasPreferredBrand
                 ? ' (${_currentBrandName ?? 'Markali'})'
                 : ''),
-        subtitle: 'Saatlik uretim: ${(product.uretimAdedi * (1.0 + (detail.mine.qualityLevel - 1) * 0.20)).toInt()}',
+        subtitle:
+            'Saatlik uretim: ${(product.uretimAdedi * (1.0 + (detail.mine.qualityLevel - 1) * 0.20)).toInt()}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
             '${selectableProduct.hasPreferredBrand ? ' ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Marka Hazir' : ''}',
@@ -1610,9 +1608,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 ),
                 child: Text(
                   'Satışta',
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.goldLight,
-                    fontSize: 9.sp,
+                    fontSize: AppTypography.caption,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1840,7 +1838,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       final result = await showDialog<int>(
         context: sheetContext,
         builder: (dialogContext) => Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.transparent,
           insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
           child: Container(
             padding: EdgeInsets.all(16.w),
@@ -1857,9 +1855,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             ? ' (${_currentBrandName ?? 'Markali'})'
                             : ''),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.sp,
+                    style: AppTextStyles.h2.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.titleLarge,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1870,19 +1868,19 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       for (int i = 0; i < 5; i++)
                         Icon(
                           i < item.qualityLevel
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
+                              ? AppIcons.starRounded
+                              : AppIcons.starBorderRounded,
                           color: i < item.qualityLevel
                               ? AppColors.gold
-                              : Colors.white24,
-                          size: 16.sp,
+                              : AppFx.softOverlay(0.24),
+                          size: AppIconSizes.compact,
                         ),
                       SizedBox(width: 6.w),
                       Text(
                         'Q${item.qualityLevel}',
-                        style: TextStyle(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.gold,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1895,7 +1893,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       margin: EdgeInsets.symmetric(vertical: 12.h),
                       padding: EdgeInsets.all(2.w),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.35),
+                        color: AppFx.panelWash(0.35),
                         borderRadius: BorderRadius.circular(14.r),
                         border: Border.all(
                           color: AppColors.gold.withValues(alpha: 0.25),
@@ -1922,25 +1920,25 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       horizontal: 12.w,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.03),
+                      color: AppFx.softOverlay(0.03),
                       borderRadius: BorderRadius.circular(10.r),
-                      border: Border.all(color: Colors.white10),
+                      border: Border.all(color: AppFx.softOverlay(0.10)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Mevcut Stok:',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 11.sp,
+                            fontSize: AppTypography.bodySmall,
                           ),
                         ),
                         Text(
                           '${item.quantity} Adet',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12.sp,
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: AppTypography.body,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1953,14 +1951,20 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     readOnly: true,
                     showCursor: true,
                     enableInteractiveSelection: false,
-                    style: const TextStyle(color: Colors.white),
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.title,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Miktar (Maks: ${item.quantity})',
-                      labelStyle: const TextStyle(color: AppColors.gold),
-                      enabledBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white24),
+                      labelStyle: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.gold,
+                        fontSize: AppTypography.body,
                       ),
-                      focusedBorder: const OutlineInputBorder(
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppColors.textMuted),
+                      ),
+                      focusedBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: AppColors.gold),
                       ),
                     ),
@@ -1996,7 +2000,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(color: Colors.white24),
+                            side: BorderSide(color: AppColors.textMuted),
                             padding: EdgeInsets.symmetric(vertical: 10.h),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10.r),
@@ -2005,8 +2009,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           onPressed: () => Navigator.pop(dialogContext),
                           child: Text(
                             'İptal',
-                            style: TextStyle(
-                              fontSize: 12.sp,
+                            style: AppTextStyles.body.standardCopyWith(
+                              fontSize: AppTypography.body,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -2027,7 +2031,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.gold,
-                              foregroundColor: Colors.black,
+                              foregroundColor: AppColors.textOnAccent,
                               padding: EdgeInsets.symmetric(vertical: 10.h),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10.r),
@@ -2049,8 +2053,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             },
                             child: Text(
                               'Kaydet',
-                              style: TextStyle(
-                                fontSize: 12.sp,
+                              style: AppTextStyles.body.standardCopyWith(
+                                fontSize: AppTypography.body,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -2132,9 +2136,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 children: [
                   Text(
                     'Depoya Gonderilecek Stoklari Sec',
-                    style: TextStyle(
+                    style: AppTextStyles.h2.standardCopyWith(
                       color: AppColors.textPrimary,
-                      fontSize: 18.sp,
+                      fontSize: AppTypography.headline,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -2143,7 +2147,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     width: double.infinity,
                     padding: EdgeInsets.all(12.w),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.035),
+                      color: AppFx.softOverlay(0.035),
                       borderRadius: BorderRadius.circular(16.r),
                       border: Border.all(
                         color: AppColors.borderGoldLight.withValues(
@@ -2161,10 +2165,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               child: Container(
                                 padding: EdgeInsets.all(8.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.16),
+                                  color: AppFx.panelWash(0.16),
                                   borderRadius: BorderRadius.circular(14.r),
                                   border: Border.all(
-                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                    color: AppColors.blue.withValues(
+                                      alpha: 0.18,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -2173,41 +2179,48 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                       width: 30.w,
                                       height: 30.w,
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.22),
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        color: AppFx.panelWash(0.22),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
                                       ),
                                       child: Icon(
-                                        Icons.landscape_rounded,
+                                        AppIcons.landscapeRounded,
                                         color: AppColors.blue,
-                                        size: 16.sp,
+                                        size: AppIconSizes.compact,
                                       ),
                                     ),
                                     SizedBox(width: 8.w),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
                                             detail.mine.name,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13.sp,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: AppTextStyles.body
+                                                .standardCopyWith(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize:
+                                                      AppTypography.bodyLarge,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                           SizedBox(height: 3.h),
                                           Text(
                                             detail.cityName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: AppColors.goldLight,
-                                              fontSize: 10.sp,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.goldLight,
+                                                  fontSize: AppTypography.label,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                           SizedBox(height: 5.h),
                                           _buildInlineMetaChip(
@@ -2226,16 +2239,18 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               width: 30.w,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
+                                color: AppFx.softOverlay(0.05),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                  color: AppColors.borderGoldLight.withValues(
+                                    alpha: 0.12,
+                                  ),
                                 ),
                               ),
                               child: Icon(
-                                Icons.arrow_forward_rounded,
+                                AppIcons.arrowForwardRounded,
                                 color: AppColors.gold,
-                                size: 18.sp,
+                                size: AppIconSizes.regular,
                               ),
                             ),
                             SizedBox(width: 8.w),
@@ -2243,10 +2258,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               child: Container(
                                 padding: EdgeInsets.all(8.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.16),
+                                  color: AppFx.panelWash(0.16),
                                   borderRadius: BorderRadius.circular(14.r),
                                   border: Border.all(
-                                    color: AppColors.green.withValues(alpha: 0.18),
+                                    color: AppColors.green.withValues(
+                                      alpha: 0.18,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -2255,41 +2272,48 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                       width: 30.w,
                                       height: 30.w,
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.22),
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        color: AppFx.panelWash(0.22),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
                                       ),
                                       child: Icon(
-                                        Icons.warehouse_rounded,
+                                        AppIcons.warehouseRounded,
                                         color: AppColors.green,
-                                        size: 16.sp,
+                                        size: AppIconSizes.compact,
                                       ),
                                     ),
                                     SizedBox(width: 8.w),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
                                             targetWarehouse.name,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13.sp,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: AppTextStyles.body
+                                                .standardCopyWith(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize:
+                                                      AppTypography.bodyLarge,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                           SizedBox(height: 3.h),
                                           Text(
                                             targetWarehouse.cityName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: AppColors.goldLight,
-                                              fontSize: 10.sp,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.goldLight,
+                                                  fontSize: AppTypography.label,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                           SizedBox(height: 5.h),
                                           _buildInlineMetaChip(
@@ -2312,9 +2336,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               Expanded(
                                 child: Text(
                                   'Bos: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
-                                  style: TextStyle(
+                                  style: AppTextStyles.caption.standardCopyWith(
                                     color: AppColors.textMuted,
-                                    fontSize: 11.sp,
+                                    fontSize: AppTypography.bodySmall,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -2322,13 +2346,13 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               SizedBox(width: 8.w),
                               Text(
                                 '%${(projectedCapacityRatio * 100).round()}',
-                                style: TextStyle(
+                                style: AppTextStyles.caption.standardCopyWith(
                                   color: projectedCapacityRatio >= 0.9
                                       ? AppColors.red
                                       : projectedCapacityRatio >= 0.75
-                                      ? Colors.orange
+                                      ? AppColors.warning
                                       : AppColors.green,
-                                  fontSize: 11.sp,
+                                  fontSize: AppTypography.bodySmall,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -2338,7 +2362,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           Container(
                             height: 9.h,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.08),
+                              color: AppFx.softOverlay(0.08),
                               borderRadius: BorderRadius.circular(999.r),
                             ),
                             child: ClipRRect(
@@ -2358,8 +2382,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   final addedWidth = rawAddedWidth > 0
                                       ? rawAddedWidth.clamp(3.0, totalWidth)
                                       : 0.0;
-                                  final baseWidth =
-                                      currentWidth.clamp(0.0, totalWidth - addedWidth);
+                                  final baseWidth = currentWidth.clamp(
+                                    0.0,
+                                    totalWidth - addedWidth,
+                                  );
 
                                   return Stack(
                                     fit: StackFit.expand,
@@ -2370,16 +2396,15 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                           child: Container(
                                             width: baseWidth,
                                             decoration: BoxDecoration(
-                                              color: projectedCapacityRatio >=
-                                                      0.9
+                                              color:
+                                                  projectedCapacityRatio >= 0.9
                                                   ? AppColors.red.withValues(
                                                       alpha: 0.75,
                                                     )
                                                   : projectedCapacityRatio >=
                                                         0.75
-                                                  ? Colors.orange.withValues(
-                                                      alpha: 0.75,
-                                                    )
+                                                  ? AppColors.warning
+                                                        .withValues(alpha: 0.75)
                                                   : AppColors.green.withValues(
                                                       alpha: 0.75,
                                                     ),
@@ -2411,9 +2436,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           SizedBox(height: 6.h),
                           Text(
                             'Secilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
-                            style: TextStyle(
+                            style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textMuted,
-                              fontSize: 11.sp,
+                              fontSize: AppTypography.bodySmall,
                             ),
                           ),
                         ],
@@ -2423,9 +2448,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet secildi',
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 12.sp,
+                      fontSize: AppTypography.body,
                     ),
                   ),
                   SizedBox(height: 16.h),
@@ -2442,7 +2467,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         return Container(
                           padding: EdgeInsets.all(10.w),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
+                            color: AppFx.softOverlay(0.04),
                             borderRadius: BorderRadius.circular(14.r),
                             border: Border.all(
                               color:
@@ -2461,13 +2486,13 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                 height: 42.w,
                                 padding: EdgeInsets.all(2.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.2),
+                                  color: AppFx.panelWash(0.2),
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
                                     color:
                                         (isSelected
                                                 ? AppColors.green
-                                                : Colors.white10)
+                                                : AppFx.softOverlay(0.10))
                                             .withValues(alpha: 0.2),
                                   ),
                                 ),
@@ -2501,11 +2526,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                               : ''),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: AppTextStyles.body
+                                          .standardCopyWith(
+                                            color: AppColors.textPrimary,
+                                            fontSize: AppTypography.bodyLarge,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                     SizedBox(height: 3.h),
                                     Row(
@@ -2513,12 +2539,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                         for (int i = 0; i < 5; i++)
                                           Icon(
                                             i < item.qualityLevel
-                                                ? Icons.star_rounded
-                                                : Icons.star_border_rounded,
+                                                ? AppIcons.starRounded
+                                                : AppIcons.starBorderRounded,
                                             color: i < item.qualityLevel
                                                 ? AppColors.gold
-                                                : Colors.white12,
-                                            size: 11.sp,
+                                                : AppFx.softOverlay(0.12),
+                                            size: AppIconSizes.xSmall,
                                           ),
                                         SizedBox(width: 4.w),
                                         Expanded(
@@ -2526,10 +2552,11 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                             '| Stok ${item.quantity}',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: AppColors.textMuted,
-                                              fontSize: 10.sp,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.textMuted,
+                                                  fontSize: AppTypography.label,
+                                                ),
                                           ),
                                         ),
                                       ],
@@ -2567,7 +2594,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.gold,
-                        foregroundColor: Colors.black,
+                        foregroundColor: AppColors.textOnAccent,
                         padding: EdgeInsets.symmetric(vertical: 12.h),
                       ),
                       onPressed: selectedItems.isEmpty
@@ -2628,7 +2655,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                 items: selectedItems,
                               );
                             },
-                      icon: const Icon(Icons.local_shipping_rounded),
+                      icon: const Icon(AppIcons.localShippingRounded),
                       label: const Text('Transferi Baslat'),
                     ),
                   ),
@@ -2771,16 +2798,19 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           children: [
             Text(
               title,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
+              style: AppTextStyles.h2.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.headline,
                 fontWeight: FontWeight.bold,
               ),
             ),
             SizedBox(height: 6.h),
             Text(
               subtitle,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
             SizedBox(height: 16.h),
             Expanded(
@@ -2890,9 +2920,9 @@ class _ActiveMineBoostCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
-                  Icons.flash_on_rounded,
+                  AppIcons.flashOnRounded,
                   color: AppColors.goldDark,
-                  size: 18.sp,
+                  size: AppIconSizes.regular,
                 ),
               ),
               SizedBox(width: 10.w),
@@ -2902,18 +2932,18 @@ class _ActiveMineBoostCard extends ConsumerWidget {
                   children: [
                     Text(
                       'Boost Aktif',
-                      style: TextStyle(
+                      style: AppTextStyles.title.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 14.sp,
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 2.h),
                     Text(
                       '${boost.durationHours} saat | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost} yildiz',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                       ),
                     ),
                   ],
@@ -2921,9 +2951,9 @@ class _ActiveMineBoostCard extends ConsumerWidget {
               ),
               Text(
                 _formatCountdownLabel(remaining),
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.gold,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -2932,13 +2962,11 @@ class _ActiveMineBoostCard extends ConsumerWidget {
           SizedBox(height: 12.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
+            child: AppProgressBar(
               value: progress,
               minHeight: 8.h,
               backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.goldDark,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.goldDark),
             ),
           ),
         ],
@@ -2992,9 +3020,9 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
-                  Icons.upgrade_rounded,
+                  AppIcons.upgradeRounded,
                   color: AppColors.green,
-                  size: 18.sp,
+                  size: AppIconSizes.regular,
                 ),
               ),
               SizedBox(width: 10.w),
@@ -3004,18 +3032,18 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
                   children: [
                     Text(
                       'Maden Yukseltmesi Devam Ediyor',
-                      style: TextStyle(
+                      style: AppTextStyles.title.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 14.sp,
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 2.h),
                     Text(
                       'Seviye ${upgrade.currentLevel} -> ${upgrade.targetLevel} | Cikti ${upgrade.previousOutputCapacity} -> ${upgrade.nextOutputCapacity}',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                       ),
                     ),
                   ],
@@ -3023,9 +3051,9 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
               ),
               Text(
                 formatCountdown(remaining),
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.gold,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -3034,11 +3062,11 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
           SizedBox(height: 12.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
+            child: AppProgressBar(
               value: progress,
               minHeight: 8.h,
               backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
             ),
           ),
           SizedBox(height: 12.h),
@@ -3050,7 +3078,7 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
                 foregroundColor: AppColors.goldLight,
               ),
               onPressed: onFinishWithGold,
-              icon: const Icon(Icons.star_rounded),
+              icon: const Icon(AppIcons.starRounded),
               label: Text(
                 '${calculateStarCost(upgrade.finishAt)} yildiz ile bitir',
               ),

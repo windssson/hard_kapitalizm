@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -21,7 +22,7 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
     final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: pageAsync.when(
           data: (page) {
@@ -54,9 +55,9 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
                           SizedBox(height: 16.h),
                           Text(
                             'Depo Slotlari',
-                            style: TextStyle(
+                            style: AppTextStyles.title.standardCopyWith(
                               color: AppColors.textPrimary,
-                              fontSize: 16.sp,
+                              fontSize: AppTypography.titleLarge,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -81,8 +82,8 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
               ],
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.gold),
+          loading: () => Center(
+            child: AppLoadingIndicator(color: AppColors.gold),
           ),
           error: (error, _) => _buildErrorState(
             'Magaza deposu yuklenemedi.\n$error',
@@ -104,16 +105,16 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
       child: Column(
         children: [
           Icon(
-            Icons.inventory_2_outlined,
+            AppIcons.inventory2Outlined,
             color: AppColors.textMuted,
-            size: 28.sp,
+            size: AppIconSizes.xLarge,
           ),
           SizedBox(height: 10.h),
           Text(
             'Magaza deposu bos.',
-            style: TextStyle(
+            style: AppTextStyles.title.standardCopyWith(
               color: AppColors.textPrimary,
-              fontSize: 14.sp,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -121,9 +122,9 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
           Text(
             'Yeni alimlar ve iade stoklar burada gorunecek.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
             ),
           ),
         ],
@@ -138,9 +139,9 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textPrimary,
-            fontSize: 14.sp,
+            fontSize: AppTypography.title,
           ),
         ),
       ),
@@ -184,9 +185,9 @@ class _StoreWarehouseHeaderCard extends StatelessWidget {
                   ),
                 ),
                 child: Icon(
-                  Icons.inventory_2_outlined,
+                  AppIcons.inventory2Outlined,
                   color: AppColors.blue,
-                  size: 26.sp,
+                  size: AppIconSizes.large,
                 ),
               ),
               SizedBox(width: 12.w),
@@ -196,18 +197,18 @@ class _StoreWarehouseHeaderCard extends StatelessWidget {
                   children: [
                     Text(
                       warehouse.name,
-                      style: TextStyle(
+                      style: AppTextStyles.title.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 16.sp,
+                        fontSize: AppTypography.titleLarge,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       '${store.name} icindeki bagli depo',
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                       ),
                     ),
                   ],
@@ -237,11 +238,11 @@ class _StoreWarehouseHeaderCard extends StatelessWidget {
           SizedBox(height: 12.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
+            child: AppProgressBar(
               value: fillRatio,
               minHeight: 8.h,
               backgroundColor: AppColors.textPrimary.withValues(alpha: 0.08),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.blue),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.blue),
             ),
           ),
         ],
@@ -275,7 +276,7 @@ class _StoreWarehouseSlotCard extends StatelessWidget {
             height: 46.w,
             padding: EdgeInsets.all(2.w),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.18),
+              color: AppFx.panelWash(0.18),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: BrandedProductImage(
@@ -289,9 +290,9 @@ class _StoreWarehouseSlotCard extends StatelessWidget {
               fit: BoxFit.contain,
               showFrame: false,
               errorWidget: Icon(
-                Icons.inventory_2_outlined,
+                AppIcons.inventory2Outlined,
                 color: AppColors.textMuted,
-                size: 22.sp,
+                size: AppIconSizes.mediumLarge,
               ),
             ),
           ),
@@ -307,27 +308,27 @@ class _StoreWarehouseSlotCard extends StatelessWidget {
                           : ''),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textPrimary,
-                    fontSize: 13.sp,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 SizedBox(height: 4.h),
                 Text(
                   'Kalite ${slot.qualityLevel}',
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.gold,
-                    fontSize: 11.sp,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 SizedBox(height: 4.h),
                 Text(
                   'Maliyet: ${AppMoney.full(slot.cost, decimals: 2)}',
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 11.sp,
+                    fontSize: AppTypography.bodySmall,
                   ),
                 ),
               ],
@@ -339,17 +340,17 @@ class _StoreWarehouseSlotCard extends StatelessWidget {
             children: [
               Text(
                 '${slot.quantity}',
-                style: TextStyle(
+                style: AppTextStyles.title.standardCopyWith(
                   color: AppColors.blue,
-                  fontSize: 16.sp,
+                  fontSize: AppTypography.titleLarge,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 'Adet',
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 10.sp,
+                  fontSize: AppTypography.label,
                 ),
               ),
             ],
@@ -380,17 +381,17 @@ class _MetricCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 11.sp,
+              fontSize: AppTypography.bodySmall,
             ),
           ),
           SizedBox(height: 4.h),
           Text(
             value,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textPrimary,
-              fontSize: 13.sp,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.bold,
             ),
           ),

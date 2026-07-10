@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -104,7 +105,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final authIdentityAsync = ref.watch(authIdentityProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -128,7 +129,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     );
                   },
                   loading: () => Center(
-                    child: CircularProgressIndicator(color: AppColors.gold),
+                    child: AppLoadingIndicator(color: AppColors.gold),
                   ),
                   error: (err, stack) => Center(
                     child: Text('Hata: $err', style: AppTextStyles.body),
@@ -266,14 +267,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   fileName: player.avatarId,
                                   fit: BoxFit.cover,
                                   placeholder: Icon(
-                                    Icons.person,
+                                    AppIcons.person,
                                     color: AppColors.gold,
-                                    size: 40.sp,
+                                    size: AppIconSizes.displayLarge,
                                   ),
                                   errorWidget: Icon(
-                                    Icons.person,
+                                    AppIcons.person,
                                     color: AppColors.gold,
-                                    size: 40.sp,
+                                    size: AppIconSizes.displayLarge,
                                   ),
                                 ),
                               )
@@ -281,14 +282,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 fileName: player.avatarId,
                                 fit: BoxFit.cover,
                                 placeholder: Icon(
-                                  Icons.person,
+                                  AppIcons.person,
                                   color: AppColors.gold,
-                                  size: 40.sp,
+                                  size: AppIconSizes.displayLarge,
                                 ),
                                 errorWidget: Icon(
-                                  Icons.person,
+                                  AppIcons.person,
                                   color: AppColors.gold,
-                                  size: 40.sp,
+                                  size: AppIconSizes.displayLarge,
                                 ),
                               ),
                       ),
@@ -304,9 +305,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           border: Border.all(color: AppColors.gold, width: 1.w),
                         ),
                         child: Icon(
-                          Icons.edit,
+                          AppIcons.edit,
                           color: AppColors.gold,
-                          size: 12.sp,
+                          size: AppIconSizes.xSmall,
                         ),
                       ),
                     ),
@@ -320,14 +321,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     Text(
                       player.companyName,
-                      style: AppTextStyles.h1.copyWith(fontSize: 20.sp),
+                      style: AppTextStyles.h1.standardCopyWith(fontSize: AppTypography.displaySmall),
                     ),
                     SizedBox(height: 2.h),
                     Text(
                       'CEO: ${player.playerName}',
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.goldLight,
-                        fontSize: 13.sp,
+                        fontSize: AppTypography.bodyLarge,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -348,8 +349,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           child: Text(
                             'Seviye ${player.level}',
-                            style: AppTextStyles.titleGold.copyWith(
-                              fontSize: 12.sp,
+                            style: AppTextStyles.titleGold.standardCopyWith(
+                              fontSize: AppTypography.body,
                             ),
                           ),
                         ),
@@ -396,15 +397,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     child: Text(
                       'LV ${player.level}',
-                      style: AppTextStyles.titleGold.copyWith(fontSize: 12.sp),
+                      style: AppTextStyles.titleGold.standardCopyWith(fontSize: AppTypography.body),
                     ),
                   ),
                   const Spacer(),
                   Text(
                     '${player.currentLevelExperience} / ${player.nextLevelRequiredExperience} XP',
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textPrimary,
-                      fontSize: 12.sp,
+                      fontSize: AppTypography.body,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -413,7 +414,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               SizedBox(height: 12.h),
               ClipRRect(
                 borderRadius: BorderRadius.circular(999.r),
-                child: LinearProgressIndicator(
+                child: AppProgressBar(
                   value: player.expProgressRatio.clamp(0.0, 1.0),
                   minHeight: 10.h,
                   backgroundColor: AppColors.border.withValues(alpha: 0.35),
@@ -423,9 +424,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               SizedBox(height: 10.h),
               Text(
                 'Sonraki seviyeye kalan XP: ${player.remainingExperienceToNextLevel}',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -453,9 +454,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Expanded(
                     child: Text(
                       '${player.achievementUnlockedCount} / ${player.achievementTotalCount} rozet acildi',
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 13.sp,
+                        fontSize: AppTypography.bodyLarge,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -464,9 +465,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onPressed: () => context.go('/achievements'),
                     child: Text(
                       'Tumunu Gor',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.gold,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -481,7 +482,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       label: 'Acilan',
                       value: player.achievementUnlockedCount.toString(),
                       color: AppColors.green,
-                      icon: Icons.workspace_premium_rounded,
+                      icon: AppIcons.workspacePremiumRounded,
                     ),
                   ),
                   SizedBox(width: 10.w),
@@ -494,7 +495,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               .clamp(0, player.achievementTotalCount)
                               .toString(),
                       color: AppColors.gold,
-                      icon: Icons.lock_open_rounded,
+                      icon: AppIcons.lockOpenRounded,
                     ),
                   ),
                 ],
@@ -503,7 +504,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               if (player.featuredBadges.isEmpty)
                 Text(
                   'Ilk rozetlerini acmak icin gorevlerini ve buyume adimlarini tamamla.',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.body,
+                  ),
                 )
               else
                 Column(
@@ -511,9 +515,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     Text(
                       'One Cikan Rozetler',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -545,7 +549,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
           ),
           child: Material(
-            color: Colors.transparent,
+            color: AppColors.transparent,
             borderRadius: BorderRadius.circular(12.r),
             child: InkWell(
               onTap: () => context.go('/leaderboard'),
@@ -565,9 +569,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ),
                       child: Icon(
-                        Icons.emoji_events_rounded,
+                        AppIcons.emojiEventsRounded,
                         color: AppColors.gold,
-                        size: 18.sp,
+                        size: AppIconSizes.regular,
                       ),
                     ),
                     SizedBox(width: 12.w),
@@ -577,27 +581,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           Text(
                             'Liderlik Tablosu',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13.sp,
+                            style: AppTextStyles.body.standardCopyWith(
+                              color: AppColors.textPrimary,
+                              fontSize: AppTypography.bodyLarge,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           SizedBox(height: 2.h),
                           Text(
                             'Diger oyuncular arasindaki yerini gor',
-                            style: TextStyle(
+                            style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.textSecondary,
-                              fontSize: 11.sp,
+                              fontSize: AppTypography.bodySmall,
                             ),
                           ),
                         ],
                       ),
                     ),
                     Icon(
-                      Icons.chevron_right_rounded,
+                      AppIcons.chevronRightRounded,
                       color: AppColors.gold,
-                      size: 20.sp,
+                      size: AppIconSizes.medium,
                     ),
                   ],
                 ),
@@ -621,17 +625,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Text(
                 'Sirket Degeri',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               SizedBox(height: 6.h),
               Text(
                 player.companyValue.toStringAsFixed(0),
-                style: AppTextStyles.h1.copyWith(
-                  fontSize: 24.sp,
+                style: AppTextStyles.h1.standardCopyWith(
+                  fontSize: AppTypography.display,
                   color: AppColors.gold,
                 ),
               ),
@@ -642,14 +646,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         Row(
           children: [
             _buildStatCard(
-              Icons.attach_money,
+              AppIcons.attachMoney,
               'Nakit',
               player.cash.toString(),
               AppColors.green,
             ),
             SizedBox(width: 12.w),
             _buildStatCard(
-              Icons.star,
+              AppIcons.star,
               'Altin',
               player.gold.toString(),
               AppColors.gold,
@@ -668,12 +672,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 borderRadius: BorderRadius.circular(8.r),
               ),
             ),
-            icon: Icon(Icons.logout, color: AppColors.red),
+            icon: Icon(AppIcons.logout, color: AppColors.red),
             label: Text(
               'Hesaptan Cikis Yap',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.red,
-                fontSize: 14.sp,
+                fontSize: AppTypography.title,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -710,10 +714,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             children: [
               Icon(
                 isGoogleLinked
-                    ? Icons.verified_user_rounded
-                    : Icons.link_rounded,
+                    ? AppIcons.verifiedUserRounded
+                    : AppIcons.linkRounded,
                 color: isGoogleLinked ? AppColors.green : AppColors.gold,
-                size: 18.sp,
+                size: AppIconSizes.regular,
               ),
               SizedBox(width: 8.w),
               Expanded(
@@ -721,7 +725,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   isGoogleLinked
                       ? 'Google Hesabi Bagli'
                       : 'Hesabi Guvenceye Al',
-                  style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+                  style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.titleLarge),
                 ),
               ),
             ],
@@ -731,9 +735,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             isGoogleLinked
                 ? 'Hesabin Google ile bagli. Oyuncu verilerin korunur, cihaz degistirdiginde ayni hesaba geri donebilirsin.'
                 : 'Gecici cihaz hesabini Google ile baglayarak ilerlemeni guvenceye al. Mevcut oyuncu kaydin aynen korunur.',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -741,9 +745,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             SizedBox(height: 10.h),
             Text(
               linkedEmail,
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textPrimary,
-                fontSize: 13.sp,
+                fontSize: AppTypography.bodyLarge,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -768,16 +772,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 icon: Icon(
                   isSignInBusy
-                      ? Icons.hourglass_top_rounded
-                      : Icons.login_rounded,
-                  size: 18.sp,
+                      ? AppIcons.hourglassTopRounded
+                      : AppIcons.loginRounded,
+                  size: AppIconSizes.regular,
                 ),
                 label: Text(
                   isSignInBusy
                       ? 'Giris Bekleniyor'
                       : 'Var Olan Google Hesabina Gir',
-                  style: TextStyle(
-                    fontSize: 12.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    fontSize: AppTypography.body,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -809,16 +813,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               onPressed: isGoogleLinked || isBusy ? null : _handleGoogleLink,
               icon: Icon(
                 isGoogleLinked
-                    ? Icons.check_circle_rounded
+                    ? AppIcons.checkCircleRounded
                     : isBusy
-                    ? Icons.hourglass_top_rounded
-                    : Icons.g_mobiledata_rounded,
+                    ? AppIcons.hourglassTopRounded
+                    : AppIcons.gMobiledataRounded,
                 color: isGoogleLinked
                     ? AppColors.green
                     : isBusy
                     ? AppColors.gold
-                    : Colors.white,
-                size: 22.sp,
+                    : AppColors.textPrimary,
+                size: AppIconSizes.mediumLarge,
               ),
               label: Text(
                 isGoogleLinked
@@ -826,13 +830,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     : isBusy
                     ? 'Baglanti Bekleniyor'
                     : 'Google Hesabina Bagla',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: isGoogleLinked
                       ? AppColors.green
                       : isBusy
                       ? AppColors.gold
-                      : Colors.white,
-                  fontSize: 13.sp,
+                      : AppColors.textPrimary,
+                  fontSize: AppTypography.bodyLarge,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -854,11 +858,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                 ),
-                icon: Icon(Icons.link_off_rounded, size: 18.sp),
+                icon: Icon(AppIcons.linkOffRounded, size: AppIconSizes.regular),
                 label: Text(
                   'Google Baglantisini Kaldir',
-                  style: TextStyle(
-                    fontSize: 12.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    fontSize: AppTypography.body,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -869,9 +873,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             SizedBox(height: 10.h),
             Text(
               'Tarayici veya Google penceresinden onay verip oyuna geri don. Baglanti tamamlaninca durum otomatik guncellenecek.',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.goldLight,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -994,7 +998,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         title: Text(
           'Kayitli Hesaba Gec',
-          style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
+          style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.headline),
         ),
         content: Text(
           'Bu islem mevcut cihaz oturumundan cikarak Google hesabina bagli kayitli oyun hesabina gecis yapar.',
@@ -1003,13 +1007,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Vazgec', style: TextStyle(color: AppColors.textMuted)),
+            child: Text(
+              'Vazgec',
+              style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
-              foregroundColor: Colors.black,
+              foregroundColor: AppColors.textOnAccent,
             ),
             child: const Text('Devam Et'),
           ),
@@ -1107,7 +1114,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             Row(
               children: [
-                Icon(icon, color: color, size: 16.sp),
+                Icon(icon, color: color, size: AppIconSizes.compact),
                 SizedBox(width: 6.w),
                 Text(label, style: AppTextStyles.body),
               ],
@@ -1115,9 +1122,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             SizedBox(height: 8.h),
             Text(
               value,
-              style: TextStyle(
+              style: AppTextStyles.h2.standardCopyWith(
                 color: color,
-                fontSize: 18.sp,
+                fontSize: AppTypography.headline,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1148,7 +1155,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               color: color.withValues(alpha: 0.12),
               border: Border.all(color: color.withValues(alpha: 0.3)),
             ),
-            child: Icon(_badgeIcon(badge.badgeKey), color: color, size: 18.sp),
+            child: Icon(_badgeIcon(badge.badgeKey), color: color, size: AppIconSizes.regular),
           ),
           SizedBox(width: 8.w),
           Expanded(
@@ -1159,9 +1166,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   badge.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1170,9 +1177,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   badge.categoryLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: color,
-                    fontSize: 9.sp,
+                    fontSize: AppTypography.caption,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1206,7 +1213,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               color: color.withValues(alpha: 0.14),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 16.sp),
+            child: Icon(icon, color: color, size: AppIconSizes.compact),
           ),
           SizedBox(width: 8.w),
           Expanded(
@@ -1215,17 +1222,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               children: [
                 Text(
                   value,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 Text(
                   label,
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1240,58 +1247,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   IconData _badgeIcon(String key) {
     switch (key) {
       case 'store':
-        return Icons.storefront_rounded;
+        return AppIcons.storefrontRounded;
       case 'warehouse':
-        return Icons.warehouse_rounded;
+        return AppIcons.warehouseRounded;
       case 'factory':
-        return Icons.precision_manufacturing_rounded;
+        return AppIcons.precisionManufacturingRounded;
       case 'field':
       case 'farm':
-        return Icons.agriculture_rounded;
+        return AppIcons.agricultureRounded;
       case 'mine':
-        return Icons.landscape_rounded;
+        return AppIcons.landscapeRounded;
       case 'builder':
-        return Icons.handyman_rounded;
+        return AppIcons.handymanRounded;
       case 'trade':
-        return Icons.point_of_sale_rounded;
+        return AppIcons.pointOfSaleRounded;
       case 'truck':
-        return Icons.local_shipping_rounded;
+        return AppIcons.localShippingRounded;
       case 'science':
-        return Icons.science_rounded;
+        return AppIcons.scienceRounded;
       case 'upgrade':
-        return Icons.trending_up_rounded;
+        return AppIcons.trendingUpRounded;
       case 'crown':
-        return Icons.workspace_premium_rounded;
+        return AppIcons.workspacePremiumRounded;
       default:
-        return Icons.military_tech_rounded;
+        return AppIcons.militaryTechRounded;
     }
   }
 
   Color _badgeColor(String key) {
-    switch (key) {
-      case 'blue':
-        return Colors.lightBlueAccent;
-      case 'red':
-        return Colors.redAccent;
-      case 'green':
-        return Colors.greenAccent;
-      case 'lime':
-        return Colors.lightGreenAccent;
-      case 'slate':
-        return Colors.blueGrey;
-      case 'orange':
-        return Colors.orangeAccent;
-      case 'deepOrange':
-        return Colors.deepOrangeAccent;
-      case 'cyan':
-        return Colors.cyanAccent;
-      case 'purple':
-        return Colors.purpleAccent;
-      case 'teal':
-        return Colors.tealAccent;
-      case 'amber':
-      default:
-        return Colors.amberAccent;
-    }
+    return AppColorPresets.badge(key);
   }
 }

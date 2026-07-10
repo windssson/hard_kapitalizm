@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
@@ -72,15 +73,18 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
             const SecondaryTopBar(title: 'Uyarilar'),
             Expanded(
               child: dashboardAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => Center(
                   child: Padding(
                     padding: EdgeInsets.all(20.w),
                     child: Text(
                       error.toString(),
-                      style: TextStyle(color: AppColors.red, fontSize: 12.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                        fontSize: AppTypography.body,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -124,7 +128,7 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
     final route = _targetRoute(notification);
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(
         onTap: () => _openAlert(notification),
         borderRadius: BorderRadius.circular(14.r),
@@ -144,7 +148,7 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
                 child: Icon(
                   _alertIcon(notification),
                   color: accent,
-                  size: 20.sp,
+                  size: AppIconSizes.medium,
                 ),
               ),
               SizedBox(width: 10.w),
@@ -174,22 +178,21 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
                     SizedBox(height: 8.h),
                     Text(
                       notification.title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
+                      style: AppTextStyles.titleBold.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.bodyLarge,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       notification.message,
-                      style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                      style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
                     ),
                     SizedBox(height: 6.h),
                     Text(
                       _relativeTime(notification.createdAt),
-                      style: AppTextStyles.body.copyWith(
-                        fontSize: 10.sp,
+                      style: AppTextStyles.body.standardCopyWith(
+                        fontSize: AppTypography.label,
                         color: AppColors.textMuted,
                       ),
                     ),
@@ -200,7 +203,7 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () => _markRead(notification),
-                              icon: const Icon(Icons.done_rounded),
+                              icon: const Icon(AppIcons.doneRounded),
                               label: const Text('Okundu Yap'),
                             ),
                           ),
@@ -210,7 +213,7 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
                           Expanded(
                             child: FilledButton.tonalIcon(
                               onPressed: () => _openAlert(notification),
-                              icon: const Icon(Icons.open_in_new_rounded),
+                              icon: const Icon(AppIcons.openInNewRounded),
                               label: const Text('Module Git'),
                             ),
                           ),
@@ -236,9 +239,9 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 9.sp,
+          fontSize: AppTypography.caption,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -251,15 +254,15 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
         child: Column(
           children: [
             Icon(
-              Icons.shield_outlined,
+              AppIcons.shieldOutlined,
               color: AppColors.textMuted,
-              size: 28.sp,
+              size: AppIconSizes.xLarge,
             ),
             SizedBox(height: 8.h),
             Text(
               'Goruntulenecek aktif uyari yok.',
               textAlign: TextAlign.center,
-              style: AppTextStyles.body.copyWith(fontSize: 12.sp),
+              style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.body),
             ),
           ],
         ),
@@ -318,20 +321,20 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
   IconData _alertIcon(PlayerNotificationModel item) {
     switch (item.category) {
       case 'store_blocked':
-        return Icons.storefront_outlined;
+        return AppIcons.storefrontOutlined;
       case 'production_blocked':
-        return Icons.warning_amber_rounded;
+        return AppIcons.warningAmberRounded;
       case 'logistics_attention':
-        return Icons.local_shipping_outlined;
+        return AppIcons.localShippingOutlined;
       case 'inactive_reminder':
-        return Icons.pause_circle_outline_rounded;
+        return AppIcons.pauseCircleOutlineRounded;
       case 'tender_failed':
       case 'tender_lost':
       case 'tender_cancelled':
       case 'tender_delivery_late':
-        return Icons.gavel_rounded;
+        return AppIcons.gavelRounded;
       default:
-        return Icons.notifications_active_outlined;
+        return AppIcons.notificationsActiveOutlined;
     }
   }
 
@@ -402,7 +405,7 @@ class _AlertScreenState extends ConsumerState<AlertScreen> {
       case 'success':
         return AppColors.green;
       case 'warning':
-        return Colors.orange;
+        return AppColors.warning;
       default:
         return AppColors.gold;
     }

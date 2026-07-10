@@ -77,8 +77,8 @@ class StoreHeroHeader extends StatelessWidget {
                     Expanded(
                       child: Text(
                         store.name,
-                        style: AppTextStyles.h2.copyWith(
-                          fontSize: 20.sp,
+                        style: AppTextStyles.h2.standardCopyWith(
+                          fontSize: AppTypography.displaySmall,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0.5,
                         ),
@@ -106,9 +106,9 @@ class StoreHeroHeader extends StatelessWidget {
                 SizedBox(height: 8.h),
                 Row(
                   children: [
-                    Icon(Icons.location_on, color: AppColors.textMuted, size: 14.sp),
+                    Icon(AppIcons.locationOn, color: AppColors.textMuted, size: AppIconSizes.small),
                     SizedBox(width: 4.w),
-                    Text(store.cityName ?? 'Bilinmiyor', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500)),
+                    Text(store.cityName ?? 'Bilinmiyor', style: AppTextStyles.body.standardCopyWith(fontWeight: FontWeight.w500)),
                     SizedBox(width: 16.w),
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
@@ -117,7 +117,7 @@ class StoreHeroHeader extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8.r),
                         border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
                       ),
-                      child: Text('Seviye ${store.level}', style: AppTextStyles.body.copyWith(color: AppColors.gold, fontSize: 10.sp, fontWeight: FontWeight.bold)),
+                      child: Text('Seviye ${store.level}', style: AppTextStyles.body.standardCopyWith(color: AppColors.gold, fontSize: AppTypography.label, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -142,25 +142,25 @@ class StoreHeroHeader extends StatelessWidget {
           _buildCompactMetricCol(
             title: 'Doluluk',
             value: '%${(store.summary.usedCapacityRatio * 100).toInt()}',
-            icon: Icons.pie_chart,
+            icon: AppIcons.pieChart,
             color: AppColors.goldDark,
           ),
           _buildCompactMetricCol(
             title: 'Stok',
             value: '${store.summary.totalQuantity}/${store.summary.totalCapacity}',
-            icon: Icons.inventory_2,
+            icon: AppIcons.inventory2,
             color: AppColors.blue,
           ),
           _buildCompactMetricCol(
             title: 'Stok Degeri',
             value: AppMoney.compact(store.summary.totalStockSaleValue ?? 0),
-            icon: Icons.trending_up,
+            icon: AppIcons.trendingUp,
             color: AppColors.green,
           ),
           _buildCompactMetricCol(
             title: 'Slot',
             value: '${store.slots.length}/${store.maxSlotCount}',
-            icon: Icons.grid_view,
+            icon: AppIcons.gridView,
             color: AppColors.gold,
           ),
         ],
@@ -178,14 +178,14 @@ class StoreHeroHeader extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 20.sp),
+          Icon(icon, color: color, size: AppIconSizes.medium),
           SizedBox(height: 6.h),
           Text(
             value,
-            style: AppTextStyles.body.copyWith(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.bold,
-              fontSize: 11.sp,
+              fontSize: AppTypography.bodySmall,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -194,9 +194,9 @@ class StoreHeroHeader extends StatelessWidget {
           SizedBox(height: 2.h),
           Text(
             title,
-            style: AppTextStyles.body.copyWith(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 9.sp,
+              fontSize: AppTypography.caption,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

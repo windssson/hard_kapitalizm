@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_finance_entry_model.dart';
@@ -14,7 +15,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
     final entriesAsync = ref.watch(logisticsFinanceEntriesProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -22,8 +23,8 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
             Expanded(
               child: entriesAsync.when(
                 data: (entries) => _buildContent(entries),
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, stack) => _buildError(),
               ),
@@ -60,7 +61,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
         SizedBox(height: 18.h),
         Text(
           'SON 7 GUN KAYITLARI',
-          style: AppTextStyles.titleGold.copyWith(fontSize: 12.sp),
+          style: AppTextStyles.titleGold.standardCopyWith(fontSize: AppTypography.body),
         ),
         SizedBox(height: 10.h),
         if (recentEntries.isEmpty)
@@ -85,7 +86,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
         children: [
           Text(
             'Son 7 Gun',
-            style: AppTextStyles.h2.copyWith(fontSize: 18.sp),
+            style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.headline),
           ),
           SizedBox(height: 12.h),
           Row(
@@ -95,7 +96,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
                   'Gelir',
                   income,
                   AppColors.green,
-                  Icons.trending_up,
+                  AppIcons.trendingUp,
                 ),
               ),
               SizedBox(width: 8.w),
@@ -104,7 +105,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
                   'Gider',
                   expense,
                   AppColors.red,
-                  Icons.trending_down,
+                  AppIcons.trendingDown,
                 ),
               ),
               SizedBox(width: 8.w),
@@ -113,7 +114,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
                   'Net',
                   net,
                   netColor,
-                  Icons.account_balance_wallet_outlined,
+                  AppIcons.accountBalanceWalletOutlined,
                 ),
               ),
             ],
@@ -139,17 +140,17 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 18.sp),
+          Icon(icon, color: color, size: AppIconSizes.regular),
           SizedBox(height: 7.h),
           Text(
             label,
-            style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+            style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
           ),
           Text(
             _formatMoney(amount),
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.w900,
             ),
             maxLines: 1,
@@ -204,22 +205,22 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
         children: [
           Text(
             _formatDate(day),
-            style: AppTextStyles.titleGold.copyWith(fontSize: 10.sp),
+            style: AppTextStyles.titleGold.standardCopyWith(fontSize: AppTypography.label),
           ),
           SizedBox(height: 8.h),
           Text(
             '+${_formatMoney(income)}',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.green,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w800,
             ),
           ),
           Text(
             '-${_formatMoney(expense)}',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.red,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -248,7 +249,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
               color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(_categoryIcon(entry.category), color: color, size: 19.sp),
+            child: Icon(_categoryIcon(entry.category), color: color, size: AppIconSizes.regular),
           ),
           SizedBox(width: 12.w),
           Expanded(
@@ -257,25 +258,25 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
               children: [
                 Text(
                   entry.description ?? _categoryLabel(entry.category),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 SizedBox(height: 3.h),
                 Text(
                   '${_categoryLabel(entry.category)} | ${_formatDateTime(entry.createdAt.toLocal())}',
-                  style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                  style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                 ),
               ],
             ),
           ),
           Text(
             '$sign${_formatMoney(entry.amount)}',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: color,
-              fontSize: 14.sp,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -311,11 +312,11 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
 
   IconData _categoryIcon(String category) {
     return switch (category) {
-      'vehicle_purchase' => Icons.local_shipping_rounded,
-      'fuel_purchase' => Icons.local_gas_station,
-      'maintenance' => Icons.build,
-      'rental_income' => Icons.payments_outlined,
-      _ => Icons.receipt_long,
+      'vehicle_purchase' => AppIcons.localShippingRounded,
+      'fuel_purchase' => AppIcons.localGasStation,
+      'maintenance' => AppIcons.build,
+      'rental_income' => AppIcons.paymentsOutlined,
+      _ => AppIcons.receiptLong,
     };
   }
 

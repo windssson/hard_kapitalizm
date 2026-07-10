@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/cash_flow/data/cash_flow_provider.dart';
@@ -96,7 +97,7 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
     final entriesAsync = ref.watch(cashMovementEntriesProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -104,8 +105,8 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
             _buildTabSelector(),
             Expanded(
               child: entriesAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => _CashFlowError(
                   message: error.toString(),
@@ -137,9 +138,9 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
       margin: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: AppFx.panelWash(0.3),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppFx.softOverlay(0.05)),
       ),
       child: Row(
         children: [
@@ -147,11 +148,11 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
             child: _buildTabButton(
               0,
               'Grafik & Analiz',
-              Icons.analytics_outlined,
+              AppIcons.analyticsOutlined,
             ),
           ),
           Expanded(
-            child: _buildTabButton(1, 'İşlem Geçmişi', Icons.history_rounded),
+            child: _buildTabButton(1, 'İşlem Geçmişi', AppIcons.historyRounded),
           ),
         ],
       ),
@@ -167,11 +168,15 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
           color:
-              isSelected ? AppColors.gold.withValues(alpha: 0.12) : Colors.transparent,
+              isSelected
+                  ? AppColors.gold.withValues(alpha: 0.12)
+                  : AppColors.transparent,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color:
-                isSelected ? AppColors.gold.withValues(alpha: 0.4) : Colors.transparent,
+                isSelected
+                    ? AppColors.gold.withValues(alpha: 0.4)
+                    : AppColors.transparent,
           ),
         ),
         child: Row(
@@ -179,15 +184,17 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
           children: [
             Icon(
               icon,
-              size: 16.sp,
+              size: AppIconSizes.compact,
               color: isSelected ? AppColors.gold : AppColors.textMuted,
             ),
             SizedBox(width: 8.w),
             Text(
               label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textMuted,
-                fontSize: 12.sp,
+              style: AppTextStyles.body.standardCopyWith(
+                color: isSelected
+                    ? AppColors.textPrimary
+                    : AppColors.textMuted,
+                fontSize: AppTypography.body,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -245,17 +252,17 @@ class _CashFlowLineChart extends StatelessWidget {
             children: [
               Text(
                 'Akış Trendi (Günlük)',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.sp,
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.title,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Row(
                 children: [
-                  const _LegendItem(color: AppColors.green, label: 'Gelir'),
+                  _LegendItem(color: AppColors.green, label: 'Gelir'),
                   SizedBox(width: 10.w),
-                  const _LegendItem(color: AppColors.red, label: 'Gider'),
+                  _LegendItem(color: AppColors.red, label: 'Gider'),
                 ],
               ),
             ],
@@ -290,9 +297,9 @@ class _LegendItem extends StatelessWidget {
         SizedBox(width: 4.w),
         Text(
           label,
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: 10.sp,
+            fontSize: AppTypography.label,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -329,7 +336,7 @@ class _ChartPainter extends CustomPainter {
     final int gridLinesCount = 3;
     final gridPaint =
         Paint()
-          ..color = Colors.white.withValues(alpha: 0.05)
+          ..color = AppFx.softOverlay(0.05)
           ..strokeWidth = 1
           ..style = PaintingStyle.stroke;
 
@@ -351,9 +358,9 @@ class _ChartPainter extends CustomPainter {
       final double val = maxVal * ratio;
       textPainter.text = TextSpan(
         text: _formatMoney(val),
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: AppColors.textMuted,
-          fontSize: 9.sp,
+          fontSize: AppTypography.caption,
           fontWeight: FontWeight.w500,
         ),
       );
@@ -369,7 +376,7 @@ class _ChartPainter extends CustomPainter {
 
     final datePaint =
         Paint()
-          ..color = Colors.white.withValues(alpha: 0.08)
+          ..color = AppFx.softOverlay(0.08)
           ..strokeWidth = 1;
 
     canvas.drawLine(
@@ -386,9 +393,9 @@ class _ChartPainter extends CustomPainter {
           '${points[i].date.day.toString().padLeft(2, '0')}.${points[i].date.month.toString().padLeft(2, '0')}';
       textPainter.text = TextSpan(
         text: dayStr,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: AppColors.textMuted,
-          fontSize: 8.5.sp,
+          fontSize: AppTypography.micro,
           fontWeight: FontWeight.w500,
         ),
       );
@@ -514,9 +521,9 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
         children: [
           Text(
             'Kategori Dağılım Analizi',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14.sp,
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -524,9 +531,9 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
 
           Text(
             'Gelir Kaynakları',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.green,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -534,7 +541,10 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
           if (sortedIncomes.isEmpty)
             Text(
               'Gelir kaydı bulunmuyor.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodySmall,
+              ),
             )
           else
             ...sortedIncomes.map(
@@ -550,9 +560,9 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
 
           Text(
             'Gider Kalemleri',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.red,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -560,7 +570,10 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
           if (sortedExpenses.isEmpty)
             Text(
               'Gider kaydı bulunmuyor.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodySmall,
+              ),
             )
           else
             ...sortedExpenses.map(
@@ -593,17 +606,17 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
             children: [
               Text(
                 _formatLabel(label),
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  fontSize: 11.5.sp,
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textPrimary.withValues(alpha: 0.9),
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               Text(
                 '${AppMoney.compact(amount)} (%${(percent * 100).toStringAsFixed(1)})',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: color,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -614,7 +627,7 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
             borderRadius: BorderRadius.circular(4.r),
             child: SizedBox(
               height: 6.h,
-              child: LinearProgressIndicator(
+              child: AppProgressBar(
                 value: percent,
                 backgroundColor: color.withValues(alpha: 0.08),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -688,16 +701,19 @@ class _CashFlowSummaryCard extends StatelessWidget {
         children: [
           Text(
             'Tüm Para Akışı',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 17.sp,
+            style: AppTextStyles.h1.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.headline,
               fontWeight: FontWeight.w900,
             ),
           ),
           SizedBox(height: 4.h),
           Text(
             '$totalCount kayıt listeleniyor',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.bodySmall,
+            ),
           ),
           SizedBox(height: 14.h),
           Row(
@@ -707,7 +723,7 @@ class _CashFlowSummaryCard extends StatelessWidget {
                   label: 'Giren',
                   value: _formatMoney(income),
                   color: AppColors.green,
-                  icon: Icons.south_west_rounded,
+                  icon: AppIcons.southWestRounded,
                 ),
               ),
               SizedBox(width: 8.w),
@@ -716,7 +732,7 @@ class _CashFlowSummaryCard extends StatelessWidget {
                   label: 'Çıkan',
                   value: _formatMoney(expense),
                   color: AppColors.red,
-                  icon: Icons.north_east_rounded,
+                  icon: AppIcons.northEastRounded,
                 ),
               ),
               SizedBox(width: 8.w),
@@ -725,7 +741,7 @@ class _CashFlowSummaryCard extends StatelessWidget {
                   label: 'Net',
                   value: _formatMoney(net),
                   color: netColor,
-                  icon: Icons.account_balance_wallet_outlined,
+                  icon: AppIcons.accountBalanceWalletOutlined,
                 ),
               ),
             ],
@@ -761,20 +777,23 @@ class _MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 18.sp),
+          Icon(icon, color: color, size: AppIconSizes.regular),
           SizedBox(height: 6.h),
           Text(
             label,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.label,
+            ),
           ),
           SizedBox(height: 2.h),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -793,7 +812,7 @@ class _CashFlowEntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accentColor = entry.isIncome ? AppColors.green : AppColors.red;
     final icon =
-        entry.isIncome ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded;
+        entry.isIncome ? AppIcons.arrowDownwardRounded : AppIcons.arrowUpwardRounded;
     final amountPrefix = entry.isIncome ? '+' : '-';
 
     return Container(
@@ -811,7 +830,7 @@ class _CashFlowEntryCard extends StatelessWidget {
                   color: accentColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(icon, color: accentColor, size: 20.sp),
+                child: Icon(icon, color: accentColor, size: AppIconSizes.medium),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -820,18 +839,18 @@ class _CashFlowEntryCard extends StatelessWidget {
                   children: [
                     Text(
                       entry.title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
+                      style: AppTextStyles.title.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       _formatDateTime(entry.createdAt),
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 10.5.sp,
+                        fontSize: AppTypography.label,
                       ),
                     ),
                   ],
@@ -839,9 +858,9 @@ class _CashFlowEntryCard extends StatelessWidget {
               ),
               Text(
                 '$amountPrefix${_formatMoney(entry.amount.abs())}',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: accentColor,
-                  fontSize: 14.sp,
+                  fontSize: AppTypography.title,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -851,9 +870,9 @@ class _CashFlowEntryCard extends StatelessWidget {
             SizedBox(height: 10.h),
             Text(
               entry.description!,
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textSecondary,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
                 height: 1.35,
               ),
             ),
@@ -879,7 +898,7 @@ class _CashFlowEntryCard extends StatelessWidget {
                 _InfoChip(
                   label: 'Kaynak',
                   value: _formatLabel(entry.referenceType!),
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                 ),
             ],
           ),
@@ -911,9 +930,9 @@ class _InfoChip extends StatelessWidget {
       ),
       child: Text(
         '$label: $value',
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 10.sp,
+          fontSize: AppTypography.label,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -937,16 +956,16 @@ class _CashFlowEmpty extends StatelessWidget {
           child: Column(
             children: [
               Icon(
-                Icons.account_balance_wallet_outlined,
+                AppIcons.accountBalanceWalletOutlined,
                 color: AppColors.textMuted,
-                size: 48.sp,
+                size: AppIconSizes.hero,
               ),
               SizedBox(height: 14.h),
               Text(
                 'Henüz para hareketi yok.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16.sp,
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.titleLarge,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -954,9 +973,9 @@ class _CashFlowEmpty extends StatelessWidget {
               Text(
                 'Kazanç, satın alım, transfer veya diğer bakiye değişiklikleri burada görünecek.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   height: 1.45,
                 ),
               ),
@@ -985,13 +1004,13 @@ class _CashFlowError extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, color: AppColors.red, size: 42.sp),
+              Icon(AppIcons.errorOutline, color: AppColors.red, size: AppIconSizes.displayLarge),
               SizedBox(height: 12.h),
               Text(
                 'Para hareketleri yüklenemedi.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.sp,
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.titleLarge,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -999,9 +1018,9 @@ class _CashFlowError extends StatelessWidget {
               SizedBox(height: 8.h),
               Text(
                 message,
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textSecondary,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   height: 1.45,
                 ),
                 textAlign: TextAlign.center,

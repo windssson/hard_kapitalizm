@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
@@ -65,9 +66,9 @@ class _LogisticsManagementScreenState
           children: [
             Text(
               type?.name ?? 'Araç',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.sp,
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.title,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -84,20 +85,20 @@ class _LogisticsManagementScreenState
             SizedBox(height: 6.h),
             Text(
               'Bakım maliyeti: ${repairCost.toStringAsFixed(0)} TL',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.gold,
-                fontSize: 13.sp,
+                fontSize: AppTypography.bodyLarge,
                 fontWeight: FontWeight.bold,
               ),
             ),
             SizedBox(height: 6.h),
             Text(
               'Mevcut nakit: ${playerCash.toStringAsFixed(0)} TL',
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: playerCash >= repairCost
                     ? AppColors.textMuted
                     : AppColors.red,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
               ),
             ),
           ],
@@ -110,9 +111,11 @@ class _LogisticsManagementScreenState
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            child: const Text(
+            child: Text(
               'Bakımı Yap',
-              style: TextStyle(color: Colors.black),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textOnAccent,
+              ),
             ),
           ),
         ],
@@ -464,9 +467,9 @@ class _LogisticsManagementScreenState
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.local_shipping_outlined,
+              AppIcons.localShippingOutlined,
               color: AppColors.gold,
-              size: 60.sp,
+              size: AppIconSizes.emptyState,
             ),
             SizedBox(height: 20.h),
             Text(
@@ -477,7 +480,7 @@ class _LogisticsManagementScreenState
             SizedBox(height: 12.h),
             Text(
               'Ürünlerinizi taşımak ve kiralama geliri elde etmek için bir lojistik firması kurmalısınız.',
-              style: AppTextStyles.body.copyWith(height: 1.5),
+              style: AppTextStyles.body.standardCopyWith(height: 1.5),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 24.h),
@@ -492,10 +495,10 @@ class _LogisticsManagementScreenState
               ),
               child: Text(
                 'FİRMAYI KUR',
-                style: TextStyle(
-                  color: Colors.black,
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textOnAccent,
                   fontWeight: FontWeight.bold,
-                  fontSize: 14.sp,
+                  fontSize: AppTypography.title,
                 ),
               ),
             ),
@@ -547,9 +550,9 @@ class _LogisticsManagementScreenState
                   ],
                 ),
                 child: Icon(
-                  Icons.business_center_rounded,
+                  AppIcons.businessCenterRounded,
                   color: AppColors.gold,
-                  size: 26.sp,
+                  size: AppIconSizes.large,
                 ),
               ),
               SizedBox(width: 12.w),
@@ -559,9 +562,9 @@ class _LogisticsManagementScreenState
                   children: [
                     Text(
                       company.name,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18.sp,
+                      style: AppTextStyles.h2.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.headline,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
@@ -585,9 +588,9 @@ class _LogisticsManagementScreenState
                           ),
                           child: Text(
                             'SEVİYE ${company.level}',
-                            style: TextStyle(
+                            style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.gold,
-                              fontSize: 9.sp,
+                              fontSize: AppTypography.caption,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
@@ -595,9 +598,9 @@ class _LogisticsManagementScreenState
                         SizedBox(width: 6.w),
                         Text(
                           'Lojistik Genel Merkezi',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 10.sp,
+                            fontSize: AppTypography.label,
                           ),
                         ),
                       ],
@@ -615,7 +618,7 @@ class _LogisticsManagementScreenState
                 child: _buildPremiumStatTile(
                   'FİLO DURUMU',
                   '${company.currentVehicleCount} / ${company.maxVehicleCount}',
-                  Icons.local_shipping_rounded,
+                  AppIcons.localShippingRounded,
                   AppColors.blue,
                 ),
               ),
@@ -624,7 +627,7 @@ class _LogisticsManagementScreenState
                 child: _buildPremiumStatTile(
                   'MERKEZ YAKIT',
                   '${company.currentFuel} / ${company.fuelCapacity} L',
-                  Icons.gas_meter_rounded,
+                  AppIcons.gasMeterRounded,
                   AppColors.gold,
                 ),
               ),
@@ -636,13 +639,13 @@ class _LogisticsManagementScreenState
             children: [
               Row(
                 children: [
-                  Icon(Icons.bolt, color: AppColors.gold, size: 12.sp),
+                  Icon(AppIcons.bolt, color: AppColors.gold, size: AppIconSizes.xSmall),
                   SizedBox(width: 4.w),
                   Text(
                     'MERKEZ YAKIT REZERVİ',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 10.sp,
+                      fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -650,10 +653,10 @@ class _LogisticsManagementScreenState
               ),
               Text(
                 '%${(fuelRatio * 100).toInt()}',
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                 ),
               ),
             ],
@@ -670,7 +673,7 @@ class _LogisticsManagementScreenState
                       : () => _showFuelSupplySheet(context, company),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.gold,
-                    foregroundColor: Colors.black,
+                    foregroundColor: AppColors.textOnAccent,
                     disabledBackgroundColor: AppColors.cardBgLight.withValues(
                       alpha: 0.5,
                     ),
@@ -681,14 +684,14 @@ class _LogisticsManagementScreenState
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                   ),
-                  icon: Icon(Icons.local_gas_station_rounded, size: 14.sp),
+                  icon: Icon(AppIcons.localGasStationRounded, size: AppIconSizes.small),
                   label: Text(
                     company.currentFuel >= company.fuelCapacity
                         ? 'REZERV DOLU'
                         : 'YAKIT AL',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 11.sp,
+                      fontSize: AppTypography.bodySmall,
                     ),
                   ),
                 ),
@@ -708,12 +711,12 @@ class _LogisticsManagementScreenState
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                   ),
-                  icon: Icon(Icons.analytics_outlined, size: 14.sp),
+                  icon: Icon(AppIcons.analyticsOutlined, size: AppIconSizes.small),
                   label: Text(
                     'FİNANS RAPORU',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 11.sp,
+                      fontSize: AppTypography.bodySmall,
                     ),
                   ),
                 ),
@@ -734,7 +737,7 @@ class _LogisticsManagementScreenState
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
+        color: AppFx.panelWash(0.25),
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.4)),
       ),
@@ -743,13 +746,13 @@ class _LogisticsManagementScreenState
         children: [
           Row(
             children: [
-              Icon(icon, color: color.withValues(alpha: 0.7), size: 13.sp),
+              Icon(icon, color: color.withValues(alpha: 0.7), size: AppIconSizes.small),
               SizedBox(width: 6.w),
               Text(
                 label,
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 9.sp,
+                  fontSize: AppTypography.caption,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -758,9 +761,9 @@ class _LogisticsManagementScreenState
           SizedBox(height: 6.h),
           Text(
             value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -808,21 +811,21 @@ class _LogisticsManagementScreenState
           _buildOverviewStat(
             'Aktif Filo',
             '$onRouteCount / ${vehicles.length}',
-            Icons.local_shipping_outlined,
+            AppIcons.localShippingOutlined,
             AppColors.blue,
           ),
           _buildOverviewDivider(),
           _buildOverviewStat(
             'Toplam Sefer',
             '$totalTrips',
-            Icons.route_outlined,
+            AppIcons.routeOutlined,
             AppColors.gold,
           ),
           _buildOverviewDivider(),
           _buildOverviewStat(
             'Günlük Kâr',
             '${netDaily >= 0 ? '+' : ''}${_formatMoney(netDaily)} TL',
-            Icons.payments_outlined,
+            AppIcons.paymentsOutlined,
             netDaily >= 0 ? AppColors.green : AppColors.red,
           ),
         ],
@@ -841,13 +844,13 @@ class _LogisticsManagementScreenState
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.textMuted, size: 12.sp),
+            Icon(icon, color: AppColors.textMuted, size: AppIconSizes.xSmall),
             SizedBox(width: 4.w),
             Text(
               label,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 9.sp,
+                fontSize: AppTypography.caption,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -856,9 +859,9 @@ class _LogisticsManagementScreenState
         SizedBox(height: 4.h),
         Text(
           value,
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: valueColor,
-            fontSize: 13.sp,
+            fontSize: AppTypography.bodyLarge,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -931,7 +934,7 @@ class _LogisticsManagementScreenState
                       color: isExpanded
                           ? AppColors.gold
                           : AppColors.textSecondary,
-                      size: 20.sp,
+                      size: AppIconSizes.medium,
                     ),
                   ),
                   SizedBox(width: 10.w),
@@ -941,9 +944,9 @@ class _LogisticsManagementScreenState
                       children: [
                         Text(
                           type?.name ?? 'Bilinmeyen Araç',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13.sp,
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: AppTypography.bodyLarge,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -952,16 +955,16 @@ class _LogisticsManagementScreenState
                           Row(
                             children: [
                               Icon(
-                                Icons.place_outlined,
+                                AppIcons.placeOutlined,
                                 color: AppColors.gold,
-                                size: 10.sp,
+                                size: AppIconSizes.xxSmall,
                               ),
                               SizedBox(width: 2.w),
                               Text(
                                 '${cityMap[vehicle.routeCityAId]?.name ?? '?'} ➔ ${cityMap[vehicle.routeCityBId]?.name ?? '?'}',
-                                style: TextStyle(
+                                style: AppTextStyles.caption.standardCopyWith(
                                   color: AppColors.textSecondary,
-                                  fontSize: 10.sp,
+                                  fontSize: AppTypography.label,
                                 ),
                               ),
                             ],
@@ -969,9 +972,9 @@ class _LogisticsManagementScreenState
                         else
                           Text(
                             'ID: $vehicleShortId • Rota Yok',
-                            style: TextStyle(
+                            style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textMuted,
-                              fontSize: 10.sp,
+                              fontSize: AppTypography.label,
                             ),
                           ),
                       ],
@@ -986,32 +989,32 @@ class _LogisticsManagementScreenState
                         Row(
                           children: [
                             Icon(
-                              Icons.bolt,
+                              AppIcons.bolt,
                               color: fuelRatio < 0.2
                                   ? AppColors.red
                                   : AppColors.gold,
-                              size: 10.sp,
+                              size: AppIconSizes.xxSmall,
                             ),
                             Text(
                               ' %${(fuelRatio * 100).toInt()}',
-                              style: TextStyle(
+                              style: AppTextStyles.caption.standardCopyWith(
                                 color: AppColors.textMuted,
-                                fontSize: 9.sp,
+                                fontSize: AppTypography.caption,
                               ),
                             ),
                             SizedBox(width: 6.w),
                             Icon(
-                              Icons.handyman_outlined,
+                              AppIcons.handymanOutlined,
                               color: conditionRatio < 0.3
                                   ? AppColors.red
                                   : AppColors.green,
-                              size: 10.sp,
+                              size: AppIconSizes.xxSmall,
                             ),
                             Text(
                               ' %${(conditionRatio * 100).toInt()}',
-                              style: TextStyle(
+                              style: AppTextStyles.caption.standardCopyWith(
                                 color: AppColors.textMuted,
-                                fontSize: 9.sp,
+                                fontSize: AppTypography.caption,
                               ),
                             ),
                           ],
@@ -1022,10 +1025,7 @@ class _LogisticsManagementScreenState
                 ],
               ),
               if (isExpanded) ...[
-                Divider(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  height: 16.h,
-                ),
+                Divider(color: AppFx.softOverlay(0.08), height: 16.h),
                 if (hasRoute) ...[
                   _buildRoutePanel(vehicle, cityMap),
                   SizedBox(height: 12.h),
@@ -1034,7 +1034,7 @@ class _LogisticsManagementScreenState
                   'YAKIT REZERVI',
                   fuelRatio,
                   fuelRatio < 0.2 ? AppColors.red : AppColors.gold,
-                  Icons.bolt,
+                  AppIcons.bolt,
                   '${vehicle.currentFuel} / ${vehicle.fuelCapacity} L',
                 ),
                 SizedBox(height: 10.h),
@@ -1042,30 +1042,30 @@ class _LogisticsManagementScreenState
                   'KONDİSYON',
                   conditionRatio,
                   conditionRatio < 0.3 ? AppColors.red : AppColors.green,
-                  Icons.handyman_outlined,
+                  AppIcons.handymanOutlined,
                   '%${vehicle.condition}',
                 ),
                 SizedBox(height: 12.h),
                 Container(
                   padding: EdgeInsets.symmetric(vertical: 8.h),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.15),
+                    color: AppFx.panelWash(0.15),
                     borderRadius: BorderRadius.circular(8.r),
                   ),
                   child: Row(
                     children: [
                       _buildVehicleDetailItem(
-                        Icons.speed,
+                        AppIcons.speed,
                         '${vehicle.speedKmh} km/h',
                         'Hız',
                       ),
                       _buildVehicleDetailItem(
-                        Icons.inventory_2_outlined,
+                        AppIcons.inventory2Outlined,
                         '${vehicle.capacity} t',
                         'Kapasite',
                       ),
                       _buildVehicleDetailItem(
-                        Icons.local_gas_station_outlined,
+                        AppIcons.localGasStationOutlined,
                         '${vehicle.fuelRate} L/km',
                         'Tüketim',
                       ),
@@ -1113,21 +1113,21 @@ class _LogisticsManagementScreenState
       children: [
         if (canRefuel)
           _buildActionButton(
-            icon: Icons.local_gas_station,
+            icon: AppIcons.localGasStation,
             label: 'Yakıt Al',
             color: AppColors.gold,
             onTap: () => _handleRefuelAction(context, vehicle),
           ),
         if (canRepair)
           _buildActionButton(
-            icon: Icons.build,
+            icon: AppIcons.build,
             label: 'Bakım',
             color: AppColors.green,
             onTap: () =>
                 _handleRepairAction(context, vehicle, type, playerCash),
           ),
         _buildActionButton(
-          icon: Icons.alt_route,
+          icon: AppIcons.altRoute,
           label: 'Rota Belirle',
           color: canChangeRoute ? AppColors.blue : AppColors.textMuted,
           onTap: canChangeRoute
@@ -1136,17 +1136,17 @@ class _LogisticsManagementScreenState
         ),
         _buildActionButton(
           icon: vehicle.isAvailableForRent
-              ? Icons.no_meeting_room
-              : Icons.vpn_key,
+              ? AppIcons.noMeetingRoom
+              : AppIcons.vpnKey,
           label: vehicle.isAvailableForRent ? 'Kiralama Kapat' : 'Kiraya Ver',
-          color: Colors.orangeAccent,
+          color: AppColors.warning,
           onTap: () => _handleRentalAction(context, vehicle),
         ),
         if (canToggleActive)
           _buildActionButton(
             icon: vehicle.status == 'inactive'
-                ? Icons.play_circle_fill
-                : Icons.pause_circle_filled,
+                ? AppIcons.playCircleFill
+                : AppIcons.pauseCircleFilled,
             label: vehicle.status == 'inactive' ? 'Etkinleştir' : 'Pasife Al',
             color: vehicle.status == 'inactive'
                 ? AppColors.green
@@ -1179,13 +1179,13 @@ class _LogisticsManagementScreenState
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: color, size: 12.sp),
+              Icon(icon, color: color, size: AppIconSizes.xSmall),
               SizedBox(width: 4.w),
               Text(
                 label,
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: color,
-                  fontSize: 10.sp,
+                  fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1218,13 +1218,13 @@ class _LogisticsManagementScreenState
         ),
         child: Row(
           children: [
-            Icon(Icons.alt_route, color: AppColors.textMuted, size: 14.sp),
+            Icon(AppIcons.altRoute, color: AppColors.textMuted, size: AppIconSizes.small),
             SizedBox(width: 8.w),
             Text(
               'Rota atanmadı',
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1246,14 +1246,14 @@ class _LogisticsManagementScreenState
       ),
       child: Row(
         children: [
-          Icon(Icons.place, color: AppColors.gold, size: 14.sp),
+          Icon(AppIcons.place, color: AppColors.gold, size: AppIconSizes.small),
           SizedBox(width: 4.w),
           Flexible(
             child: Text(
               cityAName,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.gold,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
                 fontWeight: FontWeight.w800,
               ),
               overflow: TextOverflow.ellipsis,
@@ -1262,19 +1262,19 @@ class _LogisticsManagementScreenState
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 8.w),
             child: Icon(
-              Icons.sync_alt,
+              AppIcons.syncAlt,
               color: AppColors.blue.withValues(alpha: 0.7),
-              size: 14.sp,
+              size: AppIconSizes.small,
             ),
           ),
-          Icon(Icons.place, color: AppColors.gold, size: 14.sp),
+          Icon(AppIcons.place, color: AppColors.gold, size: AppIconSizes.small),
           SizedBox(width: 4.w),
           Flexible(
             child: Text(
               cityBName,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.gold,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
                 fontWeight: FontWeight.w800,
               ),
               overflow: TextOverflow.ellipsis,
@@ -1294,13 +1294,13 @@ class _LogisticsManagementScreenState
         _buildMiniStat(
           'Sefer',
           '${performance.totalTrips}',
-          Icons.local_shipping,
+          AppIcons.localShipping,
         ),
-        _buildMiniStat('Aktif', '${performance.activeTrips}', Icons.route),
+        _buildMiniStat('Aktif', '${performance.activeTrips}', AppIcons.route),
         _buildMiniStat(
           'Gelir',
           '${performance.rentalRevenue.toStringAsFixed(0)} TL',
-          Icons.payments,
+          AppIcons.payments,
         ),
       ],
     );
@@ -1309,11 +1309,14 @@ class _LogisticsManagementScreenState
   Widget _buildMiniStat(String label, String value, IconData icon) {
     return Row(
       children: [
-        Icon(icon, color: AppColors.gold, size: 12.sp),
+        Icon(icon, color: AppColors.gold, size: AppIconSizes.xSmall),
         SizedBox(width: 4.w),
         Text(
           '$value $label',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.label,
+          ),
         ),
       ],
     );
@@ -1349,20 +1352,20 @@ class _LogisticsManagementScreenState
         child: Row(
           children: [
             Icon(
-              Icons.add_circle_outline,
+              AppIcons.addCircleOutline,
               color: isFull ? AppColors.textMuted : AppColors.gold,
             ),
             SizedBox(width: 12.w),
             Text(
               isFull ? 'FILO KAPASITESI DOLU' : 'YENI ARAC SATIN AL',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: isFull ? AppColors.textMuted : AppColors.gold,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const Spacer(),
             Icon(
-              Icons.chevron_right,
+              AppIcons.chevronRight,
               color: isFull ? AppColors.textMuted : AppColors.gold,
             ),
           ],
@@ -1394,7 +1397,7 @@ class _LogisticsManagementScreenState
             children: [
               Row(
                 children: [
-                  Icon(Icons.construction, color: AppColors.gold, size: 30.sp),
+                  Icon(AppIcons.construction, color: AppColors.gold, size: AppIconSizes.xLarge),
                   SizedBox(width: 12.w),
                   Expanded(
                     child: Text(
@@ -1439,7 +1442,7 @@ class _LogisticsManagementScreenState
         Text(title, style: AppTextStyles.titleGold),
         Text(
           count,
-          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+          style: AppTextStyles.body.standardCopyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -1526,9 +1529,9 @@ class _LogisticsManagementScreenState
           SizedBox(width: 6.w),
           Text(
             isActive ? 'AKTİF' : 'PASİF',
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: color,
-              fontSize: 9.sp,
+              fontSize: AppTypography.caption,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1548,9 +1551,9 @@ class _LogisticsManagementScreenState
       ),
       child: Text(
         _getVehicleOperationLabel(vehicle),
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 9.sp,
+          fontSize: AppTypography.caption,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -1566,7 +1569,7 @@ class _LogisticsManagementScreenState
       return AppColors.red;
     }
     if (vehicle.condition <= 30) {
-      return Colors.orange;
+      return AppColors.warning;
     }
     if (vehicle.status != 'on_route' && !vehicle.hasAssignedRoute) {
       return AppColors.gold;
@@ -1607,20 +1610,23 @@ class _LogisticsManagementScreenState
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, color: AppColors.textMuted, size: 14.sp),
+          Icon(icon, color: AppColors.textMuted, size: AppIconSizes.small),
           SizedBox(height: 4.h),
           Text(
             value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 11.sp,
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.bodySmall,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
           ),
           Text(
             label,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.caption,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1642,13 +1648,13 @@ class _LogisticsManagementScreenState
           children: [
             Row(
               children: [
-                Icon(icon, color: AppColors.textMuted, size: 10.sp),
+                Icon(icon, color: AppColors.textMuted, size: AppIconSizes.xxSmall),
                 SizedBox(width: 4.w),
                 Text(
                   label,
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 9.sp,
+                    fontSize: AppTypography.caption,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1656,9 +1662,9 @@ class _LogisticsManagementScreenState
             ),
             Text(
               detailText,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: color,
-                fontSize: 10.sp,
+                fontSize: AppTypography.label,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1673,19 +1679,22 @@ class _LogisticsManagementScreenState
   IconData _mapVehicleIcon(String? icon) {
     switch (icon) {
       case 'local_shipping':
-        return Icons.local_shipping;
+        return AppIcons.localShipping;
       case 'electric_truck':
-        return Icons.electric_bolt;
+        return AppIcons.electricBolt;
       default:
-        return Icons.local_shipping_outlined;
+        return AppIcons.localShippingOutlined;
     }
   }
 
   Widget _buildLoading() =>
-      const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      Center(child: AppLoadingIndicator(color: AppColors.gold));
 
   Widget _buildError(String message) => Center(
-    child: Text(message, style: TextStyle(color: AppColors.red)),
+    child: Text(
+      message,
+      style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
+    ),
   );
 
   Future<void> _showFuelSupplySheet(
@@ -1697,7 +1706,7 @@ class _LogisticsManagementScreenState
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (sheetContext) => Consumer(
         builder: (context, ref, _) {
           final warehouseAsync = ref.watch(
@@ -1855,8 +1864,8 @@ class _LogisticsManagementScreenState
                   color: AppColors.gold.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: const Icon(
-                  Icons.local_gas_station,
+                child: Icon(
+                  AppIcons.localGasStation,
                   color: AppColors.gold,
                 ),
               ),
@@ -1867,9 +1876,9 @@ class _LogisticsManagementScreenState
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.sp,
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.bodyLarge,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1884,14 +1893,14 @@ class _LogisticsManagementScreenState
                 children: [
                   Text(
                     trailing,
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.gold,
-                      fontSize: 11.sp,
+                      fontSize: AppTypography.bodySmall,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   SizedBox(height: 6.h),
-                  const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                  Icon(AppIcons.chevronRight, color: AppColors.textMuted),
                 ],
               ),
             ],
@@ -1995,9 +2004,11 @@ class _LogisticsManagementScreenState
               Navigator.pop(dialogContext, qty);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
-            child: const Text(
+            child: Text(
               'Devam Et',
-              style: TextStyle(color: Colors.black),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textOnAccent,
+              ),
             ),
           ),
         ],
@@ -2067,7 +2078,7 @@ class _LogisticsManagementScreenState
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (sheetContext) => Consumer(
         builder: (context, ref, _) {
           final typesAsync = ref.watch(logisticsVehicleTypesProvider);
@@ -2148,7 +2159,7 @@ class _LogisticsManagementScreenState
                       ),
                     ),
                     loading: () =>
-                        const Center(child: CircularProgressIndicator()),
+                        const Center(child: AppLoadingIndicator()),
                     error: (error, stack) =>
                         Center(child: Text('Hata: $error')),
                   ),
@@ -2218,8 +2229,8 @@ class _ConstructionCountdownState
                 isDone
                     ? 'Tamamlanmaya Hazır'
                     : 'Kalan Süre: ${_formatDuration(remaining)}',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -2227,10 +2238,10 @@ class _ConstructionCountdownState
           ],
         ),
         SizedBox(height: 12.h),
-        LinearProgressIndicator(
+        AppProgressBar(
           value: _buildProgressValue(remaining),
           backgroundColor: AppColors.cardBgLight,
-          valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+          valueColor: AlwaysStoppedAnimation(AppColors.gold),
         ),
       ],
     );
@@ -2311,7 +2322,7 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
                   color: AppColors.cardBgLight,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: const Icon(Icons.local_shipping, color: AppColors.gold),
+                child: Icon(AppIcons.localShipping, color: AppColors.gold),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -2320,10 +2331,10 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
                   children: [
                     Text(
                       type.name,
-                      style: TextStyle(
-                        color: Colors.white,
+                      style: AppTextStyles.h2.standardCopyWith(
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
-                        fontSize: 15.sp,
+                        fontSize: AppTypography.titleLarge,
                       ),
                     ),
                     Text(type.type, style: AppTextStyles.body),
@@ -2332,7 +2343,7 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
               ),
               Text(
                 _formatMoney(type.purchasePrice),
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: canAfford ? AppColors.green : AppColors.red,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2343,9 +2354,9 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _spec(Icons.speed, '${type.speedKmh} km/h'),
-              _spec(Icons.inventory, '${type.capacity} t'),
-              _spec(Icons.gas_meter, '${type.fuelCapacity} L'),
+              _spec(AppIcons.speed, '${type.speedKmh} km/h'),
+              _spec(AppIcons.inventory, '${type.capacity} t'),
+              _spec(AppIcons.gasMeter, '${type.fuelCapacity} L'),
             ],
           ),
           SizedBox(height: 12.h),
@@ -2357,15 +2368,15 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
                 backgroundColor: AppColors.gold,
                 disabledBackgroundColor: AppColors.border,
               ),
-              child: Text(
-                isFleetFull
-                    ? 'FILO DOLU'
-                    : (canAfford ? 'SATIN AL' : 'NAKIT YETERSIZ'),
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
+                child: Text(
+                  isFleetFull
+                      ? 'FILO DOLU'
+                      : (canAfford ? 'SATIN AL' : 'NAKIT YETERSIZ'),
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textOnAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
             ),
           ),
         ],
@@ -2376,11 +2387,14 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
   Widget _spec(IconData icon, String value) {
     return Row(
       children: [
-        Icon(icon, size: 12.sp, color: AppColors.textMuted),
+        Icon(icon, size: AppIconSizes.xSmall, color: AppColors.textMuted),
         SizedBox(width: 4.w),
         Text(
           value,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.bodySmall,
+          ),
         ),
       ],
     );

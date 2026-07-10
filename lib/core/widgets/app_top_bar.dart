@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
@@ -96,7 +97,7 @@ class AppTopBar extends ConsumerWidget {
                 player?.companyName ?? 'Yeni Holding',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.title.copyWith(
+                style: AppTextStyles.title.standardCopyWith(
                   fontSize: compact ? 14.sp : 16.sp,
                 ),
               ),
@@ -105,7 +106,7 @@ class AppTopBar extends ConsumerWidget {
                 player?.playerName ?? 'CEO',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.body.standardCopyWith(
                   fontWeight: FontWeight.w900,
                   fontSize: compact ? 9.sp : 10.sp,
                 ),
@@ -114,21 +115,12 @@ class AppTopBar extends ConsumerWidget {
               FractionallySizedBox(
                 widthFactor: compact ? 0.82 : 0.86,
                 alignment: Alignment.centerLeft,
-                child: Container(
-                  height: compact ? 8.h : 9.h,
-                  decoration: AppDecorations.progressTrack(),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999.r),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: FractionallySizedBox(
-                        widthFactor: progress,
-                        child: Container(
-                          decoration: AppDecorations.progressFill(),
-                        ),
-                      ),
-                    ),
-                  ),
+                child: AppProgressBar(
+                  value: progress,
+                  size: compact
+                      ? AppProgressSize.compact
+                      : AppProgressSize.regular,
+                  minHeight: compact ? 8.h : 9.h,
                 ),
               ),
               SizedBox(height: compact ? 3.h : 4.h),
@@ -136,7 +128,7 @@ class AppTopBar extends ConsumerWidget {
                 '${player?.currentLevelExperience ?? 0} / ${player?.nextLevelRequiredExperience ?? 1} XP',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textPrimary.withValues(alpha: 0.94),
                   fontWeight: FontWeight.w700,
                   fontSize: compact ? 7.5.sp : 7.8.sp,
@@ -204,14 +196,18 @@ class AppTopBar extends ConsumerWidget {
                           fileName: player?.avatarId ?? 'avatar_1.webp',
                           fit: BoxFit.cover,
                           placeholder: Icon(
-                            Icons.person,
+                            AppIcons.person,
                             color: AppColors.gold,
-                            size: compact ? 20.sp : 24.sp,
+                            size: compact
+                                ? AppIconSizes.medium
+                                : AppIconSizes.large,
                           ),
                           errorWidget: Icon(
-                            Icons.person,
+                            AppIcons.person,
                             color: AppColors.gold,
-                            size: compact ? 20.sp : 24.sp,
+                            size: compact
+                                ? AppIconSizes.medium
+                                : AppIconSizes.large,
                           ),
                         ),
                       )
@@ -219,14 +215,18 @@ class AppTopBar extends ConsumerWidget {
                         fileName: player?.avatarId ?? 'avatar_1.webp',
                         fit: BoxFit.cover,
                         placeholder: Icon(
-                          Icons.person,
+                          AppIcons.person,
                           color: AppColors.gold,
-                          size: compact ? 20.sp : 24.sp,
+                          size: compact
+                              ? AppIconSizes.medium
+                              : AppIconSizes.large,
                         ),
                         errorWidget: Icon(
-                          Icons.person,
+                          AppIcons.person,
                           color: AppColors.gold,
-                          size: compact ? 20.sp : 24.sp,
+                          size: compact
+                              ? AppIconSizes.medium
+                              : AppIconSizes.large,
                         ),
                       ),
               ),
@@ -247,7 +247,7 @@ class AppTopBar extends ConsumerWidget {
               ),
               child: Text(
                 '${player?.level ?? 1}',
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w900,
                   fontSize: compact ? 8.sp : 9.sp,
@@ -270,10 +270,10 @@ class AppTopBar extends ConsumerWidget {
       children: [
         _buildResourceCard(
           context: context,
-          icon: Icons.payments_rounded,
+          icon: AppIcons.paymentsRounded,
           iconColor: AppColors.green,
           value: _formatMoney(player?.cash ?? 0),
-          actionIcon: Icons.history_rounded,
+          actionIcon: AppIcons.historyRounded,
           actionColor: AppColors.green,
           onTap: () => context.push('/cash-history'),
           compact: compact,
@@ -281,10 +281,10 @@ class AppTopBar extends ConsumerWidget {
         SizedBox(height: compact ? 4.h : 5.h),
         _buildResourceCard(
           context: context,
-          icon: Icons.star_rounded,
+          icon: AppIcons.starRounded,
           iconColor: AppColors.gold,
           value: (player?.gold ?? 0).toStringAsFixed(0),
-          actionIcon: Icons.add_rounded,
+          actionIcon: AppIcons.addRounded,
           actionColor: AppColors.goldLight,
           onTap: () => context.push('/premium-store'),
           compact: compact,
@@ -316,14 +316,14 @@ class AppTopBar extends ConsumerWidget {
             width: compact ? 18.w : 20.w,
             height: compact ? 18.w : 20.w,
             decoration: AppDecorations.badge(
-              bgColor: Colors.black.withValues(alpha: 0.25),
-              borderColor: Colors.transparent,
+              bgColor: AppFx.panelWash(0.25),
+              borderColor: AppColors.transparent,
               radius: 8.r,
             ),
             child: Icon(
               icon,
               color: iconColor,
-              size: compact ? 11.5.sp : 12.5.sp,
+              size: compact ? AppIconSizes.xSmall : AppIconSizes.small,
             ),
           ),
           SizedBox(width: compact ? 4.w : 5.w),
@@ -332,7 +332,7 @@ class AppTopBar extends ConsumerWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.title.copyWith(
+              style: AppTextStyles.title.standardCopyWith(
                 fontSize: compact ? 10.2.sp : 11.4.sp,
                 fontWeight: FontWeight.w800,
               ),
@@ -353,7 +353,7 @@ class AppTopBar extends ConsumerWidget {
               child: Icon(
                 actionIcon,
                 color: actionColor,
-                size: compact ? 10.sp : 11.sp,
+                size: compact ? AppIconSizes.xxSmall : AppIconSizes.xSmall,
               ),
             ),
           ),
@@ -381,18 +381,18 @@ class AppTopBar extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.assignment_turned_in_rounded,
+                  AppIcons.assignmentTurnedInRounded,
                   color: AppColors.goldLight,
-                  size: compact ? 18.sp : 20.sp,
+                  size: compact ? AppIconSizes.regular : AppIconSizes.medium,
                 ),
                 if (!compact) ...[
                   SizedBox(height: 2.h),
                   Text(
                     'Gorev',
-                    style: AppTextStyles.caption.copyWith(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,
-                      fontSize: 6.8.sp,
+                      fontSize: AppTypography.micro,
                     ),
                   ),
                 ],
@@ -429,8 +429,8 @@ class AppTopBar extends ConsumerWidget {
                 claimableMissionCount > 99
                     ? '99+'
                     : claimableMissionCount.toString(),
-                style: TextStyle(
-                  color: Colors.white,
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textOnAccent,
                   fontSize: compact ? 7.5.sp : 8.sp,
                   fontWeight: FontWeight.w900,
                   height: 1,
@@ -457,18 +457,18 @@ class AppTopBar extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.emoji_events_rounded,
+              AppIcons.emojiEventsRounded,
               color: AppColors.goldLight,
-              size: compact ? 18.sp : 20.sp,
+              size: compact ? AppIconSizes.regular : AppIconSizes.medium,
             ),
             if (!compact) ...[
               SizedBox(height: 2.h),
               Text(
                 'Sıralama',
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textSecondary,
                   fontWeight: FontWeight.w700,
-                  fontSize: 6.8.sp,
+                  fontSize: AppTypography.micro,
                 ),
               ),
             ],
@@ -479,8 +479,6 @@ class AppTopBar extends ConsumerWidget {
   }
 
   String _formatMoney(dynamic amount) {
-    return AppMoney.compact(
-      double.tryParse(amount?.toString() ?? '0') ?? 0,
-    );
+    return AppMoney.compact(double.tryParse(amount?.toString() ?? '0') ?? 0);
   }
 }

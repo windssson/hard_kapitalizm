@@ -129,25 +129,25 @@ class _FloatingTextWidgetState extends State<_FloatingTextWidget>
             textColor = AppColors.green;
             prefix = '+';
             suffix = ' TL';
-            icon = Icons.payments_outlined;
+            icon = AppIcons.paymentsOutlined;
             break;
           case FloatingFeedbackType.cashRemove:
             textColor = AppColors.red;
             prefix = '-';
             suffix = ' TL';
-            icon = Icons.payments_outlined;
+            icon = AppIcons.paymentsOutlined;
             break;
           case FloatingFeedbackType.xp:
             textColor = AppColors.gold;
             prefix = '+';
             suffix = ' XP';
-            icon = Icons.military_tech_rounded;
+            icon = AppIcons.militaryTechRounded;
             break;
           case FloatingFeedbackType.gold:
             textColor = AppColors.gold;
             prefix = '+';
             suffix = ' Altin';
-            icon = Icons.stars_rounded;
+            icon = AppIcons.starsRounded;
             break;
         }
 
@@ -164,11 +164,11 @@ class _FloatingTextWidgetState extends State<_FloatingTextWidget>
               child: Transform.scale(
                 scale: _scaleAnimation.value,
                 child: Material(
-                  color: Colors.transparent,
+                  color: AppColors.transparent,
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.8),
+                      color: AppFx.panelWash(0.8),
                       borderRadius: BorderRadius.circular(20.r),
                       border: Border.all(
                         color: textColor.withValues(alpha: 0.6),
@@ -185,13 +185,13 @@ class _FloatingTextWidgetState extends State<_FloatingTextWidget>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(icon, color: textColor, size: 14.sp),
+                        Icon(icon, color: textColor, size: AppIconSizes.small),
                         SizedBox(width: 4.w),
                         Text(
                           '$prefix$amountStr$suffix',
-                          style: TextStyle(
+                          style: AppTextStyles.label.standardCopyWith(
                             color: textColor,
-                            fontSize: 12.sp,
+                            fontSize: AppTypography.body,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.5,
                           ),

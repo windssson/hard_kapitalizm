@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_product_model.dart';
 
@@ -41,7 +42,7 @@ class LiveActiveResearchCard extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF0A1A3A),
+            AppColors.cardBg,
             AppColors.cardBgLight.withValues(alpha: 0.7),
           ],
         ),
@@ -53,8 +54,9 @@ class LiveActiveResearchCard extends ConsumerWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: (isDone ? AppColors.green : AppColors.blue)
-                .withValues(alpha: 0.12),
+            color: (isDone ? AppColors.green : AppColors.blue).withValues(
+              alpha: 0.12,
+            ),
             blurRadius: 12,
             spreadRadius: 1,
           ),
@@ -71,7 +73,11 @@ class LiveActiveResearchCard extends ConsumerWidget {
                   color: AppColors.blue.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.science, color: AppColors.blue, size: 18.sp),
+                child: Icon(
+                  AppIcons.science,
+                  color: AppColors.blue,
+                  size: AppIconSizes.regular,
+                ),
               ),
               SizedBox(width: 10.w),
               Expanded(
@@ -80,9 +86,9 @@ class LiveActiveResearchCard extends ConsumerWidget {
                   children: [
                     Text(
                       'Arastirma Devam Ediyor',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.blue,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.3,
                       ),
@@ -90,9 +96,9 @@ class LiveActiveResearchCard extends ConsumerWidget {
                     SizedBox(height: 2.h),
                     Text(
                       research.productName,
-                      style: TextStyle(
+                      style: AppTextStyles.h2.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 15.sp,
+                        fontSize: AppTypography.titleLarge,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -115,16 +121,18 @@ class LiveActiveResearchCard extends ConsumerWidget {
           Row(
             children: [
               Icon(
-                isDone ? Icons.check_circle : Icons.access_time,
+                isDone ? AppIcons.checkCircle : AppIcons.accessTime,
                 color: isDone ? AppColors.green : AppColors.textSecondary,
-                size: 14.sp,
+                size: AppIconSizes.small,
               ),
               SizedBox(width: 6.w),
               Text(
-                isDone ? 'Tamamlandi! Alabilirsin.' : _formatDuration(safeRemaining),
-                style: TextStyle(
+                isDone
+                    ? 'Tamamlandi! Alabilirsin.'
+                    : _formatDuration(safeRemaining),
+                style: AppTextStyles.body.standardCopyWith(
                   color: isDone ? AppColors.green : AppColors.textPrimary,
-                  fontSize: 13.sp,
+                  fontSize: AppTypography.bodyLarge,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -132,7 +140,7 @@ class LiveActiveResearchCard extends ConsumerWidget {
               if (isDone)
                 _ActionPill(
                   label: 'TOPLA',
-                  icon: Icons.download_done,
+                  icon: AppIcons.downloadDone,
                   color: AppColors.green,
                   onTap: () => onCollect(research.id),
                 ),
@@ -187,47 +195,25 @@ class _ResearchProgressBar extends StatelessWidget {
           children: [
             Text(
               'Kalite ${research.currentQuality} -> ${research.targetQuality}',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 10.sp),
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textSecondary,
+                fontSize: AppTypography.label,
+              ),
             ),
             Text(
               '${(progress * 100).toStringAsFixed(0)}%',
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: isDone ? AppColors.green : AppColors.blue,
-                fontSize: 10.sp,
+                fontSize: AppTypography.label,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
         SizedBox(height: 6.h),
-        Container(
-          height: 8.h,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(4.r),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: progress,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4.r),
-                gradient: LinearGradient(
-                  colors: isDone
-                      ? [AppColors.green.withValues(alpha: 0.7), AppColors.green]
-                      : [AppColors.blue.withValues(alpha: 0.7), AppColors.blue],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: (isDone ? AppColors.green : AppColors.blue)
-                        .withValues(alpha: 0.4),
-                    blurRadius: 6,
-                  ),
-                ],
-              ),
-            ),
-          ),
+        AppProgressBar(
+          value: progress,
+          kind: isDone ? AppProgressKind.positive : AppProgressKind.standard,
         ),
       ],
     );
@@ -238,10 +224,7 @@ class _QualityBadge extends StatelessWidget {
   final int current;
   final int target;
 
-  const _QualityBadge({
-    required this.current,
-    required this.target,
-  });
+  const _QualityBadge({required this.current, required this.target});
 
   @override
   Widget build(BuildContext context) {
@@ -254,9 +237,9 @@ class _QualityBadge extends StatelessWidget {
       ),
       child: Text(
         '$current -> $target',
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: AppColors.goldLight,
-          fontSize: 11.sp,
+          fontSize: AppTypography.bodySmall,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -291,13 +274,13 @@ class _ActionPill extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 14.sp),
+            Icon(icon, color: color, size: AppIconSizes.small),
             SizedBox(width: 6.w),
             Text(
               label,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: color,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
                 fontWeight: FontWeight.bold,
               ),
             ),

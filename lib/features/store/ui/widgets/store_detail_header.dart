@@ -67,9 +67,9 @@ class StoreDetailHeader extends StatelessWidget {
               children: [
                 Text(
                   store.name,
-                  style: TextStyle(
+                  style: AppTextStyles.h2.standardCopyWith(
                     color: AppColors.textPrimary,
-                    fontSize: 18.sp,
+                    fontSize: AppTypography.headline,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.5,
                   ),
@@ -80,17 +80,17 @@ class StoreDetailHeader extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      Icons.location_on,
+                      AppIcons.locationOn,
                       color: AppColors.textMuted,
-                      size: 14.sp,
+                      size: AppIconSizes.small,
                     ),
                     SizedBox(width: 4.w),
                     Expanded(
                       child: Text(
                         store.cityName ?? 'Bilinmiyor',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                           fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
@@ -114,9 +114,9 @@ class StoreDetailHeader extends StatelessWidget {
                   ),
                   child: Text(
                     'Seviye ${store.level}',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.gold,
-                      fontSize: 10.sp,
+                      fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -155,8 +155,8 @@ class StoreDetailHeader extends StatelessWidget {
                     value: 'toggle_active',
                     child: _HeaderMenuItem(
                       icon: store.isActive
-                          ? Icons.pause_circle_outline
-                          : Icons.play_circle_outline,
+                          ? AppIcons.pauseCircleOutline
+                          : AppIcons.playCircleOutline,
                       iconColor:
                           store.isActive ? AppColors.red : AppColors.green,
                       label: store.isActive ? 'Pasif Yap' : 'Aktif Yap',
@@ -165,7 +165,7 @@ class StoreDetailHeader extends StatelessWidget {
                   PopupMenuItem<String>(
                     value: 'report',
                     child: _HeaderMenuItem(
-                      icon: Icons.analytics_outlined,
+                      icon: AppIcons.analyticsOutlined,
                       iconColor: AppColors.blue,
                       label: 'Raporu Ac',
                     ),
@@ -173,7 +173,7 @@ class StoreDetailHeader extends StatelessWidget {
                   PopupMenuItem<String>(
                     value: 'history',
                     child: _HeaderMenuItem(
-                      icon: Icons.history_outlined,
+                      icon: AppIcons.historyOutlined,
                       iconColor: AppColors.gold,
                       label: 'Gecmisi Ac',
                     ),
@@ -181,7 +181,7 @@ class StoreDetailHeader extends StatelessWidget {
                   PopupMenuItem<String>(
                     value: 'sell',
                     child: _HeaderMenuItem(
-                      icon: Icons.sell_outlined,
+                      icon: AppIcons.sellOutlined,
                       iconColor: AppColors.red,
                       label: 'Magazayi Sat',
                     ),
@@ -190,16 +190,16 @@ class StoreDetailHeader extends StatelessWidget {
                 child: Container(
                   padding: EdgeInsets.all(6.w),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
+                    color: AppFx.softOverlay(0.05),
                     borderRadius: BorderRadius.circular(10.r),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.06),
+                      color: AppFx.softOverlay(0.06),
                     ),
                   ),
                   child: Icon(
-                    Icons.more_vert,
-                    color: Colors.white70,
-                    size: 20.sp,
+                    AppIcons.moreVert,
+                    color: AppColors.textPrimary.withValues(alpha: 0.7),
+                    size: AppIconSizes.medium,
                   ),
                 ),
               ),
@@ -243,13 +243,13 @@ class _HeaderMenuItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: iconColor, size: 18.sp),
+        Icon(icon, color: iconColor, size: AppIconSizes.regular),
         SizedBox(width: 8.w),
         Text(
           label,
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textPrimary,
-            fontSize: 12.sp,
+            fontSize: AppTypography.body,
           ),
         ),
       ],

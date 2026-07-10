@@ -17,7 +17,7 @@ class ConstructionCountdownCard extends ConsumerStatefulWidget {
     required this.subtitle,
     required this.finishAt,
     required this.onFinished,
-    this.icon = Icons.construction,
+    this.icon = AppIcons.construction,
   });
 
   @override
@@ -65,7 +65,7 @@ class _ConstructionCountdownCardState
               color: AppColors.cardBgLight,
               borderRadius: BorderRadius.circular(12.r),
             ),
-            child: Icon(widget.icon, color: AppColors.gold, size: 24.sp),
+            child: Icon(widget.icon, color: AppColors.gold, size: AppIconSizes.large),
           ),
           SizedBox(width: 12.w),
           Expanded(
@@ -78,9 +78,9 @@ class _ConstructionCountdownCardState
                 SizedBox(height: 8.h),
                 Text(
                   safe.inSeconds <= 0 ? 'Tamamlaniyor...' : 'Kalan Sure: $h:$m:$s',
-                  style: TextStyle(
+                  style: AppTextStyles.title.standardCopyWith(
                     color: AppColors.gold,
-                    fontSize: 13.sp,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w800,
                   ),
                 ),

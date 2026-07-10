@@ -74,7 +74,10 @@ class TypeProductPreview extends StatelessWidget {
     if (products.isEmpty) {
       return Text(
         'Bu tur icin urun listesi bulunamadi.',
-        style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+        style: AppTextStyles.caption.standardCopyWith(
+          color: AppColors.textMuted,
+          fontSize: AppTypography.label,
+        ),
       );
     }
 
@@ -83,9 +86,9 @@ class TypeProductPreview extends StatelessWidget {
       children: [
         Text(
           title,
-          style: TextStyle(
+          style: AppTextStyles.label.standardCopyWith(
             color: AppColors.textPrimary,
-            fontSize: 10.sp,
+            fontSize: AppTypography.label,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -119,14 +122,14 @@ class TypeProductPreview extends StatelessWidget {
                       height: 38.w,
                       fit: BoxFit.contain,
                       placeholder: Icon(
-                        Icons.inventory_2_rounded,
+                        AppIcons.inventory2Rounded,
                         color: AppColors.gold.withValues(alpha: 0.65),
-                        size: 20.sp,
+                        size: AppIconSizes.medium,
                       ),
                       errorWidget: Icon(
-                        Icons.inventory_2_rounded,
+                        AppIcons.inventory2Rounded,
                         color: AppColors.gold,
-                        size: 20.sp,
+                        size: AppIconSizes.medium,
                       ),
                     ),
                     SizedBox(height: 5.h),
@@ -135,9 +138,9 @@ class TypeProductPreview extends StatelessWidget {
                       maxLines: 2,
                       textAlign: TextAlign.center,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 8.sp,
+                        fontSize: AppTypography.micro,
                         fontWeight: FontWeight.w600,
                         height: 1.05,
                       ),

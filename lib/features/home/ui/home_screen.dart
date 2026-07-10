@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/app_top_bar.dart';
@@ -89,7 +90,7 @@ class _GoogleLinkSuccessDialog extends StatelessWidget {
         player?.playerName ?? celebration.playerName ?? displayName;
 
     return Dialog(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       insetPadding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
       child: Container(
         padding: EdgeInsets.all(18.w),
@@ -111,16 +112,16 @@ class _GoogleLinkSuccessDialog extends StatelessWidget {
                     ),
                   ),
                   child: Icon(
-                    Icons.verified_user_rounded,
+                    AppIcons.verifiedUserRounded,
                     color: AppColors.green,
-                    size: 22.sp,
+                    size: AppIconSizes.mediumLarge,
                   ),
                 ),
                 SizedBox(width: 12.w),
                 Expanded(
                   child: Text(
                     'Hesabin Guvenceye Alindi',
-                    style: AppTextStyles.h1.copyWith(fontSize: 20.sp),
+                    style: AppTextStyles.h1.standardCopyWith(fontSize: AppTypography.displaySmall),
                   ),
                 ),
               ],
@@ -128,9 +129,9 @@ class _GoogleLinkSuccessDialog extends StatelessWidget {
             SizedBox(height: 10.h),
             Text(
               'Google baglantin tamamlandi. Artik ilerlemen bu hesapla daha guvende.',
-              style: AppTextStyles.body.copyWith(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 12.sp,
+                fontSize: AppTypography.body,
               ),
             ),
             SizedBox(height: 16.h),
@@ -184,7 +185,7 @@ class _GoogleLinkSuccessDialog extends StatelessWidget {
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
+                  foregroundColor: AppColors.textOnAccent,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
                   ),
@@ -206,17 +207,17 @@ class _GoogleLinkSuccessDialog extends StatelessWidget {
           children: [
             TextSpan(
               text: '$label: ',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 11.sp,
+                fontSize: AppTypography.bodySmall,
                 fontWeight: FontWeight.w700,
               ),
             ),
             TextSpan(
               text: value,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 11.sp,
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.bodySmall,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -286,7 +287,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         (authIdentity?.isGoogleLinked ?? false) == false;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -351,7 +352,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Padding(
       padding: EdgeInsets.fromLTRB(6.w, 0, 6.w, 0.h),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           onTap: () => context.push('/profile'),
           borderRadius: BorderRadius.circular(12.r),
@@ -365,16 +366,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             child: Row(
               children: [
-                Icon(Icons.security_rounded, color: AppColors.red, size: 14.sp),
+                Icon(AppIcons.securityRounded, color: AppColors.red, size: AppIconSizes.small),
                 SizedBox(width: 8.w),
                 Expanded(
                   child: Text(
                     'Hesabinizi guvenceye almak icin Google hesabina baglanin.',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11.sp,
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.bodySmall,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -394,10 +395,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   child: Text(
                     'Bagla',
-                    style: TextStyle(
+                    style: AppTextStyles.label.standardCopyWith(
                       color: AppColors.red,
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w800,
+                      fontSize: AppTypography.label,
                     ),
                   ),
                 ),
@@ -416,34 +416,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     // 1. Nakit Akışı Kârlılık Kontrolü
     if (finance.netProfit < 0) {
-      insights.add(const _AdvisorInsight(
+      insights.add(_AdvisorInsight(
         title: 'Mali Risk Uyarısı',
         description: 'Bugünkü net kârınız eksiye düştü! Giderleri azaltmak için lojistik giderlerini veya pasif işletmeleri gözden geçirin.',
-        icon: Icons.trending_down_rounded,
+        icon: AppIcons.trendingDownRounded,
         color: AppColors.red,
       ));
     } else if (finance.netProfit > 0 && dashboard.player.cash > 0) {
-      insights.add(const _AdvisorInsight(
+      insights.add(_AdvisorInsight(
         title: 'Yüksek Finansal Güç',
         description: 'Bugün oldukça kârlısınız. Bu kazancı yeni Ar-Ge araştırmaları başlatarak veya hammadde depolarını doldurarak yatırıma dönüştürebilirsiniz.',
-        icon: Icons.insights_rounded,
+        icon: AppIcons.insightsRounded,
         color: AppColors.green,
       ));
     }
 
     // 2. Fabrika & Mağaza Dengesi Kontrolü
     if (modules.factories.activeCount > 0 && modules.stores.activeCount == 0) {
-      insights.add(const _AdvisorInsight(
+      insights.add(_AdvisorInsight(
         title: 'Dağıtım Kanalı Eksikliği',
         description: 'Aktif fabrikalarınız var ancak bunları satacak bir mağazanız yok. Ürettiğiniz malları satmak için acilen bir mağaza inşa edin.',
-        icon: Icons.storefront_rounded,
-        color: Colors.orange,
+        icon: AppIcons.storefrontRounded,
+        color: AppColors.warning,
       ));
     } else if (modules.stores.activeCount > 0 && modules.factories.activeCount == 0) {
-      insights.add(const _AdvisorInsight(
+      insights.add(_AdvisorInsight(
         title: 'Tedarik Bağımlılığı',
         description: 'Aktif mağazalarınız var ancak kendi fabrikanız yok. Pazar yerine bağımlılığı azaltmak için kendi üretim tesislerinizi kurabilirsiniz.',
-        icon: Icons.precision_manufacturing_rounded,
+        icon: AppIcons.precisionManufacturingRounded,
         color: AppColors.blue,
       ));
     }
@@ -453,37 +453,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       insights.add(_AdvisorInsight(
         title: 'Yüksek Lojistik Gideri',
         description: 'Lojistik giderleriniz cironuzun %${((finance.logisticsCost / finance.revenue) * 100).round()}\'ine ulaştı. Verimliliği artırmak için rotaları optimize edin veya özmal araç kullanın.',
-        icon: Icons.local_shipping_rounded,
+        icon: AppIcons.localShippingRounded,
         color: AppColors.red,
       ));
     }
 
     // 4. Ar-Ge Merkezi Boşta Kontrolü
     if (modules.arge.count > 0 && modules.arge.activeResearchCount == 0) {
-      insights.add(const _AdvisorInsight(
+      insights.add(_AdvisorInsight(
         title: 'Ar-Ge Çalışmaları Boşta',
         description: 'Ar-Ge merkezinizde şu an aktif bir araştırma bulunmuyor. Ürün kalitenizi geliştirmek ve rakiplerin önüne geçmek için yeni bir araştırma başlatın.',
-        icon: Icons.science_rounded,
+        icon: AppIcons.scienceRounded,
         color: AppColors.gold,
       ));
     }
 
     // 5. Araç Filosu Sorunları
     if (modules.logistics.warningCount > 0) {
-      insights.add(const _AdvisorInsight(
+      insights.add(_AdvisorInsight(
         title: 'Araç Filosu Sorunları',
         description: 'Filodaki bazı araçların yakıtı kritik seviyede veya kondisyonu düşük. Taşımaların aksamaması için araç bakım ve yakıt durumlarını kontrol edin.',
-        icon: Icons.build_rounded,
-        color: Colors.orange,
+        icon: AppIcons.buildRounded,
+        color: AppColors.warning,
       ));
     }
 
     // Eğer hiç kritik durum yoksa, genel bir taktik göster
     if (insights.isEmpty) {
-      insights.add(const _AdvisorInsight(
+      insights.add(_AdvisorInsight(
         title: 'Yönetim Tavsiyesi',
         description: 'Ürünlerinizi mağazanızda satmadan önce Marka Reklam Kampanyası başlatmak, satış hızını ve kâr oranını %40\'a kadar artırır!',
-        icon: Icons.lightbulb_rounded,
+        icon: AppIcons.lightbulbRounded,
         color: AppColors.gold,
       ));
     }
@@ -511,17 +511,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: Row(
                   children: [
                     Icon(
-                      Icons.assistant_rounded,
+                      AppIcons.assistantRounded,
                       color: AppColors.gold,
-                      size: 16.sp,
+                      size: AppIconSizes.compact,
                     ),
                     SizedBox(width: 6.w),
                     Text(
                       'CEO STRATEJIK DANISMAN',
-                      style: TextStyle(
+                      style: AppTextStyles.titleGoldBold.standardCopyWith(
                         color: AppColors.gold,
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w900,
+                        fontSize: AppTypography.bodySmall,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -554,7 +553,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             child: Icon(
                               insight.icon,
                               color: insight.color,
-                              size: 16.sp,
+                              size: AppIconSizes.compact,
                             ),
                           ),
                           SizedBox(width: 10.w),
@@ -564,9 +563,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               children: [
                                 Text(
                                   insight.title,
-                                  style: TextStyle(
+                                  style: AppTextStyles.body.standardCopyWith(
                                     color: AppColors.textPrimary,
-                                    fontSize: 11.sp,
+                                    fontSize: AppTypography.bodySmall,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -575,9 +574,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   insight.description,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
+                                  style: AppTextStyles.caption.standardCopyWith(
                                     color: AppColors.textSecondary,
-                                    fontSize: 9.sp,
+                                    fontSize: AppTypography.caption,
                                     fontWeight: FontWeight.w500,
                                     height: 1.25,
                                   ),
@@ -622,26 +621,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Row(
                   children: [
                     Icon(
-                      Icons.apartment_rounded,
+                      AppIcons.apartmentRounded,
                       color: AppColors.gold,
-                      size: 16.sp,
+                      size: AppIconSizes.compact,
                     ),
                     SizedBox(width: 5.w),
                     Text(
                       'SIRKET OZETI',
-                      style: TextStyle(
+                      style: AppTextStyles.titleGoldBold.standardCopyWith(
                         color: AppColors.gold,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w900,
+                        fontSize: AppTypography.bodyLarge,
                         letterSpacing: 0.25,
                       ),
                     ),
                     const Spacer(),
                     Text(
                       'SIRKET DEGERI',
-                      style: TextStyle(
+                      style: AppTextStyles.overline.standardCopyWith(
                         color: AppColors.textPrimary.withValues(alpha: 0.8),
-                        fontSize: 8.sp,
+                        fontSize: AppTypography.micro,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.18,
                       ),
@@ -649,10 +647,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     SizedBox(width: 6.w),
                     Text(
                       AppMoney.compact(companyValue),
-                      style: TextStyle(
+                      style: AppTextStyles.titleGoldBold.standardCopyWith(
                         color: AppColors.gold,
-                        fontSize: 12.5.sp,
-                        fontWeight: FontWeight.w900,
+                        fontSize: AppTypography.body,
                       ),
                     ),
                   ],
@@ -668,21 +665,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildSummaryStatLine(
-                            Icons.trending_up_rounded,
+                            AppIcons.trendingUpRounded,
                             'Bugunku Kar:',
                             AppMoney.compact(dailyProfit),
                             AppColors.green,
                           ),
                           SizedBox(height: 6.h),
                           _buildSummaryStatLine(
-                            Icons.account_balance_rounded,
+                            AppIcons.accountBalanceRounded,
                             'Aktif Isletme:',
                             activeBusinessText,
                             AppColors.goldLight,
                           ),
                           SizedBox(height: 6.h),
                           _buildSummaryStatLine(
-                            Icons.place_rounded,
+                            AppIcons.placeRounded,
                             'Merkez Sehir:',
                             headquarters,
                             AppColors.goldLight,
@@ -731,7 +728,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             borderRadius: BorderRadius.circular(10.r),
             border: Border.all(color: AppColors.gold.withValues(alpha: 0.22)),
           ),
-          child: Icon(icon, color: AppColors.gold, size: 11.sp),
+          child: Icon(icon, color: AppColors.gold, size: AppIconSizes.xSmall),
         ),
         SizedBox(width: 5.w),
         Expanded(
@@ -740,9 +737,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             children: [
               Text(
                 label,
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textPrimary,
-                  fontSize: 8.sp,
+                  fontSize: AppTypography.micro,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -751,9 +748,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: valueColor,
-                  fontSize: 10.5.sp,
+                  fontSize: AppTypography.label,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -784,7 +781,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 .toDouble();
 
             return Material(
-              color: Colors.transparent,
+              color: AppColors.transparent,
               child: InkWell(
                 onTap: () => context.push('/missions'),
                 borderRadius: BorderRadius.circular(14.r),
@@ -811,10 +808,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         child: Icon(
                           isClaimable
-                              ? Icons.workspace_premium_rounded
-                              : Icons.flag_rounded,
+                              ? AppIcons.workspacePremiumRounded
+                              : AppIcons.flagRounded,
                           color: isClaimable ? AppColors.gold : AppColors.blue,
-                          size: 18.sp,
+                          size: AppIconSizes.regular,
                         ),
                       ),
                       SizedBox(width: 10.w),
@@ -824,11 +821,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           children: [
                             Text(
                               selectedMission.missionTypeLabel,
-                              style: TextStyle(
+                              style: AppTextStyles.caption.standardCopyWith(
                                 color: isClaimable
                                     ? AppColors.gold
                                     : AppColors.textMuted,
-                                fontSize: 7.6.sp,
+                                fontSize: AppTypography.micro,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -837,9 +834,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               selectedMission.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
+                              style: AppTextStyles.body.standardCopyWith(
                                 color: AppColors.textPrimary,
-                                fontSize: 11.sp,
+                                fontSize: AppTypography.bodySmall,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
@@ -849,9 +846,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 selectedMission.compactRewardText,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: AppTextStyles.caption.standardCopyWith(
                                   color: AppColors.green,
-                                  fontSize: 8.sp,
+                                  fontSize: AppTypography.micro,
                                   fontWeight: FontWeight.w700,
                                 ),
                               )
@@ -861,12 +858,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 children: [
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(999.r),
-                                    child: LinearProgressIndicator(
+                                    child: AppProgressBar(
                                       value: progress,
                                       minHeight: 5.h,
-                                      backgroundColor: Colors.white.withValues(
-                                        alpha: 0.08,
-                                      ),
+                                      backgroundColor: AppFx.softOverlay(0.08),
                                       valueColor: AlwaysStoppedAnimation<Color>(
                                         AppColors.blue,
                                       ),
@@ -875,9 +870,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   SizedBox(height: 3.h),
                                   Text(
                                     '${selectedMission.progressCount}/${selectedMission.targetCount} ilerleme',
-                                    style: TextStyle(
+                                    style: AppTextStyles.caption.standardCopyWith(
                                       color: AppColors.textMuted,
-                                      fontSize: 7.6.sp,
+                                      fontSize: AppTypography.micro,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -907,11 +902,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           isClaimable
                               ? 'Odulu Al'
                               : '%${(progress * 100).round()}',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: isClaimable
                                 ? AppColors.gold
                                 : AppColors.blue,
-                            fontSize: 8.sp,
+                            fontSize: AppTypography.micro,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -963,7 +958,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       _HomeModuleCardData(
         title: 'Magazalar',
         image: 'magazalar.webp',
-        accentColor: const Color(0xFF61D26B),
+        accentColor: AppColors.green,
         primaryLabel: 'Aktif',
         primaryValue:
             '${modules?.stores.activeCount ?? 0}/${modules?.stores.count ?? 0}',
@@ -994,7 +989,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       _HomeModuleCardData(
         title: 'Tarlalar',
         image: 'tarlalar.webp',
-        accentColor: const Color(0xFF7ED957),
+        accentColor: AppColors.green,
         primaryLabel: 'Aktif',
         primaryValue:
             '${modules?.farms.activeCount ?? 0}/${modules?.farms.count ?? 0}',
@@ -1012,7 +1007,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       _HomeModuleCardData(
         title: 'Ciftlikler',
         image: 'ciftlikler.webp',
-        accentColor: const Color(0xFF8ED081),
+        accentColor: AppColors.green,
         primaryLabel: 'Aktif',
         primaryValue:
             '${modules?.fields.activeCount ?? 0}/${modules?.fields.count ?? 0}',
@@ -1046,7 +1041,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       _HomeModuleCardData(
         title: 'Madenler',
         image: 'madenler.webp',
-        accentColor: const Color(0xFFC8A96B),
+        accentColor: AppColors.warning,
         primaryLabel: 'Aktif',
         primaryValue:
             '${modules?.mines.activeCount ?? 0}/${modules?.mines.count ?? 0}',
@@ -1064,7 +1059,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       _HomeModuleCardData(
         title: 'Nakliye',
         image: 'nakliyeler.webp',
-        accentColor: const Color(0xFF64B5F6),
+        accentColor: AppColors.info,
         primaryLabel: 'Arac',
         primaryValue: '${modules?.logistics.vehicleCount ?? 0}',
         secondaryLabel: 'Sefer',
@@ -1079,7 +1074,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       _HomeModuleCardData(
         title: 'AR-GE',
         image: 'arge.webp',
-        accentColor: const Color(0xFF7BA7FF),
+        accentColor: AppColors.info,
         primaryLabel: 'Arastirma',
         primaryValue: '${modules?.arge.activeResearchCount ?? 0}',
         secondaryLabel: 'Kalan',
@@ -1208,7 +1203,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             final module = modules[index];
 
             return Material(
-              color: Colors.transparent,
+              color: AppColors.transparent,
               borderRadius: BorderRadius.circular(16.r),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
@@ -1241,9 +1236,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               maxLines: 2,
                               textAlign: TextAlign.center,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
+                              style: AppTextStyles.body.standardCopyWith(
                                 color: AppColors.textPrimary,
-                                fontSize: 10.sp,
+                                fontSize: AppTypography.label,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -1290,9 +1285,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: 7.4.sp,
+            fontSize: AppTypography.micro,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -1302,9 +1297,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: valueColor,
-            fontSize: 8.3.sp,
+            fontSize: AppTypography.micro,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -1392,7 +1387,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 AppMoney.compact(revenue, signed: true),
                 'Bugun',
                 AppColors.green,
-                Icons.payments_rounded,
+                AppIcons.paymentsRounded,
                 AppColors.green,
               ),
               _buildVerticalDivider(),
@@ -1401,8 +1396,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 AppMoney.compact(-productionCost, signed: true),
                 'Maliyet',
                 AppColors.red,
-                Icons.precision_manufacturing_rounded,
-                Colors.orange,
+                AppIcons.precisionManufacturingRounded,
+                AppColors.warning,
               ),
               _buildVerticalDivider(),
               _buildFinStatItem(
@@ -1410,7 +1405,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 AppMoney.compact(-logisticsCost, signed: true),
                 'Gider',
                 AppColors.red,
-                Icons.local_shipping_rounded,
+                AppIcons.localShippingRounded,
                 AppColors.blue,
               ),
               _buildVerticalDivider(),
@@ -1419,7 +1414,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 AppMoney.compact(netProfit, signed: true),
                 'Bugun',
                 netProfit >= 0 ? AppColors.green : AppColors.red,
-                Icons.monetization_on_rounded,
+                AppIcons.monetizationOnRounded,
                 AppColors.gold,
               ),
             ],
@@ -1449,17 +1444,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               Row(
                 children: [
                   Icon(
-                    Icons.precision_manufacturing_rounded,
+                    AppIcons.precisionManufacturingRounded,
                     color: AppColors.gold,
-                    size: 15.sp,
+                    size: AppIconSizes.small,
                   ),
                   SizedBox(width: 6.w),
-                  Text(
-                    'AKTIF URETIM HATLARI',
-                    style: TextStyle(
+                    Text(
+                      'AKTIF URETIM HATLARI',
+                    style: AppTextStyles.titleGoldBold.standardCopyWith(
                       color: AppColors.gold,
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w900,
+                      fontSize: AppTypography.bodySmall,
                       letterSpacing: 0.25,
                     ),
                   ),
@@ -1467,9 +1461,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   if (activeProductions.isNotEmpty)
                     Text(
                       '$totalActiveSlots Aktif Slot',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 9.sp,
+                        fontSize: AppTypography.caption,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1484,9 +1478,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       children: [
                         Text(
                           'Aktif uretim bulunmuyor.',
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 10.sp,
+                            fontSize: AppTypography.label,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1515,8 +1509,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                           child: Text(
                             'Uretime Basla',
-                            style: TextStyle(
-                              fontSize: 9.sp,
+                            style: AppTextStyles.button.standardCopyWith(
+                              fontSize: AppTypography.caption,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -1542,15 +1536,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           kindLabel = 'Fabrika';
                           break;
                         case 'farm':
-                          kindColor = const Color(0xFF7ED957);
+                          kindColor = AppColors.green;
                           kindLabel = 'Tarla';
                           break;
                         case 'field':
-                          kindColor = const Color(0xFF8ED081);
+                          kindColor = AppColors.green;
                           kindLabel = 'Ciftlik';
                           break;
                         case 'mine':
-                          kindColor = const Color(0xFFC8A96B);
+                          kindColor = AppColors.warning;
                           kindLabel = 'Maden';
                           break;
                         default:
@@ -1562,9 +1556,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         width: 125.w,
                         padding: EdgeInsets.all(6.w),
                         decoration: BoxDecoration(
-                          color: const Color(
-                            0xFF0D1B2A,
-                          ).withValues(alpha: 0.35),
+                          color: AppColors.cardBgLight.withValues(alpha: 0.35),
                           borderRadius: BorderRadius.circular(10.r),
                           border: Border.all(
                             color: AppColors.borderGold.withValues(alpha: 0.18),
@@ -1595,9 +1587,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         prod.productName,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
+                                        style: AppTextStyles.body.standardCopyWith(
                                           color: AppColors.textPrimary,
-                                          fontSize: 9.sp,
+                                          fontSize: AppTypography.caption,
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
@@ -1608,12 +1600,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                               i < prod.qualityLevel;
                                           return Icon(
                                             isFilled
-                                                ? Icons.star_rounded
-                                                : Icons.star_border_rounded,
+                                                ? AppIcons.starRounded
+                                                : AppIcons.starBorderRounded,
                                             color: isFilled
                                                 ? AppColors.gold
-                                                : Colors.white24,
-                                            size: 9.sp,
+                                                : AppColors.white.withValues(alpha: 0.24),
+                                            size: AppIconSizes.xxSmall,
                                           );
                                         }),
                                       ),
@@ -1639,9 +1631,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         ),
                                         child: Text(
                                           kindLabel,
-                                          style: TextStyle(
+                                          style: AppTextStyles.caption.standardCopyWith(
                                             color: kindColor,
-                                            fontSize: 6.5.sp,
+                                            fontSize: AppTypography.micro,
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),
@@ -1665,9 +1657,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 ),
                                 child: Text(
                                   'x${prod.activeSlots}',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 7.sp,
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: AppColors.textOnAccent,
+                                    fontSize: AppTypography.micro,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
@@ -1749,10 +1741,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: const [
-            Color(0xFF102743),
-            Color(0xFF081629),
-            Color(0xFF050C15),
+          colors: [
+            AppColors.cardBgLight,
+            AppColors.cardBg,
+            AppColors.background,
           ],
         ),
         border: Border.all(color: AppColors.gold.withValues(alpha: 0.16)),
@@ -1772,17 +1764,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     borderRadius: BorderRadius.circular(5.r),
                   ),
                   child: Icon(
-                    Icons.show_chart_rounded,
+                    AppIcons.showChartRounded,
                     color: AppColors.gold,
-                    size: 10.sp,
+                    size: AppIconSizes.xxSmall,
                   ),
                 ),
                 SizedBox(width: 5.w),
                 Text(
                   '7 Gunluk Trend',
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textPrimary.withValues(alpha: 0.88),
-                    fontSize: 8.6.sp,
+                    fontSize: AppTypography.micro,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1800,9 +1792,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   child: Text(
                     '${trendPositive ? '+' : ''}${trendPercent.toStringAsFixed(1)}%',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: trendPositive ? AppColors.green : AppColors.red,
-                      fontSize: 7.6.sp,
+                      fontSize: AppTypography.micro,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1816,9 +1808,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   : 'Tahmini deger: ${AppMoney.compact(currentValueEstimate)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.goldLight.withValues(alpha: 0.92),
-                fontSize: 7.6.sp,
+                fontSize: AppTypography.micro,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1885,9 +1877,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: 6.8.sp,
+            fontSize: AppTypography.micro,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -1896,9 +1888,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: valueColor,
-            fontSize: 7.8.sp,
+            fontSize: AppTypography.micro,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -1980,13 +1972,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               borderRadius: BorderRadius.circular(8.r),
               border: Border.all(color: iconColor.withValues(alpha: 0.22)),
             ),
-            child: Icon(icon, color: iconColor, size: 16.sp),
+            child: Icon(icon, color: iconColor, size: AppIconSizes.compact),
           ),
           SizedBox(height: 5.h),
           Text(
             title,
-            style: AppTextStyles.body.copyWith(
-              fontSize: 9.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              fontSize: AppTypography.caption,
               color: AppColors.textMuted,
             ),
           ),
@@ -1994,17 +1986,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           Text(
             value,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: valueColor,
-              fontSize: 12.2.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w800,
             ),
           ),
           SizedBox(height: 1.h),
           Text(
             subtitle,
-            style: AppTextStyles.body.copyWith(
-              fontSize: 8.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              fontSize: AppTypography.micro,
               color: AppColors.textMuted,
             ),
           ),
@@ -2019,14 +2011,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       height: 18.w,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFFD94134),
+        color: AppColors.red,
         border: Border.all(
           color: AppColors.gold.withValues(alpha: 0.75),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFD94134).withValues(alpha: 0.35),
+            color: AppColors.red.withValues(alpha: 0.35),
             blurRadius: 8.r,
             offset: Offset(0, 2.h),
           ),
@@ -2035,9 +2027,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       child: Center(
         child: Text(
           '!',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 10.sp,
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textPrimary,
+            fontSize: AppTypography.label,
             fontWeight: FontWeight.w900,
             height: 1,
           ),
@@ -2050,14 +2042,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     required String title,
     required List<PlayerNotificationModel> items,
     String trailingText = 'Tumunu Gor',
-    Color trailingColor = AppColors.blue,
-    IconData headerIcon = Icons.notifications,
-    Color headerIconColor = AppColors.gold,
+    Color? trailingColor,
+    IconData headerIcon = AppIcons.notifications,
+    Color? headerIconColor,
     bool compact = false,
     VoidCallback? onHeaderTap,
   }) {
     return Container(
-      decoration: AppDecorations.premiumCard(headerIconColor.withValues(alpha: compact ? 0.22 : 0.28), 14.r),
+      decoration: AppDecorations.premiumCard((headerIconColor ?? AppColors.gold).withValues(alpha: compact ? 0.22 : 0.28), 14.r),
       child: Column(
         children: [
           InkWell(
@@ -2071,13 +2063,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 children: [
                   Icon(
                     headerIcon,
-                    color: headerIconColor,
-                    size: compact ? 18.sp : 20.sp,
+                    color: headerIconColor ?? AppColors.gold,
+                    size: compact ? AppIconSizes.regular : AppIconSizes.medium,
                   ),
                   SizedBox(width: compact ? 6.w : 8.w),
                   Text(
                     title,
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: compact ? 12.sp : 14.sp,
                       fontWeight: FontWeight.w800,
@@ -2086,17 +2078,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   const Spacer(),
                   Text(
                     trailingText,
-                    style: TextStyle(
-                      color: trailingColor,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: trailingColor ?? AppColors.blue,
                       fontSize: compact ? 9.sp : 10.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   if (onHeaderTap != null)
                     Icon(
-                      Icons.chevron_right,
-                      color: trailingColor,
-                      size: compact ? 14.sp : 16.sp,
+                      AppIcons.chevronRight,
+                      color: trailingColor ?? AppColors.blue,
+                      size: compact ? AppIconSizes.small : AppIconSizes.compact,
                     ),
                 ],
               ),
@@ -2146,16 +2138,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Row(
                   children: [
                     Icon(
-                      Icons.pending_actions_rounded,
+                      AppIcons.pendingActionsRounded,
                       color: AppColors.gold,
-                      size: 18.sp,
+                      size: AppIconSizes.regular,
                     ),
                     SizedBox(width: 8.w),
                     Text(
                       'Devam Eden Islemler',
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 15.sp,
+                        fontSize: AppTypography.titleLarge,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -2250,33 +2242,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: Row(
                     children: [
                       Icon(
-                        Icons.local_shipping_rounded,
+                        AppIcons.localShippingRounded,
                         color: AppColors.gold,
-                        size: 18.sp,
+                        size: AppIconSizes.regular,
                       ),
                       SizedBox(width: 8.w),
                       Text(
                         'Aktif Transferler',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textPrimary,
-                          fontSize: 15.sp,
+                          fontSize: AppTypography.titleLarge,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       const Spacer(),
                       Text(
                         '${activeTransfers.length} Yolda',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.gold,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       SizedBox(width: 4.w),
                       Icon(
-                        Icons.chevron_right_rounded,
+                        AppIcons.chevronRightRounded,
                         color: AppColors.gold,
-                        size: 16.sp,
+                        size: AppIconSizes.compact,
                       ),
                     ],
                   ),
@@ -2295,12 +2287,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final progress = _transferProgressRatio(transfer);
     final remaining = transfer.finishAt.toLocal().difference(DateTime.now());
     final safeRemaining = remaining.isNegative ? Duration.zero : remaining;
-    final accent = transfer.isRental ? Colors.orange : AppColors.blue;
+    final accent = transfer.isRental ? AppColors.warning : AppColors.blue;
 
     return Padding(
       padding: EdgeInsets.only(bottom: 10.h),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           onTap: () => context.push('/transfer-map'),
           borderRadius: BorderRadius.circular(10.r),
@@ -2322,10 +2314,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   child: Icon(
                     transfer.isRental
-                        ? Icons.local_shipping_outlined
-                        : Icons.fire_truck_rounded,
+                        ? AppIcons.localShippingOutlined
+                        : AppIcons.fireTruckRounded,
                     color: accent,
-                    size: 17.sp,
+                    size: AppIconSizes.compact,
                   ),
                 ),
                 SizedBox(width: 10.w),
@@ -2340,9 +2332,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               '${transfer.sellerWarehouse.city.name} -> ${transfer.buyerWarehouse.city.name}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
+                              style: AppTextStyles.body.standardCopyWith(
                                 color: AppColors.textPrimary,
-                                fontSize: 11.3.sp,
+                                fontSize: AppTypography.bodySmall,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -2350,9 +2342,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           SizedBox(width: 8.w),
                           Text(
                             _formatDuration(safeRemaining),
-                            style: TextStyle(
+                            style: AppTextStyles.caption.standardCopyWith(
                               color: accent,
-                              fontSize: 10.sp,
+                              fontSize: AppTypography.label,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -2363,15 +2355,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         '${transfer.product.name} • ${transfer.quantity} adet',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textSecondary,
-                          fontSize: 9.6.sp,
+                          fontSize: AppTypography.caption,
                         ),
                       ),
                       SizedBox(height: 8.h),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(999.r),
-                        child: LinearProgressIndicator(
+                        child: AppProgressBar(
                           value: progress,
                           minHeight: 6.h,
                           backgroundColor: AppColors.background,
@@ -2427,7 +2419,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               child: Icon(
                 _activityIcon(activity.type),
                 color: accent,
-                size: 18.sp,
+                size: AppIconSizes.regular,
               ),
             ),
             SizedBox(width: 10.w),
@@ -2442,9 +2434,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           activity.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textPrimary,
-                            fontSize: 11.6.sp,
+                            fontSize: AppTypography.bodySmall,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -2452,9 +2444,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       SizedBox(width: 8.w),
                       Text(
                         _formatDuration(activity.remainingDuration),
-                        style: TextStyle(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: accent,
-                          fontSize: 10.sp,
+                          fontSize: AppTypography.label,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -2465,15 +2457,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     activity.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 9.6.sp,
+                      fontSize: AppTypography.caption,
                     ),
                   ),
                   SizedBox(height: 8.h),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(999.r),
-                    child: LinearProgressIndicator(
+                    child: AppProgressBar(
                       value: activity.progressRatio,
                       minHeight: 6.h,
                       backgroundColor: AppColors.background,
@@ -2492,20 +2484,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   IconData _activityIcon(String type) {
     switch (type) {
       case 'construction':
-        return Icons.construction_rounded;
+        return AppIcons.constructionRounded;
       case 'upgrade':
-        return Icons.trending_up_rounded;
+        return AppIcons.trendingUpRounded;
       case 'research':
-        return Icons.science_rounded;
+        return AppIcons.scienceRounded;
       default:
-        return Icons.pending_actions_rounded;
+        return AppIcons.pendingActionsRounded;
     }
   }
 
   Color _activityColor(String type) {
     switch (type) {
       case 'construction':
-        return Colors.orange;
+        return AppColors.warning;
       case 'upgrade':
         return AppColors.gold;
       case 'research':
@@ -2566,9 +2558,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             title: 'Uyarilar',
             onHeaderTap: () => context.push('/alerts'),
             trailingText: '${dashboard.activeWarningCount} Sorun',
-            trailingColor: Colors.orange,
-            headerIcon: Icons.warning_amber_rounded,
-            headerIconColor: Colors.orange,
+            trailingColor: AppColors.warning,
+            headerIcon: AppIcons.warningAmberRounded,
+            headerIconColor: AppColors.warning,
             items: alerts.take(3).toList(),
           ),
           SizedBox(height: 8.h),
@@ -2588,9 +2580,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         title: 'Uyarilar',
         onHeaderTap: () => context.push('/alerts'),
         trailingText: '${dashboard.activeWarningCount} Sorun',
-        trailingColor: Colors.orange,
-        headerIcon: Icons.warning_amber_rounded,
-        headerIconColor: Colors.orange,
+        trailingColor: AppColors.warning,
+        headerIcon: AppIcons.warningAmberRounded,
+        headerIconColor: AppColors.warning,
         items: alerts.take(4).toList(),
       );
     }
@@ -2615,7 +2607,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Padding(
       padding: EdgeInsets.only(bottom: compact ? 6.h : 8.h),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           onTap: () async {
             if (notification.isUnread) {
@@ -2650,7 +2642,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: Icon(
                     _notificationIcon(notification),
                     color: accent,
-                    size: compact ? 15.sp : 18.sp,
+                    size: compact ? AppIconSizes.small : AppIconSizes.regular,
                   ),
                 ),
                 SizedBox(width: compact ? 8.w : 10.w),
@@ -2665,7 +2657,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               notification.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
+                              style: AppTextStyles.body.standardCopyWith(
                                 color: AppColors.textPrimary,
                                 fontSize: compact ? 10.2.sp : 11.3.sp,
                                 fontWeight: FontWeight.w700,
@@ -2675,7 +2667,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           SizedBox(width: compact ? 4.w : 6.w),
                           Text(
                             _relativeTime(notification.createdAt),
-                            style: TextStyle(
+                            style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textMuted,
                               fontSize: compact ? 8.5.sp : 9.6.sp,
                               fontWeight: FontWeight.w500,
@@ -2697,7 +2689,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                             child: Text(
                               _notificationMiniLabel(notification),
-                              style: TextStyle(
+                              style: AppTextStyles.caption.standardCopyWith(
                                 color: accent,
                                 fontSize: compact ? 7.sp : 8.sp,
                                 fontWeight: FontWeight.w700,
@@ -2724,7 +2716,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             : _notificationMiniLabel(notification),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textSecondary,
                           fontSize: compact ? 8.8.sp : 10.sp,
                           height: 1.2,
@@ -2735,9 +2727,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
                 SizedBox(width: compact ? 6.w : 8.w),
                 Icon(
-                  Icons.chevron_right_rounded,
+                  AppIcons.chevronRightRounded,
                   color: AppColors.gold,
-                  size: compact ? 14.sp : 16.sp,
+                  size: compact ? AppIconSizes.small : AppIconSizes.compact,
                 ),
               ],
             ),
@@ -2799,25 +2791,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   IconData _notificationIcon(PlayerNotificationModel item) {
     switch (item.category) {
       case 'construction_completed':
-        return Icons.construction_rounded;
+        return AppIcons.constructionRounded;
       case 'upgrade_completed':
-        return Icons.trending_up_rounded;
+        return AppIcons.trendingUpRounded;
       case 'transfer_completed':
-        return Icons.local_shipping_rounded;
+        return AppIcons.localShippingRounded;
       case 'arge_completed':
-        return Icons.science_rounded;
+        return AppIcons.scienceRounded;
       case 'achievement_unlocked':
-        return Icons.workspace_premium_rounded;
+        return AppIcons.workspacePremiumRounded;
       case 'store_blocked':
-        return Icons.storefront_outlined;
+        return AppIcons.storefrontOutlined;
       case 'production_blocked':
-        return Icons.warning_amber_rounded;
+        return AppIcons.warningAmberRounded;
       case 'logistics_attention':
-        return Icons.local_shipping_outlined;
+        return AppIcons.localShippingOutlined;
       case 'inactive_reminder':
-        return Icons.pause_circle_outline_rounded;
+        return AppIcons.pauseCircleOutlineRounded;
       default:
-        return Icons.notifications_none_rounded;
+        return AppIcons.notificationsNoneRounded;
     }
   }
 
@@ -2826,7 +2818,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case 'success':
         return AppColors.green;
       case 'warning':
-        return Colors.orange;
+        return AppColors.warning;
       default:
         return AppColors.blue;
     }
@@ -2880,7 +2872,7 @@ class _SparklinePainter extends CustomPainter {
     if (points.length < 2) return;
 
     final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.06)
+      ..color = AppFx.softOverlay(0.06)
       ..strokeWidth = 1;
 
     for (var i = 1; i <= 3; i++) {
@@ -2916,7 +2908,7 @@ class _SparklinePainter extends CustomPainter {
         colors: [
           lineColor.withValues(alpha: 0.24),
           glowColor.withValues(alpha: 0.12),
-          Colors.transparent,
+          AppColors.transparent,
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 

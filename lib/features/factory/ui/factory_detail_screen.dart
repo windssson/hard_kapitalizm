@@ -10,6 +10,7 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
@@ -98,7 +99,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         .value;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: -1,
         onItemSelected: (_) {},
@@ -109,15 +110,17 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             const SecondaryTopBar(title: 'Fabrika Yonetimi'),
             Expanded(
               child: detailAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
-                ),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (error, _) => Center(
                   child: Padding(
                     padding: EdgeInsets.all(20.w),
                     child: Text(
                       error.toString(),
-                      style: TextStyle(color: AppColors.red, fontSize: 13.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                        fontSize: AppTypography.bodyLarge,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -159,7 +162,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       _buildSectionHeader(
                         'Uretim Hatti',
                         'Fabrikanin aktif urununu, hammadde akisini ve depoya sevklerini buradan yonetebilirsin.',
-                        icon: Icons.precision_manufacturing_rounded,
+                        icon: AppIcons.precisionManufacturingRounded,
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
@@ -169,7 +172,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         _buildSectionHeader(
                           'Bagli Olmayan Hammaddeler',
                           'Urun degisikligi sonrasinda elde kalan hammaddeleri buradan depoya geri gonderebilirsin.',
-                          icon: Icons.inventory_2_outlined,
+                          icon: AppIcons.inventory2Outlined,
                           color: AppColors.blue,
                         ),
                         SizedBox(height: 10.h),
@@ -211,7 +214,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     height: 68.w,
                     padding: EdgeInsets.all(10.w),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: AppFx.panelWash(0.3),
                       borderRadius: BorderRadius.circular(16.r),
                       border: Border.all(
                         color: AppColors.gold.withValues(alpha: 0.35),
@@ -229,9 +232,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       fileName: detail.factoryType.icon,
                       fit: BoxFit.contain,
                       errorWidget: Icon(
-                        Icons.precision_manufacturing_rounded,
+                        AppIcons.precisionManufacturingRounded,
                         color: AppColors.gold,
-                        size: 32.sp,
+                        size: AppIconSizes.display,
                       ),
                     ),
                   ),
@@ -246,9 +249,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             children: [
                               Text(
                                 detail.factory.name,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18.sp,
+                                style: AppTextStyles.h2.standardCopyWith(
+                                  color: AppColors.textPrimary,
+                                  fontSize: AppTypography.headline,
                                   fontWeight: FontWeight.bold,
                                 ),
                                 maxLines: 2,
@@ -257,9 +260,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               SizedBox(height: 4.h),
                               Text(
                                 detail.factoryType.name,
-                                style: TextStyle(
+                                style: AppTextStyles.caption.standardCopyWith(
                                   color: AppColors.gold,
-                                  fontSize: 10.sp,
+                                  fontSize: AppTypography.label,
                                   fontWeight: FontWeight.w700,
                                 ),
                                 maxLines: 1,
@@ -269,19 +272,20 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               Row(
                                 children: [
                                   Icon(
-                                    Icons.location_on,
+                                    AppIcons.locationOn,
                                     color: AppColors.gold,
-                                    size: 14.sp,
+                                    size: AppIconSizes.small,
                                   ),
                                   SizedBox(width: 4.w),
                                   Expanded(
                                     child: Text(
                                       detail.cityName,
-                                      style: TextStyle(
-                                        color: AppColors.textMuted,
-                                        fontSize: 11.sp,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                      style: AppTextStyles.caption
+                                          .standardCopyWith(
+                                            color: AppColors.textMuted,
+                                            fontSize: AppTypography.bodySmall,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -317,7 +321,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         .toDouble(),
                     detail.factory.inputCapacity.toDouble(),
                   ),
-                  icon: Icons.science_outlined,
+                  icon: AppIcons.scienceOutlined,
                 ),
               ),
               SizedBox(width: 10.w),
@@ -333,7 +337,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         .toDouble(),
                     detail.factory.outputCapacity.toDouble(),
                   ),
-                  icon: Icons.agriculture_outlined,
+                  icon: AppIcons.agricultureOutlined,
                 ),
               ),
             ],
@@ -353,7 +357,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.16),
+        color: AppFx.panelWash(0.16),
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
@@ -362,7 +366,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 14.sp),
+              Icon(icon, color: color, size: AppIconSizes.small),
               SizedBox(width: 7.w),
               Expanded(
                 child: Column(
@@ -373,9 +377,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 9.sp,
+                        fontSize: AppTypography.caption,
                       ),
                     ),
                     SizedBox(height: 2.h),
@@ -383,9 +387,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       value,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11.sp,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.bodySmall,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -395,23 +399,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             ],
           ),
           SizedBox(height: 7.h),
-          Container(
-            height: 5.h,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(999.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: ratio.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(999.r),
-                ),
-              ),
-            ),
-          ),
+          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );
@@ -438,9 +426,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     return Container(
       padding: EdgeInsets.all(8.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.18),
+        color: AppFx.panelWash(0.18),
         borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppFx.softOverlay(0.05)),
       ),
       child: Column(
         children: [
@@ -449,7 +437,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               Expanded(
                 child: _buildActionButton(
                   'Urun Al',
-                  Icons.download_rounded,
+                  AppIcons.downloadRounded,
                   AppColors.gold,
                   () => _startFactoryReceiveFlow(context, ref, detail),
                 ),
@@ -458,7 +446,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               Expanded(
                 child: _buildActionButton(
                   'Urun Gonder',
-                  Icons.local_shipping_rounded,
+                  AppIcons.localShippingRounded,
                   AppColors.blue,
                   () => _startFactorySendFlow(context, ref, detail),
                 ),
@@ -468,8 +456,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 child: _buildActionButton(
                   detail.factory.isActive ? 'Durdur' : 'Baslat',
                   detail.factory.isActive
-                      ? Icons.stop_circle_outlined
-                      : Icons.play_circle_outline,
+                      ? AppIcons.stopCircleOutlined
+                      : AppIcons.playCircleOutline,
                   detail.factory.isActive ? AppColors.red : AppColors.green,
                   hasProduct
                       ? () => _toggleFactoryActive(context, ref, detail)
@@ -492,7 +480,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               Expanded(
                 child: _buildActionButton(
                   'Boost',
-                  Icons.flash_on_rounded,
+                  AppIcons.flashOnRounded,
                   canBoost ? AppColors.goldDark : AppColors.textMuted,
                   canBoost
                       ? () => _showFactoryBoostSheet(
@@ -517,7 +505,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               Expanded(
                 child: _buildActionButton(
                   'Yukselt',
-                  Icons.upgrade_rounded,
+                  AppIcons.upgradeRounded,
                   canUpgrade ? AppColors.green : AppColors.textMuted,
                   canUpgrade
                       ? () => _showFactoryUpgradeSheet(
@@ -541,7 +529,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               Expanded(
                 child: _buildActionButton(
                   'Rapor',
-                  Icons.query_stats_rounded,
+                  AppIcons.queryStatsRounded,
                   AppColors.blue,
                   () => context.push(
                     '/production-report/factory/${detail.factory.id}?name=${Uri.encodeComponent(detail.factory.name)}',
@@ -574,14 +562,14 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 15.sp),
+            Icon(icon, color: color, size: AppIconSizes.small),
             SizedBox(height: 3.h),
             Text(
               label,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: color,
-                fontSize: 9.sp,
+                fontSize: AppTypography.caption,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -609,15 +597,15 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(9.r),
               ),
-              child: Icon(icon, color: color, size: 16.sp),
+              child: Icon(icon, color: color, size: AppIconSizes.compact),
             ),
             SizedBox(width: 8.w),
             Expanded(
               child: Text(
                 title,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.sp,
+                style: AppTextStyles.h2.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.titleLarge,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -627,9 +615,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         SizedBox(height: 6.h),
         Text(
           subtitle,
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: 11.sp,
+            fontSize: AppTypography.bodySmall,
             height: 1.45,
           ),
         ),
@@ -642,16 +630,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       width: double.infinity,
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: AppFx.softOverlay(0.03),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: AppFx.softOverlay(0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             message,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.body,
+            ),
           ),
           if (action != null) ...[SizedBox(height: 12.h), action],
         ],
@@ -669,9 +660,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 10.sp,
+          fontSize: AppTypography.label,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -691,7 +682,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           alignment: Alignment.centerLeft,
           child: FilledButton.icon(
             onPressed: () => _showProductDialog(context, ref, detail),
-            icon: const Icon(Icons.category_outlined),
+            icon: const Icon(AppIcons.categoryOutlined),
             label: const Text('Urun Sec'),
           ),
         ),
@@ -721,7 +712,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 height: 70.w,
                 padding: EdgeInsets.all(2.w),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: AppFx.panelWash(0.3),
                   borderRadius: BorderRadius.circular(14.r),
                   border: Border.all(
                     color: AppColors.green.withValues(alpha: 0.3),
@@ -758,9 +749,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                             .defaultBrandId
                                     ? ' (${_currentBrandName ?? 'Markali'})'
                                     : ''),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14.sp,
+                            style: AppTextStyles.title.standardCopyWith(
+                              color: AppColors.textPrimary,
+                              fontSize: AppTypography.title,
                               fontWeight: FontWeight.bold,
                             ),
                             maxLines: 1,
@@ -788,16 +779,16 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           child: Container(
                             padding: EdgeInsets.all(5.w),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
+                              color: AppFx.softOverlay(0.05),
                               borderRadius: BorderRadius.circular(8.r),
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.06),
+                                color: AppFx.softOverlay(0.06),
                               ),
                             ),
                             child: Icon(
-                              Icons.more_vert,
+                              AppIcons.moreVert,
                               color: AppColors.textMuted,
-                              size: 16.sp,
+                              size: AppIconSizes.compact,
                             ),
                           ),
                           onSelected: (value) {
@@ -813,16 +804,16 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               child: Row(
                                 children: [
                                   Icon(
-                                    Icons.category,
+                                    AppIcons.category,
                                     color: AppColors.gold,
-                                    size: 18.sp,
+                                    size: AppIconSizes.regular,
                                   ),
                                   SizedBox(width: 8.w),
                                   Text(
                                     'Urun Degistir',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13.sp,
+                                    style: AppTextStyles.body.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.bodyLarge,
                                     ),
                                   ),
                                 ],
@@ -834,21 +825,21 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                 children: [
                                   Icon(
                                     detail.factory.isActive
-                                        ? Icons.stop_circle
-                                        : Icons.play_circle,
+                                        ? AppIcons.stopCircle
+                                        : AppIcons.playCircle,
                                     color: detail.factory.isActive
                                         ? AppColors.red
                                         : AppColors.green,
-                                    size: 18.sp,
+                                    size: AppIconSizes.regular,
                                   ),
                                   SizedBox(width: 8.w),
                                   Text(
                                     detail.factory.isActive
                                         ? 'Uretimi Durdur'
                                         : 'Uretime Basla',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13.sp,
+                                    style: AppTextStyles.body.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.bodyLarge,
                                     ),
                                   ),
                                 ],
@@ -881,9 +872,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 : Container(
                     padding: EdgeInsets.all(12.w),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.03),
+                      color: AppFx.softOverlay(0.03),
                       borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(color: AppColors.blue.withValues(alpha: 0.14)),
+                      border: Border.all(
+                        color: AppColors.blue.withValues(alpha: 0.14),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -893,7 +886,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           Padding(
                             padding: EdgeInsets.symmetric(vertical: 8.h),
                             child: Divider(
-                              color: Colors.white.withValues(alpha: 0.06),
+                              color: AppFx.softOverlay(0.06),
                               height: 1.h,
                             ),
                           ),
@@ -918,9 +911,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.02),
+        color: AppFx.softOverlay(0.02),
         borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+        border: Border.all(color: AppFx.softOverlay(0.04)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -930,35 +923,41 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             children: [
               Text(
                 'Kalite',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.micro,
+                ),
               ),
               SizedBox(height: 2.h),
               _buildQualityStars(detail.factory.qualityLevel),
             ],
           ),
-          Container(width: 1.w, height: 18.h, color: Colors.white10),
+          Container(width: 1.w, height: 18.h, color: AppFx.softOverlay(0.10)),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Birim Maliyet',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.micro,
+                ),
               ),
               SizedBox(height: 2.h),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    Icons.payments_outlined,
+                    AppIcons.paymentsOutlined,
                     color: AppColors.gold,
-                    size: 11.sp,
+                    size: AppIconSizes.xSmall,
                   ),
                   SizedBox(width: 3.w),
                   Text(
                     '${(outputInventory?.cost ?? 0).toStringAsFixed(2)} TL',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10.sp,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -966,25 +965,32 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               ),
             ],
           ),
-          Container(width: 1.w, height: 18.h, color: Colors.white10),
+          Container(width: 1.w, height: 18.h, color: AppFx.softOverlay(0.10)),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Üretim / Saat',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 8.sp),
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.micro,
+                ),
               ),
               SizedBox(height: 2.h),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.schedule, color: AppColors.green, size: 11.sp),
+                  Icon(
+                    AppIcons.schedule,
+                    color: AppColors.green,
+                    size: AppIconSizes.xSmall,
+                  ),
                   SizedBox(width: 3.w),
                   Text(
                     _estimateProductionPerHour(detail, activeBoost).toString(),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10.sp,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -997,14 +1003,17 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
   }
 
-  Widget _buildProductionFormulaRow(ProductModel product, List<dynamic> inputInventories) {
+  Widget _buildProductionFormulaRow(
+    ProductModel product,
+    List<dynamic> inputInventories,
+  ) {
     final List<Widget> items = [];
 
     // 1. Labor Cost
     if (product.iscilikMaliyeti > 0) {
       items.add(
         _buildFormulaItem(
-          icon: Icons.engineering_outlined,
+          icon: AppIcons.engineeringOutlined,
           color: AppColors.blue,
           label: 'İşçilik:',
           value: ' ${product.iscilikMaliyeti.toStringAsFixed(2)} TL',
@@ -1030,7 +1039,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         }
         items.add(
           _buildFormulaItem(
-            icon: Icons.layers_outlined,
+            icon: AppIcons.layersOutlined,
             color: AppColors.gold,
             label: '$name:',
             value: ' ${rm.qty!.toStringAsFixed(1)} ad',
@@ -1045,19 +1054,23 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       margin: EdgeInsets.only(top: 8.h),
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.015),
+        color: AppFx.softOverlay(0.015),
         borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.035)),
+        border: Border.all(color: AppFx.softOverlay(0.035)),
       ),
       child: Row(
         children: [
-          Icon(Icons.receipt_long_outlined, color: AppColors.textMuted, size: 12.sp),
+          Icon(
+            AppIcons.receiptLongOutlined,
+            color: AppColors.textMuted,
+            size: AppIconSizes.xSmall,
+          ),
           SizedBox(width: 6.w),
           Text(
             'Tarif:',
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 9.sp,
+              fontSize: AppTypography.caption,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1074,9 +1087,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         padding: EdgeInsets.symmetric(horizontal: 8.w),
                         child: Text(
                           '+',
-                          style: TextStyle(
-                            color: Colors.white24,
-                            fontSize: 10.sp,
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppFx.softOverlay(0.24),
+                            fontSize: AppTypography.label,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1100,20 +1113,20 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: color, size: 11.sp),
+        Icon(icon, color: color, size: AppIconSizes.xSmall),
         SizedBox(width: 4.w),
         Text(
           label,
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textSecondary,
-            fontSize: 10.sp,
+            fontSize: AppTypography.label,
           ),
         ),
         Text(
           value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 10.sp,
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textPrimary,
+            fontSize: AppTypography.label,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1137,9 +1150,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       children: [
         Text(
           '$totalStock adet | ${totalPending.toStringAsFixed(1)} yolda / $capacity adet',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 11.sp,
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textPrimary,
+            fontSize: AppTypography.bodySmall,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1169,7 +1182,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       return Container(
         height: 8.h,
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.35),
+          color: AppFx.panelWash(0.35),
           borderRadius: BorderRadius.circular(999.r),
         ),
       );
@@ -1201,7 +1214,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         return Container(
           height: 8.h,
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.35),
+            color: AppFx.panelWash(0.35),
             borderRadius: BorderRadius.circular(999.r),
           ),
           child: ClipRRect(
@@ -1248,9 +1261,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           SizedBox(width: 6.w),
           Text(
             label,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textSecondary,
-              fontSize: 10.sp,
+              fontSize: AppTypography.label,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1279,7 +1292,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             height: 28.w,
             padding: EdgeInsets.all(1.w),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.2),
+              color: AppFx.panelWash(0.2),
               borderRadius: BorderRadius.circular(8.r),
               border: Border.all(color: color.withValues(alpha: 0.15)),
             ),
@@ -1292,7 +1305,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     productId: inventory.productId,
                     showFrame: false,
                   )
-                : Icon(Icons.inventory_2, color: color, size: 14.sp),
+                : Icon(
+                    AppIcons.inventory2,
+                    color: color,
+                    size: AppIconSizes.small,
+                  ),
           ),
           SizedBox(width: 8.w),
           Expanded(
@@ -1302,9 +1319,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.bold,
                   ),
                   maxLines: 1,
@@ -1315,7 +1332,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 SizedBox(height: 2.h),
                 Text(
                   'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL${inventory.pendingQuantity > 0 ? " | Yolda: ${inventory.pendingQuantity.toStringAsFixed(0)}" : ""}',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.caption,
+                  ),
                 ),
               ],
             ),
@@ -1328,9 +1348,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             ),
             child: Text(
               '${inventory.quantity} ad',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10.sp,
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.label,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1367,19 +1387,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           ),
           child: Icon(
             color == AppColors.blue
-                ? Icons.science_outlined
-                : Icons.agriculture_outlined,
+                ? AppIcons.scienceOutlined
+                : AppIcons.agricultureOutlined,
             color: color,
-            size: 13.sp,
+            size: AppIconSizes.small,
           ),
         ),
         SizedBox(width: 7.w),
         Expanded(
           child: Text(
             title,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1393,7 +1413,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 4.h),
       child: Text(
         message,
-        style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+        style: AppTextStyles.body.standardCopyWith(
+          color: AppColors.textMuted,
+          fontSize: AppTypography.bodySmall,
+        ),
       ),
     );
   }
@@ -1416,7 +1439,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: AppFx.softOverlay(0.03),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppColors.green.withValues(alpha: 0.14)),
       ),
@@ -1426,17 +1449,17 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           Row(
             children: [
               Icon(
-                Icons.inventory_2_outlined,
+                AppIcons.inventory2Outlined,
                 color: AppColors.green,
-                size: 14.sp,
+                size: AppIconSizes.small,
               ),
               SizedBox(width: 6.w),
               Expanded(
                 child: Text(
                   'Üretilen Ürün Stoğu',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1447,33 +1470,16 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               ],
               Text(
                 '$quantity / ${detail.factory.outputCapacity} ad',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.green,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
           SizedBox(height: 8.h),
-          Container(
-            width: double.infinity,
-            height: 7.h,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(999.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.green,
-                  borderRadius: BorderRadius.circular(999.r),
-                ),
-              ),
-            ),
-          ),
+          AppProgressBar(value: progress, kind: AppProgressKind.positive),
         ],
       ),
     );
@@ -1500,7 +1506,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       margin: EdgeInsets.only(bottom: 8.h),
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.16),
+        color: AppFx.panelWash(0.16),
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
@@ -1514,7 +1520,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 height: 42.w,
                 padding: EdgeInsets.all(2.w),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.35),
+                  color: AppFx.panelWash(0.35),
                   borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(
                     color: color.withValues(alpha: 0.28),
@@ -1536,7 +1542,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         productId: inventory.productId,
                         showFrame: false,
                       )
-                    : Icon(Icons.inventory_2, color: color, size: 20.sp),
+                    : Icon(
+                        AppIcons.inventory2,
+                        color: color,
+                        size: AppIconSizes.medium,
+                      ),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -1547,9 +1557,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.sp,
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.bodyLarge,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1586,9 +1596,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 ),
                 child: Text(
                   '${inventory.quantity}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.body,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1596,7 +1606,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             ],
           ),
           SizedBox(height: 8.h),
-          Divider(color: Colors.white.withValues(alpha: 0.04), height: 1),
+          Divider(color: AppFx.softOverlay(0.04), height: 1),
           SizedBox(height: 8.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1604,16 +1614,16 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               Row(
                 children: [
                   Icon(
-                    Icons.payments_outlined,
+                    AppIcons.paymentsOutlined,
                     color: AppColors.textMuted,
-                    size: 12.sp,
+                    size: AppIconSizes.xSmall,
                   ),
                   SizedBox(width: 4.w),
                   Text(
                     'Maliyet: ${inventory.cost.toStringAsFixed(2)} TL',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 10.sp,
+                      fontSize: AppTypography.label,
                     ),
                   ),
                 ],
@@ -1621,22 +1631,22 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               Row(
                 children: [
                   Icon(
-                    Icons.local_shipping_outlined,
+                    AppIcons.localShippingOutlined,
                     color: inventory.pendingQuantity > 0
                         ? AppColors.gold
                         : AppColors.textMuted,
-                    size: 12.sp,
+                    size: AppIconSizes.xSmall,
                   ),
                   SizedBox(width: 4.w),
                   Text(
                     inventory.pendingQuantity > 0
                         ? 'Yolda: ${inventory.pendingQuantity.toStringAsFixed(0)}'
                         : 'Yolda yok',
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: inventory.pendingQuantity > 0
                           ? AppColors.goldLight
                           : AppColors.textMuted,
-                      fontSize: 10.sp,
+                      fontSize: AppTypography.label,
                       fontWeight: inventory.pendingQuantity > 0
                           ? FontWeight.bold
                           : FontWeight.normal,
@@ -1650,9 +1660,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             SizedBox(height: 8.h),
             Text(
               'Bu stok Urun Gonder akisi ile depoya geri yollanabilir.',
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 10.sp,
+                fontSize: AppTypography.label,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1674,7 +1684,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     final product = detail.product;
     if (product == null) return '-';
     final qualityMultiplier = 1.0 + (detail.factory.qualityLevel - 1) * 0.20;
-    final amount = product.uretimAdedi * (activeBoost?.multiplier ?? 1) * qualityMultiplier;
+    final amount =
+        product.uretimAdedi *
+        (activeBoost?.multiplier ?? 1) *
+        qualityMultiplier;
     return amount % 1 == 0
         ? amount.toInt().toString()
         : amount.toStringAsFixed(1);
@@ -1687,9 +1700,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         return Padding(
           padding: EdgeInsets.only(right: 2.w),
           child: Icon(
-            isFilled ? Icons.star : Icons.star_border,
+            isFilled ? AppIcons.star : AppIcons.starBorder,
             color: isFilled ? AppColors.gold : AppColors.textMuted,
-            size: 14.sp,
+            size: AppIconSizes.small,
           ),
         );
       }),
@@ -1697,13 +1710,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   }
 
   Color _inputColorForProduct(String productId) {
-    const palette = <Color>[
-      Color(0xFF4FC3F7),
-      Color(0xFF81C784),
-      Color(0xFFFF8A65),
-      Color(0xFFBA68C8),
-      Color(0xFFFFD54F),
-      Color(0xFF64B5F6),
+    final palette = <Color>[
+      AppColors.blue,
+      AppColors.green,
+      AppColors.red,
+      AppColors.goldDark,
+      AppColors.gold,
+      AppColors.info,
     ];
     final hash = productId.codeUnits.fold<int>(0, (sum, unit) => sum + unit);
     return palette[hash % palette.length];
@@ -1745,9 +1758,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           children: [
             Text(
               'Fabrika Boostu',
-              style: TextStyle(
+              style: AppTextStyles.h2.standardCopyWith(
                 color: AppColors.textPrimary,
-                fontSize: 18.sp,
+                fontSize: AppTypography.headline,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1756,9 +1769,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               activeBoost != null
                   ? 'Bu fabrikada zaten aktif bir boost var. Sure dolana kadar uretim x${activeBoost.multiplier.toStringAsFixed(1)} hizla calisir.'
                   : 'Boost basladiginda fabrikanin uretim hizi sure boyunca 2 katina cikar.',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
-                fontSize: 12.sp,
+                fontSize: AppTypography.body,
                 height: 1.45,
               ),
             ),
@@ -1818,9 +1831,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               borderRadius: BorderRadius.circular(12.r),
                             ),
                             child: Icon(
-                              Icons.flash_on_rounded,
+                              AppIcons.flashOnRounded,
                               color: AppColors.goldDark,
-                              size: 18.sp,
+                              size: AppIconSizes.regular,
                             ),
                           ),
                           SizedBox(width: 12.w),
@@ -1830,18 +1843,18 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               children: [
                                 Text(
                                   '${entry.key} Saat',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13.sp,
+                                  style: AppTextStyles.body.standardCopyWith(
+                                    color: AppColors.textPrimary,
+                                    fontSize: AppTypography.bodyLarge,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 SizedBox(height: 2.h),
                                 Text(
                                   'Katsayi x2.0',
-                                  style: TextStyle(
+                                  style: AppTextStyles.caption.standardCopyWith(
                                     color: AppColors.textMuted,
-                                    fontSize: 11.sp,
+                                    fontSize: AppTypography.bodySmall,
                                   ),
                                 ),
                               ],
@@ -1850,16 +1863,16 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           Row(
                             children: [
                               Icon(
-                                Icons.star_rounded,
+                                AppIcons.starRounded,
                                 color: AppColors.gold,
-                                size: 16.sp,
+                                size: AppIconSizes.compact,
                               ),
                               SizedBox(width: 4.w),
                               Text(
                                 '${entry.value}',
-                                style: TextStyle(
+                                style: AppTextStyles.body.standardCopyWith(
                                   color: AppColors.gold,
-                                  fontSize: 13.sp,
+                                  fontSize: AppTypography.bodyLarge,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -1909,9 +1922,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             children: [
               Text(
                 'Fabrika Yukseltmesi',
-                style: TextStyle(
+                style: AppTextStyles.h2.standardCopyWith(
                   color: AppColors.textPrimary,
-                  fontSize: 18.sp,
+                  fontSize: AppTypography.headline,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1920,9 +1933,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 activeUpgrade != null
                     ? 'Bu fabrikada zaten devam eden bir yukseltme var.'
                     : 'Her seviye artisinda hammadde ve uretilen urun kapasitesi 2 katina cikar.',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textMuted,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   height: 1.45,
                 ),
               ),
@@ -1931,7 +1944,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 Container(
                   padding: EdgeInsets.all(14.w),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.03),
+                    color: AppFx.softOverlay(0.03),
                     borderRadius: BorderRadius.circular(16.r),
                     border: Border.all(
                       color: AppColors.green.withValues(alpha: 0.22),
@@ -1942,42 +1955,42 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     children: [
                       Text(
                         'Seviye ${detail.factory.level} -> $nextLevel',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
+                        style: AppTextStyles.title.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: AppTypography.title,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 10.h),
                       Text(
                         'Hammadde kapasitesi: ${detail.factory.inputCapacity} adet -> $nextInputCapacity adet',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                         ),
                       ),
                       SizedBox(height: 6.h),
                       Text(
                         'Uretilen urun kapasitesi: ${detail.factory.outputCapacity} adet -> $nextOutputCapacity adet',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                         ),
                       ),
                       SizedBox(height: 6.h),
                       Text(
                         'Sure: $durationMinutes dk',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                         ),
                       ),
                       SizedBox(height: 6.h),
                       Text(
                         'Maliyet: $upgradeCost TL',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 12.sp,
+                          fontSize: AppTypography.body,
                         ),
                       ),
                       SizedBox(height: 14.h),
@@ -2018,7 +2031,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               );
                             }
                           },
-                          icon: const Icon(Icons.upgrade_rounded),
+                          icon: const Icon(AppIcons.upgradeRounded),
                           label: const Text('Yukseltmeyi Baslat'),
                         ),
                       ),
@@ -2105,7 +2118,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             (selectableProduct.hasPreferredBrand
                 ? ' (${_currentBrandName ?? 'Markali'})'
                 : ''),
-        subtitle: 'Saatlik uretim: ${(product.uretimAdedi * (1.0 + (detail.factory.qualityLevel - 1) * 0.20)).toInt()}',
+        subtitle:
+            'Saatlik uretim: ${(product.uretimAdedi * (1.0 + (detail.factory.qualityLevel - 1) * 0.20)).toInt()}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
             '${selectableProduct.hasPreferredBrand ? ' Ã¢â‚¬Â¢ Marka Hazir' : ''}',
@@ -2124,9 +2138,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 ),
                 child: Text(
                   'Satışta',
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.goldLight,
-                    fontSize: 9.sp,
+                    fontSize: AppTypography.caption,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -2535,7 +2549,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       final result = await showDialog<int>(
         context: sheetContext,
         builder: (dialogContext) => Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.transparent,
           insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
           child: Container(
             padding: EdgeInsets.all(16.w),
@@ -2548,9 +2562,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   Text(
                     slot.productName,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.sp,
+                    style: AppTextStyles.h2.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.titleLarge,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -2561,19 +2575,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       for (int i = 0; i < 5; i++)
                         Icon(
                           i < slot.qualityLevel
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
+                              ? AppIcons.starRounded
+                              : AppIcons.starBorderRounded,
                           color: i < slot.qualityLevel
                               ? AppColors.gold
-                              : Colors.white24,
-                          size: 16.sp,
+                              : AppFx.softOverlay(0.24),
+                          size: AppIconSizes.compact,
                         ),
                       SizedBox(width: 6.w),
                       Text(
                         'Q${slot.qualityLevel}',
-                        style: TextStyle(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.gold,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -2586,7 +2600,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       margin: EdgeInsets.symmetric(vertical: 12.h),
                       padding: EdgeInsets.all(2.w),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.35),
+                        color: AppFx.panelWash(0.35),
                         borderRadius: BorderRadius.circular(14.r),
                         border: Border.all(
                           color: AppColors.gold.withValues(alpha: 0.25),
@@ -2607,25 +2621,25 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       horizontal: 12.w,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.03),
+                      color: AppFx.softOverlay(0.03),
                       borderRadius: BorderRadius.circular(10.r),
-                      border: Border.all(color: Colors.white10),
+                      border: Border.all(color: AppFx.softOverlay(0.10)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Mevcut Stok:',
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 11.sp,
+                            fontSize: AppTypography.bodySmall,
                           ),
                         ),
                         Text(
                           '${slot.availableQuantity} Adet',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12.sp,
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: AppTypography.body,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -2638,14 +2652,18 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     readOnly: true,
                     showCursor: true,
                     enableInteractiveSelection: false,
-                    style: const TextStyle(color: Colors.white),
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Miktar (Maks: $maxQuantity)',
-                      labelStyle: const TextStyle(color: AppColors.gold),
-                      enabledBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white24),
+                      labelStyle: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.gold,
                       ),
-                      focusedBorder: const OutlineInputBorder(
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppFx.softOverlay(0.24)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: AppColors.gold),
                       ),
                     ),
@@ -2681,7 +2699,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(color: Colors.white24),
+                            side: BorderSide(color: AppFx.softOverlay(0.24)),
                             padding: EdgeInsets.symmetric(vertical: 10.h),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10.r),
@@ -2690,8 +2708,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           onPressed: () => Navigator.pop(dialogContext),
                           child: Text(
                             'İptal',
-                            style: TextStyle(
-                              fontSize: 12.sp,
+                            style: AppTextStyles.button.standardCopyWith(
+                              fontSize: AppTypography.body,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -2712,7 +2730,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.gold,
-                              foregroundColor: Colors.black,
+                              foregroundColor: AppColors.textOnAccent,
                               padding: EdgeInsets.symmetric(vertical: 10.h),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10.r),
@@ -2734,8 +2752,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             },
                             child: Text(
                               'Kaydet',
-                              style: TextStyle(
-                                fontSize: 12.sp,
+                              style: AppTextStyles.button.standardCopyWith(
+                                fontSize: AppTypography.body,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -2784,9 +2802,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           );
           final totalVolume = selectedItems.fold<double>(
             0,
-            (sum, item) =>
-                sum +
-                (item.quantity * item.slot.unitVolume),
+            (sum, item) => sum + (item.quantity * item.slot.unitVolume),
           );
           final currentUsedInputCapacity =
               (detail.factory.inputCapacity - remainingInputCapacity)
@@ -2809,7 +2825,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           final projectedInputColor = projectedInputRatio >= 0.9
               ? AppColors.red
               : projectedInputRatio >= 0.75
-              ? Colors.orange
+              ? AppColors.gold
               : AppColors.green;
 
           return SafeArea(
@@ -2824,9 +2840,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 children: [
                   Text(
                     'Alinacak Hammaddeleri Sec',
-                    style: TextStyle(
+                    style: AppTextStyles.h2.standardCopyWith(
                       color: AppColors.textPrimary,
-                      fontSize: 18.sp,
+                      fontSize: AppTypography.headline,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -2835,7 +2851,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     width: double.infinity,
                     padding: EdgeInsets.all(12.w),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.035),
+                      color: AppFx.softOverlay(0.035),
                       borderRadius: BorderRadius.circular(16.r),
                       border: Border.all(
                         color: AppColors.borderGoldLight.withValues(
@@ -2853,10 +2869,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               child: Container(
                                 padding: EdgeInsets.all(8.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.16),
+                                  color: AppFx.panelWash(0.16),
                                   borderRadius: BorderRadius.circular(14.r),
                                   border: Border.all(
-                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                    color: AppColors.blue.withValues(
+                                      alpha: 0.18,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -2865,41 +2883,48 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                       width: 30.w,
                                       height: 30.w,
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.22),
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        color: AppFx.panelWash(0.22),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
                                       ),
                                       child: Icon(
-                                        Icons.warehouse_rounded,
+                                        AppIcons.warehouseRounded,
                                         color: AppColors.blue,
-                                        size: 16.sp,
+                                        size: AppIconSizes.compact,
                                       ),
                                     ),
                                     SizedBox(width: 8.w),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
                                             warehouse.warehouseName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13.sp,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: AppTextStyles.body
+                                                .standardCopyWith(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize:
+                                                      AppTypography.bodyLarge,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                           SizedBox(height: 3.h),
                                           Text(
                                             warehouse.cityName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: AppColors.goldLight,
-                                              fontSize: 10.sp,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.goldLight,
+                                                  fontSize: AppTypography.label,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                           SizedBox(height: 5.h),
                                           _buildInlineMetaChip(
@@ -2918,26 +2943,30 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               width: 30.w,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
+                                color: AppFx.softOverlay(0.05),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                  color: AppColors.borderGoldLight.withValues(
+                                    alpha: 0.12,
+                                  ),
                                 ),
                               ),
                               child: Icon(
-                                Icons.arrow_forward_rounded,
+                                AppIcons.arrowForwardRounded,
                                 color: AppColors.gold,
-                                size: 18.sp,
+                                size: AppIconSizes.regular,
                               ),
                             ),
                             Expanded(
                               child: Container(
                                 padding: EdgeInsets.all(10.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.16),
+                                  color: AppFx.panelWash(0.16),
                                   borderRadius: BorderRadius.circular(14.r),
                                   border: Border.all(
-                                    color: AppColors.green.withValues(alpha: 0.18),
+                                    color: AppColors.green.withValues(
+                                      alpha: 0.18,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -2946,41 +2975,48 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                       width: 30.w,
                                       height: 30.w,
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.22),
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        color: AppFx.panelWash(0.22),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
                                       ),
                                       child: Icon(
-                                        Icons.precision_manufacturing_rounded,
+                                        AppIcons.precisionManufacturingRounded,
                                         color: AppColors.green,
-                                        size: 16.sp,
+                                        size: AppIconSizes.compact,
                                       ),
                                     ),
                                     SizedBox(width: 10.w),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
                                             detail.factory.name,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13.sp,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: AppTextStyles.body
+                                                .standardCopyWith(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize:
+                                                      AppTypography.bodyLarge,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                           SizedBox(height: 3.h),
                                           Text(
                                             detail.cityName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: AppColors.goldLight,
-                                              fontSize: 10.sp,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.goldLight,
+                                                  fontSize: AppTypography.label,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                           SizedBox(height: 5.h),
                                           _buildInlineMetaChip(
@@ -3002,9 +3038,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             Expanded(
                               child: Text(
                                 'Fabrika Bos: $remainingInputCapacity / ${detail.factory.inputCapacity} adet',
-                                style: TextStyle(
+                                style: AppTextStyles.body.standardCopyWith(
                                   color: AppColors.textMuted,
-                                  fontSize: 11.sp,
+                                  fontSize: AppTypography.bodySmall,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -3012,9 +3048,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             SizedBox(width: 8.w),
                             Text(
                               '%${(projectedInputRatio * 100).round()}',
-                              style: TextStyle(
+                              style: AppTextStyles.body.standardCopyWith(
                                 color: projectedInputColor,
-                                fontSize: 11.sp,
+                                fontSize: AppTypography.bodySmall,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -3024,7 +3060,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         Container(
                           height: 9.h,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08),
+                            color: AppFx.softOverlay(0.08),
                             borderRadius: BorderRadius.circular(999.r),
                           ),
                           child: ClipRRect(
@@ -3044,8 +3080,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                 final addedWidth = rawAddedWidth > 0
                                     ? rawAddedWidth.clamp(3.0, totalWidth)
                                     : 0.0;
-                                final baseWidth =
-                                    currentWidth.clamp(0.0, totalWidth - addedWidth);
+                                final baseWidth = currentWidth.clamp(
+                                  0.0,
+                                  totalWidth - addedWidth,
+                                );
 
                                 return Stack(
                                   fit: StackFit.expand,
@@ -3056,9 +3094,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                         child: Container(
                                           width: baseWidth,
                                           decoration: BoxDecoration(
-                                            color: projectedInputColor.withValues(
-                                              alpha: 0.75,
-                                            ),
+                                            color: projectedInputColor
+                                                .withValues(alpha: 0.75),
                                             borderRadius: BorderRadius.circular(
                                               999.r,
                                             ),
@@ -3089,9 +3126,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         SizedBox(height: 6.h),
                         Text(
                           'Secilen: $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3',
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 11.sp,
+                            fontSize: AppTypography.bodySmall,
                           ),
                         ),
                       ],
@@ -3100,9 +3137,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 12.sp,
+                      fontSize: AppTypography.body,
                     ),
                   ),
                   SizedBox(height: 16.h),
@@ -3120,7 +3157,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         return Container(
                           padding: EdgeInsets.all(10.w),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
+                            color: AppFx.softOverlay(0.04),
                             borderRadius: BorderRadius.circular(14.r),
                             border: Border.all(
                               color:
@@ -3139,13 +3176,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                 height: 42.w,
                                 padding: EdgeInsets.all(2.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.2),
+                                  color: AppFx.panelWash(0.2),
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
                                     color:
                                         (isSelected
                                                 ? AppColors.green
-                                                : Colors.white10)
+                                                : AppFx.softOverlay(0.10))
                                             .withValues(alpha: 0.2),
                                   ),
                                 ),
@@ -3163,11 +3200,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                   children: [
                                     Text(
                                       slot.productName,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: AppTextStyles.body
+                                          .standardCopyWith(
+                                            color: AppColors.textPrimary,
+                                            fontSize: AppTypography.bodyLarge,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                     SizedBox(height: 3.h),
                                     Row(
@@ -3175,12 +3213,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                         for (int i = 0; i < 5; i++)
                                           Icon(
                                             i < slot.qualityLevel
-                                                ? Icons.star_rounded
-                                                : Icons.star_border_rounded,
+                                                ? AppIcons.starRounded
+                                                : AppIcons.starBorderRounded,
                                             color: i < slot.qualityLevel
                                                 ? AppColors.gold
-                                                : Colors.white12,
-                                            size: 11.sp,
+                                                : AppFx.softOverlay(0.12),
+                                            size: AppIconSizes.xSmall,
                                           ),
                                         SizedBox(width: 4.w),
                                         Expanded(
@@ -3188,10 +3226,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                             '| Stok ${slot.availableQuantity} | Hedef: ${slot.targetInventory.quantity}',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: AppColors.textMuted,
-                                              fontSize: 10.sp,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.textMuted,
+                                                  fontSize: AppTypography.label,
+                                                ),
                                           ),
                                         ),
                                       ],
@@ -3231,7 +3270,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.gold,
-                        foregroundColor: Colors.black,
+                        foregroundColor: AppColors.textOnAccent,
                         padding: EdgeInsets.symmetric(vertical: 12.h),
                       ),
                       onPressed: selectedItems.isEmpty
@@ -3246,7 +3285,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                 items: selectedItems,
                               );
                             },
-                      icon: const Icon(Icons.download_rounded),
+                      icon: const Icon(AppIcons.downloadRounded),
                       label: const Text('Transferi Baslat'),
                     ),
                   ),
@@ -3335,9 +3374,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
     final totalVolume = items.fold<double>(
       0,
-      (sum, item) =>
-          sum +
-          (item.quantity * item.slot.unitVolume),
+      (sum, item) => sum + (item.quantity * item.slot.unitVolume),
     );
     try {
       vehicleResult = await ref
@@ -3455,7 +3492,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       final result = await showDialog<int>(
         context: sheetContext,
         builder: (dialogContext) => Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.transparent,
           insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
           child: Container(
             padding: EdgeInsets.all(16.w),
@@ -3474,9 +3511,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             ? ' (${_currentBrandName ?? 'Markali'})'
                             : ''),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.sp,
+                    style: AppTextStyles.h2.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.titleLarge,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -3487,19 +3524,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       for (int i = 0; i < 5; i++)
                         Icon(
                           i < item.qualityLevel
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
+                              ? AppIcons.starRounded
+                              : AppIcons.starBorderRounded,
                           color: i < item.qualityLevel
                               ? AppColors.gold
-                              : Colors.white24,
-                          size: 16.sp,
+                              : AppFx.softOverlay(0.24),
+                          size: AppIconSizes.compact,
                         ),
                       SizedBox(width: 6.w),
                       Text(
                         'Q${item.qualityLevel}',
-                        style: TextStyle(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.gold,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -3512,7 +3549,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       margin: EdgeInsets.symmetric(vertical: 12.h),
                       padding: EdgeInsets.all(2.w),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.35),
+                        color: AppFx.panelWash(0.35),
                         borderRadius: BorderRadius.circular(14.r),
                         border: Border.all(
                           color: AppColors.gold.withValues(alpha: 0.25),
@@ -3541,25 +3578,25 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       horizontal: 12.w,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.03),
+                      color: AppFx.softOverlay(0.03),
                       borderRadius: BorderRadius.circular(10.r),
-                      border: Border.all(color: Colors.white10),
+                      border: Border.all(color: AppFx.softOverlay(0.10)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Mevcut Stok:',
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 11.sp,
+                            fontSize: AppTypography.bodySmall,
                           ),
                         ),
                         Text(
                           '${item.quantity} Adet',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12.sp,
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: AppTypography.body,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -3572,14 +3609,18 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     readOnly: true,
                     showCursor: true,
                     enableInteractiveSelection: false,
-                    style: const TextStyle(color: Colors.white),
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Miktar (Maks: ${item.quantity})',
-                      labelStyle: const TextStyle(color: AppColors.gold),
-                      enabledBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white24),
+                      labelStyle: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.gold,
                       ),
-                      focusedBorder: const OutlineInputBorder(
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppFx.softOverlay(0.24)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: AppColors.gold),
                       ),
                     ),
@@ -3615,7 +3656,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         child: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(color: Colors.white24),
+                            side: BorderSide(color: AppFx.softOverlay(0.24)),
                             padding: EdgeInsets.symmetric(vertical: 10.h),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10.r),
@@ -3624,8 +3665,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           onPressed: () => Navigator.pop(dialogContext),
                           child: Text(
                             'İptal',
-                            style: TextStyle(
-                              fontSize: 12.sp,
+                            style: AppTextStyles.button.standardCopyWith(
+                              fontSize: AppTypography.body,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -3646,7 +3687,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.gold,
-                              foregroundColor: Colors.black,
+                              foregroundColor: AppColors.textOnAccent,
                               padding: EdgeInsets.symmetric(vertical: 10.h),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10.r),
@@ -3668,8 +3709,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             },
                             child: Text(
                               'Kaydet',
-                              style: TextStyle(
-                                fontSize: 12.sp,
+                              style: AppTextStyles.button.standardCopyWith(
+                                fontSize: AppTypography.body,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -3741,7 +3782,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           final projectedCapacityColor = projectedCapacityRatio >= 0.9
               ? AppColors.red
               : projectedCapacityRatio >= 0.75
-              ? Colors.orange
+              ? AppColors.gold
               : AppColors.green;
 
           return SafeArea(
@@ -3756,9 +3797,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 children: [
                   Text(
                     'Depoya Gonderilecek Stoklari Sec',
-                    style: TextStyle(
+                    style: AppTextStyles.h2.standardCopyWith(
                       color: AppColors.textPrimary,
-                      fontSize: 18.sp,
+                      fontSize: AppTypography.headline,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -3767,7 +3808,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     width: double.infinity,
                     padding: EdgeInsets.all(12.w),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.035),
+                      color: AppFx.softOverlay(0.035),
                       borderRadius: BorderRadius.circular(16.r),
                       border: Border.all(
                         color: AppColors.borderGoldLight.withValues(
@@ -3785,10 +3826,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               child: Container(
                                 padding: EdgeInsets.all(10.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.16),
+                                  color: AppFx.panelWash(0.16),
                                   borderRadius: BorderRadius.circular(14.r),
                                   border: Border.all(
-                                    color: AppColors.blue.withValues(alpha: 0.18),
+                                    color: AppColors.blue.withValues(
+                                      alpha: 0.18,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -3797,41 +3840,48 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                       width: 30.w,
                                       height: 30.w,
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.22),
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        color: AppFx.panelWash(0.22),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
                                       ),
                                       child: Icon(
-                                        Icons.precision_manufacturing_rounded,
+                                        AppIcons.precisionManufacturingRounded,
                                         color: AppColors.blue,
-                                        size: 16.sp,
+                                        size: AppIconSizes.compact,
                                       ),
                                     ),
                                     SizedBox(width: 10.w),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
                                             detail.factory.name,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13.sp,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: AppTextStyles.body
+                                                .standardCopyWith(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize:
+                                                      AppTypography.bodyLarge,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                           SizedBox(height: 3.h),
                                           Text(
                                             detail.cityName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: AppColors.goldLight,
-                                              fontSize: 10.sp,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.goldLight,
+                                                  fontSize: AppTypography.label,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                           SizedBox(height: 5.h),
                                           _buildInlineMetaChip(
@@ -3850,16 +3900,18 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               width: 34.w,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
+                                color: AppFx.softOverlay(0.05),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: AppColors.borderGoldLight.withValues(alpha: 0.12),
+                                  color: AppColors.borderGoldLight.withValues(
+                                    alpha: 0.12,
+                                  ),
                                 ),
                               ),
                               child: Icon(
-                                Icons.arrow_forward_rounded,
+                                AppIcons.arrowForwardRounded,
                                 color: AppColors.gold,
-                                size: 18.sp,
+                                size: AppIconSizes.regular,
                               ),
                             ),
                             SizedBox(width: 10.w),
@@ -3867,10 +3919,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               child: Container(
                                 padding: EdgeInsets.all(8.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.16),
+                                  color: AppFx.panelWash(0.16),
                                   borderRadius: BorderRadius.circular(14.r),
                                   border: Border.all(
-                                    color: AppColors.green.withValues(alpha: 0.18),
+                                    color: AppColors.green.withValues(
+                                      alpha: 0.18,
+                                    ),
                                   ),
                                 ),
                                 child: Row(
@@ -3879,41 +3933,48 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                       width: 30.w,
                                       height: 30.w,
                                       decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.22),
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        color: AppFx.panelWash(0.22),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
                                       ),
                                       child: Icon(
-                                        Icons.warehouse_rounded,
+                                        AppIcons.warehouseRounded,
                                         color: AppColors.green,
-                                        size: 16.sp,
+                                        size: AppIconSizes.compact,
                                       ),
                                     ),
                                     SizedBox(width: 8.w),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
                                             targetWarehouse.name,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13.sp,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: AppTextStyles.body
+                                                .standardCopyWith(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize:
+                                                      AppTypography.bodyLarge,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                           SizedBox(height: 3.h),
                                           Text(
                                             targetWarehouse.cityName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: AppColors.goldLight,
-                                              fontSize: 10.sp,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.goldLight,
+                                                  fontSize: AppTypography.label,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                           SizedBox(height: 5.h),
                                           _buildInlineMetaChip(
@@ -3936,9 +3997,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               Expanded(
                                 child: Text(
                                   'Bos: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
-                                  style: TextStyle(
+                                  style: AppTextStyles.body.standardCopyWith(
                                     color: AppColors.textMuted,
-                                    fontSize: 11.sp,
+                                    fontSize: AppTypography.bodySmall,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -3946,9 +4007,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               SizedBox(width: 8.w),
                               Text(
                                 '%${(projectedCapacityRatio * 100).round()}',
-                                style: TextStyle(
+                                style: AppTextStyles.body.standardCopyWith(
                                   color: projectedCapacityColor,
-                                  fontSize: 11.sp,
+                                  fontSize: AppTypography.bodySmall,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -3958,7 +4019,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           Container(
                             height: 9.h,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.08),
+                              color: AppFx.softOverlay(0.08),
                               borderRadius: BorderRadius.circular(999.r),
                             ),
                             child: ClipRRect(
@@ -3978,8 +4039,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                   final addedWidth = rawAddedWidth > 0
                                       ? rawAddedWidth.clamp(3.0, totalWidth)
                                       : 0.0;
-                                  final baseWidth =
-                                      currentWidth.clamp(0.0, totalWidth - addedWidth);
+                                  final baseWidth = currentWidth.clamp(
+                                    0.0,
+                                    totalWidth - addedWidth,
+                                  );
 
                                   return Stack(
                                     fit: StackFit.expand,
@@ -4021,9 +4084,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           SizedBox(height: 6.h),
                           Text(
                             'Secilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
-                            style: TextStyle(
+                            style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.textMuted,
-                              fontSize: 11.sp,
+                              fontSize: AppTypography.bodySmall,
                             ),
                           ),
                         ],
@@ -4033,9 +4096,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   SizedBox(height: 8.h),
                   Text(
                     '${selectedItems.length} stok | $totalQuantity adet secildi',
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 12.sp,
+                      fontSize: AppTypography.body,
                     ),
                   ),
                   SizedBox(height: 16.h),
@@ -4052,7 +4115,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         return Container(
                           padding: EdgeInsets.all(10.w),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
+                            color: AppFx.softOverlay(0.04),
                             borderRadius: BorderRadius.circular(14.r),
                             border: Border.all(
                               color:
@@ -4071,13 +4134,13 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                 height: 42.w,
                                 padding: EdgeInsets.all(2.w),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.2),
+                                  color: AppFx.panelWash(0.2),
                                   borderRadius: BorderRadius.circular(10.r),
                                   border: Border.all(
                                     color:
                                         (isSelected
                                                 ? AppColors.green
-                                                : Colors.white10)
+                                                : AppFx.softOverlay(0.10))
                                             .withValues(alpha: 0.2),
                                   ),
                                 ),
@@ -4113,11 +4176,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                               : ''),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: AppTextStyles.body
+                                          .standardCopyWith(
+                                            color: AppColors.textPrimary,
+                                            fontSize: AppTypography.bodyLarge,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                     SizedBox(height: 3.h),
                                     Row(
@@ -4125,12 +4189,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                         for (int i = 0; i < 5; i++)
                                           Icon(
                                             i < item.qualityLevel
-                                                ? Icons.star_rounded
-                                                : Icons.star_border_rounded,
+                                                ? AppIcons.starRounded
+                                                : AppIcons.starBorderRounded,
                                             color: i < item.qualityLevel
                                                 ? AppColors.gold
-                                                : Colors.white12,
-                                            size: 11.sp,
+                                                : AppFx.softOverlay(0.12),
+                                            size: AppIconSizes.xSmall,
                                           ),
                                         SizedBox(width: 4.w),
                                         Expanded(
@@ -4138,10 +4202,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                             '| Stok ${item.quantity}',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: AppColors.textMuted,
-                                              fontSize: 10.sp,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.textMuted,
+                                                  fontSize: AppTypography.label,
+                                                ),
                                           ),
                                         ),
                                       ],
@@ -4179,7 +4244,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.gold,
-                        foregroundColor: Colors.black,
+                        foregroundColor: AppColors.textOnAccent,
                         padding: EdgeInsets.symmetric(vertical: 12.h),
                       ),
                       onPressed: selectedItems.isEmpty
@@ -4240,7 +4305,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                 items: selectedItems,
                               );
                             },
-                      icon: const Icon(Icons.local_shipping_rounded),
+                      icon: const Icon(AppIcons.localShippingRounded),
                       label: const Text('Transferi Baslat'),
                     ),
                   ),
@@ -4389,16 +4454,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           children: [
             Text(
               title,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
+              style: AppTextStyles.h2.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.headline,
                 fontWeight: FontWeight.bold,
               ),
             ),
             SizedBox(height: 6.h),
             Text(
               subtitle,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
             SizedBox(height: 16.h),
             Expanded(
@@ -4463,8 +4531,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     return (capacity - usedAndPending.ceil()).clamp(0, capacity);
   }
 
-
-
   Widget _buildInlineMetaChip(String label, Color color) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
@@ -4475,9 +4541,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 9.sp,
+          fontSize: AppTypography.caption,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -4508,7 +4574,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
     return 0;
   }
-
 }
 
 class _SelectedFactoryProductionTransferItem {
@@ -4626,9 +4691,9 @@ class _ActiveFactoryBoostCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
-                  Icons.flash_on_rounded,
+                  AppIcons.flashOnRounded,
                   color: AppColors.goldDark,
-                  size: 18.sp,
+                  size: AppIconSizes.regular,
                 ),
               ),
               SizedBox(width: 10.w),
@@ -4638,18 +4703,18 @@ class _ActiveFactoryBoostCard extends ConsumerWidget {
                   children: [
                     Text(
                       'Boost Aktif',
-                      style: TextStyle(
+                      style: AppTextStyles.title.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 14.sp,
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 2.h),
                     Text(
                       '${boost.durationHours} saat | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost} yildiz',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                       ),
                     ),
                   ],
@@ -4657,9 +4722,9 @@ class _ActiveFactoryBoostCard extends ConsumerWidget {
               ),
               Text(
                 _formatCountdownLabel(remaining),
-                style: TextStyle(
+                style: AppTextStyles.label.standardCopyWith(
                   color: AppColors.gold,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -4668,13 +4733,11 @@ class _ActiveFactoryBoostCard extends ConsumerWidget {
           SizedBox(height: 12.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
+            child: AppProgressBar(
               value: progress,
               minHeight: 8.h,
               backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.goldDark,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.goldDark),
             ),
           ),
         ],
@@ -4728,9 +4791,9 @@ class _ActiveFactoryUpgradeCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
-                  Icons.upgrade_rounded,
+                  AppIcons.upgradeRounded,
                   color: AppColors.green,
-                  size: 18.sp,
+                  size: AppIconSizes.regular,
                 ),
               ),
               SizedBox(width: 10.w),
@@ -4740,18 +4803,18 @@ class _ActiveFactoryUpgradeCard extends ConsumerWidget {
                   children: [
                     Text(
                       'Fabrika Yukseltmesi Devam Ediyor',
-                      style: TextStyle(
+                      style: AppTextStyles.title.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 14.sp,
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 2.h),
                     Text(
                       'Seviye ${upgrade.currentLevel} -> ${upgrade.targetLevel} | Hammadde ${upgrade.previousInputCapacity} -> ${upgrade.nextInputCapacity} | Cikti ${upgrade.previousOutputCapacity} -> ${upgrade.nextOutputCapacity}',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                       ),
                     ),
                   ],
@@ -4759,9 +4822,9 @@ class _ActiveFactoryUpgradeCard extends ConsumerWidget {
               ),
               Text(
                 formatCountdown(remaining),
-                style: TextStyle(
+                style: AppTextStyles.label.standardCopyWith(
                   color: AppColors.gold,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -4770,11 +4833,11 @@ class _ActiveFactoryUpgradeCard extends ConsumerWidget {
           SizedBox(height: 12.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
+            child: AppProgressBar(
               value: progress,
               minHeight: 8.h,
               backgroundColor: AppColors.textPrimary.withValues(alpha: 0.1),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.green),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
             ),
           ),
           SizedBox(height: 12.h),
@@ -4786,7 +4849,7 @@ class _ActiveFactoryUpgradeCard extends ConsumerWidget {
                 foregroundColor: AppColors.goldLight,
               ),
               onPressed: onFinishWithGold,
-              icon: const Icon(Icons.star_rounded),
+              icon: const Icon(AppIcons.starRounded),
               label: Text(
                 '${calculateStarCost(upgrade.finishAt)} yildiz ile bitir',
               ),

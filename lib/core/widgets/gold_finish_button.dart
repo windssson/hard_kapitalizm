@@ -17,26 +17,22 @@ class GoldFinishButton extends StatelessWidget {
       height: 44.h,
       child: ElevatedButton.icon(
         onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFB8860B),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-            side: BorderSide(
-              color: AppColors.gold.withValues(alpha: 0.6),
-              width: 1,
-            ),
-          ),
+        style: AppButtonStyles.primary(
+          backgroundColor: AppColors.goldDark,
+          foregroundColor: AppColors.white,
+          borderColor: AppColors.gold.withValues(alpha: 0.6),
         ),
-        icon: Icon(Icons.star_rounded, size: 18.sp, color: AppColors.gold),
+        icon: Icon(
+          AppIcons.starRounded,
+          size: AppIconSizes.regular,
+          color: AppColors.gold,
+        ),
         label: Text(
           '$starCost ile Bitir',
-          style: TextStyle(
-            fontSize: 13.sp,
+          style: AppTextStyles.button.standardCopyWith(
+            fontSize: AppTypography.bodyLarge,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.textOnAccent,
             letterSpacing: 0.3,
           ),
         ),

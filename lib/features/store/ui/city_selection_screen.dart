@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
@@ -33,7 +34,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
     final citiesAsync = ref.watch(citiesProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Veritabanındaki güncel koordinatları tekrar çekmek için:
@@ -42,7 +43,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
         backgroundColor: AppColors.gold,
         mini: true, // Çok yer kaplamasın
         tooltip: 'Koordinatları Yenile',
-        child: const Icon(Icons.refresh, color: Colors.black),
+        child: Icon(AppIcons.refresh, color: AppColors.textOnAccent),
       ),
       body: SafeArea(
         child: Column(
@@ -74,13 +75,13 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
                           ),
                         ),
                       ),
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, stack) => Center(
                   child: Text(
                     'Hata: $error',
-                    style: TextStyle(color: AppColors.red),
+                    style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                   ),
                 ),
               ),
@@ -97,7 +98,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.map_outlined, color: AppColors.textMuted, size: 64.sp),
+          Icon(AppIcons.mapOutlined, color: AppColors.textMuted, size: AppIconSizes.emptyState),
           SizedBox(height: 16.h),
           Text('Aktif şehir bulunamadı.', style: AppTextStyles.h2),
         ],
@@ -114,9 +115,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
           image: const AssetImage('assets/backmap.webp'),
           fit: BoxFit.fill,
           colorFilter: ColorFilter.mode(
-            Colors.black.withValues(
-              alpha: 0.5,
-            ), // Görünürlük için çok hafif karartma
+            AppFx.panelWash(0.5),
             BlendMode.darken,
           ),
         ),
@@ -124,7 +123,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: AppFx.shadow(0.3),
             blurRadius: 20,
             spreadRadius: 5,
           ),
@@ -186,10 +185,10 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
               width: isSelected ? 20.w : 14.w,
               height: isSelected ? 20.w : 14.w,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.gold : Colors.black87,
+                color: isSelected ? AppColors.gold : AppColors.panel,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Colors.white : AppColors.gold,
+                  color: isSelected ? AppColors.white : AppColors.gold,
                   width: isSelected ? 3 : 2,
                 ),
                 boxShadow: [
@@ -209,21 +208,21 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? AppColors.gold
-                    : Colors.black.withValues(alpha: 0.8),
+                    : AppFx.panelWash(0.8),
                 borderRadius: BorderRadius.circular(6.r),
                 border: Border.all(
                   color: isSelected
-                      ? Colors.white.withValues(alpha: 0.5)
+                      ? AppColors.white.withValues(alpha: 0.5)
                       : AppColors.borderGold.withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
               child: Text(
                 city.name,
-                style: TextStyle(
-                  fontSize: 8.sp,
+                style: AppTextStyles.caption.standardCopyWith(
+                  fontSize: AppTypography.micro,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.black : Colors.white,
+                  color: isSelected ? AppColors.textOnAccent : AppColors.white,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -260,8 +259,8 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
               children: [
                 Icon(
                   _selectedCity != null
-                      ? Icons.location_on
-                      : Icons.location_off,
+                      ? AppIcons.locationOn
+                      : AppIcons.locationOff,
                   color: _selectedCity != null
                       ? AppColors.gold
                       : AppColors.textMuted,
@@ -272,18 +271,18 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
                   children: [
                     Text(
                       'Seçilen Şehir',
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: 12.sp,
+                        fontSize: AppTypography.body,
                       ),
                     ),
                     Text(
                       _selectedCity?.name ?? 'Lütfen Şehir Seçiniz',
-                      style: TextStyle(
+                      style: AppTextStyles.h2.standardCopyWith(
                         color: _selectedCity != null
-                            ? Colors.white
+                            ? AppColors.white
                             : AppColors.textMuted,
-                        fontSize: 18.sp,
+                        fontSize: AppTypography.headline,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -308,11 +307,11 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
               ),
               child: Text(
                 'Devam Et',
-                style: TextStyle(
+                style: AppTextStyles.button.standardCopyWith(
                   color: _selectedCity != null
-                      ? Colors.black
-                      : Colors.white.withValues(alpha: 0.3),
-                  fontSize: 16.sp,
+                      ? AppColors.textOnAccent
+                      : AppColors.white.withValues(alpha: 0.3),
+                  fontSize: AppTypography.titleLarge,
                   fontWeight: FontWeight.bold,
                 ),
               ),

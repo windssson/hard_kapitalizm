@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -20,23 +21,23 @@ import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 class PublicProfileScreen extends ConsumerStatefulWidget {
   final String playerId;
 
-  const PublicProfileScreen({
-    super.key,
-    required this.playerId,
-  });
+  const PublicProfileScreen({super.key, required this.playerId});
 
   @override
-  ConsumerState<PublicProfileScreen> createState() => _PublicProfileScreenState();
+  ConsumerState<PublicProfileScreen> createState() =>
+      _PublicProfileScreenState();
 }
 
 class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(publicProfileProvider(widget.playerId));
-    final listingsAsync = ref.watch(playerMarketListingsProvider(widget.playerId));
+    final listingsAsync = ref.watch(
+      playerMarketListingsProvider(widget.playerId),
+    );
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: -1,
         onItemSelected: (_) {},
@@ -47,26 +48,32 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
             const SecondaryTopBar(title: 'Oyuncu Profili'),
             Expanded(
               child: profileAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
-                ),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (err, _) => Center(
                   child: Text(
                     'Oyuncu bilgileri alinamadi.\n$err',
-                    style: AppTextStyles.body.copyWith(color: AppColors.red),
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.red,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
                 data: (player) {
                   if (player == null) {
                     return Center(
-                      child: Text('Oyuncu bulunamadi.', style: AppTextStyles.body),
+                      child: Text(
+                        'Oyuncu bulunamadi.',
+                        style: AppTextStyles.body,
+                      ),
                     );
                   }
                   return RefreshIndicator(
                     onRefresh: () async {
                       ref.invalidate(publicProfileProvider(widget.playerId));
-                      ref.invalidate(playerMarketListingsProvider(widget.playerId));
+                      ref.invalidate(
+                        playerMarketListingsProvider(widget.playerId),
+                      );
                     },
                     color: AppColors.gold,
                     child: SingleChildScrollView(
@@ -83,19 +90,25 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                           SizedBox(height: 24.h),
                           Text(
                             'Satistaki Urunleri 📦',
-                            style: AppTextStyles.h2.copyWith(color: AppColors.gold),
+                            style: AppTextStyles.h2.standardCopyWith(
+                              color: AppColors.gold,
+                            ),
                           ),
                           SizedBox(height: 10.h),
                           listingsAsync.when(
-                            loading: () => const Center(
+                            loading: () => Center(
                               child: Padding(
                                 padding: EdgeInsets.all(24.0),
-                                child: CircularProgressIndicator(color: AppColors.gold),
+                                child: AppLoadingIndicator(
+                                  color: AppColors.gold,
+                                ),
                               ),
                             ),
                             error: (err, _) => Text(
                               'Urun listesi alinamadi: $err',
-                              style: AppTextStyles.body.copyWith(color: AppColors.red),
+                              style: AppTextStyles.body.standardCopyWith(
+                                color: AppColors.red,
+                              ),
                             ),
                             data: (listings) {
                               if (listings.isEmpty) {
@@ -105,7 +118,8 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: listings.length,
-                                separatorBuilder: (context, index) => SizedBox(height: 10.h),
+                                separatorBuilder: (context, index) =>
+                                    SizedBox(height: 10.h),
                                 itemBuilder: (context, index) {
                                   final listing = listings[index];
                                   return _buildListingCard(listing);
@@ -150,14 +164,17 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
               border: Border.all(color: AppColors.gold, width: 2.w),
             ),
             child: ClipOval(
-              child: player.googleAvatarUrl != null && player.googleAvatarUrl!.trim().isNotEmpty
+              child:
+                  player.googleAvatarUrl != null &&
+                      player.googleAvatarUrl!.trim().isNotEmpty
                   ? Image.network(
                       player.googleAvatarUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => CachedAssetImage(
-                        fileName: player.avatarId,
-                        fit: BoxFit.cover,
-                      ),
+                      errorBuilder: (context, error, stackTrace) =>
+                          CachedAssetImage(
+                            fileName: player.avatarId,
+                            fit: BoxFit.cover,
+                          ),
                     )
                   : CachedAssetImage(
                       fileName: player.avatarId,
@@ -175,24 +192,32 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                     Flexible(
                       child: Text(
                         player.playerName,
-                        style: AppTextStyles.h1.copyWith(fontSize: 18.sp),
+                        style: AppTextStyles.h1.standardCopyWith(
+                          fontSize: AppTypography.headline,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     SizedBox(width: 6.w),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.w,
+                        vertical: 2.h,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.gold.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(6.r),
-                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.4), width: 1.w),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.4),
+                          width: 1.w,
+                        ),
                       ),
                       child: Text(
                         'Sv.${player.level}',
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.gold,
                           fontWeight: FontWeight.bold,
-                          fontSize: 8.5.sp,
+                          fontSize: AppTypography.micro,
                         ),
                       ),
                     ),
@@ -201,7 +226,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 SizedBox(height: 4.h),
                 Text(
                   player.companyName,
-                  style: AppTextStyles.body.copyWith(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.bold,
                   ),
@@ -211,28 +236,17 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Container(
-                        height: 5.h,
-                        decoration: BoxDecoration(
-                          color: AppColors.cardBgLight,
-                          borderRadius: BorderRadius.circular(10.r),
-                        ),
-                        child: FractionallySizedBox(
-                          alignment: Alignment.centerLeft,
-                          widthFactor: player.expProgressRatio.clamp(0.0, 1.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.gold,
-                              borderRadius: BorderRadius.circular(10.r),
-                            ),
-                          ),
-                        ),
+                      child: AppProgressBar(
+                        value: player.expProgressRatio,
+                        size: AppProgressSize.compact,
                       ),
                     ),
                     SizedBox(width: 8.w),
                     Text(
                       '${player.currentLevelExperience}/${player.nextLevelRequiredExperience} XP',
-                      style: AppTextStyles.caption.copyWith(fontSize: 8.sp),
+                      style: AppTextStyles.caption.standardCopyWith(
+                        fontSize: AppTypography.micro,
+                      ),
                     ),
                   ],
                 ),
@@ -262,18 +276,14 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
               SizedBox(height: 2.h),
               Text(
                 AppMoney.compact(player.companyValue),
-                style: AppTextStyles.title.copyWith(
+                style: AppTextStyles.title.standardCopyWith(
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          Container(
-            height: 30.h,
-            width: 1.w,
-            color: AppColors.border,
-          ),
+          Container(height: 30.h, width: 1.w, color: AppColors.border),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -281,7 +291,9 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
               SizedBox(height: 2.h),
               Text(
                 '${player.createdAt.day}.${player.createdAt.month}.${player.createdAt.year}',
-                style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                style: AppTextStyles.body.standardCopyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -298,7 +310,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
       children: [
         Text(
           'Vitrin Rozetleri 🏆',
-          style: AppTextStyles.h2.copyWith(color: AppColors.gold),
+          style: AppTextStyles.h2.standardCopyWith(color: AppColors.gold),
         ),
         SizedBox(height: 8.h),
         GridView.builder(
@@ -336,7 +348,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                       child: Icon(
                         _badgeIcon(badge.badgeKey),
                         color: color,
-                        size: 14.sp,
+                        size: AppIconSizes.small,
                       ),
                     ),
                   ),
@@ -346,8 +358,8 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.caption.copyWith(
-                      fontSize: 8.sp,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      fontSize: AppTypography.micro,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -373,14 +385,16 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
       child: Column(
         children: [
           Icon(
-            Icons.store_mall_directory_outlined,
+            AppIcons.storeMallDirectoryOutlined,
             color: AppColors.textMuted,
-            size: 36.sp,
+            size: AppIconSizes.displayLarge,
           ),
           SizedBox(height: 8.h),
           Text(
             'Oyuncunun satista aktif urunu bulunmuyor.',
-            style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -422,22 +436,27 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                     Flexible(
                       child: Text(
                         listing.productName,
-                        style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTextStyles.body.standardCopyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     SizedBox(width: 4.w),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 4.w,
+                        vertical: 1.h,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.gold.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4.r),
                       ),
                       child: Text(
                         'Q${listing.qualityLevel}',
-                        style: AppTextStyles.caption.copyWith(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.gold,
-                          fontSize: 7.sp,
+                          fontSize: AppTypography.micro,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -452,7 +471,9 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 SizedBox(height: 2.h),
                 Text(
                   'Konum: ${listing.cityName} (${listing.warehouseName})',
-                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -463,7 +484,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
             children: [
               Text(
                 AppMoney.full(listing.price),
-                style: AppTextStyles.body.copyWith(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
                 ),
@@ -473,8 +494,11 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 onPressed: () => _openPurchaseSheet(listing),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                  foregroundColor: AppColors.textOnAccent,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   shape: RoundedRectangleBorder(
@@ -483,7 +507,10 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                 ),
                 child: Text(
                   'Satin Al',
-                  style: TextStyle(fontSize: 10.sp, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.button.standardCopyWith(
+                    fontSize: AppTypography.label,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -497,9 +524,10 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.6),
-      builder: (sheetContext) => _PurchaseBottomSheet(listing: listing, ref: ref),
+      backgroundColor: AppColors.transparent,
+      barrierColor: AppFx.scrim(0.6),
+      builder: (sheetContext) =>
+          _PurchaseBottomSheet(listing: listing, ref: ref),
     ).then((_) {
       ref.invalidate(playerMarketListingsProvider(widget.playerId));
     });
@@ -508,59 +536,35 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   IconData _badgeIcon(String key) {
     switch (key) {
       case 'store':
-        return Icons.storefront_rounded;
+        return AppIcons.storefrontRounded;
       case 'warehouse':
-        return Icons.warehouse_rounded;
+        return AppIcons.warehouseRounded;
       case 'factory':
-        return Icons.precision_manufacturing_rounded;
+        return AppIcons.precisionManufacturingRounded;
       case 'field':
       case 'farm':
-        return Icons.agriculture_rounded;
+        return AppIcons.agricultureRounded;
       case 'mine':
-        return Icons.landscape_rounded;
+        return AppIcons.landscapeRounded;
       case 'builder':
-        return Icons.handyman_rounded;
+        return AppIcons.handymanRounded;
       case 'trade':
-        return Icons.point_of_sale_rounded;
+        return AppIcons.pointOfSaleRounded;
       case 'truck':
-        return Icons.local_shipping_rounded;
+        return AppIcons.localShippingRounded;
       case 'science':
-        return Icons.science_rounded;
+        return AppIcons.scienceRounded;
       case 'upgrade':
-        return Icons.trending_up_rounded;
+        return AppIcons.trendingUpRounded;
       case 'crown':
-        return Icons.workspace_premium_rounded;
+        return AppIcons.workspacePremiumRounded;
       default:
-        return Icons.military_tech_rounded;
+        return AppIcons.militaryTechRounded;
     }
   }
 
   Color _badgeColor(String key) {
-    switch (key) {
-      case 'blue':
-        return Colors.lightBlueAccent;
-      case 'red':
-        return Colors.redAccent;
-      case 'green':
-        return Colors.greenAccent;
-      case 'lime':
-        return Colors.lightGreenAccent;
-      case 'slate':
-        return Colors.blueGrey;
-      case 'orange':
-        return Colors.orangeAccent;
-      case 'deepOrange':
-        return Colors.deepOrangeAccent;
-      case 'cyan':
-        return Colors.cyanAccent;
-      case 'purple':
-        return Colors.purpleAccent;
-      case 'teal':
-        return Colors.tealAccent;
-      case 'amber':
-      default:
-        return Colors.amberAccent;
-    }
+    return AppColorPresets.badge(key);
   }
 }
 
@@ -568,10 +572,7 @@ class _PurchaseBottomSheet extends StatefulWidget {
   final MarketListingModel listing;
   final WidgetRef ref;
 
-  const _PurchaseBottomSheet({
-    required this.listing,
-    required this.ref,
-  });
+  const _PurchaseBottomSheet({required this.listing, required this.ref});
 
   @override
   State<_PurchaseBottomSheet> createState() => _PurchaseBottomSheetState();
@@ -592,7 +593,12 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
           decoration: AppDecorations.panelGlass(24.r),
-          padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, MediaQuery.of(context).viewInsets.bottom + 24.h),
+          padding: EdgeInsets.fromLTRB(
+            16.w,
+            16.h,
+            16.w,
+            MediaQuery.of(context).viewInsets.bottom + 24.h,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,7 +609,11 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                   Text('Urun Satin Al', style: AppTextStyles.h1),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: AppColors.textMuted, size: 20.sp),
+                    icon: Icon(
+                      AppIcons.close,
+                      color: AppColors.textMuted,
+                      size: AppIconSizes.medium,
+                    ),
                   ),
                 ],
               ),
@@ -628,16 +638,33 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.listing.productName, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
-                          Text('Satici: ${widget.listing.sellerPlayerName}', style: AppTextStyles.caption),
+                          Text(
+                            widget.listing.productName,
+                            style: AppTextStyles.body.standardCopyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Satici: ${widget.listing.sellerPlayerName}',
+                            style: AppTextStyles.caption,
+                          ),
                         ],
                       ),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(AppMoney.full(widget.listing.price), style: AppTextStyles.body.copyWith(color: AppColors.gold, fontWeight: FontWeight.bold)),
-                        Text('Stok: ${widget.listing.quantity}', style: AppTextStyles.caption),
+                        Text(
+                          AppMoney.full(widget.listing.price),
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.gold,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Stok: ${widget.listing.quantity}',
+                          style: AppTextStyles.caption,
+                        ),
                       ],
                     ),
                   ],
@@ -647,11 +674,22 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
               Text('Hedef Depo Secin 🏢', style: AppTextStyles.h2),
               SizedBox(height: 8.h),
               warehousesAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.gold)),
-                error: (err, _) => Text('Depolar yuklenemedi: $err', style: AppTextStyles.body.copyWith(color: AppColors.red)),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
+                error: (err, _) => Text(
+                  'Depolar yuklenemedi: $err',
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.red,
+                  ),
+                ),
                 data: (warehouses) {
                   if (warehouses.isEmpty) {
-                    return Text('Satin alinan urunu koyacak bir deponuz bulunmuyor!', style: AppTextStyles.body.copyWith(color: AppColors.red));
+                    return Text(
+                      'Satin alinan urunu koyacak bir deponuz bulunmuyor!',
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                      ),
+                    );
                   }
                   _selectedWarehouse ??= warehouses.firstWhere(
                     (w) => w.cityId == widget.listing.cityId,
@@ -669,7 +707,10 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                         value: _selectedWarehouse,
                         dropdownColor: AppColors.cardBgLight,
                         isExpanded: true,
-                        icon: const Icon(Icons.arrow_drop_down, color: AppColors.gold),
+                        icon: Icon(
+                          AppIcons.arrowDropDown,
+                          color: AppColors.gold,
+                        ),
                         items: warehouses.map((w) {
                           final isSameCity = w.cityId == widget.listing.cityId;
                           return DropdownMenuItem<WarehouseModel>(
@@ -677,16 +718,28 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('${w.name} (${w.cityName})', style: AppTextStyles.body),
+                                Text(
+                                  '${w.name} (${w.cityName})',
+                                  style: AppTextStyles.body,
+                                ),
                                 if (isSameCity)
                                   Text(
                                     'Yerel (Anlik Alim)',
-                                    style: AppTextStyles.caption.copyWith(color: AppColors.green, fontWeight: FontWeight.bold, fontSize: 8.sp),
+                                    style: AppTextStyles.caption
+                                        .standardCopyWith(
+                                          color: AppColors.green,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: AppTypography.micro,
+                                        ),
                                   )
                                 else
                                   Text(
                                     'Farkli Sehir',
-                                    style: AppTextStyles.caption.copyWith(color: AppColors.gold, fontSize: 8.sp),
+                                    style: AppTextStyles.caption
+                                        .standardCopyWith(
+                                          color: AppColors.gold,
+                                          fontSize: AppTypography.micro,
+                                        ),
                                   ),
                               ],
                             ),
@@ -710,18 +763,28 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                   Row(
                     children: [
                       IconButton(
-                        onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
-                        icon: const Icon(Icons.remove_circle_outline, color: AppColors.gold),
+                        onPressed: _quantity > 1
+                            ? () => setState(() => _quantity--)
+                            : null,
+                        icon: Icon(
+                          AppIcons.removeCircleOutline,
+                          color: AppColors.gold,
+                        ),
                       ),
                       Text(
                         '$_quantity',
-                        style: AppTextStyles.title.copyWith(fontWeight: FontWeight.bold),
+                        style: AppTextStyles.title.standardCopyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         onPressed: _quantity < widget.listing.quantity
                             ? () => setState(() => _quantity++)
                             : null,
-                        icon: const Icon(Icons.add_circle_outline, color: AppColors.gold),
+                        icon: Icon(
+                          AppIcons.addCircleOutline,
+                          color: AppColors.gold,
+                        ),
                       ),
                     ],
                   ),
@@ -740,7 +803,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                 },
               ),
               SizedBox(height: 14.h),
-              const Divider(color: AppColors.border),
+              Divider(color: AppColors.border),
               SizedBox(height: 6.h),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -748,7 +811,10 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                   Text('Toplam Tutar', style: AppTextStyles.body),
                   Text(
                     AppMoney.full(widget.listing.price * _quantity),
-                    style: AppTextStyles.title.copyWith(color: AppColors.gold, fontWeight: FontWeight.bold),
+                    style: AppTextStyles.title.standardCopyWith(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -756,20 +822,32 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _loading || _selectedWarehouse == null ? null : _submitPurchase,
+                  onPressed: _loading || _selectedWarehouse == null
+                      ? null
+                      : _submitPurchase,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.gold,
-                    foregroundColor: Colors.black,
+                    foregroundColor: AppColors.textOnAccent,
                     padding: EdgeInsets.symmetric(vertical: 12.h),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
                   ),
                   child: _loading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                          child: AppLoadingIndicator(
+                            color: AppColors.textOnAccent,
+                            strokeWidth: 2,
+                          ),
                         )
-                      : const Text('Satinalmayi Onayla', style: TextStyle(fontWeight: FontWeight.bold)),
+                      : Text(
+                          'Satinalmayi Onayla',
+                          style: AppTextStyles.button.standardCopyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -791,7 +869,9 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
     }
   }
 
-  Future<void> _showIntercityVehiclePicker(WarehouseModel targetWarehouse) async {
+  Future<void> _showIntercityVehiclePicker(
+    WarehouseModel targetWarehouse,
+  ) async {
     setState(() {
       _loading = true;
     });
@@ -842,20 +922,24 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Arac Secin',
-                    style: AppTextStyles.h1,
-                  ),
+                  Text('Arac Secin', style: AppTextStyles.h1),
                   IconButton(
                     onPressed: () => Navigator.pop(sheetContext),
-                    icon: Icon(Icons.close, color: AppColors.textMuted, size: 20.sp),
+                    icon: Icon(
+                      AppIcons.close,
+                      color: AppColors.textMuted,
+                      size: AppIconSizes.medium,
+                    ),
                   ),
                 ],
               ),
               SizedBox(height: 6.h),
               Text(
                 '${widget.listing.cityName} -> ${targetWarehouse.cityName} | ${totalVolume.toStringAsFixed(1)} m3',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.bodyLarge,
+                ),
               ),
               SizedBox(height: 16.h),
               Expanded(
@@ -919,14 +1003,13 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
     final isSameCity = targetWarehouse.cityId == widget.listing.cityId;
 
     final items = [
-      {
-        'seller_slot_id': widget.listing.slotId,
-        'quantity': _quantity,
-      }
+      {'seller_slot_id': widget.listing.slotId, 'quantity': _quantity},
     ];
 
     try {
-      final result = await widget.ref.read(marketActionProvider).startMultiMarketTransfer(
+      final result = await widget.ref
+          .read(marketActionProvider)
+          .startMultiMarketTransfer(
             buyerWarehouseId: targetWarehouse.id,
             sourceCityId: widget.listing.cityId,
             items: items,
@@ -948,7 +1031,9 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
         return;
       }
 
-      final isInstant = result['mode']?.toString() == 'instant' || (isSameCity && vehicleId == null);
+      final isInstant =
+          result['mode']?.toString() == 'instant' ||
+          (isSameCity && vehicleId == null);
       if (isInstant && result['transfer_id'] != null) {
         final completeResult = await widget.ref
             .read(warehouseActionProvider)
@@ -958,7 +1043,9 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
           AppSnackbar.show(
             context,
             title: 'Hata',
-            message: completeResult['message']?.toString() ?? 'Anlik market transferi tamamlanamadi.',
+            message:
+                completeResult['message']?.toString() ??
+                'Anlik market transferi tamamlanamadi.',
             type: SnackbarType.error,
           );
           setState(() {

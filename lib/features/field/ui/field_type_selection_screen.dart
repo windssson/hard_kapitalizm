@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -36,7 +37,7 @@ class _FieldTypeSelectionScreenState
     final catalogsAsync = ref.watch(staticCatalogsProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -53,27 +54,35 @@ class _FieldTypeSelectionScreenState
                       (player?.cash ?? 0).toDouble(),
                       player?.level ?? 1,
                     ),
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: AppColors.gold),
+                    loading: () => Center(
+                      child: AppLoadingIndicator(color: AppColors.gold),
                     ),
                     error: (error, stack) => Center(
                       child: Text(
                         'Hata: $error',
-                        style: const TextStyle(color: AppColors.red),
+                        style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                       ),
                     ),
                   ),
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppColors.gold),
+                  loading: () => Center(
+                    child: AppLoadingIndicator(color: AppColors.gold),
                   ),
-                  error: (error, stack) =>
-                      const Center(child: Text('Urun katalogu yuklenemedi.')),
+                  error: (error, stack) => Center(
+                    child: Text(
+                      'Urun katalogu yuklenemedi.',
+                      style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
+                    ),
+                  ),
                 ),
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
-                error: (error, stack) =>
-                    const Center(child: Text('Oyuncu bilgisi alinamadi.')),
+                error: (error, stack) => Center(
+                  child: Text(
+                    'Oyuncu bilgisi alinamadi.',
+                    style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
+                  ),
+                ),
               ),
             ),
             _buildActionPanel(),
@@ -148,13 +157,13 @@ class _FieldTypeSelectionScreenState
                           width: 65.w,
                           height: 65.w,
                           decoration: BoxDecoration(
-                            color: Colors.black45,
+                            color: AppFx.panelWash(0.45),
                             borderRadius: BorderRadius.circular(12.r),
                           ),
                           child: Icon(
-                            Icons.lock,
+                            AppIcons.lock,
                             color: AppColors.gold,
-                            size: 24.sp,
+                            size: AppIconSizes.large,
                           ),
                         ),
                     ],
@@ -166,9 +175,9 @@ class _FieldTypeSelectionScreenState
                       children: [
                         Text(
                           type['name'] ?? 'Bilinmeyen Ciftlik',
-                          style: TextStyle(
-                            color: isSelected ? AppColors.gold : Colors.white,
-                            fontSize: 16.sp,
+                          style: AppTextStyles.h2.standardCopyWith(
+                            color: isSelected ? AppColors.gold : AppColors.white,
+                            fontSize: AppTypography.titleLarge,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -176,23 +185,23 @@ class _FieldTypeSelectionScreenState
                         Row(
                           children: [
                             _buildDetailChip(
-                              Icons.monetization_on,
+                              AppIcons.monetizationOn,
                               _formatMoney((type['cost'] ?? 0).toDouble()),
                               cashLocked ? AppColors.red : AppColors.gold,
                             ),
                             SizedBox(width: 8.w),
                             _buildDetailChip(
-                              Icons.layers,
+                              AppIcons.layers,
                               '${type['max_slot_count'] ?? 5} Slot',
                               AppColors.blue,
                             ),
                             SizedBox(width: 8.w),
                             _buildDetailChip(
-                              Icons.stars,
+                              AppIcons.stars,
                               'Lv. ${type['required_level'] ?? 1}',
                               levelLocked
                                   ? AppColors.red
-                                  : Colors.blueAccent,
+                                  : AppColors.info,
                             ),
                           ],
                         ),
@@ -209,9 +218,9 @@ class _FieldTypeSelectionScreenState
                   ),
                   if (isSelected)
                     Icon(
-                      Icons.check_circle,
+                      AppIcons.checkCircle,
                       color: AppColors.gold,
-                      size: 24.sp,
+                      size: AppIconSizes.large,
                     ),
                 ],
               ),
@@ -226,11 +235,14 @@ class _FieldTypeSelectionScreenState
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: color, size: 10.sp),
+        Icon(icon, color: color, size: AppIconSizes.xxSmall),
         SizedBox(width: 4.w),
         Text(
           label,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.label,
+          ),
         ),
       ],
     );
@@ -243,11 +255,11 @@ class _FieldTypeSelectionScreenState
         color: AppColors.cardBg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
         border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Colors.black54,
+            color: AppFx.shadow(0.54),
             blurRadius: 20,
-            offset: Offset(0, -5),
+            offset: const Offset(0, -5),
           ),
         ],
       ),
@@ -257,7 +269,10 @@ class _FieldTypeSelectionScreenState
           if (_selectedType != null) ...[
             Text(
               '${widget.selectedCity.name} sehrinde ${_selectedType!['name']} insa edilecek.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodySmall,
+              ),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 12.h),
@@ -277,21 +292,21 @@ class _FieldTypeSelectionScreenState
                 ),
               ),
               child: _isProcessing
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.black,
+                      child: AppLoadingIndicator(
+                        color: AppColors.textOnAccent,
                         strokeWidth: 2,
                       ),
                     )
                   : Text(
                       'CIFTLIGI INSA ET',
-                      style: TextStyle(
+                      style: AppTextStyles.button.standardCopyWith(
                         color: _selectedType != null
-                            ? Colors.black
-                            : Colors.white30,
-                        fontSize: 14.sp,
+                            ? AppColors.textOnAccent
+                            : AppColors.white.withValues(alpha: 0.30),
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

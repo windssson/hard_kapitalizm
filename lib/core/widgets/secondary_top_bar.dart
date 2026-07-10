@@ -33,28 +33,32 @@ class SecondaryTopBar extends ConsumerWidget implements PreferredSizeWidget {
             children: [
               // Back Button
               Material(
-                color: Colors.transparent,
+                color: AppColors.transparent,
                 child: InkWell(
-                  onTap: onBackPressed ?? () {
-                    if (context.canPop()) {
-                      context.pop();
-                    } else {
-                      context.go('/home');
-                    }
-                  },
+                  onTap:
+                      onBackPressed ??
+                      () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/home');
+                        }
+                      },
                   borderRadius: BorderRadius.circular(999.r),
                   child: Container(
                     width: 38.w,
                     height: 38.w,
                     decoration: AppDecorations.badge(
                       bgColor: AppColors.cardBg,
-                      borderColor: AppColors.borderGoldLight.withValues(alpha: 0.3),
+                      borderColor: AppColors.borderGoldLight.withValues(
+                        alpha: 0.3,
+                      ),
                       isCircle: true,
                     ),
-                    child: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
+                    child: Icon(
+                      AppIcons.arrowBackIosNewRounded,
                       color: AppColors.gold,
-                      size: 16,
+                      size: AppIconSizes.compact,
                     ),
                   ),
                 ),
@@ -66,7 +70,7 @@ class SecondaryTopBar extends ConsumerWidget implements PreferredSizeWidget {
                   title.toUpperCase(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.title.copyWith(
+                  style: AppTextStyles.title.standardCopyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.2,
@@ -77,21 +81,18 @@ class SecondaryTopBar extends ConsumerWidget implements PreferredSizeWidget {
               // Player Wealth Display
               if (player != null) ...[
                 _buildCompactCurrencyBox(
-                  icon: Icons.payments_rounded,
+                  icon: AppIcons.paymentsRounded,
                   value: AppMoney.compact(player.cash),
                   color: AppColors.green,
                 ),
                 SizedBox(width: 6.w),
                 _buildCompactCurrencyBox(
-                  icon: Icons.star_rounded,
+                  icon: AppIcons.starRounded,
                   value: player.gold.toStringAsFixed(0),
                   color: AppColors.gold,
                 ),
               ],
-              if (actions != null) ...[
-                SizedBox(width: 8.w),
-                ...actions!,
-              ],
+              if (actions != null) ...[SizedBox(width: 8.w), ...actions!],
             ],
           ),
         ),
@@ -114,17 +115,13 @@ class SecondaryTopBar extends ConsumerWidget implements PreferredSizeWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 12.sp,
-          ),
+          Icon(icon, color: color, size: AppIconSizes.xSmall),
           SizedBox(width: 4.w),
           Text(
             value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10.5.sp,
+            style: AppTextStyles.label.standardCopyWith(
+              color: AppColors.white,
+              fontSize: AppTypography.label,
               fontWeight: FontWeight.w800,
             ),
           ),

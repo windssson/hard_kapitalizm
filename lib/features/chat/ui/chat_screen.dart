@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -113,7 +114,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: 1,
         onItemSelected: (_) {},
@@ -127,8 +128,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // Mesaj listesi
           Expanded(
             child: chatState.isLoading && chatState.messages.isEmpty
-                ? const Center(
-                    child: CircularProgressIndicator(
+                ? Center(
+                    child: AppLoadingIndicator(
                       color: AppColors.gold,
                       strokeWidth: 2,
                     ),
@@ -146,11 +147,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           if (chatState.isLoading && index == 0) {
                             return Padding(
                               padding: EdgeInsets.only(bottom: 8.h),
-                              child: const Center(
+                              child: Center(
                                 child: SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(
+                                  child: AppLoadingIndicator(
                                     color: AppColors.gold,
                                     strokeWidth: 1.5,
                                   ),
@@ -179,9 +180,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.chat_bubble_outline_rounded,
+            AppIcons.chatBubbleOutlineRounded,
             color: AppColors.gold.withValues(alpha: 0.3),
-            size: 48.sp,
+            size: AppIconSizes.hero,
           ),
           SizedBox(height: 12.h),
           Text('Henüz mesaj yok', style: AppTextStyles.title),
@@ -202,17 +203,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       color: AppColors.red.withValues(alpha: 0.15),
       child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: AppColors.red, size: 14.sp),
+          Icon(AppIcons.warningAmberRounded, color: AppColors.red, size: AppIconSizes.small),
           SizedBox(width: 8.w),
           Expanded(
             child: Text(
               error,
-              style: AppTextStyles.caption.copyWith(color: AppColors.red),
+              style: AppTextStyles.caption.standardCopyWith(color: AppColors.red),
             ),
           ),
           GestureDetector(
             onTap: () => ref.read(chatProvider.notifier).clearError(),
-            child: Icon(Icons.close, color: AppColors.red, size: 14.sp),
+            child: Icon(AppIcons.close, color: AppColors.red, size: AppIconSizes.small),
           ),
         ],
       ),
@@ -253,7 +254,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           onTap: () => context.push('/profile/public/${msg.playerId}'),
                           child: Text(
                             msg.playerName,
-                            style: AppTextStyles.caption.copyWith(
+                            style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textSecondary,
                               fontWeight: FontWeight.w700,
                             ),
@@ -269,9 +270,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                           child: Text(
                             'Sv.${msg.playerLevel}',
-                            style: AppTextStyles.caption.copyWith(
+                            style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.gold,
-                              fontSize: 7.sp,
+                              fontSize: AppTypography.micro,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -302,11 +303,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                   child: Text(
                     msg.content,
-                    style: AppTextStyles.body.copyWith(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: isMine
                           ? AppColors.textPrimary
                           : AppColors.textPrimary,
-                      fontSize: 12.sp,
+                      fontSize: AppTypography.body,
                     ),
                   ),
                 ),
@@ -314,7 +315,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   padding: EdgeInsets.only(top: 3.h, left: 4.w, right: 4.w),
                   child: Text(
                     timeStr,
-                    style: AppTextStyles.caption.copyWith(fontSize: 8.sp),
+                    style: AppTextStyles.caption.standardCopyWith(fontSize: AppTypography.micro),
                   ),
                 ),
               ],
@@ -346,9 +347,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           'assets/avatars/${msg.avatarId}',
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => Icon(
-            Icons.person,
+            AppIcons.person,
             color: AppColors.textMuted,
-            size: 16.sp,
+            size: AppIconSizes.compact,
           ),
         ),
       ),
@@ -377,7 +378,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   maxLines: null,
                   keyboardType: TextInputType.multiline,
                   textInputAction: TextInputAction.newline,
-                  style: AppTextStyles.body.copyWith(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textPrimary,
                   ),
                   decoration: InputDecoration(
@@ -414,15 +415,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 child: chatState.isSending
                     ? Padding(
                         padding: EdgeInsets.all(10.w),
-                        child: const CircularProgressIndicator(
+                        child: AppLoadingIndicator(
                           color: AppColors.gold,
                           strokeWidth: 1.5,
                         ),
                       )
                     : Icon(
-                        Icons.send_rounded,
+                        AppIcons.sendRounded,
                         color: AppColors.gold,
-                        size: 18.sp,
+                        size: AppIconSizes.regular,
                       ),
               ),
             ),

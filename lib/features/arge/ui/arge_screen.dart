@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
@@ -153,7 +154,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     final player = playerAsync.value;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: -1,
         onItemSelected: _onNavSelected,
@@ -164,15 +165,15 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             const SecondaryTopBar(title: 'AR-GE Merkezi'),
             Expanded(
               child: centerAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => _buildError(error),
                 data: (center) {
                   if (center == null) {
                     return constructionAsync.when(
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(color: AppColors.gold),
+                      loading: () => Center(
+                        child: AppLoadingIndicator(color: AppColors.gold),
                       ),
                       error: (error, _) => _buildError(error),
                       data: (construction) {
@@ -181,8 +182,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                         }
 
                         return playerAsync.when(
-                          loading: () => const Center(
-                            child: CircularProgressIndicator(color: AppColors.gold),
+                          loading: () => Center(
+                            child: AppLoadingIndicator(color: AppColors.gold),
                           ),
                           error: (error, _) => _buildError(error),
                           data: (player) => _buildSetupState(player),
@@ -196,8 +197,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                   );
 
                   return productsAsync.when(
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: AppColors.gold),
+                    loading: () => Center(
+                      child: AppLoadingIndicator(color: AppColors.gold),
                     ),
                     error: (error, _) => _buildError(error),
                     data: (products) => RefreshIndicator(
@@ -251,7 +252,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                                 ),
                                 child: Text(
                                   'Araştırmalar yüklenirken hata oluştu: $e',
-                                  style: TextStyle(color: AppColors.red, fontSize: 11.sp),
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: AppColors.red,
+                                    fontSize: AppTypography.bodySmall,
+                                  ),
                                 ),
                               ),
                               data: (researches) => researches.isEmpty
@@ -343,15 +347,15 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       child: Row(
         children: [
           _buildStatItem(
-            Icons.apartment_rounded,
+            AppIcons.apartmentRounded,
             AppColors.blue,
             center.name,
             'Lv.${center.level}',
-            Colors.white,
+            AppColors.textPrimary,
           ),
           _buildDivider(),
           _buildStatItem(
-            Icons.star,
+            AppIcons.star,
             AppColors.gold,
             'Arastirma Slotu',
             '${center.maxConcurrentResearches} eszamanli',
@@ -359,7 +363,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           ),
           _buildDivider(),
           _buildStatItem(
-            Icons.bolt_rounded,
+            AppIcons.boltRounded,
             AppColors.green,
             'Sure Bonusu',
             '%${center.durationReductionPct.toStringAsFixed(0)}',
@@ -390,14 +394,14 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.inventory_2_outlined, color: AppColors.blue, size: 16.sp),
+                  Icon(AppIcons.inventory2Outlined, color: AppColors.blue, size: AppIconSizes.compact),
                   SizedBox(width: 8.w),
                   Expanded(
                     child: Text(
                       'Arastirma slotu: ${_slotPreviewText(center, activeUpgrade)}',
-                      style: TextStyle(
+                      style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textSecondary,
-                        fontSize: 12.sp,
+                        fontSize: AppTypography.body,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -411,14 +415,17 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             onPressed: (_isCenterSubmitting || activeUpgrade != null)
                 ? null
                 : () => _showCenterUpgradeSheet(center),
-            icon: Icon(Icons.upgrade_rounded, size: 16.sp),
+            icon: Icon(AppIcons.upgradeRounded, size: AppIconSizes.compact),
             label: Text(
               activeUpgrade != null ? 'Yukseliyor' : 'Yukselt',
-              style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+              style: AppTextStyles.body.standardCopyWith(
+                fontSize: AppTypography.body,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.gold,
-              foregroundColor: Colors.black,
+              foregroundColor: AppColors.textOnAccent,
               disabledBackgroundColor: AppColors.cardBgLight,
               disabledForegroundColor: AppColors.textMuted,
               padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
@@ -472,7 +479,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 color: iconColor.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: iconColor, size: 15.sp),
+              child: Icon(icon, color: iconColor, size: AppIconSizes.small),
             ),
             SizedBox(width: 7.w),
             Expanded(
@@ -482,17 +489,17 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 children: [
                   Text(
                     label,
-                    style: TextStyle(
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textMuted,
-                      fontSize: 9.sp,
+                      fontSize: AppTypography.caption,
                     ),
                   ),
                   SizedBox(height: 2.h),
                   Text(
                     value,
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: valueColor,
-                      fontSize: 12.sp,
+                      fontSize: AppTypography.body,
                       fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -510,17 +517,20 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     return Container(
       height: 42.h,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: AppFx.softOverlay(0.04),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: AppFx.softOverlay(0.06)),
       ),
       child: TextField(
         controller: _searchController,
-        style: const TextStyle(color: Colors.white),
+        style: AppTextStyles.body.standardCopyWith(color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: 'Urun ara...',
-          hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
-          prefixIcon: Icon(Icons.search, color: AppColors.textMuted, size: 18.sp),
+          hintStyle: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.body,
+          ),
+          prefixIcon: Icon(AppIcons.search, color: AppColors.textMuted, size: AppIconSizes.regular),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
         ),
@@ -554,10 +564,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 ),
                 child: Text(
                   filter.$2,
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color:
                         isSelected ? AppColors.goldLight : AppColors.textSecondary,
-                    fontSize: 11.sp,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   ),
                 ),
@@ -601,9 +611,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 ),
                 child: Text(
                   filter.$2,
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: isSelected ? AppColors.blue : AppColors.textSecondary,
-                    fontSize: 11.sp,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   ),
                 ),
@@ -686,7 +696,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             height: 54.w,
             padding: EdgeInsets.all(6.w),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.22),
+              color: AppFx.panelWash(0.22),
               shape: BoxShape.circle,
               border: Border.all(
                 color: AppColors.gold.withValues(alpha: 0.3),
@@ -696,9 +706,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               fileName: product.urunIconu,
               fit: BoxFit.contain,
               errorWidget: Icon(
-                Icons.science,
+                AppIcons.science,
                 color: AppColors.gold,
-                size: 24.sp,
+                size: AppIconSizes.large,
               ),
             ),
           ),
@@ -713,9 +723,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     Flexible(
                       child: Text(
                         product.urunAdi,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
+                        style: AppTextStyles.h2.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: AppTypography.title,
                           fontWeight: FontWeight.bold,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -732,9 +742,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                         ),
                         child: Text(
                           'ÜRETİLİYOR',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.green,
-                            fontSize: 8.sp,
+                            fontSize: AppTypography.micro,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -749,9 +759,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     return Padding(
                       padding: EdgeInsets.only(right: 1.w),
                       child: Icon(
-                        filled ? Icons.star : Icons.star_border,
+                        filled ? AppIcons.star : AppIcons.starBorder,
                         color: filled ? AppColors.gold : AppColors.textMuted,
-                        size: 13.sp,
+                        size: AppIconSizes.small,
                       ),
                     );
                   }),
@@ -759,7 +769,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 SizedBox(height: 2.h),
                 Text(
                   'Kalite ${product.currentQualityLevel} -> ${product.targetQuality}',
-                  style: TextStyle(color: AppColors.blue, fontSize: 10.sp),
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.blue,
+                    fontSize: AppTypography.label,
+                  ),
                 ),
               ],
             ),
@@ -772,19 +785,19 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildMiniReqBadge(
-                    Icons.account_balance_wallet_outlined,
+                    AppIcons.accountBalanceWalletOutlined,
                     _formatMoney(product.upgradeCost),
                     hasCash ? AppColors.gold : AppColors.red,
                   ),
                   SizedBox(width: 4.w),
                   _buildMiniReqBadge(
-                    Icons.workspace_premium_outlined,
+                    AppIcons.workspacePremiumOutlined,
                     'Lv.${product.requiredPlayerLevel}',
                     hasLevel ? AppColors.green : AppColors.red,
                   ),
                   SizedBox(width: 4.w),
                   _buildMiniReqBadge(
-                    Icons.schedule,
+                    AppIcons.schedule,
                     '${product.upgradeDurationHours}s',
                     AppColors.textSecondary,
                   ),
@@ -806,7 +819,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor:
                         canUpgrade ? AppColors.gold : AppColors.cardBgLight,
-                    foregroundColor: canUpgrade ? Colors.black : AppColors.textMuted,
+                    foregroundColor: canUpgrade ? AppColors.textOnAccent : AppColors.textMuted,
                     disabledBackgroundColor: AppColors.cardBgLight,
                     disabledForegroundColor: AppColors.textMuted,
                     padding: EdgeInsets.zero,
@@ -816,8 +829,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                   ),
                   child: Text(
                     product.isMaxQuality ? 'MAKS' : 'Araştır',
-                    style: TextStyle(
-                      fontSize: 11.sp,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      fontSize: AppTypography.bodySmall,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -841,11 +854,15 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 10.sp),
+          Icon(icon, color: color, size: AppIconSizes.xxSmall),
           SizedBox(width: 2.w),
           Text(
             text,
-            style: TextStyle(color: color, fontSize: 9.sp, fontWeight: FontWeight.w600),
+            style: AppTextStyles.caption.standardCopyWith(
+              color: color,
+              fontSize: AppTypography.caption,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -868,7 +885,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (_) => _UpgradeBottomSheet(
         product: product,
         playerLevel: playerLevel,
@@ -940,32 +957,38 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
         backgroundColor: AppColors.cardBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.r),
-          side: const BorderSide(color: AppColors.borderGold),
+          side: BorderSide(color: AppColors.borderGold),
         ),
         title: Text(
           'Aninda Tamamla',
-          style: TextStyle(
+          style: AppTextStyles.h2.standardCopyWith(
             color: AppColors.goldLight,
-            fontSize: 16.sp,
+            fontSize: AppTypography.titleLarge,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           '$goldCost yildiz kullanarak arastirmayi aninda tamamlamak istiyor musunuz?',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+            fontSize: AppTypography.bodyLarge,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Iptal',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
-              foregroundColor: Colors.black,
+              foregroundColor: AppColors.textOnAccent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.r),
               ),
@@ -973,7 +996,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               'Tamamla',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
           ),
         ],
@@ -1045,7 +1071,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (_) => Container(
         decoration: BoxDecoration(
@@ -1062,9 +1088,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             children: [
               Text(
                 'AR-GE Merkezini Yukselt',
-                style: TextStyle(
+                style: AppTextStyles.h2.standardCopyWith(
                   color: AppColors.goldLight,
-                  fontSize: 18.sp,
+                  fontSize: AppTypography.headline,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1088,14 +1114,17 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     Navigator.of(context).pop();
                     await _startCenterUpgrade(center.id);
                   },
-                  icon: Icon(Icons.upgrade_rounded, size: 18.sp),
+                  icon: Icon(AppIcons.upgradeRounded, size: AppIconSizes.regular),
                   label: Text(
                     'Yukseltmeyi Baslat',
-                    style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+                    style: AppTextStyles.body.standardCopyWith(
+                      fontSize: AppTypography.bodyLarge,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.gold,
-                    foregroundColor: Colors.black,
+                    foregroundColor: AppColors.textOnAccent,
                     padding: EdgeInsets.symmetric(vertical: 14.h),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14.r),
@@ -1196,7 +1225,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     color: AppColors.blue.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(16.r),
                   ),
-                  child: Icon(Icons.science_outlined, color: AppColors.blue, size: 30.sp),
+                  child: Icon(AppIcons.scienceOutlined, color: AppColors.blue, size: AppIconSizes.xLarge),
                 ),
                 SizedBox(width: 14.w),
                 Expanded(
@@ -1205,12 +1234,12 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     children: [
                       Text(
                         'AR-GE Merkezi Kur',
-                        style: AppTextStyles.h2.copyWith(color: AppColors.gold),
+                        style: AppTextStyles.h2.standardCopyWith(color: AppColors.gold),
                       ),
                       SizedBox(height: 4.h),
                       Text(
                         'Kalite gelistirmelerini baslatmak icin once arastirma merkezinizi faaliyete gecirin.',
-                        style: AppTextStyles.body.copyWith(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
                           height: 1.4,
                         ),
@@ -1232,13 +1261,13 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Merkez Bilgileri',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w800,
-                  ),
+              Text(
+                'Merkez Bilgileri',
+                style: AppTextStyles.h2.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.titleLarge,
+                  fontWeight: FontWeight.w800,
+                ),
                 ),
                 SizedBox(height: 12.h),
                 _buildSetupRow('Kurulum Maliyeti', _formatMoney(setupCost)),
@@ -1265,9 +1294,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             child: Row(
               children: [
                 Icon(
-                  hasCash ? Icons.check_circle_outline : Icons.error_outline,
+                  hasCash ? AppIcons.checkCircleOutline : AppIcons.errorOutline,
                   color: hasCash ? AppColors.green : AppColors.red,
-                  size: 18.sp,
+                  size: AppIconSizes.regular,
                 ),
                 SizedBox(width: 10.w),
                 Expanded(
@@ -1275,9 +1304,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     hasCash
                         ? 'Kurulum icin yeterli bakiyeniz var.'
                         : 'Yetersiz bakiye. Mevcut: ${_formatMoney(playerCash)}',
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: hasCash ? AppColors.green : AppColors.red,
-                      fontSize: 12.sp,
+                      fontSize: AppTypography.body,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1296,16 +1325,19 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                   ? SizedBox(
                       width: 16.w,
                       height: 16.w,
-                      child: const CircularProgressIndicator(strokeWidth: 2),
+                      child: const AppLoadingIndicator(strokeWidth: 2),
                     )
-                  : Icon(Icons.construction_outlined, size: 18.sp),
+                  : Icon(AppIcons.constructionOutlined, size: AppIconSizes.regular),
               label: Text(
                 _isCenterSubmitting ? 'Kuruluyor...' : 'AR-GE MERKEZINI KUR',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+                style: AppTextStyles.body.standardCopyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: AppTypography.bodyLarge,
+                ),
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.gold,
-                foregroundColor: Colors.black,
+                foregroundColor: AppColors.textOnAccent,
                 disabledBackgroundColor: AppColors.cardBgLight,
                 disabledForegroundColor: AppColors.textMuted,
                 padding: EdgeInsets.symmetric(vertical: 14.h),
@@ -1357,7 +1389,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     color: AppColors.gold.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(16.r),
                   ),
-                  child: Icon(Icons.construction, color: AppColors.gold, size: 30.sp),
+                  child: Icon(AppIcons.construction, color: AppColors.gold, size: AppIconSizes.xLarge),
                 ),
                 SizedBox(width: 14.w),
                 Expanded(
@@ -1366,12 +1398,12 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     children: [
                       Text(
                         (params['name'] ?? 'AR-GE Merkezi').toString(),
-                        style: AppTextStyles.h2.copyWith(color: AppColors.gold),
+                        style: AppTextStyles.h2.standardCopyWith(color: AppColors.gold),
                       ),
                       SizedBox(height: 4.h),
                       Text(
                         'Merkez kurulumu devam ediyor. Insaat tamamlaninca arastirmalar aktif olacak.',
-                        style: AppTextStyles.body.copyWith(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
                           height: 1.4,
                         ),
@@ -1422,7 +1454,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.green,
                 disabledBackgroundColor: AppColors.cardBgLight,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textPrimary,
                 padding: EdgeInsets.symmetric(vertical: 14.h),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14.r),
@@ -1430,7 +1462,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               ),
               child: Text(
                 isDone ? 'KURULUMU TAMAMLA' : 'KURULUM DEVAM EDIYOR',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+                style: AppTextStyles.body.standardCopyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: AppTypography.bodyLarge,
+                ),
               ),
             ),
           ),
@@ -1445,10 +1480,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                           construction['id'].toString(),
                           goldCost,
                         ),
-                icon: Icon(Icons.bolt, size: 16.sp, color: AppColors.gold),
+                icon: Icon(AppIcons.bolt, size: AppIconSizes.compact, color: AppColors.gold),
                 label: Text(
                   '$goldCost yildiz ile hemen bitir',
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.gold,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1476,15 +1511,18 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.body,
+              ),
             ),
           ),
           SizedBox(width: 10.w),
           Text(
             value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1554,37 +1592,46 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
         backgroundColor: AppColors.cardBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.r),
-          side: const BorderSide(color: AppColors.borderGold),
+          side: BorderSide(color: AppColors.borderGold),
         ),
         title: Text(
           'Kurulumu Bitir',
-          style: TextStyle(
+          style: AppTextStyles.h2.standardCopyWith(
             color: AppColors.goldLight,
-            fontSize: 16.sp,
+            fontSize: AppTypography.titleLarge,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           '$goldCost yildiz kullanarak AR-GE merkezini hemen kullanima acmak istiyor musunuz?',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+            fontSize: AppTypography.bodyLarge,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Iptal',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
-              foregroundColor: Colors.black,
+              foregroundColor: AppColors.textOnAccent,
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               'Bitir',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
           ),
         ],
@@ -1627,11 +1674,14 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
         child: Column(
           children: [
             SizedBox(height: 40.h),
-            Icon(Icons.search_off, color: AppColors.textMuted, size: 60.sp),
+            Icon(AppIcons.searchOff, color: AppColors.textMuted, size: AppIconSizes.emptyState),
             SizedBox(height: 16.h),
             Text(
               'Urun bulunamadi.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.title,
+              ),
             ),
           ],
         ),
@@ -1644,11 +1694,14 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.error_outline, color: AppColors.red, size: 48.sp),
+          Icon(AppIcons.errorOutline, color: AppColors.red, size: AppIconSizes.hero),
           SizedBox(height: 12.h),
           Text(
             error.toString(),
-            style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.body,
+            ),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 12.h),
@@ -1659,7 +1712,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             ),
             child: Text(
               'Tekrar Dene',
-              style: TextStyle(color: AppColors.gold),
+              style: AppTextStyles.body.standardCopyWith(color: AppColors.gold),
             ),
           ),
         ],
@@ -1744,7 +1797,7 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
                   color: AppColors.gold.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.upgrade_rounded, color: AppColors.gold, size: 18.sp),
+                child: Icon(AppIcons.upgradeRounded, color: AppColors.gold, size: AppIconSizes.regular),
               ),
               SizedBox(width: 10.w),
               Expanded(
@@ -1753,18 +1806,18 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
                   children: [
                     Text(
                       'Merkez Yukseliyor',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.gold,
-                        fontSize: 11.sp,
+                        fontSize: AppTypography.bodySmall,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     SizedBox(height: 2.h),
                     Text(
                       '${upgrade.name ?? 'AR-GE Merkezi'}  Lv.${upgrade.currentLevel} -> Lv.${upgrade.targetLevel}',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
+                      style: AppTextStyles.h2.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1773,19 +1826,19 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
               ),
               Text(
                 formatCountdown(upgrade.finishAt),
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textPrimary,
-                  fontSize: 12.sp,
+                  fontSize: AppTypography.body,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
           SizedBox(height: 12.h),
-          LinearProgressIndicator(
+          AppProgressBar(
             value: progress,
             minHeight: 8.h,
-            backgroundColor: Colors.black.withValues(alpha: 0.3),
+            backgroundColor: AppFx.panelWash(0.3),
             color: AppColors.gold,
             borderRadius: BorderRadius.circular(999.r),
           ),
@@ -1814,14 +1867,17 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
                 onPressed: onFinishWithGold,
-                icon: Icon(Icons.flash_on_rounded, size: 16.sp),
+                icon: Icon(AppIcons.flashOnRounded, size: AppIconSizes.compact),
                 label: Text(
                   '$starCost yildizla bitir',
-                  style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.body.standardCopyWith(
+                    fontSize: AppTypography.body,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
+                  foregroundColor: AppColors.textOnAccent,
                   padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
@@ -1850,7 +1906,7 @@ class _ArgeUpgradeMeta extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 10.h),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.18),
+        color: AppFx.panelWash(0.18),
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: AppColors.border.withValues(alpha: 0.35)),
       ),
@@ -1859,14 +1915,17 @@ class _ArgeUpgradeMeta extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.label,
+            ),
           ),
           SizedBox(height: 3.h),
           Text(
             value,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1924,7 +1983,7 @@ class _UpgradeBottomSheet extends StatelessWidget {
                 height: 60.w,
                 padding: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
+                  color: AppFx.panelWash(0.3),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: AppColors.gold.withValues(alpha: 0.4),
@@ -1940,9 +1999,9 @@ class _UpgradeBottomSheet extends StatelessWidget {
                   fileName: product.urunIconu,
                   fit: BoxFit.contain,
                   errorWidget: Icon(
-                    Icons.science,
+                    AppIcons.science,
                     color: AppColors.gold,
-                    size: 28.sp,
+                    size: AppIconSizes.xLarge,
                   ),
                 ),
               ),
@@ -1953,9 +2012,9 @@ class _UpgradeBottomSheet extends StatelessWidget {
                   children: [
                     Text(
                       product.urunAdi,
-                      style: TextStyle(
+                      style: AppTextStyles.h2.standardCopyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 18.sp,
+                        fontSize: AppTypography.headline,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -1965,19 +2024,22 @@ class _UpgradeBottomSheet extends StatelessWidget {
                         ArgeProductModel.maxQualityLevel,
                         (index) => Icon(
                           index < product.currentQualityLevel
-                              ? Icons.star
-                              : Icons.star_border,
+                              ? AppIcons.star
+                              : AppIcons.starBorder,
                           color: index < product.currentQualityLevel
                               ? AppColors.gold
                               : AppColors.textMuted,
-                          size: 16.sp,
+                          size: AppIconSizes.compact,
                         ),
                       ),
                     ),
                     SizedBox(height: 2.h),
                     Text(
                       'Kalite ${product.currentQualityLevel} -> ${product.targetQuality}',
-                      style: TextStyle(color: AppColors.blue, fontSize: 12.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.blue,
+                        fontSize: AppTypography.body,
+                      ),
                     ),
                   ],
                 ),
@@ -1988,7 +2050,7 @@ class _UpgradeBottomSheet extends StatelessWidget {
           Divider(color: AppColors.border, height: 1),
           SizedBox(height: 16.h),
           _buildRequirementRow(
-            icon: Icons.military_tech,
+            icon: AppIcons.militaryTech,
             label: 'Gerekli Seviye',
             value: 'Seviye ${product.requiredPlayerLevel}',
             ok: hasLevel,
@@ -1996,7 +2058,7 @@ class _UpgradeBottomSheet extends StatelessWidget {
           ),
           SizedBox(height: 10.h),
           _buildRequirementRow(
-            icon: Icons.account_balance_wallet,
+            icon: AppIcons.accountBalanceWallet,
             label: 'Arastirma Maliyeti',
             value: _formatMoney(product.upgradeCost),
             ok: hasCash,
@@ -2004,7 +2066,7 @@ class _UpgradeBottomSheet extends StatelessWidget {
           ),
           SizedBox(height: 10.h),
           _buildRequirementRow(
-            icon: Icons.access_time,
+            icon: AppIcons.accessTime,
             label: 'Arastirma Suresi',
             value: '${product.upgradeDurationHours} saat',
             ok: true,
@@ -2024,14 +2086,14 @@ class _UpgradeBottomSheet extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: AppColors.gold, size: 16.sp),
+                Icon(AppIcons.infoOutline, color: AppColors.gold, size: AppIconSizes.compact),
                 SizedBox(width: 8.w),
                 Expanded(
                   child: Text(
                     'Gelistirme tamamlandiginda bu urunu daha yuksek kalite seviyesinde uretebileceksiniz. Arastirma sirasinda para iadesi yapilmaz.',
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 11.sp,
+                      fontSize: AppTypography.bodySmall,
                     ),
                   ),
                 ),
@@ -2052,16 +2114,19 @@ class _UpgradeBottomSheet extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    Icons.warning_amber_rounded,
+                    AppIcons.warningAmberRounded,
                     color: AppColors.red,
-                    size: 14.sp,
+                    size: AppIconSizes.small,
                   ),
                   SizedBox(width: 8.w),
                   Expanded(
-                    child: Text(
-                      'Tum arastirma slotlariniz dolu.',
-                      style: TextStyle(color: AppColors.red, fontSize: 11.sp),
+                  child: Text(
+                    'Tum arastirma slotlariniz dolu.',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.red,
+                      fontSize: AppTypography.bodySmall,
                     ),
+                  ),
                   ),
                 ],
               ),
@@ -2073,15 +2138,18 @@ class _UpgradeBottomSheet extends StatelessWidget {
             height: 50.h,
             child: ElevatedButton.icon(
               onPressed: canStart ? onStart : null,
-              icon: Icon(Icons.science, size: 18.sp),
+              icon: Icon(AppIcons.science, size: AppIconSizes.regular),
               label: Text(
                 canStart ? 'ARASTIRMAYI BASLAT' : 'KOSULLAR KARSILANMADI',
-                style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+                style: AppTextStyles.body.standardCopyWith(
+                  fontSize: AppTypography.bodyLarge,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor:
                     canStart ? AppColors.gold : AppColors.cardBgLight,
-                foregroundColor: canStart ? Colors.black : AppColors.textMuted,
+                foregroundColor: canStart ? AppColors.textOnAccent : AppColors.textMuted,
                 disabledBackgroundColor: AppColors.cardBgLight,
                 disabledForegroundColor: AppColors.textMuted,
                 shape: RoundedRectangleBorder(
@@ -2111,17 +2179,20 @@ class _UpgradeBottomSheet extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: Icon(
-            ok ? Icons.check : Icons.close,
+            ok ? AppIcons.check : AppIcons.close,
             color: ok ? AppColors.green : AppColors.red,
-            size: 13.sp,
+            size: AppIconSizes.small,
           ),
         ),
         SizedBox(width: 10.w),
-        Icon(icon, color: AppColors.textMuted, size: 14.sp),
+        Icon(icon, color: AppColors.textMuted, size: AppIconSizes.small),
         SizedBox(width: 6.w),
         Text(
           label,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 12.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+            fontSize: AppTypography.body,
+          ),
         ),
         const Spacer(),
         Column(
@@ -2129,15 +2200,18 @@ class _UpgradeBottomSheet extends StatelessWidget {
           children: [
             Text(
               value,
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: ok ? AppColors.textPrimary : AppColors.red,
-                fontSize: 12.sp,
+                fontSize: AppTypography.body,
                 fontWeight: FontWeight.bold,
               ),
             ),
             Text(
               currentValue,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.label,
+              ),
             ),
           ],
         ),

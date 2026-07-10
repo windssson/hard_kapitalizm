@@ -27,11 +27,11 @@ class AppBottomNav extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavItem(context, 0, Icons.home, 'Ana Sayfa'),
-            _buildNavItem(context, 1, Icons.chat_bubble_rounded, 'Sohbet'),
-            _buildNavItem(context, 2, Icons.map, 'Harita'),
-            _buildNavItem(context, 3, Icons.storefront, 'Pazar'),
-            _buildNavItem(context, 4, Icons.person, 'Profil'),
+            _buildNavItem(context, 0, AppIcons.home, 'Ana Sayfa'),
+            _buildNavItem(context, 1, AppIcons.chatBubbleRounded, 'Sohbet'),
+            _buildNavItem(context, 2, AppIcons.map, 'Harita'),
+            _buildNavItem(context, 3, AppIcons.storefront, 'Pazar'),
+            _buildNavItem(context, 4, AppIcons.person, 'Profil'),
           ],
         ),
       ),
@@ -79,13 +79,13 @@ class AppBottomNav extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 24.sp),
+            Icon(icon, color: color, size: AppIconSizes.large),
             SizedBox(height: 4.h),
             Text(
               label,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: color,
-                fontSize: 10.sp,
+                fontSize: AppTypography.label,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),

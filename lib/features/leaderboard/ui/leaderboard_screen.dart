@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -60,7 +61,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     final playerRankAsync = ref.watch(currentPlayerRankProvider(_selectedCategory));
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -109,7 +110,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                   SizedBox(height: 20.h),
                                   Text(
                                     'Sıralama Listesi',
-                                    style: AppTextStyles.h2.copyWith(fontSize: 16.sp),
+                                    style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.titleLarge),
                                   ),
                                   SizedBox(height: 10.h),
                                 ],
@@ -140,8 +141,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                       ],
                     );
                   },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppColors.gold),
+                  loading: () => Center(
+                    child: AppLoadingIndicator(color: AppColors.gold),
                   ),
                   error: (err, stack) => ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -150,7 +151,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                       Center(
                         child: Text(
                           'Hata: $err',
-                          style: AppTextStyles.body.copyWith(color: AppColors.red),
+                          style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                         ),
                       ),
                     ],
@@ -225,10 +226,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 alignment: Alignment.center,
                 child: Text(
                   cat['label']!,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.gold : AppColors.textSecondary,
-                    fontSize: 12.sp,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: isSelected
+                        ? AppColors.gold
+                        : AppColors.textSecondary,
+                    fontSize: AppTypography.body,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ),
@@ -258,7 +263,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               entry: second,
               avatarSize: 52.w,
               podiumHeight: 90.h,
-              medallionColor: const Color(0xFFC0C0C0), // Silver
+              medallionColor: AppColors.textMuted,
             ),
           ),
           SizedBox(width: 8.w),
@@ -286,7 +291,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               entry: third,
               avatarSize: 46.w,
               podiumHeight: 70.h,
-              medallionColor: const Color(0xFFCD7F32), // Bronze
+              medallionColor: AppColors.warning,
             ),
           ),
         ] else
@@ -342,8 +347,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 child: CachedAssetImage(
                   fileName: entry.avatarId,
                   fit: BoxFit.cover,
-                  placeholder: Icon(Icons.person, color: AppColors.gold, size: 24.sp),
-                  errorWidget: Icon(Icons.person, color: AppColors.gold, size: 24.sp),
+                  placeholder: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.large),
+                  errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.large),
                 ),
               ),
             ),
@@ -351,9 +356,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               Positioned(
                 top: -16.h,
                 child: Icon(
-                  Icons.emoji_events_rounded,
+                  AppIcons.emojiEventsRounded,
                   color: AppColors.gold,
-                  size: 20.sp,
+                  size: AppIconSizes.medium,
                 ),
               ),
             Positioned(
@@ -367,9 +372,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 ),
                 child: Text(
                   '#$rank',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 9.sp,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textOnAccent,
+                    fontSize: AppTypography.caption,
                     fontWeight: FontWeight.w900,
                     height: 1,
                   ),
@@ -384,8 +389,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
           entry.playerName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: Colors.white,
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textPrimary,
             fontSize: isFirst ? 13.sp : 11.sp,
             fontWeight: FontWeight.bold,
           ),
@@ -394,16 +399,16 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
           entry.companyName,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textSecondary,
-            fontSize: 9.sp,
+            fontSize: AppTypography.caption,
           ),
         ),
         SizedBox(height: 6.h),
         // Value indicator
         Text(
           valueStr,
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: isFirst ? AppColors.gold : AppColors.goldLight,
             fontSize: isFirst ? 12.sp : 10.sp,
             fontWeight: FontWeight.w900,
@@ -434,7 +439,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               opacity: 0.15,
               child: Text(
                 '$rank',
-                style: TextStyle(
+                style: AppTextStyles.largeTitle.standardCopyWith(
                   color: medallionColor,
                   fontSize: isFirst ? 42.sp : 32.sp,
                   fontWeight: FontWeight.w900,
@@ -472,9 +477,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             width: 32.w,
             child: Text(
               '#$rank',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textSecondary,
-                fontSize: 13.sp,
+                fontSize: AppTypography.bodyLarge,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -491,8 +496,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               child: CachedAssetImage(
                 fileName: entry.avatarId,
                 fit: BoxFit.cover,
-                placeholder: Icon(Icons.person, color: AppColors.gold, size: 18.sp),
-                errorWidget: Icon(Icons.person, color: AppColors.gold, size: 18.sp),
+                placeholder: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.regular),
+                errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.regular),
               ),
             ),
           ),
@@ -504,18 +509,18 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               children: [
                 Text(
                   entry.playerName,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 SizedBox(height: 2.h),
                 Text(
                   entry.companyName,
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                   ),
                 ),
               ],
@@ -524,9 +529,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
           // Value
           Text(
             valueStr,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.gold,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -576,9 +581,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             ),
             child: Text(
               '#$rank',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.gold,
-                fontSize: 14.sp,
+                fontSize: AppTypography.title,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -596,8 +601,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               child: CachedAssetImage(
                 fileName: entry.avatarId,
                 fit: BoxFit.cover,
-                placeholder: Icon(Icons.person, color: AppColors.gold, size: 20.sp),
-                errorWidget: Icon(Icons.person, color: AppColors.gold, size: 20.sp),
+                placeholder: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.medium),
+                errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.medium),
               ),
             ),
           ),
@@ -612,9 +617,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   children: [
                     Text(
                       '${entry.playerName} (Ben)',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.sp,
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.bodyLarge,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -623,9 +628,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 SizedBox(height: 2.h),
                 Text(
                   entry.companyName,
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textSecondary,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                   ),
                 ),
               ],
@@ -634,9 +639,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
           // Value
           Text(
             valueStr,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.gold,
-              fontSize: 14.sp,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.w900,
             ),
           ),

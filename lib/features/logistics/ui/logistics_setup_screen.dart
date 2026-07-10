@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -30,7 +31,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
     final constructionAsync = ref.watch(playerLogisticsConstructionProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -140,7 +141,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
               borderRadius: BorderRadius.circular(20.r),
               border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
             ),
-            child: Icon(Icons.hub_outlined, color: AppColors.gold, size: 32.sp),
+            child: Icon(AppIcons.hubOutlined, color: AppColors.gold, size: AppIconSizes.display),
           ),
           SizedBox(width: 16.w),
           Expanded(
@@ -149,12 +150,12 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
               children: [
                 Text(
                   'Lojistik Hub',
-                  style: AppTextStyles.h2.copyWith(color: AppColors.gold),
+                  style: AppTextStyles.h2.standardCopyWith(color: AppColors.gold),
                 ),
                 SizedBox(height: 4.h),
                 Text(
                   'Ticaretin kalbi burada atar. Mal tasiyin, arac kiralayin ve imparatorlugunuzu buyutun.',
-                  style: AppTextStyles.body.copyWith(height: 1.4),
+                  style: AppTextStyles.body.standardCopyWith(height: 1.4),
                 ),
               ],
             ),
@@ -169,8 +170,8 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       padding: EdgeInsets.only(left: 4.w),
       child: Text(
         title,
-        style: AppTextStyles.titleGold.copyWith(
-          fontSize: 12.sp,
+        style: AppTextStyles.titleGold.standardCopyWith(
+          fontSize: AppTypography.body,
           letterSpacing: 1.2,
         ),
       ),
@@ -229,9 +230,9 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                   ),
                 ),
                 child: Icon(
-                  Icons.apartment_rounded,
+                  AppIcons.apartmentRounded,
                   color: AppColors.gold,
-                  size: 28.sp,
+                  size: AppIconSizes.xLarge,
                 ),
               ),
               SizedBox(width: 14.w),
@@ -241,10 +242,9 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                   children: [
                     Text(
                       type.name,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w800,
+                      style: AppTextStyles.h2.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.titleLarge,
                       ),
                     ),
                     SizedBox(height: 8.h),
@@ -253,24 +253,24 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                       runSpacing: 6.h,
                       children: [
                         _buildTypeChip(
-                          Icons.payments_outlined,
+                          AppIcons.paymentsOutlined,
                           _formatMoney(type.cost),
                           cashLocked ? AppColors.red : AppColors.green,
                         ),
                         _buildTypeChip(
-                          Icons.star_outline,
+                          AppIcons.starOutline,
                           'Lv. ${type.requiredLevel}',
                           levelLocked ? AppColors.red : AppColors.blue,
                         ),
                         _buildTypeChip(
-                          Icons.local_shipping_outlined,
+                          AppIcons.localShippingOutlined,
                           '${type.maxVehicleCount} Kapasite',
                           AppColors.gold,
                         ),
                         _buildTypeChip(
-                          Icons.gas_meter_outlined,
+                          AppIcons.gasMeterOutlined,
                           '${type.fuelCapacity} L Yakit',
-                          Colors.orange,
+                          AppColors.warning,
                         ),
                       ],
                     ),
@@ -278,14 +278,14 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                     Row(
                       children: [
                         Icon(
-                          Icons.timer_outlined,
+                          AppIcons.timerOutlined,
                           color: AppColors.textMuted,
-                          size: 12.sp,
+                          size: AppIconSizes.xSmall,
                         ),
                         SizedBox(width: 4.w),
                         Text(
                           'Insaat: ${type.constructionTimeMinutes} Dakika',
-                          style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                          style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
                         ),
                       ],
                     ),
@@ -293,12 +293,12 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                 ),
               ),
               if (isSelected)
-                Icon(Icons.check_circle, color: AppColors.gold, size: 24.sp),
+                Icon(AppIcons.checkCircle, color: AppColors.gold, size: AppIconSizes.large),
               if (isLocked)
                 Icon(
-                  Icons.lock_outline,
+                  AppIcons.lockOutline,
                   color: AppColors.red.withValues(alpha: 0.7),
-                  size: 20.sp,
+                  size: AppIconSizes.medium,
                 ),
             ],
           ),
@@ -318,13 +318,13 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 10.sp),
+          Icon(icon, color: color, size: AppIconSizes.xxSmall),
           SizedBox(width: 4.w),
           Text(
             label,
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: color,
-              fontSize: 9.sp,
+              fontSize: AppTypography.caption,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -362,19 +362,19 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
           elevation: 0,
         ),
         child: _isSubmitting
-            ? const SizedBox(
+            ? SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(
-                  color: Colors.black,
+                child: AppLoadingIndicator(
+                  color: AppColors.textOnAccent,
                   strokeWidth: 2.5,
                 ),
               )
             : Text(
                 'MERKEZI KURMAYI BASLAT',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 14.sp,
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textOnAccent,
+                  fontSize: AppTypography.title,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1,
                 ),
@@ -400,9 +400,9 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.verified_user_outlined,
+              AppIcons.verifiedUserOutlined,
               color: AppColors.gold,
-              size: 48.sp,
+              size: AppIconSizes.hero,
             ),
             SizedBox(height: 16.h),
             Text(title, style: AppTextStyles.h2, textAlign: TextAlign.center),
@@ -429,7 +429,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                 ),
                 child: Text(
                   'YONETIM EKRANINA GIT',
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.gold,
                     fontWeight: FontWeight.bold,
                   ),
@@ -443,10 +443,15 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
   }
 
   Widget _buildLoading() =>
-      const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      Center(child: AppLoadingIndicator(color: AppColors.gold));
 
   Widget _buildError(String message) =>
-      Center(child: Text(message, style: const TextStyle(color: AppColors.red)));
+      Center(
+        child: Text(
+          message,
+          style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
+        ),
+      );
 
   Future<void> _handleSubmit() async {
     if (_selectedType == null) return;

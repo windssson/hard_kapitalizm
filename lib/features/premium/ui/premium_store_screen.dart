@@ -19,15 +19,15 @@ class PremiumStoreScreen extends ConsumerWidget {
         name: 'Avuç Dolusu Altın',
         goldCount: 100,
         priceText: '1.99 \$',
-        icon: Icons.monetization_on_outlined,
-        color: const Color(0xFFCD7F32), // Bronze
+        icon: AppIcons.monetizationOnOutlined,
+        color: AppColors.warning,
       ),
       _GoldPackage(
         id: 'gold_500',
         name: 'Kese Dolusu Altın',
         goldCount: 500,
         priceText: '7.99 \$',
-        icon: Icons.shopping_bag_rounded,
+        icon: AppIcons.shoppingBagRounded,
         badge: 'En Popüler',
         color: AppColors.gold,
       ),
@@ -36,7 +36,7 @@ class PremiumStoreScreen extends ConsumerWidget {
         name: 'Sandık Dolusu Altın',
         goldCount: 1200,
         priceText: '14.99 \$',
-        icon: Icons.inventory_2_rounded,
+        icon: AppIcons.inventory2Rounded,
         badge: 'Tasarruf',
         color: AppColors.goldLight,
       ),
@@ -45,7 +45,7 @@ class PremiumStoreScreen extends ConsumerWidget {
         name: 'Holding Hazine Kasası',
         goldCount: 3000,
         priceText: '29.99 \$',
-        icon: Icons.lock_rounded,
+        icon: AppIcons.lockRounded,
         badge: 'Büyük Avantaj',
         color: AppColors.blue,
       ),
@@ -54,23 +54,23 @@ class PremiumStoreScreen extends ConsumerWidget {
         name: 'İmparatorluk Rezervi',
         goldCount: 7500,
         priceText: '59.99 \$',
-        icon: Icons.account_balance_rounded,
+        icon: AppIcons.accountBalanceRounded,
         badge: 'En İyi Oran',
         color: AppColors.green,
       ),
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF030A14),
+      backgroundColor: AppColors.background,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0C1D33),
-              Color(0xFF050B14),
-              Color(0xFF02050A),
+              AppColors.background,
+              AppColors.cardBgLight.withValues(alpha: 0.45),
+              AppColors.background,
             ],
           ),
         ),
@@ -91,9 +91,8 @@ class PremiumStoreScreen extends ConsumerWidget {
                       SizedBox(height: 16.h),
                       Text(
                         'ALTIN PAKETLERI',
-                        style: TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 12.sp,
+                        style: AppTextStyles.titleGold.standardCopyWith(
+                          fontSize: AppTypography.body,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.2,
                         ),
@@ -125,7 +124,7 @@ class PremiumStoreScreen extends ConsumerWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: AppFx.panelWash(0.3),
         border: Border(
           bottom: BorderSide(
             color: AppColors.borderGold.withValues(alpha: 0.25),
@@ -136,7 +135,11 @@ class PremiumStoreScreen extends ConsumerWidget {
       child: Row(
         children: [
           IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20.sp),
+            icon: Icon(
+              AppIcons.arrowBackIosNewRounded,
+              color: AppColors.textPrimary,
+              size: AppIconSizes.medium,
+            ),
             onPressed: () => context.pop(),
           ),
           SizedBox(width: 4.w),
@@ -146,18 +149,18 @@ class PremiumStoreScreen extends ConsumerWidget {
               children: [
                 Text(
                   'PREMIUM MAGAZA',
-                  style: TextStyle(
+                  style: AppTextStyles.h2.standardCopyWith(
                     color: AppColors.textPrimary,
-                    fontSize: 16.sp,
+                    fontSize: AppTypography.titleLarge,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.5,
                   ),
                 ),
                 Text(
                   'Holdinginizin Hızlı Büyüme Kaynağı',
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textSecondary,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -168,7 +171,7 @@ class PremiumStoreScreen extends ConsumerWidget {
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
+              color: AppFx.panelWash(0.4),
               borderRadius: BorderRadius.circular(12.r),
               border: Border.all(
                 color: AppColors.gold.withValues(alpha: 0.45),
@@ -177,13 +180,13 @@ class PremiumStoreScreen extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.star_rounded, color: AppColors.gold, size: 16.sp),
+                Icon(AppIcons.starRounded, color: AppColors.gold, size: AppIconSizes.compact),
                 SizedBox(width: 4.w),
                 Text(
                   goldCount.toStringAsFixed(0),
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textPrimary,
-                    fontSize: 13.sp,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -218,7 +221,7 @@ class PremiumStoreScreen extends ConsumerWidget {
                 color: AppColors.gold.withValues(alpha: 0.35),
               ),
             ),
-            child: Icon(Icons.bolt_rounded, color: AppColors.gold, size: 22.sp),
+            child: Icon(AppIcons.boltRounded, color: AppColors.gold, size: AppIconSizes.mediumLarge),
           ),
           SizedBox(width: 12.w),
           Expanded(
@@ -227,18 +230,18 @@ class PremiumStoreScreen extends ConsumerWidget {
               children: [
                 Text(
                   'Premium Altın Avantajları',
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textPrimary,
-                    fontSize: 13.sp,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 SizedBox(height: 4.h),
                 Text(
                   'Altın kullanarak lojistik transferlerinizi, bina inşaatlarını veya AR-GE araştırmalarını beklemeden anında tamamlayabilir ve kapitalist sistemde rakiplerinizin hemen önüne geçebilirsiniz.',
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                     fontWeight: FontWeight.w500,
                     height: 1.35,
                   ),
@@ -274,13 +277,13 @@ class PremiumStoreScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(18.r),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF060F1A).withValues(alpha: 0.8),
+            color: AppColors.cardBg,
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF091629).withValues(alpha: 0.8),
-                const Color(0xFF03070E).withValues(alpha: 0.9),
+                AppColors.cardBg,
+                AppColors.cardBgLight.withValues(alpha: 0.5),
               ],
             ),
           ),
@@ -302,7 +305,7 @@ class PremiumStoreScreen extends ConsumerWidget {
                 child: Icon(
                   package.icon,
                   color: package.color,
-                  size: 24.sp,
+                  size: AppIconSizes.large,
                 ),
               ),
               SizedBox(width: 12.w),
@@ -315,9 +318,9 @@ class PremiumStoreScreen extends ConsumerWidget {
                       children: [
                         Text(
                           package.name,
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textPrimary,
-                            fontSize: 13.sp,
+                            fontSize: AppTypography.bodyLarge,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -335,9 +338,9 @@ class PremiumStoreScreen extends ConsumerWidget {
                             ),
                             child: Text(
                               package.badge!,
-                              style: TextStyle(
+                              style: AppTextStyles.caption.standardCopyWith(
                                 color: package.color,
-                                fontSize: 7.5.sp,
+                                fontSize: AppTypography.micro,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
@@ -348,13 +351,13 @@ class PremiumStoreScreen extends ConsumerWidget {
                     SizedBox(height: 3.h),
                     Row(
                       children: [
-                        Icon(Icons.star_rounded, color: AppColors.gold, size: 14.sp),
+                        Icon(AppIcons.starRounded, color: AppColors.gold, size: AppIconSizes.small),
                         SizedBox(width: 3.w),
                         Text(
                           '${package.goldCount.toString()} Altın / Yıldız',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textSecondary,
-                            fontSize: 11.sp,
+                            fontSize: AppTypography.bodySmall,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -368,7 +371,7 @@ class PremiumStoreScreen extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: package.color.withValues(alpha: 0.16),
                   foregroundColor: package.color,
-                  shadowColor: Colors.black.withValues(alpha: 0.4),
+                  shadowColor: AppFx.panelWash(0.4),
                   elevation: 4,
                   padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   shape: RoundedRectangleBorder(
@@ -382,8 +385,8 @@ class PremiumStoreScreen extends ConsumerWidget {
                 onPressed: () => _triggerPurchaseFlow(context, package),
                 child: Text(
                   package.priceText,
-                  style: TextStyle(
-                    fontSize: 12.sp,
+                  style: AppTextStyles.body.standardCopyWith(
+                    fontSize: AppTypography.body,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -400,12 +403,12 @@ class PremiumStoreScreen extends ConsumerWidget {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.transparent,
           insetPadding: EdgeInsets.symmetric(horizontal: 28.w),
           child: Container(
             padding: EdgeInsets.all(20.w),
             decoration: BoxDecoration(
-              color: const Color(0xFF06101B),
+              color: AppColors.cardBg,
               borderRadius: BorderRadius.circular(24.r),
               border: Border.all(
                 color: AppColors.borderGold.withValues(alpha: 0.55),
@@ -413,7 +416,7 @@ class PremiumStoreScreen extends ConsumerWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.6),
+                  color: AppFx.panelWash(0.6),
                   blurRadius: 20.r,
                   offset: const Offset(0, 8),
                 ),
@@ -434,17 +437,17 @@ class PremiumStoreScreen extends ConsumerWidget {
                     ),
                   ),
                   child: Icon(
-                    Icons.shopping_cart_checkout_rounded,
+                    AppIcons.shoppingCartCheckoutRounded,
                     color: AppColors.gold,
-                    size: 26.sp,
+                    size: AppIconSizes.large,
                   ),
                 ),
                 SizedBox(height: 16.h),
                 Text(
                   'SATIN ALMA ISLEMI',
-                  style: TextStyle(
+                  style: AppTextStyles.h2.standardCopyWith(
                     color: AppColors.textPrimary,
-                    fontSize: 16.sp,
+                    fontSize: AppTypography.titleLarge,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 0.5,
                   ),
@@ -453,9 +456,9 @@ class PremiumStoreScreen extends ConsumerWidget {
                 Text(
                   'Google Play Store bağlantısı hazırlanıyor...\n\nGoogle geliştirici hesabı entegrasyonu tamamlandığında, bu paket üzerinden ödeme onaylanarak hesabınıza anında ${package.goldCount} Altın yüklenecektir.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textMuted,
-                    fontSize: 11.5.sp,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.w500,
                     height: 1.45,
                   ),
@@ -466,7 +469,7 @@ class PremiumStoreScreen extends ConsumerWidget {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.gold,
-                      foregroundColor: Colors.black,
+                      foregroundColor: AppColors.textOnAccent,
                       shadowColor: AppColors.gold.withValues(alpha: 0.35),
                       elevation: 6,
                       padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -481,8 +484,8 @@ class PremiumStoreScreen extends ConsumerWidget {
                     onPressed: () => Navigator.of(context).pop(),
                     child: Text(
                       'TAMAM',
-                      style: TextStyle(
-                        fontSize: 13.sp,
+                      style: AppTextStyles.body.standardCopyWith(
+                        fontSize: AppTypography.bodyLarge,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
                       ),

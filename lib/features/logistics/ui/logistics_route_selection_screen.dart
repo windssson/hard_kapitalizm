@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
@@ -58,7 +59,7 @@ class _LogisticsRouteSelectionScreenState
     final canSave = cityA != null && cityB != null && cityA.id != cityB.id;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -95,7 +96,7 @@ class _LogisticsRouteSelectionScreenState
             widget.vehicle.hasAssignedRoute
                 ? 'Mevcut rotayi guncelle'
                 : 'Arac icin sehir cifti sec',
-            style: AppTextStyles.h2.copyWith(fontSize: 15.sp),
+            style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.titleLarge),
           ),
           SizedBox(height: 8.h),
           Row(
@@ -108,7 +109,7 @@ class _LogisticsRouteSelectionScreenState
                 ),
               ),
               SizedBox(width: 8.w),
-              Icon(Icons.sync_alt, color: AppColors.textMuted, size: 18.sp),
+              Icon(AppIcons.syncAlt, color: AppColors.textMuted, size: AppIconSizes.regular),
               SizedBox(width: 8.w),
               Expanded(
                 child: _buildSelectedCityChip(
@@ -122,7 +123,7 @@ class _LogisticsRouteSelectionScreenState
           SizedBox(height: 8.h),
           Text(
             'Haritadan iki farkli sehir sec. Rota cift yonludur.',
-            style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+            style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
           ),
         ],
       ),
@@ -146,18 +147,18 @@ class _LogisticsRouteSelectionScreenState
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: color,
-              fontSize: 9.sp,
+              fontSize: AppTypography.caption,
               fontWeight: FontWeight.w800,
             ),
           ),
           SizedBox(height: 3.h),
           Text(
             city?.name ?? 'Secilmedi',
-            style: TextStyle(
-              color: city == null ? AppColors.textMuted : Colors.white,
-              fontSize: 12.sp,
+            style: AppTextStyles.body.standardCopyWith(
+              color: city == null ? AppColors.textMuted : AppColors.textPrimary,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.bold,
             ),
             maxLines: 1,
@@ -200,7 +201,7 @@ class _LogisticsRouteSelectionScreenState
                   child: Image.asset(
                     'assets/backmap.webp',
                     fit: BoxFit.fill,
-                    color: Colors.black.withValues(alpha: 0.38),
+                    color: AppFx.panelWash(0.38),
                     colorBlendMode: BlendMode.darken,
                   ),
                 ),
@@ -237,7 +238,7 @@ class _LogisticsRouteSelectionScreenState
         ? AppColors.gold
         : isEnd
         ? AppColors.blue
-        : Colors.white;
+        : AppColors.textPrimary;
     const markerWidth = 82.0;
     const markerHeight = 48.0;
     final left = (position.dx - markerWidth / 2)
@@ -262,10 +263,10 @@ class _LogisticsRouteSelectionScreenState
               width: isSelected ? 18.w : 13.w,
               height: isSelected ? 18.w : 13.w,
               decoration: BoxDecoration(
-                color: isSelected ? color : Colors.black87,
+                color: isSelected ? color : AppFx.panelWash(0.87),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Colors.white : AppColors.gold,
+                  color: isSelected ? AppColors.textPrimary : AppColors.gold,
                   width: isSelected ? 2.5 : 1.5,
                 ),
                 boxShadow: [
@@ -280,9 +281,9 @@ class _LogisticsRouteSelectionScreenState
                   ? Center(
                       child: Text(
                         isStart ? '1' : '2',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 8.sp,
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textOnAccent,
+                          fontSize: AppTypography.micro,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -293,7 +294,7 @@ class _LogisticsRouteSelectionScreenState
             Container(
               padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: isSelected ? 0.88 : 0.7),
+                color: AppFx.panelWash(isSelected ? 0.88 : 0.7),
                 borderRadius: BorderRadius.circular(999.r),
                 border: Border.all(
                   color: color.withValues(alpha: isSelected ? 0.75 : 0.25),
@@ -301,9 +302,9 @@ class _LogisticsRouteSelectionScreenState
               ),
               child: Text(
                 city.name,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 8.sp,
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.micro,
                   fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
@@ -331,9 +332,9 @@ class _LogisticsRouteSelectionScreenState
               distance == null
                   ? 'Rota icin iki sehir sec.'
                   : 'Mesafe: ${distance.toStringAsFixed(0)} km',
-              style: TextStyle(
-                color: distance == null ? AppColors.textMuted : Colors.white,
-                fontSize: 12.sp,
+              style: AppTextStyles.body.standardCopyWith(
+                color: distance == null ? AppColors.textMuted : AppColors.textPrimary,
+                fontSize: AppTypography.body,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -353,16 +354,16 @@ class _LogisticsRouteSelectionScreenState
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               disabledBackgroundColor: AppColors.border,
-              foregroundColor: Colors.black,
+              foregroundColor: AppColors.textOnAccent,
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 11.h),
             ),
             child: _isSaving
                 ? SizedBox(
                     width: 16.w,
                     height: 16.w,
-                    child: const CircularProgressIndicator(
+                    child: AppLoadingIndicator(
                       strokeWidth: 2,
-                      color: Colors.black,
+                      color: AppColors.textOnAccent,
                     ),
                   )
                 : const Text('Kaydet'),

@@ -24,9 +24,8 @@ Future<void> showExperienceFeedbackFromResult(
         backgroundColor: AppColors.background,
         title: Text(
           'Seviye Atladi!',
-          style: TextStyle(
+          style: AppTextStyles.h2.standardCopyWith(
             color: AppColors.gold,
-            fontSize: 18.sp,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -36,9 +35,9 @@ Future<void> showExperienceFeedbackFromResult(
           children: [
             Text(
               'Tebrikler, sirket seviyen yukseldi.',
-              style: TextStyle(
+              style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textPrimary,
-                fontSize: 13.sp,
+                fontSize: AppTypography.bodyLarge,
               ),
             ),
             SizedBox(height: 12.h),
@@ -73,11 +72,7 @@ Future<void> showExperienceFeedbackFromResult(
   );
 }
 
-Widget _buildFeedbackRow(
-  String label,
-  String value, {
-  Color? valueColor,
-}) {
+Widget _buildFeedbackRow(String label, String value, {Color? valueColor}) {
   return Padding(
     padding: EdgeInsets.only(bottom: 6.h),
     child: Row(
@@ -85,16 +80,12 @@ Widget _buildFeedbackRow(
       children: [
         Text(
           label,
-          style: TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 12.sp,
-          ),
+          style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
         ),
         Text(
           value,
-          style: TextStyle(
+          style: AppTextStyles.body.standardCopyWith(
             color: valueColor ?? AppColors.textPrimary,
-            fontSize: 12.sp,
             fontWeight: FontWeight.bold,
           ),
         ),

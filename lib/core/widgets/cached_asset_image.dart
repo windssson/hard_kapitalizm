@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
+import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 
 class CachedAssetImage extends ConsumerStatefulWidget {
   final String fileName;
@@ -75,7 +77,10 @@ class _CachedAssetImageState extends ConsumerState<CachedAssetImage> {
       return SizedBox(
         width: widget.width,
         height: widget.height,
-        child: widget.placeholder ?? const Center(child: CircularProgressIndicator()),
+        child: widget.placeholder ??
+            Center(
+              child: AppLoadingIndicator(color: AppColors.gold),
+            ),
       );
     }
 
@@ -83,8 +88,8 @@ class _CachedAssetImageState extends ConsumerState<CachedAssetImage> {
       return SizedBox(
         width: widget.width,
         height: widget.height,
-        child: widget.errorWidget ?? const Center(
-          child: Icon(Icons.broken_image, color: Colors.grey),
+        child: widget.errorWidget ?? Center(
+          child: Icon(AppIcons.brokenImage, color: AppColors.textMuted),
         ),
       );
     }

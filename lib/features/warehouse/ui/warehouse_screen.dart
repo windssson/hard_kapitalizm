@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -53,7 +54,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: _selectedIndex,
         onItemSelected: _onNavSelected,
@@ -61,10 +62,10 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/warehouses/new/city'),
         backgroundColor: AppColors.gold,
-        icon: const Icon(Icons.add_home_work, color: Colors.black),
-        label: const Text(
+        icon: Icon(AppIcons.addHomeWork, color: AppColors.textOnAccent),
+        label: Text(
           'Yeni Depo',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: AppTextStyles.button.standardCopyWith(fontWeight: FontWeight.bold),
         ),
       ),
       body: SafeArea(
@@ -111,8 +112,8 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     ),
                   );
                 },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, stack) => _buildErrorState(error),
               ),
@@ -142,7 +143,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         child: Row(
           children: [
             _buildStatItem(
-              Icons.warehouse,
+              AppIcons.warehouse,
               AppColors.gold,
               'Depo',
               warehouses.length.toString(),
@@ -151,7 +152,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             Container(width: 1, height: 30.h, color: AppColors.border),
             SizedBox(width: 14.w),
             _buildStatItem(
-              Icons.check_circle,
+              AppIcons.checkCircle,
               AppColors.green,
               'Aktif',
               activeCount.toString(),
@@ -160,8 +161,8 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             Container(width: 1, height: 30.h, color: AppColors.border),
             SizedBox(width: 14.w),
             _buildStatItem(
-              Icons.storage,
-              Colors.blueAccent,
+              AppIcons.storage,
+              AppColors.blue,
               'Kapasite',
               _formatCapacity(totalCapacity),
             ),
@@ -185,7 +186,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: color, size: 16.sp),
+          child: Icon(icon, color: color, size: AppIconSizes.compact),
         ),
         SizedBox(width: 8.w),
         Column(
@@ -193,13 +194,16 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
           children: [
             Text(
               label,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.caption,
+              ),
             ),
             Text(
               value,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13.sp,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.bodyLarge,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -243,7 +247,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     gradient: LinearGradient(
                       colors: [
                         AppColors.gold.withValues(alpha: 0.08),
-                        Colors.black.withValues(alpha: 0.32),
+                        AppFx.panelWash(0.32),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -265,17 +269,17 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.location_on,
+                        AppIcons.locationOn,
                         color: AppColors.gold,
-                        size: 12.sp,
+                        size: AppIconSizes.xSmall,
                       ),
                       SizedBox(width: 3.w),
                       Flexible(
                         child: Text(
                           warehouse.cityName ?? 'Bilinmiyor',
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.gold,
-                            fontSize: 12.sp,
+                            fontSize: AppTypography.body,
                             fontWeight: FontWeight.w700,
                           ),
                           maxLines: 1,
@@ -298,9 +302,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                       Expanded(
                         child: Text(
                           warehouse.name,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14.sp,
+                          style: AppTextStyles.title.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: AppTypography.title,
                             fontWeight: FontWeight.bold,
                           ),
                           maxLines: 1,
@@ -332,9 +336,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                   filledSlots.isEmpty
                       ? Text(
                           'Bos Depo',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 10.sp,
+                            fontSize: AppTypography.label,
                             fontStyle: FontStyle.italic,
                           ),
                         )
@@ -414,13 +418,16 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
           children: [
             Text(
               'Kapasite Kullanimi',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 9.sp),
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.caption,
+              ),
             ),
             Text(
               '%${(ratio * 100).toInt()}',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10.sp,
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.label,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -429,15 +436,15 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         SizedBox(height: 4.h),
         ClipRRect(
           borderRadius: BorderRadius.circular(4.r),
-          child: LinearProgressIndicator(
+          child: AppProgressBar(
             value: ratio,
             minHeight: 6.h,
-            backgroundColor: Colors.black.withValues(alpha: 0.3),
+            backgroundColor: AppFx.panelWash(0.3),
             valueColor: AlwaysStoppedAnimation<Color>(
               ratio > 0.9
                   ? AppColors.red
                   : ratio > 0.7
-                  ? Colors.orange
+                  ? AppColors.warning
                   : AppColors.green,
             ),
           ),
@@ -456,9 +463,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 10.sp,
+          fontSize: AppTypography.label,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -483,13 +490,13 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                 width: 70.w,
                 height: 70.w,
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: AppFx.panelWash(0.2),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
-                  Icons.construction,
+                  AppIcons.construction,
                   color: AppColors.gold,
-                  size: 28.sp,
+                  size: AppIconSizes.xLarge,
                 ),
               ),
               SizedBox(width: 12.w),
@@ -499,15 +506,18 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                   children: [
                     Text(
                       warehouse.name,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
+                      style: AppTextStyles.title.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.title,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
                       warehouse.cityName ?? 'Bilinmeyen Sehir',
-                      style: TextStyle(color: AppColors.gold, fontSize: 11.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.gold,
+                        fontSize: AppTypography.bodySmall,
+                      ),
                     ),
                     SizedBox(height: 8.h),
                     if (finishAt != null)
@@ -534,9 +544,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     else
                       Text(
                         'Insaat verisi guncelleniyor...',
-                        style: TextStyle(
+                        style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: 11.sp,
+                          fontSize: AppTypography.bodySmall,
                         ),
                       ),
                   ],
@@ -570,32 +580,38 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         backgroundColor: AppColors.cardBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.r),
-          side: const BorderSide(color: AppColors.borderGold),
+          side: BorderSide(color: AppColors.borderGold),
         ),
         title: Text(
           'Depo Insaatini Bitir',
-          style: TextStyle(
+          style: AppTextStyles.title.standardCopyWith(
             color: AppColors.goldLight,
-            fontSize: 16.sp,
+            fontSize: AppTypography.titleLarge,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           '$starCost yildiz kullanarak depo insaatini aninda tamamlamak istiyor musunuz?',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+            fontSize: AppTypography.bodyLarge,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Iptal',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
-              foregroundColor: Colors.black,
+              foregroundColor: AppColors.textOnAccent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.r),
               ),
@@ -603,7 +619,10 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             onPressed: () => Navigator.pop(context, true),
             child: Text(
               'Tamamla',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
+              style: AppTextStyles.button.standardCopyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: AppTypography.bodyLarge,
+              ),
             ),
           ),
         ],
@@ -650,14 +669,17 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         children: [
           SizedBox(height: 100.h),
           Icon(
-            Icons.warehouse_outlined,
+            AppIcons.warehouseOutlined,
             color: AppColors.textMuted,
-            size: 64.sp,
+            size: AppIconSizes.emptyState,
           ),
           SizedBox(height: 16.h),
           Text(
             title,
-            style: TextStyle(color: AppColors.textMuted, fontSize: 14.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.title,
+          ),
           ),
         ],
       ),
@@ -671,14 +693,14 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, color: AppColors.red, size: 42.sp),
+            Icon(AppIcons.errorOutline, color: AppColors.red, size: AppIconSizes.displayLarge),
             SizedBox(height: 12.h),
             Text(
               'Depo listesi yuklenemedi.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14.sp,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.title,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -686,7 +708,10 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             Text(
               error.toString(),
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodySmall,
+              ),
             ),
           ],
         ),
@@ -741,9 +766,9 @@ class _ConstructionCountdownState
 
     return Text(
       'Kalan Sure: $h:$m:$s',
-      style: TextStyle(
+      style: AppTextStyles.body.standardCopyWith(
         color: AppColors.gold,
-        fontSize: 12.sp,
+        fontSize: AppTypography.body,
         fontWeight: FontWeight.bold,
       ),
     );

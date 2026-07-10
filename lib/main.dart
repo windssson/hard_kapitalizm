@@ -66,7 +66,7 @@ Future<void> main() async {
 
   await Supabase.initialize(
     url: SupabaseConstants.supabaseUrl,
-    anonKey: SupabaseConstants.supabaseAnonKey,
+    publishableKey: SupabaseConstants.supabaseAnonKey,
   );
 
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
@@ -101,10 +101,7 @@ final _router = GoRouter(
       path: '/leaderboard',
       builder: (context, state) => const LeaderboardScreen(),
     ),
-    GoRoute(
-      path: '/chat',
-      builder: (context, state) => const ChatScreen(),
-    ),
+    GoRoute(path: '/chat', builder: (context, state) => const ChatScreen()),
     GoRoute(
       path: '/cash-history',
       builder: (context, state) => const CashFlowScreen(),
@@ -388,29 +385,21 @@ class HardKapitalizmApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
+        final appTheme = AppTheme.buildTheme();
         return MaterialApp.router(
           title: 'Hard Kapitalizm',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            scaffoldBackgroundColor: Colors.transparent,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.blueGrey,
-              brightness: Brightness.dark,
-              surface: Colors.transparent,
+          theme: appTheme.copyWith(
+            scaffoldBackgroundColor: AppColors.transparent,
+            colorScheme: appTheme.colorScheme.copyWith(
+              surface: AppColors.transparent,
             ),
-            useMaterial3: true,
           ),
           builder: (context, materialChild) {
             return TimedTaskRuntime(
               child: Stack(
                 children: [
                   Container(color: AppColors.background),
-                  Positioned.fill(
-                    child: Opacity(
-                      opacity: 0.06,
-                      child: Image.asset('assets/back.png', fit: BoxFit.cover),
-                    ),
-                  ),
                   materialChild!,
                 ],
               ),

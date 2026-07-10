@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/achievement/data/achievement_provider.dart';
@@ -46,7 +47,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
     final dashboardAsync = ref.watch(playerAchievementDashboardProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -121,7 +122,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                     loading: () => Center(
                       child: Padding(
                         padding: EdgeInsets.only(top: 120.h),
-                        child: CircularProgressIndicator(color: AppColors.gold),
+                        child: AppLoadingIndicator(color: AppColors.gold),
                       ),
                     ),
                     error: (error, _) =>
@@ -161,16 +162,16 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
           SizedBox(height: 8.h),
           Text(
             '$unlockedCount / $totalCount rozet acildi',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textPrimary,
-              fontSize: 13.sp,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.w700,
             ),
           ),
           SizedBox(height: 10.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
+            child: AppProgressBar(
               value: ratio.clamp(0.0, 1.0),
               minHeight: 10.h,
               backgroundColor: AppColors.border.withValues(alpha: 0.3),
@@ -215,9 +216,9 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
               child: Center(
                 child: Text(
                   label,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.gold : Colors.white,
-                    fontSize: 11.sp,
+                  style: AppTextStyles.label.standardCopyWith(
+                    color: isSelected ? AppColors.gold : AppColors.white,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -237,7 +238,10 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
         SizedBox(height: 3.h),
         Text(
           subtitle,
-          style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.bodySmall,
+          ),
         ),
       ],
     );
@@ -289,7 +293,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: color.withValues(alpha: 0.35)),
             ),
-            child: Icon(icon, color: color, size: compact ? 20.sp : 24.sp),
+            child: Icon(icon, color: color, size: compact ? AppIconSizes.medium : AppIconSizes.large),
           ),
           SizedBox(width: 12.w),
           Expanded(
@@ -311,8 +315,8 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                 SizedBox(height: 6.h),
                 Text(
                   badge.title,
-                  style: TextStyle(
-                    color: Colors.white,
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: AppColors.white,
                     fontSize: compact ? 13.sp : 14.sp,
                     fontWeight: FontWeight.w800,
                   ),
@@ -320,7 +324,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                 SizedBox(height: 6.h),
                 Text(
                   badge.description,
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.textMuted,
                     fontSize: compact ? 11.sp : 12.sp,
                     height: 1.35,
@@ -330,7 +334,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                 if (!badge.isUnlocked) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(999.r),
-                    child: LinearProgressIndicator(
+                    child: AppProgressBar(
                       value: badge.progressRatio.clamp(0.0, 1.0),
                       minHeight: 7.h,
                       backgroundColor: AppColors.border.withValues(alpha: 0.3),
@@ -341,9 +345,9 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                 ],
                 Text(
                   badge.compactRewardText,
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.goldLight,
-                    fontSize: 10.sp,
+                    fontSize: AppTypography.label,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -365,9 +369,9 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 9.sp,
+          fontSize: AppTypography.caption,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -385,7 +389,10 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
       ),
       child: Text(
         message,
-        style: TextStyle(color: AppColors.textMuted, fontSize: 12.sp),
+        style: AppTextStyles.body.standardCopyWith(
+          color: AppColors.textMuted,
+          fontSize: AppTypography.body,
+        ),
       ),
     );
   }
@@ -393,59 +400,35 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
   IconData _badgeIcon(String key) {
     switch (key) {
       case 'store':
-        return Icons.storefront_rounded;
+        return AppIcons.storefrontRounded;
       case 'warehouse':
-        return Icons.warehouse_rounded;
+        return AppIcons.warehouseRounded;
       case 'factory':
-        return Icons.precision_manufacturing_rounded;
+        return AppIcons.precisionManufacturingRounded;
       case 'field':
       case 'farm':
-        return Icons.agriculture_rounded;
+        return AppIcons.agricultureRounded;
       case 'mine':
-        return Icons.landscape_rounded;
+        return AppIcons.landscapeRounded;
       case 'builder':
-        return Icons.handyman_rounded;
+        return AppIcons.handymanRounded;
       case 'trade':
-        return Icons.point_of_sale_rounded;
+        return AppIcons.pointOfSaleRounded;
       case 'truck':
-        return Icons.local_shipping_rounded;
+        return AppIcons.localShippingRounded;
       case 'science':
-        return Icons.science_rounded;
+        return AppIcons.scienceRounded;
       case 'upgrade':
-        return Icons.trending_up_rounded;
+        return AppIcons.trendingUpRounded;
       case 'crown':
-        return Icons.workspace_premium_rounded;
+        return AppIcons.workspacePremiumRounded;
       default:
-        return Icons.military_tech_rounded;
+        return AppIcons.militaryTechRounded;
     }
   }
 
   Color _badgeColor(String key) {
-    switch (key) {
-      case 'blue':
-        return Colors.lightBlueAccent;
-      case 'red':
-        return Colors.redAccent;
-      case 'green':
-        return Colors.greenAccent;
-      case 'lime':
-        return Colors.lightGreenAccent;
-      case 'slate':
-        return Colors.blueGrey;
-      case 'orange':
-        return Colors.orangeAccent;
-      case 'deepOrange':
-        return Colors.deepOrangeAccent;
-      case 'cyan':
-        return Colors.cyanAccent;
-      case 'purple':
-        return Colors.purpleAccent;
-      case 'teal':
-        return Colors.tealAccent;
-      case 'amber':
-      default:
-        return Colors.amberAccent;
-    }
+    return AppColorPresets.badge(key);
   }
 
   String _categoryLabel(String key) {

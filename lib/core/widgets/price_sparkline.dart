@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 
 class PriceSparkline extends StatelessWidget {
   final List<double> prices;
@@ -21,11 +22,11 @@ class PriceSparkline extends StatelessWidget {
       return SizedBox(
         width: width,
         height: height,
-        child: const Center(
+        child: Center(
           child: SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.gold),
+            child: AppLoadingIndicator(strokeWidth: 1.5, color: AppColors.gold),
           ),
         ),
       );
@@ -131,6 +132,6 @@ class _SparklinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SparklinePainter oldDelegate) {
-    return oldDelegate.prices != oldDelegate.prices || oldDelegate.strokeColor != oldDelegate.strokeColor;
+    return oldDelegate.prices != prices || oldDelegate.strokeColor != strokeColor;
   }
 }

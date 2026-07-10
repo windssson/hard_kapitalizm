@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -316,8 +317,8 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
             const SecondaryTopBar(title: 'Ihale Detayi'),
             Expanded(
               child: detailAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => Center(
                   child: Padding(
@@ -325,7 +326,10 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                     child: Text(
                       error.toString(),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.red, fontSize: 12.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                        fontSize: AppTypography.body,
+                      ),
                     ),
                   ),
                 ),
@@ -386,18 +390,18 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                                     Expanded(
                                       child: Text(
                                         'Teslimat Durumu',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.sp,
+                                        style: AppTextStyles.title.standardCopyWith(
+                                          color: AppColors.white,
+                                          fontSize: AppTypography.bodyLarge,
                                           fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ),
                                     Text(
                                       '%${(progress * 100).round()}',
-                                      style: TextStyle(
+                                      style: AppTextStyles.label.standardCopyWith(
                                         color: AppColors.goldLight,
-                                        fontSize: 11.sp,
+                                        fontSize: AppTypography.bodySmall,
                                         fontWeight: FontWeight.w900,
                                       ),
                                     ),
@@ -406,11 +410,11 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                                 SizedBox(height: 8.h),
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(999.r),
-                                  child: LinearProgressIndicator(
+                                  child: AppProgressBar(
                                     value: progress,
                                     minHeight: 10.h,
-                                    backgroundColor: Colors.white.withValues(alpha: 0.08),
-                                    valueColor: const AlwaysStoppedAnimation<Color>(
+                                    backgroundColor: AppFx.softOverlay(0.08),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
                                       AppColors.gold,
                                     ),
                                   ),
@@ -477,9 +481,9 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                               children: [
                                 Text(
                                   'Sevkiyat Hazırlığı',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14.sp,
+                                  style: AppTextStyles.title.standardCopyWith(
+                                    color: AppColors.white,
+                                    fontSize: AppTypography.title,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
@@ -498,7 +502,7 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                                 if (selectedWarehouse != null) ...[
                                   if (!selectedWarehouse.sameCity) ...[
                                     SizedBox(height: 14.h),
-                                    const Divider(color: Colors.white10, height: 1),
+                                    Divider(color: AppFx.softOverlay(0.10), height: 1),
                                     SizedBox(height: 14.h),
                                     _VehicleSelectionCard(
                                       optionsAsync: vehicleOptionsAsync,
@@ -511,7 +515,7 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                                     ),
                                   ],
                                   SizedBox(height: 14.h),
-                                  const Divider(color: Colors.white10, height: 1),
+                                  Divider(color: AppFx.softOverlay(0.10), height: 1),
                                   SizedBox(height: 14.h),
                                   _QuantityCard(
                                     quantity: _selectedQuantity,
@@ -575,7 +579,7 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                                           : () => _startDelivery(detail),
                                       style: FilledButton.styleFrom(
                                         backgroundColor: AppColors.gold,
-                                        foregroundColor: Colors.black,
+                                        foregroundColor: AppColors.textOnAccent,
                                         padding: EdgeInsets.symmetric(vertical: 12.h),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12.r),
@@ -585,15 +589,15 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                                           ? SizedBox(
                                               width: 16.w,
                                               height: 16.w,
-                                              child: const CircularProgressIndicator(
+                                              child: AppLoadingIndicator(
                                                 strokeWidth: 2,
-                                                color: Colors.black,
+                                                color: AppColors.textOnAccent,
                                               ),
                                             )
-                                          : const Icon(Icons.local_shipping_rounded),
-                                      label: const Text(
+                                          : Icon(AppIcons.localShippingRounded),
+                                      label: Text(
                                         'Teslimatı Başlat',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                        style: AppTextStyles.button.standardCopyWith(fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                   ),
@@ -604,20 +608,20 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                                       onPressed: _isSubmitting
                                           ? null
                                           : () => _cancelTender(detail),
-                                      icon: const Icon(
-                                        Icons.cancel_outlined,
+                                      icon: Icon(
+                                        AppIcons.cancelOutlined,
                                         color: AppColors.red,
                                       ),
                                       style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(color: AppColors.red),
+                                        side: BorderSide(color: AppColors.red),
                                         padding: EdgeInsets.symmetric(vertical: 12.h),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12.r),
                                         ),
                                       ),
-                                      label: const Text(
+                                      label: Text(
                                         'İhaleyi İptal Et',
-                                        style: TextStyle(color: AppColors.red, fontWeight: FontWeight.bold),
+                                        style: AppTextStyles.button.standardCopyWith(color: AppColors.red, fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                   ),
@@ -684,7 +688,7 @@ class _TenderHeroCard extends StatelessWidget {
                 height: 74.w,
                 padding: EdgeInsets.all(10.w),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: AppFx.softOverlay(0.08),
                   borderRadius: BorderRadius.circular(18.r),
                   border: Border.all(
                     color: AppColors.gold.withValues(alpha: 0.24),
@@ -702,16 +706,16 @@ class _TenderHeroCard extends StatelessWidget {
                   children: [
                     Text(
                       tender.title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.sp,
+                      style: AppTextStyles.h2.standardCopyWith(
+                        color: AppColors.white,
+                        fontSize: AppTypography.titleLarge,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       '${tender.cityName} - ${tender.productName}',
-                      style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+                      style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
                     ),
                     SizedBox(height: 10.h),
                     Wrap(
@@ -749,8 +753,8 @@ class _TenderHeroCard extends StatelessWidget {
             SizedBox(height: 12.h),
             Text(
               tender.description,
-              style: AppTextStyles.body.copyWith(
-                fontSize: 11.sp,
+              style: AppTextStyles.body.standardCopyWith(
+                fontSize: AppTypography.bodySmall,
                 color: AppColors.textPrimary.withValues(alpha: 0.82),
               ),
             ),
@@ -812,16 +816,16 @@ class _BidActionCard extends StatelessWidget {
         children: [
           Text(
             'Teklif Ver',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.white,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.w800,
             ),
           ),
           SizedBox(height: 4.h),
           Text(
             'En dusuk gecerli teklif kazanir. Teminat ilk teklifinde hemen kesilir, kaybedersen iade edilir.',
-            style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+            style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
           ),
           SizedBox(height: 10.h),
           if (playerBid != null) ...[
@@ -848,7 +852,7 @@ class _BidActionCard extends StatelessWidget {
           TextField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(color: Colors.white),
+            style: AppTextStyles.input,
             decoration: InputDecoration(
               labelText: 'Teklif Tutari',
               hintText: tender.rewardCash.round().toString(),
@@ -865,9 +869,9 @@ class _BidActionCard extends StatelessWidget {
                   ? SizedBox(
                       width: 16.w,
                       height: 16.w,
-                      child: const CircularProgressIndicator(strokeWidth: 2),
+                      child: AppLoadingIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.gavel_rounded),
+                  : Icon(AppIcons.gavelRounded),
               label: Text(playerBid == null ? 'Teklif Ver' : 'Teklifi Guncelle'),
             ),
           ),
@@ -898,16 +902,16 @@ class _FirstClaimActionCard extends StatelessWidget {
         children: [
           Text(
             'Anlik Alim Ihalesi',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.w800,
             ),
           ),
           SizedBox(height: 4.h),
           Text(
             'Bu ihalede ilk kabul eden kazanir. Teminat kabul aninda kesilir ve ihale hemen sana atanir.',
-            style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+            style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
           ),
           SizedBox(height: 10.h),
           Row(
@@ -937,9 +941,9 @@ class _FirstClaimActionCard extends StatelessWidget {
                   ? SizedBox(
                       width: 16.w,
                       height: 16.w,
-                      child: const CircularProgressIndicator(strokeWidth: 2),
+                      child: AppLoadingIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.flash_on_rounded),
+                  : Icon(AppIcons.flashOnRounded),
               label: const Text('Ihaleyi Hemen Al'),
             ),
           ),
@@ -968,13 +972,13 @@ class _WarehouseSelectionCard extends StatelessWidget {
         decoration: AppDecorations.premiumCard(AppColors.red, 16.r),
         child: Column(
           children: [
-            Icon(Icons.inventory_2_outlined, color: AppColors.red, size: 28.sp),
+            Icon(AppIcons.inventory2Outlined, color: AppColors.red, size: AppIconSizes.xLarge),
             SizedBox(height: 10.h),
             Text(
               'Uygun stok bulunamadi',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13.sp,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.bodyLarge,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -982,7 +986,7 @@ class _WarehouseSelectionCard extends StatelessWidget {
             Text(
               'Bu ihalenin urununu tasiyan bir depo bulunmuyor.',
               textAlign: TextAlign.center,
-              style: AppTextStyles.body.copyWith(fontSize: 11.sp),
+              style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
             ),
           ],
         ),
@@ -997,9 +1001,9 @@ class _WarehouseSelectionCard extends StatelessWidget {
         children: [
           Text(
             'Kaynak Depo Sec',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1015,7 +1019,7 @@ class _WarehouseSelectionCard extends StatelessWidget {
             return Padding(
               padding: EdgeInsets.only(bottom: 8.h),
               child: Material(
-                color: Colors.transparent,
+                color: AppColors.transparent,
                 child: InkWell(
                   onTap: () => onSelected(warehouse.warehouseId),
                   borderRadius: BorderRadius.circular(14.r),
@@ -1036,16 +1040,16 @@ class _WarehouseSelectionCard extends StatelessWidget {
                             children: [
                               Text(
                                 warehouse.warehouseName,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12.sp,
+                                style: AppTextStyles.title.standardCopyWith(
+                                  color: AppColors.white,
+                                  fontSize: AppTypography.body,
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
                               SizedBox(height: 3.h),
                               Text(
                                 '${warehouse.cityName} - ${warehouse.availableQuantity} adet hazir',
-                                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                                style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                               ),
                               SizedBox(height: 6.h),
                               Wrap(
@@ -1093,10 +1097,10 @@ class _WarehouseSelectionCard extends StatelessWidget {
                         SizedBox(width: 8.w),
                         Icon(
                           isSelected
-                              ? Icons.radio_button_checked_rounded
-                              : Icons.radio_button_off_rounded,
+                              ? AppIcons.radioButtonCheckedRounded
+                              : AppIcons.radioButtonOffRounded,
                           color: accent,
-                          size: 18.sp,
+                          size: AppIconSizes.regular,
                         ),
                       ],
                     ),
@@ -1138,18 +1142,18 @@ class _QuantityCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Gonderilecek Adet',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: AppColors.white,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               Text(
                 '$quantity / $safeMax',
-                style: TextStyle(
+                style: AppTextStyles.label.standardCopyWith(
                   color: AppColors.goldLight,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -1158,11 +1162,11 @@ class _QuantityCard extends StatelessWidget {
           SizedBox(height: 10.h),
           ClipRRect(
             borderRadius: BorderRadius.circular(999.r),
-            child: LinearProgressIndicator(
+            child: AppProgressBar(
               value: progress,
               minHeight: 10.h,
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+              backgroundColor: AppFx.softOverlay(0.08),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
             ),
           ),
           SizedBox(height: 12.h),
@@ -1251,15 +1255,15 @@ class _VehicleSelectionCard extends StatelessWidget {
       child: asyncValue.when(
         loading: () => SizedBox(
           height: 72.h,
-          child: const Center(
-            child: CircularProgressIndicator(color: AppColors.gold),
+          child: Center(
+            child: AppLoadingIndicator(color: AppColors.gold),
           ),
         ),
         error: (error, _) => Text(
           error.toString(),
-          style: TextStyle(
+          style: AppTextStyles.label.standardCopyWith(
             color: AppColors.red,
-            fontSize: 11.sp,
+            fontSize: AppTypography.bodySmall,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -1270,18 +1274,18 @@ class _VehicleSelectionCard extends StatelessWidget {
               children: [
                 Text(
                   'Arac Secimi',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: AppColors.white,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 SizedBox(height: 8.h),
                 Text(
                   result.unavailableReason ?? 'Bu rota icin uygun arac bulunamadi.',
-                  style: TextStyle(
+                  style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.red,
-                    fontSize: 11.sp,
+                    fontSize: AppTypography.bodySmall,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -1294,16 +1298,16 @@ class _VehicleSelectionCard extends StatelessWidget {
             children: [
               Text(
                 'Arac Secimi',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 13.sp,
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.bodyLarge,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               SizedBox(height: 4.h),
               Text(
                 'Sehirler arasi teslimatta ETA ve maliyet secilen araca gore hesaplanir.',
-                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
               ),
               SizedBox(height: 10.h),
               ...result.options.map((option) {
@@ -1334,7 +1338,7 @@ class _VehicleSelectionCard extends StatelessWidget {
                 SizedBox(height: 4.h),
                 Text(
                   'Nakliye bedeli teslimat baslayinca kasadan dusulur.',
-                  style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                  style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                 ),
               ],
             ],
@@ -1362,9 +1366,9 @@ class _ActiveDeliveriesCard extends ConsumerWidget {
         children: [
           Text(
             'Yoldaki Teslimatlar',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13.sp,
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.white,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1382,10 +1386,10 @@ class _ActiveDeliveriesCard extends ConsumerWidget {
               margin: EdgeInsets.only(bottom: 8.h),
               padding: EdgeInsets.all(10.w),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
+                color: AppFx.softOverlay(0.04),
                 borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: AppFx.softOverlay(0.08),
                 ),
               ),
               child: Row(
@@ -1398,9 +1402,9 @@ class _ActiveDeliveriesCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                     child: Icon(
-                      Icons.local_shipping_rounded,
+                      AppIcons.localShippingRounded,
                       color: AppColors.green,
-                      size: 18.sp,
+                      size: AppIconSizes.regular,
                     ),
                   ),
                   SizedBox(width: 10.w),
@@ -1410,36 +1414,36 @@ class _ActiveDeliveriesCard extends ConsumerWidget {
                       children: [
                         Text(
                           '${delivery.sourceWarehouseName} - ${delivery.quantity} adet',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11.sp,
+                          style: AppTextStyles.label.standardCopyWith(
+                            color: AppColors.white,
+                            fontSize: AppTypography.bodySmall,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         SizedBox(height: 3.h),
                         Text(
                           '${delivery.sourceCityName} - Varis ${_formatDateTime(delivery.finishAt)}',
-                          style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                          style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                         ),
                         SizedBox(height: 3.h),
                         Text(
                           isDone
                               ? 'Teslim ediliyor...'
                               : 'Kalan Sure: ${_formatLiveCountdown(remaining)}',
-                          style: TextStyle(
+                          style: AppTextStyles.label.standardCopyWith(
                             color: AppColors.goldLight,
-                            fontSize: 10.sp,
+                            fontSize: AppTypography.label,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         SizedBox(height: 6.h),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(999.r),
-                          child: LinearProgressIndicator(
+                          child: AppProgressBar(
                             value: progress,
                             minHeight: 7.h,
-                            backgroundColor: Colors.white.withValues(alpha: 0.08),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
+                            backgroundColor: AppFx.softOverlay(0.08),
+                            valueColor: AlwaysStoppedAnimation<Color>(
                               AppColors.green,
                             ),
                           ),
@@ -1483,19 +1487,19 @@ class _DetailMetric extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 9.sp,
-              fontWeight: FontWeight.w600,
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.caption,
+                  fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: 3.h),
           Text(
             value,
-            style: TextStyle(
-              color: color,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w800,
+                style: AppTextStyles.label.standardCopyWith(
+                  color: color,
+                  fontSize: AppTypography.bodySmall,
+                  fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -1521,9 +1525,9 @@ class _HeroPill extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 9.sp,
+          fontSize: AppTypography.caption,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -1616,9 +1620,9 @@ class _ClosedTenderStateCard extends StatelessWidget {
               border: Border.all(color: accent.withValues(alpha: 0.3)),
             ),
             child: Icon(
-              isCompleted ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
+              isCompleted ? AppIcons.checkCircleRounded : AppIcons.warningAmberRounded,
               color: accent,
-              size: 20.sp,
+              size: AppIconSizes.medium,
             ),
           ),
           SizedBox(width: 10.w),
@@ -1628,16 +1632,16 @@ class _ClosedTenderStateCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: AppColors.white,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 SizedBox(height: 3.h),
                 Text(
                   message,
-                  style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                  style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                 ),
               ],
             ),
@@ -1669,9 +1673,9 @@ class _MissingPlayerTenderCard extends StatelessWidget {
               ),
             ),
             child: Icon(
-              Icons.info_outline_rounded,
+              AppIcons.infoOutlineRounded,
               color: AppColors.red,
-              size: 20.sp,
+              size: AppIconSizes.medium,
             ),
           ),
           SizedBox(width: 10.w),
@@ -1681,16 +1685,16 @@ class _MissingPlayerTenderCard extends StatelessWidget {
               children: [
                 Text(
                   'Ihale Kaydi Bulunamadi',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13.sp,
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: AppColors.white,
+                    fontSize: AppTypography.bodyLarge,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 SizedBox(height: 3.h),
                 Text(
                   'Bu ihalenin oyuncu kaydi su anda yuklenemedi. Listeyi yenileyip tekrar deneyebilirsin.',
-                  style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                  style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                 ),
               ],
             ),
@@ -1730,7 +1734,7 @@ class _DeliveryProfitCalculator extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
+        color: AppFx.panelWash(0.25),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
           color: (isProfitable ? AppColors.green : AppColors.red).withValues(alpha: 0.3),
@@ -1742,9 +1746,9 @@ class _DeliveryProfitCalculator extends StatelessWidget {
         children: [
           Text(
             'Sevkiyat Maliyet & Kar Analizi (Tahmini)',
-            style: TextStyle(
+            style: AppTextStyles.title.standardCopyWith(
               color: AppColors.gold,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1754,13 +1758,13 @@ class _DeliveryProfitCalculator extends StatelessWidget {
             children: [
               Text(
                 'Tahmini Ürün Maliyeti (Est. %60):',
-                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
               ),
               Text(
                 AppMoney.full(totalProdCost),
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.sp,
+                style: AppTextStyles.label.standardCopyWith(
+                  color: AppColors.white,
+                  fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1772,33 +1776,33 @@ class _DeliveryProfitCalculator extends StatelessWidget {
             children: [
               Text(
                 'Sevkiyat Yol Bedeli (Lojistik):',
-                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
               ),
               Text(
                 sameCity ? 'Ücretsiz (Aynı Şehir)' : AppMoney.full(transportCost),
-                style: TextStyle(
-                  color: sameCity ? AppColors.green : Colors.white,
-                  fontSize: 10.sp,
+                style: AppTextStyles.label.standardCopyWith(
+                  color: sameCity ? AppColors.green : AppColors.white,
+                  fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
           SizedBox(height: 6.h),
-          const Divider(color: Colors.white10),
+          Divider(color: AppFx.softOverlay(0.10)),
           SizedBox(height: 4.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Oransal Hak Ediş Geliri:',
-                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
               ),
               Text(
                 AppMoney.full(estRevenue),
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.sp,
+                style: AppTextStyles.label.standardCopyWith(
+                  color: AppColors.white,
+                  fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1810,13 +1814,13 @@ class _DeliveryProfitCalculator extends StatelessWidget {
             children: [
               Text(
                 'Tahmini Net Kar / Zarar:',
-                style: AppTextStyles.body.copyWith(fontSize: 10.sp),
+                style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
               ),
               Text(
                 '${isProfitable ? '+' : ''}${AppMoney.full(netProfit)} (${profitMargin.toStringAsFixed(1)}%)',
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: isProfitable ? AppColors.green : AppColors.red,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.w900,
                 ),
               ),

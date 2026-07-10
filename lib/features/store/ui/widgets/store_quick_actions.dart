@@ -34,35 +34,35 @@ class StoreQuickActions extends StatelessWidget {
           children: [
             _AnimatedQuickActionButton(
               width: itemWidth,
-              icon: Icons.upgrade_rounded,
+              icon: AppIcons.upgradeRounded,
               label: 'Yukselt',
               color: AppColors.green,
               onTap: onUpgradeTap,
             ),
             _AnimatedQuickActionButton(
               width: itemWidth,
-              icon: Icons.flash_on_rounded,
+              icon: AppIcons.flashOnRounded,
               label: 'Boost',
               color: AppColors.goldDark,
               onTap: onBoostTap,
             ),
             _AnimatedQuickActionButton(
               width: itemWidth,
-              icon: Icons.bar_chart,
+              icon: AppIcons.barChart,
               label: 'Rapor',
-              color: Colors.purpleAccent,
+              color: AppColors.purple,
               onTap: onReportTap,
             ),
             _AnimatedQuickActionButton(
               width: itemWidth,
-              icon: Icons.add_box,
+              icon: AppIcons.addBox,
               label: 'Slot Ac',
               color: AppColors.gold,
               onTap: canOpenNewSlot ? onOpenSlotTap : null,
             ),
             _AnimatedQuickActionButton(
               width: itemWidth,
-              icon: Icons.history,
+              icon: AppIcons.history,
               label: 'Gecmis',
               color: AppColors.textPrimary,
               onTap: onHistoryTap,
@@ -125,7 +125,7 @@ class _AnimatedQuickActionButtonState extends State<_AnimatedQuickActionButton> 
   @override
   Widget build(BuildContext context) {
     final isDisabled = widget.onTap == null;
-    final displayColor = isDisabled ? Colors.grey : widget.color;
+    final displayColor = isDisabled ? AppColors.textMuted : widget.color;
 
     return GestureDetector(
       onTapDown: _onTapDown,
@@ -160,16 +160,16 @@ class _AnimatedQuickActionButtonState extends State<_AnimatedQuickActionButton> 
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(widget.icon, color: displayColor, size: 20.sp),
+              Icon(widget.icon, color: displayColor, size: AppIconSizes.medium),
               SizedBox(height: 5.h),
               Text(
                 widget.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: isDisabled ? Colors.grey : AppColors.textPrimary,
-                  fontSize: 9.sp,
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: isDisabled ? AppColors.textMuted : AppColors.textPrimary,
+                  fontSize: AppTypography.caption,
                   fontWeight: FontWeight.w600,
                 ),
               ),

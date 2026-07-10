@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/data/production_daily_stats_service.dart';
 import 'package:hard_kapitalizm/core/models/production_daily_stat_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -34,15 +35,15 @@ class ProductionReportScreen extends ConsumerWidget {
     final statsAsync = ref.watch(productionDailyStatsProvider(query));
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
           children: [
             const SecondaryTopBar(title: 'Uretim Raporu'),
             Expanded(
               child: statsAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                loading: () => Center(
+                  child: AppLoadingIndicator(color: AppColors.gold),
                 ),
                 error: (error, _) => Center(
                   child: Padding(
@@ -50,7 +51,10 @@ class ProductionReportScreen extends ConsumerWidget {
                     child: Text(
                       error.toString(),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.red, fontSize: 13.sp),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                        fontSize: AppTypography.bodyLarge,
+                      ),
                     ),
                   ),
                 ),
@@ -93,18 +97,18 @@ class ProductionReportScreen extends ConsumerWidget {
         children: [
           Text(
             ownerName,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18.sp,
+            style: AppTextStyles.h2.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.headline,
               fontWeight: FontWeight.bold,
             ),
           ),
           SizedBox(height: 4.h),
           Text(
             '${_ownerKindLabel(ownerKind)} icin son 7 gunluk ozet',
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 11.sp,
+              fontSize: AppTypography.bodySmall,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -119,14 +123,14 @@ class ProductionReportScreen extends ConsumerWidget {
       decoration: AppDecorations.panelGlass(),
       child: Column(
         children: [
-          Icon(Icons.query_stats_rounded, color: AppColors.gold, size: 30.sp),
+          Icon(AppIcons.queryStatsRounded, color: AppColors.gold, size: AppIconSizes.xLarge),
           SizedBox(height: 10.h),
           Text(
             'Henuz son 7 gun icinde kayitli uretim yok.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textPrimary,
-              fontSize: 13.sp,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -200,9 +204,9 @@ class ProductionReportScreen extends ConsumerWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 9.5.sp,
+              fontSize: AppTypography.caption,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -211,9 +215,9 @@ class ProductionReportScreen extends ConsumerWidget {
             value,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: color,
-              fontSize: 12.sp,
+              fontSize: AppTypography.body,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -223,9 +227,9 @@ class ProductionReportScreen extends ConsumerWidget {
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textSecondary,
-                fontSize: 8.8.sp,
+                fontSize: AppTypography.micro,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -247,9 +251,9 @@ class ProductionReportScreen extends ConsumerWidget {
         children: [
           Text(
             'One Cikan Urunler',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14.sp,
+            style: AppTextStyles.h2.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -271,7 +275,7 @@ class ProductionReportScreen extends ConsumerWidget {
                     width: 38.w,
                     height: 38.w,
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.2),
+                      color: AppFx.panelWash(0.2),
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                     padding: EdgeInsets.all(6.w),
@@ -281,9 +285,9 @@ class ProductionReportScreen extends ConsumerWidget {
                             fit: BoxFit.contain,
                           )
                         : Icon(
-                            Icons.inventory_2_outlined,
+                            AppIcons.inventory2Outlined,
                             color: AppColors.gold,
-                            size: 18.sp,
+                            size: AppIconSizes.regular,
                           ),
                   ),
                   SizedBox(width: 10.w),
@@ -293,26 +297,26 @@ class ProductionReportScreen extends ConsumerWidget {
                       children: [
                         Text(
                           item.name,
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textPrimary,
-                            fontSize: 12.sp,
+                            fontSize: AppTypography.body,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         SizedBox(height: 2.h),
                         Text(
                           '${item.total} adet uretildi',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 9.5.sp,
+                            fontSize: AppTypography.caption,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                         Text(
                           'Tahmini kar: ${_formatMoney(item.estimatedProfit)}',
-                          style: TextStyle(
+                          style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 9.5.sp,
+                            fontSize: AppTypography.caption,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -321,11 +325,11 @@ class ProductionReportScreen extends ConsumerWidget {
                   ),
                   Text(
                     _formatMoney(item.unitProfit),
-                    style: TextStyle(
+                    style: AppTextStyles.body.standardCopyWith(
                       color: item.unitProfit >= 0
                           ? AppColors.green
                           : AppColors.red,
-                      fontSize: 11.sp,
+                      fontSize: AppTypography.bodySmall,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -368,9 +372,9 @@ class ProductionReportScreen extends ConsumerWidget {
         children: [
           Text(
             'Son 7 Gun',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14.sp,
+            style: AppTextStyles.h2.standardCopyWith(
+              color: AppColors.textPrimary,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -389,9 +393,9 @@ class ProductionReportScreen extends ConsumerWidget {
                         width: 86.w,
                         child: Text(
                           _formatShortDate(day),
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textMuted,
-                            fontSize: 11.sp,
+                            fontSize: AppTypography.bodySmall,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -399,12 +403,12 @@ class ProductionReportScreen extends ConsumerWidget {
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(999.r),
-                          child: LinearProgressIndicator(
+                          child: AppProgressBar(
                             value: _progressForDay(quantity, groupedQty),
                             minHeight: 8.h,
                             backgroundColor: AppColors.cardBgLight,
                             valueColor:
-                                const AlwaysStoppedAnimation<Color>(
+                                AlwaysStoppedAnimation<Color>(
                                   AppColors.gold,
                                 ),
                           ),
@@ -416,9 +420,9 @@ class ProductionReportScreen extends ConsumerWidget {
                         child: Text(
                           quantity.toString(),
                           textAlign: TextAlign.right,
-                          style: TextStyle(
+                          style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textPrimary,
-                            fontSize: 11.sp,
+                            fontSize: AppTypography.bodySmall,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -430,9 +434,9 @@ class ProductionReportScreen extends ConsumerWidget {
                     alignment: Alignment.centerRight,
                     child: Text(
                       'Kar: ${_formatMoney(profit)}',
-                      style: TextStyle(
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: profit >= 0 ? AppColors.green : AppColors.red,
-                        fontSize: 9.5.sp,
+                        fontSize: AppTypography.caption,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

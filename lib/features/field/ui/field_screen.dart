@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -124,16 +125,19 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
     final constructionAsync = ref.watch(fieldConstructionProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/fields/new/city'),
         backgroundColor: AppColors.gold,
-        foregroundColor: Colors.black,
+        foregroundColor: AppColors.textOnAccent,
         extendedPadding: EdgeInsets.symmetric(horizontal: 14.w),
-        icon: Icon(Icons.add, size: 16.sp),
+        icon: Icon(AppIcons.add, size: AppIconSizes.compact),
         label: Text(
           'YENI CIFTLIK',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.sp),
+          style: AppTextStyles.caption.standardCopyWith(
+            fontWeight: FontWeight.bold,
+            fontSize: AppTypography.bodySmall,
+          ),
         ),
       ),
       bottomNavigationBar: AppBottomNav(
@@ -172,7 +176,12 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                               ),
                             ),
                           SliverPadding(
-                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 80.h),
+                            padding: EdgeInsets.fromLTRB(
+                              10.w,
+                              16.h,
+                              10.w,
+                              80.h,
+                            ),
                             sliver: filteredFields.isEmpty
                                 ? SliverToBoxAdapter(
                                     child: construction == null
@@ -192,17 +201,15 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                       ),
                     );
                   },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppColors.gold),
-                  ),
+                  loading: () =>
+                      Center(child: AppLoadingIndicator(color: AppColors.gold)),
                   error: (error, stack) => _buildErrorState(
                     error,
                     onRetry: () => ref.refresh(fieldConstructionProvider),
                   ),
                 ),
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
-                ),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (error, stack) => _buildErrorState(
                   error,
                   onRetry: () => ref.refresh(fieldListProvider),
@@ -233,7 +240,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
           title: name?.isNotEmpty == true ? name! : 'Yeni Ciftlik',
           subtitle: 'Ciftlik insaati devam ediyor',
           finishAt: finishAt.toLocal(),
-          icon: Icons.grass,
+          icon: AppIcons.grass,
           onFinished: () => _completeConstruction(constructionId),
         ),
         if (starCost > 0)
@@ -292,7 +299,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: AppFx.panelWash(0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -304,19 +311,23 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             children: [
               Expanded(
                 child: _buildStatItem(
-                  Icons.grass,
+                  AppIcons.grass,
                   AppColors.gold,
                   'Toplam Ciftlik',
                   fields.length.toString(),
-                  Colors.white,
+                  AppColors.textPrimary,
                 ),
               ),
-              Container(width: 1.w, height: 36.h, color: AppColors.border.withValues(alpha: 0.5)),
+              Container(
+                width: 1.w,
+                height: 36.h,
+                color: AppColors.border.withValues(alpha: 0.5),
+              ),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(left: 12.w),
                   child: _buildStatItem(
-                    Icons.check_circle,
+                    AppIcons.checkCircle,
                     AppColors.green,
                     'Aktif Ciftlik',
                     activeCount.toString(),
@@ -328,29 +339,36 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
           ),
           Padding(
             padding: EdgeInsets.symmetric(vertical: 8.h),
-            child: Divider(color: AppColors.border.withValues(alpha: 0.3), height: 1),
+            child: Divider(
+              color: AppColors.border.withValues(alpha: 0.3),
+              height: 1,
+            ),
           ),
           Row(
             children: [
               Expanded(
                 child: _buildStatItem(
-                  Icons.layers,
-                  Colors.blueAccent,
+                  AppIcons.layers,
+                  AppColors.blue,
                   'Toplam Slot',
                   totalSlots.toString(),
-                  Colors.white,
+                  AppColors.textPrimary,
                 ),
               ),
-              Container(width: 1.w, height: 36.h, color: AppColors.border.withValues(alpha: 0.5)),
+              Container(
+                width: 1.w,
+                height: 36.h,
+                color: AppColors.border.withValues(alpha: 0.5),
+              ),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(left: 12.w),
                   child: _buildStatItem(
-                    Icons.inventory_2,
+                    AppIcons.inventory2,
                     AppColors.gold,
                     'Toplam Urun',
                     _formatCompact(totalOutputStock),
-                    Colors.white,
+                    AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -377,7 +395,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             color: iconColor.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: iconColor, size: 16.sp),
+          child: Icon(icon, color: iconColor, size: AppIconSizes.compact),
         ),
         SizedBox(width: 10.w),
         Expanded(
@@ -387,14 +405,17 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             children: [
               Text(
                 label,
-                style: TextStyle(color: AppColors.textMuted, fontSize: 10.sp),
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.label,
+                ),
               ),
               SizedBox(height: 2.h),
               Text(
                 value,
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: valueColor,
-                  fontSize: 14.sp,
+                  fontSize: AppTypography.title,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -418,7 +439,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
   }
 
   Widget _buildFilterChip(String label, Color? dotColor) {
-    final isSelected = _selectedFilter == label || (label == 'Tümü' && _selectedFilter == 'Tumu');
+    final isSelected =
+        _selectedFilter == label ||
+        (label == 'Tümü' && _selectedFilter == 'Tumu');
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -438,7 +461,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
               : AppColors.cardBg.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(10.r),
           border: Border.all(
-            color: isSelected ? AppColors.gold : AppColors.border.withValues(alpha: 0.5),
+            color: isSelected
+                ? AppColors.gold
+                : AppColors.border.withValues(alpha: 0.5),
             width: isSelected ? 1.5 : 1,
           ),
           boxShadow: isSelected
@@ -447,7 +472,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                     color: AppColors.gold.withValues(alpha: 0.1),
                     blurRadius: 8,
                     spreadRadius: 1,
-                  )
+                  ),
                 ]
               : null,
         ),
@@ -465,7 +490,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                       color: dotColor.withValues(alpha: 0.6),
                       blurRadius: 4,
                       spreadRadius: 1,
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -473,10 +498,12 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             ],
             Text(
               label,
-              style: TextStyle(
-                color: isSelected ? AppColors.goldLight : AppColors.textSecondary,
+              style: AppTextStyles.body.standardCopyWith(
+                color: isSelected
+                    ? AppColors.goldLight
+                    : AppColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 12.sp,
+                fontSize: AppTypography.body,
               ),
             ),
           ],
@@ -490,18 +517,24 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       child: Column(
         children: [
           SizedBox(height: 60.h),
-          Icon(Icons.grass, color: AppColors.textMuted, size: 80.sp),
+          Icon(
+            AppIcons.grass,
+            color: AppColors.textMuted,
+            size: AppIconSizes.showcase,
+          ),
           SizedBox(height: 16.h),
           Text(
             'Henuz bir ciftligin yok.',
-            style: AppTextStyles.h2.copyWith(color: AppColors.textMuted),
+            style: AppTextStyles.h2.standardCopyWith(
+              color: AppColors.textMuted,
+            ),
           ),
           SizedBox(height: 16.h),
           ElevatedButton(
             onPressed: () => context.push('/fields/new/city'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.cardBgLight,
-              side: const BorderSide(color: AppColors.gold),
+              side: BorderSide(color: AppColors.gold),
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
             ),
             child: Text('ILK CIFTLIGINI KUR', style: AppTextStyles.titleGold),
@@ -510,8 +543,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       ),
     );
   }
-
-
 
   Widget _buildAdvancedFieldCard(FieldListItemModel item) {
     final field = item.field;
@@ -536,7 +567,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
+            color: AppFx.panelWash(0.4),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -564,8 +595,11 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                       .withValues(alpha: 0.04),
                   boxShadow: [
                     BoxShadow(
-                      color: (field.isActive ? AppColors.gold : AppColors.textMuted)
-                          .withValues(alpha: 0.06),
+                      color:
+                          (field.isActive
+                                  ? AppColors.gold
+                                  : AppColors.textMuted)
+                              .withValues(alpha: 0.06),
                       blurRadius: 35,
                     ),
                   ],
@@ -573,7 +607,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
               ),
             ),
             Material(
-              color: Colors.transparent,
+              color: AppColors.transparent,
               child: InkWell(
                 onTap: () => context.push('/fields/${field.id}'),
                 splashColor: AppColors.gold.withValues(alpha: 0.1),
@@ -588,9 +622,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                         children: [
                           _buildFieldImage(item),
                           SizedBox(width: 14.w),
-                          Expanded(
-                            child: _buildFieldHeader(item),
-                          ),
+                          Expanded(child: _buildFieldHeader(item)),
                         ],
                       ),
                       SizedBox(height: 12.h),
@@ -620,7 +652,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       height: 76.w,
       padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: AppFx.panelWash(0.3),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
           color: AppColors.gold.withValues(alpha: 0.3),
@@ -638,9 +670,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         fileName: item.fieldTypeIcon,
         fit: BoxFit.contain,
         errorWidget: Icon(
-          Icons.grass,
+          AppIcons.grass,
           color: AppColors.green,
-          size: 36.sp,
+          size: AppIconSizes.displayLarge,
         ),
       ),
     );
@@ -657,9 +689,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             Expanded(
               child: Text(
                 field.name,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.sp,
+                style: AppTextStyles.h2.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.titleLarge,
                   fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
@@ -675,29 +707,33 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         SizedBox(height: 4.h),
         Row(
           children: [
-            Icon(Icons.location_on, color: AppColors.gold, size: 12.sp),
+            Icon(
+              AppIcons.locationOn,
+              color: AppColors.gold,
+              size: AppIconSizes.xSmall,
+            ),
             SizedBox(width: 4.w),
             Expanded(
               child: Text(
                 item.cityName,
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.gold,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            _buildSmallBadge('Seviye ${field.level}', Colors.orangeAccent),
+            _buildSmallBadge('Seviye ${field.level}', AppColors.warning),
           ],
         ),
         SizedBox(height: 6.h),
         Text(
           item.fieldTypeName,
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: 11.sp,
+            fontSize: AppTypography.bodySmall,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -708,13 +744,12 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
 
   Widget _buildOutputSection(FieldListItemModel item) {
     final ratio = item.outputStockRatio;
-    final color = _getRatioColor(ratio);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.15),
+        color: AppFx.panelWash(0.15),
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+        border: Border.all(color: AppFx.softOverlay(0.04)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -726,9 +761,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                 child: Row(
                   children: [
                     Icon(
-                      Icons.inventory_2,
+                      AppIcons.inventory2,
                       color: AppColors.textSecondary,
-                      size: 13.sp,
+                      size: AppIconSizes.small,
                     ),
                     SizedBox(width: 5.w),
                     Expanded(
@@ -736,9 +771,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                         'Urun Deposu',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.textSecondary,
-                          fontSize: 10.sp,
+                          fontSize: AppTypography.label,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -749,44 +784,16 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
               SizedBox(width: 4.w),
               Text(
                 '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.totalOutputCapacity)} adet',
-                style: TextStyle(
-                  color: ratio >= 0.9 ? AppColors.red : Colors.white,
-                  fontSize: 10.sp,
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: ratio >= 0.9 ? AppColors.red : AppColors.textPrimary,
+                  fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
           SizedBox(height: 6.h),
-          Container(
-            height: 5.h,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(3.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: ratio,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3.r),
-                  gradient: LinearGradient(
-                    colors: [
-                      color.withValues(alpha: 0.6),
-                      color,
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.3),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );
@@ -794,13 +801,12 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
 
   Widget _buildInputSection(FieldListItemModel item) {
     final ratio = item.inputStockRatio;
-    final color = AppColors.blue;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.15),
+        color: AppFx.panelWash(0.15),
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+        border: Border.all(color: AppFx.softOverlay(0.04)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -812,9 +818,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                 child: Row(
                   children: [
                     Icon(
-                      Icons.science_outlined,
+                      AppIcons.scienceOutlined,
                       color: AppColors.textSecondary,
-                      size: 13.sp,
+                      size: AppIconSizes.small,
                     ),
                     SizedBox(width: 5.w),
                     Expanded(
@@ -822,9 +828,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                         'Hammadde Deposu',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.textSecondary,
-                          fontSize: 10.sp,
+                          fontSize: AppTypography.label,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -835,44 +841,16 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
               SizedBox(width: 4.w),
               Text(
                 '${_formatCompact(item.inputStockQuantity)} adet / ${_formatCompact(item.totalInputCapacity)} adet',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.sp,
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
           SizedBox(height: 6.h),
-          Container(
-            height: 5.h,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(3.r),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: ratio,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3.r),
-                  gradient: LinearGradient(
-                    colors: [
-                      color.withValues(alpha: 0.6),
-                      color,
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.3),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );
@@ -883,11 +861,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.2),
+        color: AppFx.panelWash(0.2),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: AppColors.borderGold.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -897,9 +873,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             children: [
               Text(
                 'Üretim Slotları',
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textSecondary,
-                  fontSize: 11.sp,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -940,15 +916,15 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       height: 48.w,
       decoration: BoxDecoration(
         color: isLocked
-            ? Colors.black.withValues(alpha: 0.3)
+            ? AppFx.panelWash(0.3)
             : AppColors.cardBgLight.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
           color: isLocked
-              ? Colors.white.withValues(alpha: 0.04)
+              ? AppFx.softOverlay(0.04)
               : hasProduct
-                  ? AppColors.green.withValues(alpha: 0.4)
-                  : AppColors.borderGold.withValues(alpha: 0.2),
+              ? AppColors.green.withValues(alpha: 0.4)
+              : AppColors.borderGold.withValues(alpha: 0.2),
           width: hasProduct ? 1.5 : 1,
         ),
         boxShadow: hasProduct
@@ -957,32 +933,38 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                   color: AppColors.green.withValues(alpha: 0.15),
                   blurRadius: 8,
                   spreadRadius: 1,
-                )
+                ),
               ]
             : null,
       ),
       child: isLocked
-          ? Center(child: Icon(Icons.lock, color: Colors.white24, size: 20.sp))
+          ? Center(
+              child: Icon(
+                AppIcons.lock,
+                color: AppFx.softOverlay(0.24),
+                size: AppIconSizes.medium,
+              ),
+            )
           : hasProduct
-              ? Padding(
-                  padding: EdgeInsets.all(6.w),
-                  child: CachedAssetImage(
-                    fileName: slot!.product!.urunIconu,
-                    fit: BoxFit.contain,
-                    errorWidget: Icon(
-                      Icons.grass,
-                      color: AppColors.green,
-                      size: 24.sp,
-                    ),
-                  ),
-                )
-              : Center(
-                  child: Icon(
-                    Icons.add_circle_outline,
-                    color: AppColors.gold.withValues(alpha: 0.3),
-                    size: 24.sp,
-                  ),
+          ? Padding(
+              padding: EdgeInsets.all(6.w),
+              child: CachedAssetImage(
+                fileName: slot!.product!.urunIconu,
+                fit: BoxFit.contain,
+                errorWidget: Icon(
+                  AppIcons.grass,
+                  color: AppColors.green,
+                  size: AppIconSizes.large,
                 ),
+              ),
+            )
+          : Center(
+              child: Icon(
+                AppIcons.addCircleOutline,
+                color: AppColors.gold.withValues(alpha: 0.3),
+                size: AppIconSizes.large,
+              ),
+            ),
     );
   }
 
@@ -996,19 +978,13 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: 9.sp,
+          fontSize: AppTypography.caption,
           fontWeight: FontWeight.bold,
         ),
       ),
     );
-  }
-
-  Color _getRatioColor(double ratio) {
-    if (ratio >= 0.8) return AppColors.green;
-    if (ratio >= 0.4) return Colors.orange;
-    return AppColors.red;
   }
 
   String _formatCompact(int value) {
@@ -1022,18 +998,19 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, color: AppColors.red, size: 48.sp),
+          Icon(
+            AppIcons.errorOutline,
+            color: AppColors.red,
+            size: AppIconSizes.hero,
+          ),
           SizedBox(height: 16.h),
           Text(
             'Hata: ${error.toString()}',
-            style: AppTextStyles.body.copyWith(color: AppColors.red),
+            style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 16.h),
-          ElevatedButton(
-            onPressed: onRetry,
-            child: const Text('Tekrar Dene'),
-          ),
+          ElevatedButton(onPressed: onRetry, child: const Text('Tekrar Dene')),
         ],
       ),
     );

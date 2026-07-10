@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -115,180 +116,154 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final progress = _totalFiles > 0 ? _currentFile / _totalFiles : 0.0;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Center(
-        child: TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 1200),
-          curve: Curves.easeOutExpo,
-          tween: Tween<double>(begin: 0, end: 1),
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value.clamp(0.0, 1.0),
-              child: Transform.scale(
-                scale: 0.95 + (0.05 * value),
-                child: child,
-              ),
-            );
-          },
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40.w),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Glowing Logo
-                Container(
-                  padding: EdgeInsets.all(24.w),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppColors.cardBg, AppColors.cardBgLight],
-                    ),
-                    border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.5),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.gold.withValues(alpha: 0.3),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: Image.asset(
-                    'assets/splashlogo.webp',
-                    width: 80.sp,
-                    height: 80.sp,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                SizedBox(height: 40.h),
-                // Title
-                Text(
-                  'HARD',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 36.sp,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 8,
-                  ),
-                ),
-                Text(
-                  'KAPITALIZM',
-                  style: TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 32.sp,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 4,
-                  ),
-                ),
-                SizedBox(height: 60.h),
-
-                if (_error != null) ...[
-                  Icon(Icons.error_outline, color: AppColors.red, size: 40.sp),
-                  SizedBox(height: 16.h),
-                  Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.red, fontSize: 14.sp),
-                  ),
-                  SizedBox(height: 24.h),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.gold,
-                      foregroundColor: Colors.black,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 32.w,
-                        vertical: 12.h,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                    ),
-                    onPressed: () {
-                      setState(() => _error = null);
-                      _startDownload();
-                    },
-                    child: Text(
-                      'Tekrar Dene',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.sp,
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  // Progress Info
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        progress == 1.0 ? 'Hazir!' : 'Sunucuya baglaniliyor...',
-                        style: TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 12.sp,
-                        ),
-                      ),
-                      Text(
-                        '%${(progress * 100).toInt()}',
-                        style: TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12.h),
-                  // Custom Progress Bar
-                  Container(
-                    height: 8.h,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: AppColors.cardBgLight.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(4.r),
-                      border: Border.all(
-                        color: AppColors.borderGold.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Stack(
-                          children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeOut,
-                              width: constraints.maxWidth * progress,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppColors.goldDark,
-                                    AppColors.goldLight,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(4.r),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.gold.withValues(
-                                      alpha: 0.5,
-                                    ),
-                                    blurRadius: 8,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ],
+      backgroundColor: AppColors.transparent,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.06,
+              child: Image.asset('assets/back.png', fit: BoxFit.cover),
             ),
           ),
-        ),
+          Center(
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOutExpo,
+              tween: Tween<double>(begin: 0, end: 1),
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value.clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: 0.95 + (0.05 * value),
+                    child: child,
+                  ),
+                );
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40.w),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(24.w),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [AppColors.cardBg, AppColors.cardBgLight],
+                        ),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.5),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'assets/splashlogo.webp',
+                        width: 80.sp,
+                        height: 80.sp,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    SizedBox(height: 40.h),
+                    Text(
+                      'HARD',
+                      style: AppTextStyles.largeTitle.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.heroLarge,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 8,
+                      ),
+                    ),
+                    Text(
+                      'KAPITALIZM',
+                      style: AppTextStyles.largeTitle.standardCopyWith(
+                        color: AppColors.gold,
+                        fontSize: AppTypography.heroLarge,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 4,
+                      ),
+                    ),
+                    SizedBox(height: 60.h),
+                    if (_error != null) ...[
+                      Icon(
+                        AppIcons.errorOutline,
+                        color: AppColors.red,
+                        size: AppIconSizes.displayLarge,
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.title.standardCopyWith(
+                          color: AppColors.red,
+                        ),
+                      ),
+                      SizedBox(height: 24.h),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.gold,
+                          foregroundColor: AppColors.textPrimary,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 32.w,
+                            vertical: 12.h,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                        onPressed: () {
+                          setState(() => _error = null);
+                          _startDownload();
+                        },
+                        child: Text(
+                          'Tekrar Dene',
+                          style: AppTextStyles.button.standardCopyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: AppTypography.title,
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            progress == 1.0
+                                ? 'Hazir!'
+                                : 'Sunucuya baglaniliyor...',
+                            style: AppTextStyles.body.standardCopyWith(
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                          Text(
+                            '%${(progress * 100).toInt()}',
+                            style: AppTextStyles.title.standardCopyWith(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12.h),
+                      AppProgressBar(
+                        value: progress,
+                        semanticsLabel: 'Varliklar yukleniyor',
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -47,9 +47,9 @@ class ProductSelectionSheet extends StatefulWidget {
   }) {
     return showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
-      barrierColor: Colors.black.withValues(alpha: 0.6),
+      barrierColor: AppFx.scrim(),
       builder: (sheetContext) => ProductSelectionSheet(
         title: title,
         options: options,
@@ -95,7 +95,7 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                     height: 4.h,
                     margin: EdgeInsets.only(bottom: 12.h),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: AppFx.softOverlay(0.15),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -106,18 +106,18 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                   children: [
                     Text(
                       widget.title,
-                      style: TextStyle(
+                      style: AppTextStyles.h2.standardCopyWith(
                         color: AppColors.goldLight,
-                        fontSize: 18.sp,
+                        fontSize: AppTypography.headline,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close, color: AppColors.textMuted),
+                      icon: Icon(AppIcons.close, color: AppColors.textMuted),
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.05),
+                        backgroundColor: AppFx.softOverlay(0.05),
                         padding: EdgeInsets.all(6.w),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -129,35 +129,12 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                 // Search Bar
                 TextField(
                   onChanged: (val) => setState(() => _searchQuery = val),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
+                  style: AppTextStyles.input.standardCopyWith(color: AppColors.white),
+                  decoration: AppInputStyles.search(
                     hintText: 'Ürün ara...',
-                    hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
-                    prefixIcon: const Icon(Icons.search, color: AppColors.gold),
-                    filled: true,
-                    fillColor: Colors.black.withValues(alpha: 0.25),
-                    contentPadding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14.r),
-                      borderSide: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        width: 1.w,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14.r),
-                      borderSide: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        width: 1.w,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14.r),
-                      borderSide: BorderSide(
-                        color: AppColors.gold.withValues(alpha: 0.3),
-                        width: 1.w,
-                      ),
-                    ),
+                    prefixIcon: Icon(AppIcons.search, color: AppColors.gold),
+                    fillColor: AppFx.panelWash(0.25),
+                    borderColor: AppFx.softOverlay(0.06),
                   ),
                 ),
                 SizedBox(height: 16.h),
@@ -171,16 +148,16 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.inventory_2_outlined,
+                                  AppIcons.inventory2Outlined,
                                   color: AppColors.textMuted,
-                                  size: 40.sp,
+                                  size: AppIconSizes.displayLarge,
                                 ),
                                 SizedBox(height: 12.h),
                                 Text(
                                   'Aramanızla eşleşen ürün bulunamadı.',
-                                  style: TextStyle(
+                                  style: AppTextStyles.body.standardCopyWith(
                                     color: AppColors.textMuted,
-                                    fontSize: 12.sp,
+                                    fontSize: AppTypography.body,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -210,7 +187,7 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                                 );
                               },
                               child: Material(
-                                color: Colors.transparent,
+                                color: AppColors.transparent,
                                 child: InkWell(
                                   onTap: option.isDisabled ? null : option.onTap,
                                   borderRadius: BorderRadius.circular(16.r),
@@ -223,20 +200,20 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                           colors: [
-                                            Colors.white.withValues(alpha: 0.04),
-                                            Colors.white.withValues(alpha: 0.01),
+                                            AppFx.softOverlay(0.04),
+                                            AppFx.softOverlay(0.01),
                                           ],
                                         ),
                                         borderRadius: BorderRadius.circular(16.r),
                                         border: Border.all(
                                           color: option.isDisabled
-                                              ? Colors.white.withValues(alpha: 0.05)
+                                              ? AppFx.softOverlay(0.05)
                                               : AppColors.borderGoldLight.withValues(alpha: 0.15),
                                           width: 1.w,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.15),
+                                            color: AppFx.shadow(0.15),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
                                           ),
@@ -250,10 +227,10 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                                             height: 44.w,
                                             padding: EdgeInsets.all(6.w),
                                             decoration: BoxDecoration(
-                                              color: Colors.black.withValues(alpha: 0.35),
+                                              color: AppFx.panelWash(0.35),
                                               borderRadius: BorderRadius.circular(12.r),
                                               border: Border.all(
-                                                color: Colors.white.withValues(alpha: 0.05),
+                                                color: AppFx.softOverlay(0.05),
                                                 width: 1.w,
                                               ),
                                             ),
@@ -270,9 +247,9 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                                               children: [
                                                 Text(
                                                   option.title,
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 13.sp,
+                                                  style: AppTextStyles.title.standardCopyWith(
+                                                    color: AppColors.white,
+                                                    fontSize: AppTypography.bodyLarge,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                   maxLines: 1,
@@ -283,11 +260,11 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                                                   option.isDisabled && option.disabledReason != null
                                                       ? option.disabledReason!
                                                       : option.subtitle,
-                                                  style: TextStyle(
+                                                  style: AppTextStyles.body.standardCopyWith(
                                                     color: option.isDisabled
-                                                        ? AppColors.red.withValues(alpha: 0.8)
+                                                        ? AppColors.danger.withValues(alpha: 0.8)
                                                         : AppColors.textMuted,
-                                                    fontSize: 11.sp,
+                                                    fontSize: AppTypography.bodySmall,
                                                   ),
                                                   maxLines: 2,
                                                   overflow: TextOverflow.ellipsis,
@@ -314,9 +291,9 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                                                   ),
                                                   child: Text(
                                                     option.badgeText!,
-                                                    style: TextStyle(
+                                                    style: AppTextStyles.caption.standardCopyWith(
                                                       color: AppColors.goldLight,
-                                                      fontSize: 9.sp,
+                                                      fontSize: AppTypography.caption,
                                                       fontWeight: FontWeight.bold,
                                                     ),
                                                   ),
@@ -326,9 +303,9 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                                               if (option.trailingText != null)
                                                 Text(
                                                   option.trailingText!,
-                                                  style: TextStyle(
+                                                  style: AppTextStyles.label.standardCopyWith(
                                                     color: AppColors.goldLight,
-                                                    fontSize: 11.sp,
+                                                    fontSize: AppTypography.bodySmall,
                                                     fontWeight: FontWeight.w700,
                                                   ),
                                                 ),
@@ -336,9 +313,9 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                                                 option.trailingWidget!,
                                               if (option.isDisabled && option.trailingWidget == null && option.badgeText == null && option.trailingText == null)
                                                 Icon(
-                                                  Icons.block,
-                                                  color: AppColors.red.withValues(alpha: 0.7),
-                                                  size: 18.sp,
+                                                  AppIcons.block,
+                                                  color: AppColors.danger.withValues(alpha: 0.7),
+                                                  size: AppIconSizes.regular,
                                                 ),
                                             ],
                                           ),

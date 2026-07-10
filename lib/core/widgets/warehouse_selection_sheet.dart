@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -40,9 +41,9 @@ class WarehouseSelectionSheet extends StatelessWidget {
   }) {
     return showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
-      barrierColor: Colors.black.withValues(alpha: 0.6),
+      barrierColor: AppFx.scrim(),
       builder: (sheetContext) => WarehouseSelectionSheet(
         title: title,
         options: options,
@@ -75,7 +76,7 @@ class WarehouseSelectionSheet extends StatelessWidget {
                     height: 4.h,
                     margin: EdgeInsets.only(bottom: 12.h),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: AppFx.softOverlay(0.15),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -86,18 +87,18 @@ class WarehouseSelectionSheet extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: TextStyle(
+                      style: AppTextStyles.h2.standardCopyWith(
                         color: AppColors.goldLight,
-                        fontSize: 18.sp,
+                        fontSize: AppTypography.headline,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close, color: AppColors.textMuted),
+                      icon: Icon(AppIcons.close, color: AppColors.textMuted),
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.05),
+                        backgroundColor: AppFx.softOverlay(0.05),
                         padding: EdgeInsets.all(6.w),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -130,7 +131,7 @@ class WarehouseSelectionSheet extends StatelessWidget {
                           );
                         },
                         child: Material(
-                          color: Colors.transparent,
+                          color: AppColors.transparent,
                           child: InkWell(
                             onTap: option.onTap,
                             borderRadius: BorderRadius.circular(16.r),
@@ -143,11 +144,11 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                   colors: option.isHighlightBadge
                                       ? [
                                           AppColors.green.withValues(alpha: 0.08),
-                                          Colors.white.withValues(alpha: 0.01),
+                                          AppFx.softOverlay(0.01),
                                         ]
                                       : [
-                                          Colors.white.withValues(alpha: 0.04),
-                                          Colors.white.withValues(alpha: 0.01),
+                                          AppFx.softOverlay(0.04),
+                                          AppFx.softOverlay(0.01),
                                         ],
                                 ),
                                 borderRadius: BorderRadius.circular(16.r),
@@ -161,7 +162,7 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                   BoxShadow(
                                     color: option.isHighlightBadge
                                         ? AppColors.green.withValues(alpha: 0.05)
-                                        : Colors.black.withValues(alpha: 0.2),
+                                        : AppFx.shadow(0.2),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -173,7 +174,7 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                   Container(
                                     padding: EdgeInsets.all(10.w),
                                     decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.45),
+                                      color: AppFx.panelWash(0.45),
                                       borderRadius: BorderRadius.circular(12.r),
                                       border: Border.all(
                                         color: (option.isHighlightBadge ? AppColors.green : AppColors.gold)
@@ -182,9 +183,9 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                       ),
                                     ),
                                     child: Icon(
-                                      Icons.warehouse_outlined,
+                                      AppIcons.warehouseOutlined,
                                       color: option.isHighlightBadge ? AppColors.green : AppColors.gold,
-                                      size: 20.sp,
+                                      size: AppIconSizes.medium,
                                     ),
                                   ),
                                   SizedBox(width: 14.w),
@@ -195,9 +196,9 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                       children: [
                                         Text(
                                           option.title,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 13.sp,
+                                          style: AppTextStyles.title.standardCopyWith(
+                                            color: AppColors.white,
+                                            fontSize: AppTypography.bodyLarge,
                                             fontWeight: FontWeight.bold,
                                           ),
                                           maxLines: 1,
@@ -207,17 +208,17 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                         Row(
                                           children: [
                                             Icon(
-                                              Icons.location_on_outlined,
+                                              AppIcons.locationOnOutlined,
                                               color: AppColors.textMuted,
-                                              size: 11.sp,
+                                              size: AppIconSizes.xSmall,
                                             ),
                                             SizedBox(width: 4.w),
                                             Expanded(
                                               child: Text(
                                                 option.subtitle,
-                                                style: TextStyle(
+                                                style: AppTextStyles.body.standardCopyWith(
                                                   color: AppColors.textMuted,
-                                                  fontSize: 11.sp,
+                                                  fontSize: AppTypography.bodySmall,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -250,9 +251,9 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                           ),
                                           child: Text(
                                             option.badgeText!,
-                                            style: TextStyle(
+                                            style: AppTextStyles.label.standardCopyWith(
                                               color: option.isHighlightBadge ? AppColors.green : AppColors.goldLight,
-                                              fontSize: 10.sp,
+                                              fontSize: AppTypography.label,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
@@ -266,9 +267,9 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                             textAlign: TextAlign.end,
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
+                                            style: AppTextStyles.caption.standardCopyWith(
                                               color: AppColors.goldLight,
-                                              fontSize: 10.sp,
+                                              fontSize: AppTypography.label,
                                               fontWeight: FontWeight.w700,
                                               height: 1.15,
                                             ),

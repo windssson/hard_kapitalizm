@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/features/arge/data/arge_provider.dart';
@@ -98,6 +100,23 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     _timer = Timer(delay, _runCycle);
   }
 
+  void _safeInvalidate(ProviderOrFamily provider) {
+    void invalidate() {
+      if (mounted) {
+        ref.invalidate(provider);
+      }
+    }
+
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.persistentCallbacks ||
+        phase == SchedulerPhase.midFrameMicrotasks) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => invalidate());
+      return;
+    }
+
+    invalidate();
+  }
+
   Duration? _capDelay(DateTime? nextDueAt) {
     if (nextDueAt == null) {
       return null;
@@ -158,7 +177,9 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     try {
       return await future;
     } catch (e, stackTrace) {
-      debugPrint('Error loading nullable future in TimedTaskRuntime: $e\n$stackTrace');
+      debugPrint(
+        'Error loading nullable future in TimedTaskRuntime: $e\n$stackTrace',
+      );
       return null;
     }
   }
@@ -166,26 +187,44 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
   Future<_TimedTaskSnapshot> _loadSnapshot() async {
     final transfersFuture = ref.read(buyerTransferMapProvider.future);
     final researchesFuture = ref.read(activeArgeResearchesProvider.future);
-    final factoryConstructionFuture = ref.read(factoryConstructionProvider.future);
+    final factoryConstructionFuture = ref.read(
+      factoryConstructionProvider.future,
+    );
     final farmConstructionFuture = ref.read(farmConstructionProvider.future);
     final fieldConstructionFuture = ref.read(fieldConstructionProvider.future);
     final mineConstructionFuture = ref.read(mineConstructionProvider.future);
-    final argeConstructionFuture = ref.read(playerArgeConstructionProvider.future);
+    final argeConstructionFuture = ref.read(
+      playerArgeConstructionProvider.future,
+    );
     final logisticsConstructionFuture = ref.read(
       playerLogisticsConstructionProvider.future,
     );
     final storesFuture = ref.read(storesListProvider.future);
     final warehousesFuture = ref.read(warehouseListProvider.future);
-    final activeUpgradeFuture = ref.read(anyActiveWarehouseUpgradeProvider.future);
+    final activeUpgradeFuture = ref.read(
+      anyActiveWarehouseUpgradeProvider.future,
+    );
 
-    final transfers = await _safeFuture(transfersFuture, <TransferMapItemModel>[]);
-    final researches = await _safeFuture(researchesFuture, <ArgeResearchModel>[]);
-    final factoryConstruction = await _safeNullableFuture(factoryConstructionFuture);
+    final transfers = await _safeFuture(
+      transfersFuture,
+      <TransferMapItemModel>[],
+    );
+    final researches = await _safeFuture(
+      researchesFuture,
+      <ArgeResearchModel>[],
+    );
+    final factoryConstruction = await _safeNullableFuture(
+      factoryConstructionFuture,
+    );
     final farmConstruction = await _safeNullableFuture(farmConstructionFuture);
-    final fieldConstruction = await _safeNullableFuture(fieldConstructionFuture);
+    final fieldConstruction = await _safeNullableFuture(
+      fieldConstructionFuture,
+    );
     final mineConstruction = await _safeNullableFuture(mineConstructionFuture);
     final argeConstruction = await _safeNullableFuture(argeConstructionFuture);
-    final logisticsConstruction = await _safeNullableFuture(logisticsConstructionFuture);
+    final logisticsConstruction = await _safeNullableFuture(
+      logisticsConstructionFuture,
+    );
     final stores = await _safeFuture(storesFuture, <StoreModel>[]);
     final warehouses = await _safeFuture(warehousesFuture, <WarehouseModel>[]);
     final activeUpgrade = await _safeNullableFuture(activeUpgradeFuture);
@@ -196,7 +235,10 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
       _constructionFromMap(kind: 'field', raw: fieldConstruction),
       _constructionFromMap(kind: 'mine', raw: mineConstruction),
       _constructionFromMap(kind: 'arge_center', raw: argeConstruction),
-      _constructionFromMap(kind: 'logistics_company', raw: logisticsConstruction),
+      _constructionFromMap(
+        kind: 'logistics_company',
+        raw: logisticsConstruction,
+      ),
       ...stores
           .where((store) => store.isUnderConstruction && store.finishAt != null)
           .map(
@@ -225,7 +267,8 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     DateTime? nextDueAt;
 
     for (final transfer in transfers) {
-      if (transfer.status != 'in_transit' || !_canAutoCompleteTransfer(transfer)) {
+      if (transfer.status != 'in_transit' ||
+          !_canAutoCompleteTransfer(transfer)) {
         continue;
       }
       nextDueAt = _earlier(nextDueAt, transfer.finishAt);
@@ -252,11 +295,15 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     );
   }
 
-  DateTime? _calculateNextDueAt(_TimedTaskSnapshot snapshot, DateTime relativeTo) {
+  DateTime? _calculateNextDueAt(
+    _TimedTaskSnapshot snapshot,
+    DateTime relativeTo,
+  ) {
     DateTime? nextDueAt;
 
     for (final transfer in snapshot.transfers) {
-      if (transfer.status != 'in_transit' || !_canAutoCompleteTransfer(transfer)) {
+      if (transfer.status != 'in_transit' ||
+          !_canAutoCompleteTransfer(transfer)) {
         continue;
       }
       if (transfer.finishAt.isAfter(relativeTo)) {
@@ -277,7 +324,8 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     }
 
     final activeUpgrade = snapshot.activeUpgrade;
-    if (activeUpgrade?.isInProgress == true && activeUpgrade!.finishAt.isAfter(relativeTo)) {
+    if (activeUpgrade?.isInProgress == true &&
+        activeUpgrade!.finishAt.isAfter(relativeTo)) {
       nextDueAt = _earlier(nextDueAt, activeUpgrade.finishAt);
     }
 
@@ -304,7 +352,9 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     );
   }
 
-  Future<_CompletionResult> _completeDueTasks(_TimedTaskSnapshot snapshot) async {
+  Future<_CompletionResult> _completeDueTasks(
+    _TimedTaskSnapshot snapshot,
+  ) async {
     final now = DateTime.now();
     var didChange = false;
     var hasErrors = false;
@@ -356,7 +406,9 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     );
   }
 
-  Future<bool> _completeDueTransfers(List<TransferMapItemModel> transfers) async {
+  Future<bool> _completeDueTransfers(
+    List<TransferMapItemModel> transfers,
+  ) async {
     final action = ref.read(warehouseActionProvider);
     bool hasError = false;
 
@@ -367,22 +419,28 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
           _invalidateTransferTargets(result);
         } else {
           hasError = true;
-          debugPrint('Transfer completion failed for ${transfer.id}: ${result['message'] ?? 'Unknown error'}');
+          debugPrint(
+            'Transfer completion failed for ${transfer.id}: ${result['message'] ?? 'Unknown error'}',
+          );
         }
       } catch (e, stackTrace) {
         hasError = true;
-        debugPrint('Failed to complete transfer ${transfer.id}: $e\n$stackTrace');
+        debugPrint(
+          'Failed to complete transfer ${transfer.id}: $e\n$stackTrace',
+        );
       }
     }
 
-    ref.invalidate(buyerTransferMapProvider);
-    ref.invalidate(buyerTransferHistoryProvider);
-    ref.invalidate(playerProvider);
+    _safeInvalidate(buyerTransferMapProvider);
+    _safeInvalidate(buyerTransferHistoryProvider);
+    _safeInvalidate(playerProvider);
 
     return hasError;
   }
 
-  Future<bool> _completeDueResearches(List<ArgeResearchModel> researches) async {
+  Future<bool> _completeDueResearches(
+    List<ArgeResearchModel> researches,
+  ) async {
     final action = ref.read(argeActionProvider);
     bool hasError = false;
     for (final research in researches) {
@@ -392,11 +450,15 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
         final result = await action.completeResearch(researchId);
         if (result['success'] != true) {
           hasError = true;
-          debugPrint('Research completion failed for $researchId: ${result['message'] ?? 'Unknown error'}');
+          debugPrint(
+            'Research completion failed for $researchId: ${result['message'] ?? 'Unknown error'}',
+          );
         }
       } catch (e, stackTrace) {
         hasError = true;
-        debugPrint('Failed to complete research ${research.id}: $e\n$stackTrace');
+        debugPrint(
+          'Failed to complete research ${research.id}: $e\n$stackTrace',
+        );
       }
     }
     return hasError;
@@ -414,25 +476,37 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
             result = await ref
                 .read(factoryActionProvider)
                 .completeConstruction(construction.constructionId);
-            _invalidateConstructionKind('factory', entityId: construction.entityId);
+            _invalidateConstructionKind(
+              'factory',
+              entityId: construction.entityId,
+            );
             break;
           case 'farm':
             result = await ref
                 .read(farmActionProvider)
                 .completeConstruction(construction.constructionId);
-            _invalidateConstructionKind('farm', entityId: construction.entityId);
+            _invalidateConstructionKind(
+              'farm',
+              entityId: construction.entityId,
+            );
             break;
           case 'field':
             result = await ref
                 .read(fieldActionProvider)
                 .completeConstruction(construction.constructionId);
-            _invalidateConstructionKind('field', entityId: construction.entityId);
+            _invalidateConstructionKind(
+              'field',
+              entityId: construction.entityId,
+            );
             break;
           case 'mine':
             result = await ref
                 .read(mineActionProvider)
                 .completeConstruction(construction.constructionId);
-            _invalidateConstructionKind('mine', entityId: construction.entityId);
+            _invalidateConstructionKind(
+              'mine',
+              entityId: construction.entityId,
+            );
             break;
           case 'arge_center':
             result = await ref
@@ -456,7 +530,10 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
             result = await ref
                 .read(storeActionProvider)
                 .completeConstruction(construction.constructionId);
-            _invalidateConstructionKind('store', entityId: construction.entityId);
+            _invalidateConstructionKind(
+              'store',
+              entityId: construction.entityId,
+            );
             break;
           case 'warehouse':
             result = await ref
@@ -468,15 +545,22 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
             );
             break;
           default:
-            result = {'success': false, 'message': 'Unknown construction kind: ${construction.kind}'};
+            result = {
+              'success': false,
+              'message': 'Unknown construction kind: ${construction.kind}',
+            };
         }
         if (result['success'] != true) {
           hasError = true;
-          debugPrint('Construction completion failed for ${construction.constructionId} (${construction.kind}): ${result['message'] ?? 'Unknown error'}');
+          debugPrint(
+            'Construction completion failed for ${construction.constructionId} (${construction.kind}): ${result['message'] ?? 'Unknown error'}',
+          );
         }
       } catch (e, stackTrace) {
         hasError = true;
-        debugPrint('Failed to complete construction ${construction.constructionId} (${construction.kind}): $e\n$stackTrace');
+        debugPrint(
+          'Failed to complete construction ${construction.constructionId} (${construction.kind}): $e\n$stackTrace',
+        );
       }
     }
     return hasError;
@@ -499,7 +583,7 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
       hasError = true;
       debugPrint('Failed to complete building upgrades: $e\n$stackTrace');
     } finally {
-      ref.invalidate(playerProvider);
+      _safeInvalidate(playerProvider);
     }
     return hasError;
   }
@@ -513,44 +597,44 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     final mineIds = _affectedIds(result, 'mine_ids');
 
     if (storeIds.isNotEmpty) {
-      ref.invalidate(storesListProvider);
+      _safeInvalidate(storesListProvider);
       for (final storeId in storeIds) {
-        ref.invalidate(storeDetailPageProvider(storeId));
+        _safeInvalidate(storeDetailPageProvider(storeId));
       }
     }
 
     if (warehouseIds.isNotEmpty) {
-      ref.invalidate(warehouseListProvider);
+      _safeInvalidate(warehouseListProvider);
       for (final warehouseId in warehouseIds) {
-        ref.invalidate(warehouseDetailProvider(warehouseId));
+        _safeInvalidate(warehouseDetailProvider(warehouseId));
       }
     }
 
     if (factoryIds.isNotEmpty) {
-      ref.invalidate(factoryListProvider);
+      _safeInvalidate(factoryListProvider);
       for (final factoryId in factoryIds) {
-        ref.invalidate(factoryDetailProvider(factoryId));
+        _safeInvalidate(factoryDetailProvider(factoryId));
       }
     }
 
     if (farmIds.isNotEmpty) {
-      ref.invalidate(farmListProvider);
+      _safeInvalidate(farmListProvider);
       for (final farmId in farmIds) {
-        ref.invalidate(farmDetailProvider(farmId));
+        _safeInvalidate(farmDetailProvider(farmId));
       }
     }
 
     if (fieldIds.isNotEmpty) {
-      ref.invalidate(fieldListProvider);
+      _safeInvalidate(fieldListProvider);
       for (final fieldId in fieldIds) {
-        ref.invalidate(fieldDetailProvider(fieldId));
+        _safeInvalidate(fieldDetailProvider(fieldId));
       }
     }
 
     if (mineIds.isNotEmpty) {
-      ref.invalidate(mineListProvider);
+      _safeInvalidate(mineListProvider);
       for (final mineId in mineIds) {
-        ref.invalidate(mineDetailProvider(mineId));
+        _safeInvalidate(mineDetailProvider(mineId));
       }
     }
   }
@@ -569,116 +653,116 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
   void _invalidateConstructionKind(String kind, {String? entityId}) {
     switch (kind) {
       case 'factory':
-        ref.invalidate(factoryConstructionProvider);
-        ref.invalidate(factoryListProvider);
+        _safeInvalidate(factoryConstructionProvider);
+        _safeInvalidate(factoryListProvider);
         if (entityId != null && entityId.isNotEmpty) {
-          ref.invalidate(factoryDetailProvider(entityId));
+          _safeInvalidate(factoryDetailProvider(entityId));
         }
         break;
       case 'farm':
-        ref.invalidate(farmConstructionProvider);
-        ref.invalidate(farmListProvider);
+        _safeInvalidate(farmConstructionProvider);
+        _safeInvalidate(farmListProvider);
         if (entityId != null && entityId.isNotEmpty) {
-          ref.invalidate(farmDetailProvider(entityId));
+          _safeInvalidate(farmDetailProvider(entityId));
         }
         break;
       case 'field':
-        ref.invalidate(fieldConstructionProvider);
-        ref.invalidate(fieldListProvider);
+        _safeInvalidate(fieldConstructionProvider);
+        _safeInvalidate(fieldListProvider);
         if (entityId != null && entityId.isNotEmpty) {
-          ref.invalidate(fieldDetailProvider(entityId));
+          _safeInvalidate(fieldDetailProvider(entityId));
         }
         break;
       case 'mine':
-        ref.invalidate(mineConstructionProvider);
-        ref.invalidate(mineListProvider);
+        _safeInvalidate(mineConstructionProvider);
+        _safeInvalidate(mineListProvider);
         if (entityId != null && entityId.isNotEmpty) {
-          ref.invalidate(mineDetailProvider(entityId));
+          _safeInvalidate(mineDetailProvider(entityId));
         }
         break;
       case 'arge_center':
-        ref.invalidate(playerArgeConstructionProvider);
-        ref.invalidate(playerArgeCenterProvider);
+        _safeInvalidate(playerArgeConstructionProvider);
+        _safeInvalidate(playerArgeCenterProvider);
         break;
       case 'logistics_company':
-        ref.invalidate(playerLogisticsConstructionProvider);
-        ref.invalidate(playerLogisticsCompanyProvider);
+        _safeInvalidate(playerLogisticsConstructionProvider);
+        _safeInvalidate(playerLogisticsCompanyProvider);
         break;
       case 'store':
-        ref.invalidate(storesListProvider);
+        _safeInvalidate(storesListProvider);
         if (entityId != null && entityId.isNotEmpty) {
-          ref.invalidate(storeDetailPageProvider(entityId));
+          _safeInvalidate(storeDetailPageProvider(entityId));
         }
         break;
       case 'warehouse':
-        ref.invalidate(warehouseListProvider);
+        _safeInvalidate(warehouseListProvider);
         if (entityId != null && entityId.isNotEmpty) {
-          ref.invalidate(warehouseDetailProvider(entityId));
+          _safeInvalidate(warehouseDetailProvider(entityId));
         }
         break;
     }
 
-    ref.invalidate(playerProvider);
+    _safeInvalidate(playerProvider);
   }
 
   void _invalidateUpgradeKind(String kind, {String? entityId}) {
     switch (kind) {
       case 'factory':
-        ref.invalidate(factoryListProvider);
+        _safeInvalidate(factoryListProvider);
         break;
       case 'farm':
-        ref.invalidate(farmListProvider);
+        _safeInvalidate(farmListProvider);
         break;
       case 'field':
-        ref.invalidate(fieldListProvider);
+        _safeInvalidate(fieldListProvider);
         break;
       case 'mine':
-        ref.invalidate(mineListProvider);
+        _safeInvalidate(mineListProvider);
         break;
       case 'warehouse':
-        ref.invalidate(warehouseListProvider);
+        _safeInvalidate(warehouseListProvider);
         break;
       case 'store':
-        ref.invalidate(storesListProvider);
+        _safeInvalidate(storesListProvider);
         break;
       case 'arge_center':
-        ref.invalidate(playerArgeCenterProvider);
+        _safeInvalidate(playerArgeCenterProvider);
         break;
     }
 
     if (entityId != null && entityId.isNotEmpty) {
       switch (kind) {
         case 'factory':
-          ref.invalidate(factoryDetailProvider(entityId));
-          ref.invalidate(activeFactoryUpgradeProvider(entityId));
+          _safeInvalidate(factoryDetailProvider(entityId));
+          _safeInvalidate(activeFactoryUpgradeProvider(entityId));
           break;
         case 'farm':
-          ref.invalidate(farmDetailProvider(entityId));
-          ref.invalidate(activeFarmUpgradeProvider(entityId));
+          _safeInvalidate(farmDetailProvider(entityId));
+          _safeInvalidate(activeFarmUpgradeProvider(entityId));
           break;
         case 'field':
-          ref.invalidate(fieldDetailProvider(entityId));
-          ref.invalidate(activeFieldUpgradeProvider(entityId));
+          _safeInvalidate(fieldDetailProvider(entityId));
+          _safeInvalidate(activeFieldUpgradeProvider(entityId));
           break;
         case 'mine':
-          ref.invalidate(mineDetailProvider(entityId));
-          ref.invalidate(activeMineUpgradeProvider(entityId));
+          _safeInvalidate(mineDetailProvider(entityId));
+          _safeInvalidate(activeMineUpgradeProvider(entityId));
           break;
         case 'warehouse':
-          ref.invalidate(warehouseDetailProvider(entityId));
-          ref.invalidate(activeWarehouseUpgradeProvider(entityId));
+          _safeInvalidate(warehouseDetailProvider(entityId));
+          _safeInvalidate(activeWarehouseUpgradeProvider(entityId));
           break;
         case 'store':
-          ref.invalidate(storeDetailPageProvider(entityId));
+          _safeInvalidate(storeDetailPageProvider(entityId));
           break;
         case 'arge_center':
-          ref.invalidate(activeArgeCenterUpgradeProvider(entityId));
+          _safeInvalidate(activeArgeCenterUpgradeProvider(entityId));
           break;
       }
     }
 
-    ref.invalidate(anyActiveWarehouseUpgradeProvider);
-    ref.invalidate(playerProvider);
+    _safeInvalidate(anyActiveWarehouseUpgradeProvider);
+    _safeInvalidate(playerProvider);
   }
 
   bool _canAutoCompleteTransfer(TransferMapItemModel transfer) {
@@ -696,16 +780,31 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
   @override
   Widget build(BuildContext context) {
     ref.listen(buyerTransferMapProvider, (prev, next) => _onProviderUpdated());
-    ref.listen(activeArgeResearchesProvider, (prev, next) => _onProviderUpdated());
-    ref.listen(factoryConstructionProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(
+      activeArgeResearchesProvider,
+      (prev, next) => _onProviderUpdated(),
+    );
+    ref.listen(
+      factoryConstructionProvider,
+      (prev, next) => _onProviderUpdated(),
+    );
     ref.listen(farmConstructionProvider, (prev, next) => _onProviderUpdated());
     ref.listen(fieldConstructionProvider, (prev, next) => _onProviderUpdated());
     ref.listen(mineConstructionProvider, (prev, next) => _onProviderUpdated());
-    ref.listen(playerArgeConstructionProvider, (prev, next) => _onProviderUpdated());
-    ref.listen(playerLogisticsConstructionProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(
+      playerArgeConstructionProvider,
+      (prev, next) => _onProviderUpdated(),
+    );
+    ref.listen(
+      playerLogisticsConstructionProvider,
+      (prev, next) => _onProviderUpdated(),
+    );
     ref.listen(storesListProvider, (prev, next) => _onProviderUpdated());
     ref.listen(warehouseListProvider, (prev, next) => _onProviderUpdated());
-    ref.listen(anyActiveWarehouseUpgradeProvider, (prev, next) => _onProviderUpdated());
+    ref.listen(
+      anyActiveWarehouseUpgradeProvider,
+      (prev, next) => _onProviderUpdated(),
+    );
 
     return widget.child;
   }

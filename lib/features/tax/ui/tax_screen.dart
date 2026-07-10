@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -95,7 +96,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
     final playerAsync = ref.watch(playerProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
         selectedIndex: 3,
         onItemSelected: (_) {},
@@ -108,8 +109,8 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(16.w),
                 child: taxDebtAsync.when(
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(color: AppColors.gold),
+                  loading: () => Center(
+                    child: AppLoadingIndicator(color: AppColors.gold),
                   ),
                   error: (err, _) => Center(
                     child: Padding(
@@ -117,13 +118,13 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                       child: Text(
                         'Vergi borcu bilgisi alinamadi.\n$err',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: AppColors.red),
+                        style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                       ),
                     ),
                   ),
                   data: (taxDebt) => playerAsync.when(
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(color: AppColors.gold),
+                    loading: () => Center(
+                      child: AppLoadingIndicator(color: AppColors.gold),
                     ),
                     error: (err, _) => Center(
                       child: Padding(
@@ -131,7 +132,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                         child: Text(
                           'Vergi borcu bilgisi alinamadi.\n$err',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: AppColors.red),
+                          style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                         ),
                       ),
                     ),
@@ -182,17 +183,17 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
               ),
             ),
             child: Icon(
-              Icons.assured_workload_rounded,
+              AppIcons.assuredWorkloadRounded,
               color: hasDebt ? AppColors.red : AppColors.green,
-              size: 40.sp,
+              size: AppIconSizes.displayLarge,
             ),
           ),
           SizedBox(height: 14.h),
           Text(
             'BIRIKMIS VERGI BORCU',
-            style: TextStyle(
+            style: AppTextStyles.caption.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: 10.sp,
+              fontSize: AppTypography.label,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,
             ),
@@ -200,9 +201,9 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
           SizedBox(height: 6.h),
           Text(
             AppMoney.full(taxDebt, decimals: 2),
-            style: TextStyle(
+            style: AppTextStyles.h2.standardCopyWith(
               color: hasDebt ? AppColors.red : AppColors.green,
-              fontSize: 26.sp,
+              fontSize: AppTypography.hero,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -221,9 +222,9 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
             ),
             child: Text(
               hasDebt ? 'VERGI BORCUNUZ BULUNMAKTADIR' : 'VERGI BORCUNUZ TEMIZ',
-              style: TextStyle(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: hasDebt ? AppColors.red : AppColors.green,
-                fontSize: 9.sp,
+                fontSize: AppTypography.caption,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 0.5,
               ),
@@ -241,16 +242,16 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
       child: Column(
         children: [
           Icon(
-            Icons.sentiment_very_satisfied_rounded,
+            AppIcons.sentimentVerySatisfiedRounded,
             color: AppColors.green,
-            size: 44.sp,
+            size: AppIconSizes.displayLarge,
           ),
           SizedBox(height: 10.h),
           Text(
             'Tebrikler!',
-            style: TextStyle(
+            style: AppTextStyles.h2.standardCopyWith(
               color: AppColors.textPrimary,
-              fontSize: 14.sp,
+              fontSize: AppTypography.title,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -258,9 +259,9 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
           Text(
             'Mevcut tum vergileriniz odenmis durumdadir. Devlete borcunuz bulunmuyor.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textSecondary,
-              fontSize: 11.sp,
+              fontSize: AppTypography.bodySmall,
             ),
           ),
         ],
@@ -274,9 +275,9 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
       children: [
         Text(
           'ODEME YAP',
-          style: TextStyle(
+          style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.gold,
-            fontSize: 11.sp,
+            fontSize: AppTypography.bodySmall,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.8,
           ),
@@ -311,9 +312,9 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
             children: [
               Text(
                 'OZEL ODEME TUTARI',
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textSecondary,
-                  fontSize: 9.sp,
+                  fontSize: AppTypography.caption,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -324,14 +325,14 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                 ],
-                style: TextStyle(
+                style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textPrimary,
-                  fontSize: 14.sp,
+                  fontSize: AppTypography.title,
                   fontWeight: FontWeight.w700,
                 ),
                 decoration: InputDecoration(
                   labelText: 'Tutar (TL)',
-                  labelStyle: const TextStyle(color: AppColors.textMuted),
+                  labelStyle: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
                   filled: true,
                   fillColor: AppColors.background.withValues(alpha: 0.4),
                   enabledBorder: OutlineInputBorder(
@@ -339,7 +340,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(color: AppColors.gold),
+                    borderSide: BorderSide(color: AppColors.gold),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
@@ -358,7 +359,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gold,
-                  foregroundColor: Colors.black,
+                  foregroundColor: AppColors.textOnAccent,
                   disabledBackgroundColor: AppColors.gold.withValues(alpha: 0.4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
@@ -366,17 +367,19 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                   padding: EdgeInsets.symmetric(vertical: 12.h),
                 ),
                 child: _isPaying
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
+                        child: AppLoadingIndicator(
                           strokeWidth: 2.0,
-                          color: Colors.black,
+                          color: AppColors.textOnAccent,
                         ),
                       )
-                    : const Text(
+                    : Text(
                         'Odemeyi Onayla',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                        style: AppTextStyles.body.standardCopyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
               ),
             ],
@@ -400,7 +403,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
     final bool canPay = playerCash >= payableAmount && payableAmount > 0;
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(
         onTap: (canPay && !_isPaying)
             ? () => _handlePayment(amount, currentDebt)
@@ -427,11 +430,11 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: isPrimary
-                      ? Colors.black
+                      ? AppColors.textOnAccent
                       : (canPay ? AppColors.textPrimary : AppColors.textMuted),
-                  fontSize: 10.sp,
+                  fontSize: AppTypography.label,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -439,9 +442,9 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                 SizedBox(height: 2.h),
                 Text(
                   canPay ? 'Nakit Yeterli' : 'Yetersiz Nakit',
-                  style: TextStyle(
+                  style: AppTextStyles.caption.standardCopyWith(
                     color: canPay ? AppColors.green : AppColors.red,
-                    fontSize: 8.sp,
+                    fontSize: AppTypography.micro,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
