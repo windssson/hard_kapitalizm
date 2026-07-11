@@ -1384,13 +1384,37 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                       history.prices.isEmpty) {
                                     return const SizedBox.shrink();
                                   }
-                                  return Tooltip(
-                                    message: 'Son 5 Günlük Fiyat Trendi',
-                                    child: PriceSparkline(
-                                      prices: history.prices,
-                                      width: 60.w,
-                                      height: 22.h,
-                                    ),
+                                  double minPrice = history.prices.first;
+                                  double maxPrice = history.prices.first;
+                                  for (final p in history.prices) {
+                                    if (p < minPrice) minPrice = p;
+                                    if (p > maxPrice) maxPrice = p;
+                                  }
+                                  final priceList = history.prices
+                                      .map((p) => '₺${p.toStringAsFixed(1)}')
+                                      .join(' ➔ ');
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Tooltip(
+                                        message: '5 Günlük Fiyat Seyri:\n$priceList',
+                                        child: PriceSparkline(
+                                          prices: history.prices,
+                                          width: 64.w,
+                                          height: 22.h,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        'Min-Max: ₺${minPrice.toStringAsFixed(0)}-₺${maxPrice.toStringAsFixed(0)}',
+                                        style: AppTextStyles.caption.standardCopyWith(
+                                          color: AppColors.textMuted,
+                                          fontSize: 8.sp,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   );
                                 },
                                 orElse: () => const SizedBox.shrink(),
