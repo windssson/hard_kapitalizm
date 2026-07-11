@@ -2548,10 +2548,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     }
   }
 
-  String _formatSignedPercent(double value) {
-    final sign = value > 0 ? '+' : '';
-    return '$sign${value.toStringAsFixed(1)}%';
-  }
+
 
   String _describeDemandEffect(double multiplier) {
     if (multiplier >= 1.35) return 'Cok yuksek talep';
@@ -2597,31 +2594,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         ),
       if (cost > 0)
         NumericKeyboardShortcut(label: 'Maliyet', value: shortcutValue(cost)),
-      if (cost > 0)
-        NumericKeyboardShortcut(
-          label: 'Maliyet +%25',
-          value: shortcutValue(cost * 1.25),
-        ),
-      if (cost > 0)
-        NumericKeyboardShortcut(
-          label: 'Maliyet +%30',
-          value: shortcutValue(cost * 1.30),
-        ),
-      if (cost > 0)
-        NumericKeyboardShortcut(
-          label: 'Maliyet +%50',
-          value: shortcutValue(cost * 1.50),
-        ),
-      if (basePrice > 0)
-        NumericKeyboardShortcut(
-          label: 'Piyasa',
-          value: shortcutValue(basePrice),
-        ),
-      if (basePrice > 0)
-        NumericKeyboardShortcut(
-          label: 'Piyasa +%25',
-          value: shortcutValue(basePrice * 1.25),
-        ),
       if (averagePrice > 0)
         NumericKeyboardShortcut(
           label: 'Pazar Ort.',
@@ -2679,9 +2651,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         builder: (sheetContext, setState) {
           final marginAmount = previewPrice - cost;
           final marginRatio = cost > 0 ? (marginAmount / cost) * 100 : null;
-          final vsBasePercent = basePrice > 0
-              ? ((previewPrice - basePrice) / basePrice) * 100
-              : 0.0;
+
           final demandMultiplier = _calculateStorePriceDemandMultiplier(
             previewPrice,
             basePrice,
@@ -2789,23 +2759,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             SizedBox(width: 8.w),
                             Expanded(
                               child: _PriceDetailMetric(
-                                label: 'PİYASA FİYATI',
-                                value: AppMoney.full(basePrice),
-                                subtitle: basePrice > 0
-                                    ? _formatSignedPercent(vsBasePercent)
-                                    : null,
-                                color: vsBasePercent <= 0
-                                    ? AppColors.green
-                                    : AppColors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8.h),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _PriceDetailMetric(
                                 label: 'TAHMİNİ NET KAR',
                                 value: AppMoney.full(marginAmount),
                                 subtitle: marginRatio == null
@@ -2814,7 +2767,11 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                 color: profitColor,
                               ),
                             ),
-                            SizedBox(width: 8.w),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Row(
+                          children: [
                             Expanded(
                               child: _PriceDetailMetric(
                                 label: 'TAHMİNİ TALEP',
