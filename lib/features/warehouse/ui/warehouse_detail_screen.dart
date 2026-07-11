@@ -374,7 +374,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   Container(
                     width: 68.w,
                     height: 68.w,
-                    padding: EdgeInsets.all(5.w),
+                    padding: EdgeInsets.zero,
                     decoration: BoxDecoration(
                       color: AppFx.panelWash(0.3),
                       borderRadius: BorderRadius.circular(16.r),
@@ -1020,7 +1020,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             Container(
               width: 66.w,
               height: 66.w,
-              padding: EdgeInsets.all(9.w),
+              padding: EdgeInsets.zero,
               decoration: BoxDecoration(
                 color: AppFx.panelWash(0.3),
                 borderRadius: BorderRadius.circular(16.r),
@@ -1029,7 +1029,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               child: Icon(
                 AppIcons.addCircleOutline,
                 color: AppColors.textMuted,
-                size: AppIconSizes.large,
+                size: 32.w,
               ),
             ),
             SizedBox(width: 14.w),
