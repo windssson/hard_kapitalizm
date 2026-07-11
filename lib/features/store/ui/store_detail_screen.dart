@@ -1689,37 +1689,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     final canSendStock = _canSendStockFromSlot(slot);
     final canEditProduct = _canEditSlotProduct(slot);
 
-    final String qLabel;
-    final Color qColor;
-    final Color qBgColor;
-    switch (slot.qualityLevel) {
-      case 1:
-        qLabel = 'Q1';
-        qColor = AppColors.red;
-        qBgColor = AppColors.red.withValues(alpha: 0.15);
-        break;
-      case 2:
-        qLabel = 'Q2';
-        qColor = AppColors.blue;
-        qBgColor = AppColors.blue.withValues(alpha: 0.15);
-        break;
-      case 3:
-        qLabel = 'Q3';
-        qColor = AppColors.gold;
-        qBgColor = AppColors.gold.withValues(alpha: 0.15);
-        break;
-      case 4:
-        qLabel = 'Q4';
-        qColor = Colors.purple;
-        qBgColor = Colors.purple.withValues(alpha: 0.15);
-        break;
-      case 5:
-      default:
-        qLabel = 'Q5';
-        qColor = Colors.cyan;
-        qBgColor = Colors.cyan.withValues(alpha: 0.15);
-        break;
-    }
+    final qColor = slot.qualityLevel <= 1
+        ? AppColors.red
+        : slot.qualityLevel <= 2
+        ? AppColors.warning
+        : slot.qualityLevel <= 3
+        ? AppColors.goldLight
+        : slot.qualityLevel <= 4
+        ? AppColors.success.withValues(alpha: 0.8)
+        : AppColors.green;
 
     return Container(
       decoration: BoxDecoration(
@@ -1829,48 +1807,24 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Stack(
-                          children: [
-                            Container(
-                              width: 72.w,
-                              height: 72.w,
-                              decoration: BoxDecoration(
-                                color: AppColors.cardBgLight,
-                                borderRadius: BorderRadius.circular(12.r),
-                                border: Border.all(
-                                  color: AppColors.border.withValues(alpha: 0.3),
-                                ),
-                              ),
-                              child: BrandedProductImage(
-                                fileName: slot.productIcon ?? 'default',
-                                brandId: slot.brandId,
-                                brandName: _slotBrandName(slot),
-                                productId: slot.productId,
-                                fit: BoxFit.contain,
-                                showFrame: false,
-                              ),
+                        Container(
+                          width: 72.w,
+                          height: 72.w,
+                          decoration: BoxDecoration(
+                            color: AppColors.cardBgLight,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: AppColors.border.withValues(alpha: 0.3),
                             ),
-                            Positioned(
-                              top: 2.w,
-                              left: 2.w,
-                              child: Container(
-                                padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
-                                decoration: BoxDecoration(
-                                  color: qBgColor,
-                                  borderRadius: BorderRadius.circular(6.r),
-                                  border: Border.all(color: qColor.withValues(alpha: 0.5), width: 1.w),
-                                ),
-                                child: Text(
-                                  qLabel,
-                                  style: AppTextStyles.badgeText.standardCopyWith(
-                                    color: qColor,
-                                    fontSize: 8.sp,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
+                          child: BrandedProductImage(
+                            fileName: slot.productIcon ?? 'default',
+                            brandId: slot.brandId,
+                            brandName: _slotBrandName(slot),
+                            productId: slot.productId,
+                            fit: BoxFit.contain,
+                            showFrame: false,
+                          ),
                         ),
                         SizedBox(width: 12.w),
                         Expanded(
@@ -1889,6 +1843,18 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 4.h),
+                              Row(
+                                children: List.generate(5, (barIndex) {
+                                  return Icon(
+                                    AppIcons.starRounded,
+                                    color: barIndex < slot.qualityLevel
+                                        ? qColor
+                                        : AppColors.textMuted,
+                                    size: AppIconSizes.xSmall,
+                                  );
+                                }),
                               ),
                               SizedBox(height: 6.h),
                               Row(
