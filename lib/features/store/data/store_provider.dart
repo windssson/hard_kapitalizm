@@ -9,6 +9,8 @@ import 'package:hard_kapitalizm/features/store/models/store_detail_page_model.da
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_history_item_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_performance_model.dart';
+import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final storeHistoryDirtyProvider = StateProvider.family<bool, String>(
@@ -215,10 +217,19 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
   final String _storeId;
 
   @override
-  Future<StoreDetailPageModel> build() => _fetchStoreDetailPage(_storeId);
+  Future<StoreDetailPageModel> build() async {
+    final page = await _fetchStoreDetailPage(_storeId);
+    ref.invalidate(taxDebtProvider);
+    ref.invalidate(playerTaxProvider);
+    ref.invalidate(playerProvider);
+    return page;
+  }
 
   Future<StoreDetailPageModel> refresh() async {
     final page = await _fetchStoreDetailPage(_storeId);
+    ref.invalidate(taxDebtProvider);
+    ref.invalidate(playerTaxProvider);
+    ref.invalidate(playerProvider);
     state = AsyncData(page);
     return page;
   }

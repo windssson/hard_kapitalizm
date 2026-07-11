@@ -24,6 +24,17 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
   bool _isPaying = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Invalidate tax and player providers on screen enter to always load freshest data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(taxDebtProvider);
+      ref.invalidate(playerTaxProvider);
+      ref.invalidate(playerProvider);
+    });
+  }
+
+  @override
   void dispose() {
     _customAmountController.dispose();
     super.dispose();
@@ -45,10 +56,13 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
   }
 
   Future<void> _handlePayment(double requestedAmount, double currentDebt) async {
-    final amount = _resolvePayableAmount(
-      requestedAmount: requestedAmount,
-      currentDebt: currentDebt,
-    );
+    final isPayAll = requestedAmount == -1;
+    final amount = isPayAll
+        ? currentDebt
+        : _resolvePayableAmount(
+            requestedAmount: requestedAmount,
+            currentDebt: currentDebt,
+          );
 
     if (amount <= 0) {
       AppSnackbar.show(context, message: 'Lutfen gecerli bir tutar girin.', type: SnackbarType.error);
@@ -68,7 +82,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
     });
 
     final notifier = ref.read(taxActionProvider);
-    final result = await notifier.payTax(amount);
+    final result = await notifier.payTax(isPayAll ? -1 : amount);
 
     if (mounted) {
       setState(() {
@@ -76,9 +90,11 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
       });
 
       if (result['success'] == true) {
+        // If pay all, use the actual amount paid returned from the server for the UI floating feedback
+        final actualPaid = (result['paid_amount'] as num?)?.toDouble() ?? amount;
         FloatingFeedback.show(
           context,
-          amount: amount,
+          amount: actualPaid,
           type: FloatingFeedbackType.cashRemove,
         );
         AppSnackbar.show(context, message: result['message'] ?? 'Odeme basarili.', type: SnackbarType.success);
@@ -295,7 +311,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
             _buildQuickPaymentButton('10,000 TL', 10000.0, playerCash, taxDebt),
             _buildQuickPaymentButton('50,000 TL', 50000.0, playerCash, taxDebt),
             _buildQuickPaymentButton('100,000 TL', 100000.0, playerCash, taxDebt),
-            _buildQuickPaymentButton('BORCUN HEPSINI ODE', taxDebt, playerCash, taxDebt, isPrimary: true),
+            _buildQuickPaymentButton('BORCUN HEPSINI ODE', -1, playerCash, taxDebt, isPrimary: true),
           ],
         ),
         SizedBox(height: 16.h),
@@ -396,10 +412,13 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
     double currentDebt, {
     bool isPrimary = false,
   }) {
-    final payableAmount = _resolvePayableAmount(
-      requestedAmount: amount,
-      currentDebt: currentDebt,
-    );
+    final isPayAll = amount == -1;
+    final payableAmount = isPayAll
+        ? currentDebt
+        : _resolvePayableAmount(
+            requestedAmount: amount,
+            currentDebt: currentDebt,
+          );
     final bool canPay = playerCash >= payableAmount && payableAmount > 0;
 
     return Material(
