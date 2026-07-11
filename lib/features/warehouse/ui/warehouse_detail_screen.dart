@@ -1300,6 +1300,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       context: context,
       builder: (dialogContext) => Dialog(
         backgroundColor: AppColors.cardBg,
+        insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.r),
         ),
@@ -1313,7 +1314,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
               Padding(
-                padding: EdgeInsets.all(16.w),
+                padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 8.h),
                 child: Row(
                   children: [
                     Container(
@@ -1384,37 +1385,16 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                       history.prices.isEmpty) {
                                     return const SizedBox.shrink();
                                   }
-                                  double minPrice = history.prices.first;
-                                  double maxPrice = history.prices.first;
-                                  for (final p in history.prices) {
-                                    if (p < minPrice) minPrice = p;
-                                    if (p > maxPrice) maxPrice = p;
-                                  }
                                   final priceList = history.prices
                                       .map((p) => '₺${p.toStringAsFixed(1)}')
                                       .join(' ➔ ');
-                                  return Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Tooltip(
-                                        message: '5 Günlük Fiyat Seyri:\n$priceList',
-                                        child: PriceSparkline(
-                                          prices: history.prices,
-                                          width: 64.w,
-                                          height: 22.h,
-                                        ),
-                                      ),
-                                      SizedBox(height: 2.h),
-                                      Text(
-                                        'Min-Max: ₺${minPrice.toStringAsFixed(0)}-₺${maxPrice.toStringAsFixed(0)}',
-                                        style: AppTextStyles.caption.standardCopyWith(
-                                          color: AppColors.textMuted,
-                                          fontSize: 8.sp,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
+                                  return Tooltip(
+                                    message: '5 Günlük Fiyat Seyri:\n$priceList',
+                                    child: PriceSparkline(
+                                      prices: history.prices,
+                                      width: 104.w,
+                                      height: 36.h,
+                                    ),
                                   );
                                 },
                                 orElse: () => const SizedBox.shrink(),
@@ -1429,7 +1409,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               ),
               Divider(color: AppFx.softOverlay(0.1), height: 1),
               Padding(
-                padding: EdgeInsets.all(16.w),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                 child: ValueListenableBuilder<TextEditingValue>(
                   valueListenable: controller,
                   builder: (context, value, _) {
@@ -1514,7 +1494,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                padding: EdgeInsets.symmetric(horizontal: 12.w),
                 child: NumericKeyboard(
                   controller: controller,
                   allowDecimal: true,
@@ -1523,7 +1503,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.all(16.w),
+                padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 12.h),
                 child: Row(
                   children: [
                     Expanded(

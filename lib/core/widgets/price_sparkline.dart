@@ -35,10 +35,9 @@ class PriceSparkline extends StatelessWidget {
     final isUp = prices.last >= prices.first;
     final strokeColor = isUp ? AppColors.green : AppColors.red;
 
-    return Container(
+    return SizedBox(
       width: width,
       height: height,
-      padding: EdgeInsets.symmetric(vertical: 4.h),
       child: CustomPaint(
         painter: _SparklinePainter(
           prices: prices,
@@ -75,18 +74,52 @@ class _SparklinePainter extends CustomPainter {
     }
 
     final valRange = maxVal - minVal;
-    final widthStep = size.width / (prices.length - 1);
+
+    // Layout configuration
+    final labelWidth = 26.w;
+    final chartLeft = labelWidth;
+    final chartWidth = size.width - chartLeft;
+    final widthStep = chartWidth / (prices.length - 1);
+
+    // Draw horizontal grid lines
+    final gridPaint = Paint()
+      ..color = AppColors.textMuted.withValues(alpha: 0.12)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0.r;
+
+    canvas.drawLine(Offset(chartLeft, 2.h), Offset(size.width, 2.h), gridPaint);
+    canvas.drawLine(Offset(chartLeft, size.height / 2), Offset(size.width, size.height / 2), gridPaint);
+    canvas.drawLine(Offset(chartLeft, size.height - 2.h), Offset(size.width, size.height - 2.h), gridPaint);
+
+    // Draw Y-axis labels
+    final textStyle = TextStyle(
+      color: AppColors.textMuted,
+      fontSize: 8.sp,
+      fontWeight: FontWeight.w600,
+    );
+
+    void drawLabel(double val, double yOffset) {
+      final tp = TextPainter(
+        text: TextSpan(text: val.toStringAsFixed(0), style: textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(0, yOffset - tp.height / 2));
+    }
+
+    drawLabel(maxVal, 2.h);
+    drawLabel((maxVal + minVal) / 2, size.height / 2);
+    drawLabel(minVal, size.height - 2.h);
 
     final path = Path();
     final areaPath = Path();
 
     for (int i = 0; i < prices.length; i++) {
-      final x = i * widthStep;
-      final y = size.height - ((prices[i] - minVal) / valRange * size.height);
+      final x = chartLeft + i * widthStep;
+      final y = size.height - 2.h - ((prices[i] - minVal) / valRange * (size.height - 4.h));
 
       if (i == 0) {
         path.moveTo(x, y);
-        areaPath.moveTo(x, size.height);
+        areaPath.moveTo(x, size.height - 2.h);
         areaPath.lineTo(x, y);
       } else {
         path.lineTo(x, y);
@@ -94,7 +127,7 @@ class _SparklinePainter extends CustomPainter {
       }
 
       if (i == prices.length - 1) {
-        areaPath.lineTo(x, size.height);
+        areaPath.lineTo(x, size.height - 2.h);
         areaPath.close();
       }
     }
@@ -103,7 +136,7 @@ class _SparklinePainter extends CustomPainter {
       ..shader = ui.Gradient.linear(
         const Offset(0, 0),
         Offset(0, size.height),
-        [strokeColor.withValues(alpha: 0.25), strokeColor.withValues(alpha: 0.0)],
+        [strokeColor.withValues(alpha: 0.20), strokeColor.withValues(alpha: 0.0)],
       )
       ..style = PaintingStyle.fill;
     canvas.drawPath(areaPath, fillPaint);
@@ -111,23 +144,30 @@ class _SparklinePainter extends CustomPainter {
     final strokePaint = Paint()
       ..color = strokeColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0.r
+      ..strokeWidth = 1.8.r
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(path, strokePaint);
-    
-    final lastX = size.width;
-    final lastY = size.height - ((prices.last - minVal) / valRange * size.height);
-    
+
+    // Draw dots at each point
     final dotPaint = Paint()
       ..color = strokeColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(lastX, lastY), 3.0.r, dotPaint);
+    
+    for (int i = 0; i < prices.length; i++) {
+      final x = chartLeft + i * widthStep;
+      final y = size.height - 2.h - ((prices[i] - minVal) / valRange * (size.height - 4.h));
+      canvas.drawCircle(Offset(x, y), 2.0.r, dotPaint);
+    }
+
+    // Draw outer pulsing circle on the last point
+    final lastX = chartLeft + chartWidth;
+    final lastY = size.height - 2.h - ((prices.last - minVal) / valRange * (size.height - 4.h));
 
     final dotOuterPaint = Paint()
-      ..color = strokeColor.withValues(alpha: 0.4)
+      ..color = strokeColor.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(lastX, lastY), 6.0.r, dotOuterPaint);
+    canvas.drawCircle(Offset(lastX, lastY), 5.0.r, dotOuterPaint);
   }
 
   @override
