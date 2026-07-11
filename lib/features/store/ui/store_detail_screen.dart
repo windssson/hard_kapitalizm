@@ -1804,17 +1804,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Product image container (larger size: 84.w)
-                    Container(
-                      width: 84.w,
-                      height: 84.w,
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBgLight,
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: AppColors.border.withValues(alpha: 0.3),
-                        ),
-                      ),
+                    // Product image container (larger size: 88.w, sits directly on slot card)
+                    SizedBox(
+                      width: 88.w,
+                      height: 88.w,
                       child: BrandedProductImage(
                         fileName: slot.productIcon ?? 'default',
                         brandId: slot.brandId,
