@@ -15,6 +15,7 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
+import 'package:hard_kapitalizm/core/widgets/price_sparkline.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
@@ -1333,29 +1334,64 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     ),
                     SizedBox(width: 12.w),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
-                            'Satis Fiyati',
-                            style: AppTextStyles.h1.standardCopyWith(
-                              color: AppColors.textPrimary,
-                              fontSize: AppTypography.headline,
-                              fontWeight: FontWeight.bold,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Satis Fiyati',
+                                  style: AppTextStyles.h1.standardCopyWith(
+                                    color: AppColors.textPrimary,
+                                    fontSize: AppTypography.headline,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  (slot.productName ?? 'Urun') +
+                                      (slot.brandId != _defaultBrandId
+                                          ? ' (${currentBrandName ?? 'Markali'})'
+                                          : ''),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.body.standardCopyWith(
+                                    color: AppColors.textMuted,
+                                    fontSize: AppTypography.body,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            (slot.productName ?? 'Urun') +
-                                (slot.brandId != _defaultBrandId
-                                    ? ' (${currentBrandName ?? 'Markali'})'
-                                    : ''),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.body.standardCopyWith(
-                              color: AppColors.textMuted,
-                              fontSize: AppTypography.body,
-                            ),
+                          SizedBox(width: 8.w),
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final historyAsync = ref.watch(
+                                productPriceHistoryProvider(
+                                  slot.productId ?? '',
+                                ),
+                              );
+                              return historyAsync.maybeWhen(
+                                data: (history) {
+                                  if (history == null ||
+                                      history.prices.isEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Tooltip(
+                                    message: 'Son 5 Günlük Fiyat Trendi',
+                                    child: PriceSparkline(
+                                      prices: history.prices,
+                                      width: 60.w,
+                                      height: 22.h,
+                                    ),
+                                  );
+                                },
+                                orElse: () => const SizedBox.shrink(),
+                              );
+                            },
                           ),
                         ],
                       ),
