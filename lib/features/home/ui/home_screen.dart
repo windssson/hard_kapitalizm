@@ -1546,7 +1546,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 height: 56.w,
                                 child: CachedAssetImage(
                                   fileName: module.image,
-                                  fit: BoxFit.contain,
+                                  fit: BoxFit.cover,
                                 ),
                               ),
                             ),
