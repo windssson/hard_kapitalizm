@@ -891,6 +891,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                     : null,
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.blue,
+                                  minimumSize: Size(0, 32.h),
                                   side: BorderSide(
                                     color: AppColors.blue.withValues(
                                       alpha: 0.35,
@@ -898,7 +899,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                   ),
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 8.w,
-                                    vertical: 8.h,
+                                    vertical: 4.h,
                                   ),
                                 ),
                                 icon: _isBulkUpdatingPrices
@@ -917,9 +918,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                 label: Text(
                                   _isBulkUpdatingPrices ? 'Guncel' : 'Fiyat',
                                   overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.button.standardCopyWith(
+                                  style: AppTextStyles.label.standardCopyWith(
+                                    color: AppColors.blue,
                                     fontSize: AppTypography.label,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
@@ -938,6 +940,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                     : null,
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.goldLight,
+                                  minimumSize: Size(0, 32.h),
                                   side: BorderSide(
                                     color: AppColors.gold.withValues(
                                       alpha: 0.35,
@@ -945,7 +948,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                   ),
                                   padding: EdgeInsets.symmetric(
                                     horizontal: 8.w,
-                                    vertical: 8.h,
+                                    vertical: 4.h,
                                   ),
                                 ),
                                 icon: _isFillingShelves
@@ -964,9 +967,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                 label: Text(
                                   _isFillingShelves ? 'Doluyor' : 'Doldur',
                                   overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.button.standardCopyWith(
+                                  style: AppTextStyles.label.standardCopyWith(
+                                    color: AppColors.goldLight,
                                     fontSize: AppTypography.label,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
@@ -1991,7 +1995,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             icon: Icon(
                               AppIcons.localShipping,
                               color: AppColors.green,
-                              size: AppIconSizes.medium,
+                              size: AppIconSizes.small,
                             ),
                             style: IconButton.styleFrom(
                               backgroundColor: AppColors.green.withValues(alpha: 0.12),
@@ -1999,7 +2003,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                 borderRadius: BorderRadius.circular(8.r),
                                 side: BorderSide(color: AppColors.green.withValues(alpha: 0.25)),
                               ),
-                              padding: EdgeInsets.all(6.w),
+                              padding: EdgeInsets.all(4.w),
                             ),
                             tooltip: 'Stok Ekle',
                           ),
