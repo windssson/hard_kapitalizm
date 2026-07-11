@@ -15,7 +15,6 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
-import 'package:hard_kapitalizm/core/widgets/price_sparkline.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
@@ -1289,20 +1288,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           label: 'Mevcut',
           value: priceShortcut(slot.price),
         ),
-      if (slot.cost > 0) ...[
+      if (slot.cost > 0)
         NumericKeyboardShortcut(
           label: 'Maliyet',
           value: priceShortcut(slot.cost),
         ),
-        NumericKeyboardShortcut(
-          label: 'Kar +%25',
-          value: priceShortcut(slot.cost * 1.25),
-        ),
-        NumericKeyboardShortcut(
-          label: 'Kar +%50',
-          value: priceShortcut(slot.cost * 1.5),
-        ),
-      ],
     ];
 
     final result = await showDialog<double>(
@@ -1313,7 +1303,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           borderRadius: BorderRadius.circular(16.r),
         ),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: 680.h, maxWidth: 400.w),
+          constraints: BoxConstraints(maxHeight: 520.h, maxWidth: 400.w),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1393,96 +1383,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Consumer(
-                          builder: (context, ref, _) {
-                            final productAsync = ref.watch(marketProductProvider(slot.productId ?? ''));
-                            return productAsync.when(
-                              loading: () => Center(
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                                  child: AppLoadingIndicator(color: AppColors.gold, strokeWidth: 2),
-                                ),
-                              ),
-                              error: (err, _) => const SizedBox.shrink(),
-                              data: (product) {
-                                if (product == null) return const SizedBox.shrink();
-                                return Padding(
-                                  padding: EdgeInsets.only(bottom: 12.h),
-                                  child: Container(
-                                    padding: EdgeInsets.all(10.w),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.cardBgLight,
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      border: Border.all(color: AppColors.border),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              'Guncel Piyasa Analizi 📈',
-                                              style: AppTextStyles.caption.standardCopyWith(
-                                                color: AppColors.gold,
-                                                fontSize: AppTypography.label,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            Consumer(
-                                              builder: (context, ref, _) {
-                                                final historyAsync = ref.watch(productPriceHistoryProvider(slot.productId ?? ''));
-                                                return historyAsync.maybeWhen(
-                                                  data: (history) {
-                                                    if (history == null || history.prices.isEmpty) return const SizedBox.shrink();
-                                                    return PriceSparkline(
-                                                      prices: history.prices,
-                                                      width: 80.w,
-                                                      height: 20.h,
-                                                    );
-                                                  },
-                                                  orElse: () => const SizedBox.shrink(),
-                                                );
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: 8.h),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: _buildPriceInfoTile(
-                                                'En Dusuk',
-                                                product.enDusukFiyat > 0 ? AppMoney.compact(product.enDusukFiyat) : '-',
-                                                AppColors.green,
-                                              ),
-                                            ),
-                                            SizedBox(width: 6.w),
-                                            Expanded(
-                                              child: _buildPriceInfoTile(
-                                                'Ortalama',
-                                                product.ortalamaFiyat > 0 ? AppMoney.compact(product.ortalamaFiyat) : '-',
-                                                AppColors.gold,
-                                              ),
-                                            ),
-                                            SizedBox(width: 6.w),
-                                            Expanded(
-                                              child: _buildPriceInfoTile(
-                                                'En Yuksek',
-                                                product.enYuksekFiyat > 0 ? AppMoney.compact(product.enYuksekFiyat) : '-',
-                                                AppColors.red,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
                         Container(
                           width: double.infinity,
                           padding: EdgeInsets.symmetric(
