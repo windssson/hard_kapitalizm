@@ -1304,10 +1304,14 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           borderRadius: BorderRadius.circular(16.r),
         ),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: 520.h, maxWidth: 400.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(dialogContext).size.height * 0.9,
+            maxWidth: 400.w,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               Padding(
                 padding: EdgeInsets.all(16.w),
                 child: Row(
@@ -1548,6 +1552,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
