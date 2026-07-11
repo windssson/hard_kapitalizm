@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
@@ -15,6 +16,7 @@ import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
+import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
@@ -737,8 +739,11 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               ClipRRect(
                 borderRadius: BorderRadius.circular(4.r),
                 child: LinearProgressIndicator(
-                  value: warehouse.capacity > 0 
-                      ? (warehouse.usedCapacity / warehouse.capacity).clamp(0.0, 1.0) 
+                  value: warehouse.capacity > 0
+                      ? (warehouse.usedCapacity / warehouse.capacity).clamp(
+                          0.0,
+                          1.0,
+                        )
                       : 0.0,
                   minHeight: 8.h,
                   backgroundColor: AppColors.cardBg,
@@ -785,7 +790,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       ),
     );
   }
-
 
   Widget _buildMainContent(
     BuildContext context,
@@ -1467,126 +1471,75 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     StoreModel store,
     BuildingUpgradeModel? activeUpgrade,
   ) async {
-    final targetLevel = store.level + 1;
-    final durationMinutes =
-        store.storeType.constructionTimeMinutes * targetLevel;
-    final upgradeCost = (store.storeType.cost * targetLevel).toDouble();
-    final slotCapacityIncrease = store.slotCapacity;
-    const maxSlotIncrease = 2;
+    if (activeUpgrade != null) {
+      _showError(context, 'Oyun genelinde devam eden bir yukseltme var.');
+      return;
+    }
+    final quote = await ref.read(
+      buildingUpgradeQuoteProvider((
+        buildingKind: 'store',
+        entityId: store.id,
+      )).future,
+    );
+    if (!context.mounted) return;
+    if (quote.isMaximumLevel) {
+      _showError(context, 'Bu magaza maksimum seviye ${quote.maxLevel}.');
+      return;
+    }
+    final targetLevel = quote.targetLevel!;
+    final durationMinutes = quote.durationMinutes;
+    final upgradeCost = quote.cashCost;
+    final slotCapacityIncrease =
+        quote.effect('store_slot_capacity')?.increase.toInt() ?? 0;
+    final maxSlotIncrease =
+        quote.effect('store_max_slot_count')?.increase.toInt() ?? 0;
 
-    await showModalBottomSheet<void>(
+    await showBuildingUpgradeSheet(
       context: context,
-      backgroundColor: AppColors.background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
-      ),
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.all(18.w),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Magaza Yukseltme',
-              style: AppTextStyles.h2.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.headline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            if (activeUpgrade != null)
-              Text(
-                '${store.name} icin bir yukseltme zaten devam ediyor. Tamamlaninca seviye ${activeUpgrade.targetLevel} olacak, tum slot kapasiteleri +${activeUpgrade.slotCapacityIncrease} artacak ve max slot sayisi +${activeUpgrade.maxSlotIncrease} yukselecek.',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.body,
-                  height: 1.45,
-                ),
-              )
-            else
-              Text(
-                '${store.name} seviyesi ${store.level} -> $targetLevel olacak. Yukseltme tamamlaninca tum store slot kapasiteleri +$slotCapacityIncrease artar ve max slot sayisi +$maxSlotIncrease olur.',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.body,
-                  height: 1.45,
-                ),
-              ),
-            SizedBox(height: 16.h),
-            _buildSalesSummaryRow('Mevcut Seviye', store.level.toString()),
-            _buildSalesSummaryRow(
-              'Hedef Seviye',
-              (activeUpgrade?.targetLevel ?? targetLevel).toString(),
-            ),
-            _buildSalesSummaryRow(
-              'Yukseltme Suresi',
-              '${activeUpgrade?.durationMinutes ?? durationMinutes} dk',
-            ),
-            _buildSalesSummaryRow(
-              'Yukseltme Maliyeti',
-              AppMoney.compact(activeUpgrade?.upgradeCost ?? upgradeCost),
-              valueColor: AppColors.red,
-            ),
-            _buildSalesSummaryRow(
-              'Slot Kapasitesi',
-              '${activeUpgrade?.previousSlotCapacity ?? store.slotCapacity} -> ${activeUpgrade?.nextSlotCapacity ?? (store.slotCapacity + slotCapacityIncrease)}',
-              valueColor: AppColors.gold,
-            ),
-            _buildSalesSummaryRow(
-              'Max Slot',
-              '${activeUpgrade?.previousMaxSlotCount ?? store.maxSlotCount} -> ${activeUpgrade?.nextMaxSlotCount ?? (store.maxSlotCount + maxSlotIncrease)}',
-              valueColor: AppColors.green,
-            ),
-            SizedBox(height: 14.h),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gold,
-                  foregroundColor: AppColors.textOnAccent,
-                ),
-                onPressed: activeUpgrade != null
-                    ? () => Navigator.pop(sheetContext)
-                    : () async {
-                        Navigator.pop(sheetContext);
-                        final result = await ref
-                            .read(storeActionProvider)
-                            .startStoreUpgrade(store.id);
-
-                        if (!context.mounted) return;
-
-                        if (result['success'] == true) {
-                          await _refreshStorePageAndSync(
-                            store.id,
-                            refreshPlayer: true,
-                          );
-                          if (!context.mounted) return;
-                          FloatingFeedback.show(
-                            context,
-                            amount: upgradeCost,
-                            type: FloatingFeedbackType.cashRemove,
-                          );
-                          _showSuccess(
-                            context,
-                            'Magaza yukseltmesi baslatildi.',
-                          );
-                        } else {
-                          _showError(
-                            context,
-                            result['message'] ??
-                                'Magaza yukseltmesi baslatilamadi.',
-                          );
-                        }
-                      },
-                child: Text(
-                  activeUpgrade != null ? 'Tamam' : 'Yukseltmeyi Baslat',
-                ),
-              ),
-            ),
-          ],
+      title: 'Magaza Yukseltmesi',
+      buildingName: store.name,
+      icon: AppIcons.storefrontRounded,
+      currentLevel: store.level,
+      targetLevel: targetLevel,
+      durationLabel: '$durationMinutes dk',
+      costLabel: AppMoney.compact(upgradeCost),
+      requirementLabel: quote.requirementLabel,
+      benefits: [
+        BuildingUpgradeBenefit(
+          icon: AppIcons.inventory2Rounded,
+          label: 'Raf kapasitesi',
+          before: '${store.slotCapacity}',
+          after: '${store.slotCapacity + slotCapacityIncrease}',
         ),
-      ),
+        BuildingUpgradeBenefit(
+          icon: AppIcons.gridView,
+          label: 'Maksimum raf',
+          before: '${store.maxSlotCount}',
+          after: '${store.maxSlotCount + maxSlotIncrease}',
+        ),
+      ],
+      canConfirm: quote.canUpgrade,
+      onConfirm: () async {
+        final result = await ref
+            .read(storeActionProvider)
+            .startStoreUpgrade(store.id);
+        if (!context.mounted) return;
+        if (result['success'] == true) {
+          await _refreshStorePageAndSync(store.id, refreshPlayer: true);
+          if (!context.mounted) return;
+          FloatingFeedback.show(
+            context,
+            amount: upgradeCost,
+            type: FloatingFeedbackType.cashRemove,
+          );
+          _showSuccess(context, 'Magaza yukseltmesi baslatildi.');
+        } else {
+          _showError(
+            context,
+            result['message'] ?? 'Magaza yukseltmesi baslatilamadi.',
+          );
+        }
+      },
     );
   }
 
@@ -1708,15 +1661,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         color: slot.isEmpty
             ? AppColors.cardBg.withValues(alpha: 0.3)
             : slot.isActive
-                ? AppColors.cardBg.withValues(alpha: 0.7)
-                : AppColors.cardBg.withValues(alpha: 0.4),
+            ? AppColors.cardBg.withValues(alpha: 0.7)
+            : AppColors.cardBg.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(
           color: slot.isEmpty
               ? AppColors.border.withValues(alpha: 0.2)
               : slot.isActive
-                  ? AppColors.gold.withValues(alpha: 0.35)
-                  : AppColors.border.withValues(alpha: 0.15),
+              ? AppColors.gold.withValues(alpha: 0.35)
+              : AppColors.border.withValues(alpha: 0.15),
           width: 1.2.w,
         ),
         boxShadow: (!slot.isEmpty && slot.isActive)
@@ -1725,7 +1678,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   color: AppColors.gold.withValues(alpha: 0.05),
                   blurRadius: 10.r,
                   spreadRadius: 1.r,
-                )
+                ),
               ]
             : null,
       ),
@@ -1869,10 +1822,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                     vertical: 3.h,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.gold.withValues(alpha: 0.1),
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(6.r),
                                     border: Border.all(
-                                      color: AppColors.gold.withValues(alpha: 0.3),
+                                      color: AppColors.gold.withValues(
+                                        alpha: 0.3,
+                                      ),
                                       width: 1.w,
                                     ),
                                   ),
@@ -1881,16 +1838,19 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                     children: [
                                       Text(
                                         '₺${slot.price?.toStringAsFixed(1) ?? '0'}',
-                                        style: AppTextStyles.label.standardCopyWith(
-                                          color: AppColors.gold,
-                                          fontSize: AppTypography.bodySmall,
-                                          fontWeight: FontWeight.w900,
-                                        ),
+                                        style: AppTextStyles.label
+                                            .standardCopyWith(
+                                              color: AppColors.gold,
+                                              fontSize: AppTypography.bodySmall,
+                                              fontWeight: FontWeight.w900,
+                                            ),
                                       ),
                                       SizedBox(width: 4.w),
                                       Icon(
                                         AppIcons.edit,
-                                        color: AppColors.gold.withValues(alpha: 0.8),
+                                        color: AppColors.gold.withValues(
+                                          alpha: 0.8,
+                                        ),
                                         size: 9.sp,
                                       ),
                                     ],
@@ -1904,10 +1864,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                   vertical: 2.h,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _storeSlotMarginColor(slot).withValues(alpha: 0.12),
+                                  color: _storeSlotMarginColor(
+                                    slot,
+                                  ).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(5.r),
                                   border: Border.all(
-                                    color: _storeSlotMarginColor(slot).withValues(alpha: 0.25),
+                                    color: _storeSlotMarginColor(
+                                      slot,
+                                    ).withValues(alpha: 0.25),
                                     width: 1.w,
                                   ),
                                 ),
@@ -1928,30 +1892,36 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Stok Doluluğu',
-                                    style: AppTextStyles.caption.standardCopyWith(
-                                      color: AppColors.textSecondary,
-                                      fontSize: AppTypography.micro,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: AppTextStyles.caption
+                                        .standardCopyWith(
+                                          color: AppColors.textSecondary,
+                                          fontSize: AppTypography.micro,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   ),
                                   Text(
                                     '${slot.quantity}/${slot.capacity}',
-                                    style: AppTextStyles.caption.standardCopyWith(
-                                      color: AppColors.textPrimary,
-                                      fontSize: AppTypography.micro,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: AppTextStyles.caption
+                                        .standardCopyWith(
+                                          color: AppColors.textPrimary,
+                                          fontSize: AppTypography.micro,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   ),
                                 ],
                               ),
                               SizedBox(height: 3.h),
                               _buildMiniProgressStacked(
                                 slot.capacity > 0
-                                    ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
+                                    ? (slot.quantity / slot.capacity).clamp(
+                                        0.0,
+                                        1.0,
+                                      )
                                     : 0,
                               ),
                             ],
@@ -1967,11 +1937,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       children: [
                         if (!slot.isActive) ...[
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6.w,
+                              vertical: 3.h,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.red.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4.r),
-                              border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: AppColors.red.withValues(alpha: 0.3),
+                              ),
                             ),
                             child: Text(
                               'PASİF',
@@ -1998,10 +1973,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                               size: AppIconSizes.small,
                             ),
                             style: IconButton.styleFrom(
-                              backgroundColor: AppColors.green.withValues(alpha: 0.12),
+                              backgroundColor: AppColors.green.withValues(
+                                alpha: 0.12,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8.r),
-                                side: BorderSide(color: AppColors.green.withValues(alpha: 0.25)),
+                                side: BorderSide(
+                                  color: AppColors.green.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                ),
                               ),
                               padding: EdgeInsets.all(4.w),
                             ),
@@ -2024,19 +2005,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                 slot,
                               );
                             } else if (val == 'toggle') {
-                              _toggleStoreSlotActive(
-                                context,
-                                ref,
-                                store,
-                                slot,
-                              );
+                              _toggleStoreSlotActive(context, ref, store, slot);
                             } else if (val == 'clear' && canEditProduct) {
-                              _confirmClearStoreSlot(
-                                context,
-                                ref,
-                                store,
-                                slot,
-                              );
+                              _confirmClearStoreSlot(context, ref, store, slot);
                             } else if (val == 'change' && canEditProduct) {
                               _showProductSelectionDialog(
                                 context,
@@ -2548,8 +2519,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     }
   }
 
-
-
   String _describeDemandEffect(double multiplier) {
     if (multiplier >= 1.35) return 'Cok yuksek talep';
     if (multiplier >= 1.1) return 'Yuksek talep';
@@ -2789,13 +2758,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                           padding: EdgeInsets.symmetric(horizontal: 4.w),
                           child: Text(
                             (averagePrice > 0
-                                ? 'Piyasa ortalamasi: ${averagePrice.toStringAsFixed(1)}'
-                                : basePrice > 0
-                                ? 'Kalite ${slot.qualityLevel} piyasa fiyati: ${basePrice.toStringAsFixed(1)} (x${qualityPriceMultiplier.toStringAsFixed(2)})'
-                                : 'Fiyat arttikca talep azalir, dustukce talep artar.') +
-                            (basePrice > 0
-                                ? '\nMaksimum fiyat (3x): ₺${(basePrice * 3).toStringAsFixed(1)}'
-                                : ''),
+                                    ? 'Piyasa ortalamasi: ${averagePrice.toStringAsFixed(1)}'
+                                    : basePrice > 0
+                                    ? 'Kalite ${slot.qualityLevel} piyasa fiyati: ${basePrice.toStringAsFixed(1)} (x${qualityPriceMultiplier.toStringAsFixed(2)})'
+                                    : 'Fiyat arttikca talep azalir, dustukce talep artar.') +
+                                (basePrice > 0
+                                    ? '\nMaksimum fiyat (3x): ₺${(basePrice * 3).toStringAsFixed(1)}'
+                                    : ''),
                             style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textMuted,
                               fontSize: AppTypography.bodySmall,

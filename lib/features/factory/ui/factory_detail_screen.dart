@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -10,10 +11,12 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
+import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -1900,151 +1903,94 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     FactoryDetailModel detail,
     BuildingUpgradeModel? activeUpgrade,
   ) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
-      ),
-      builder: (sheetContext) {
-        final nextLevel = detail.factory.level + 1;
-        final nextInputCapacity = detail.factory.inputCapacity * 2;
-        final nextOutputCapacity = detail.factory.outputCapacity * 2;
-        final durationMinutes =
-            detail.factoryType.constructionTimeMinutes * nextLevel;
-        final upgradeCost = detail.factoryType.cost * nextLevel;
+    if (activeUpgrade != null) {
+      AppSnackbar.show(
+        context,
+        title: 'Bilgi',
+        message: 'Oyun genelinde devam eden bir yukseltme var.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+    final quote = await ref.read(
+      buildingUpgradeQuoteProvider((
+        buildingKind: 'factory',
+        entityId: detail.factory.id,
+      )).future,
+    );
+    if (!context.mounted) return;
+    if (quote.isMaximumLevel) {
+      AppSnackbar.show(
+        context,
+        title: 'Maksimum Seviye',
+        message: 'Bu fabrika maksimum seviye ${quote.maxLevel}.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+    final nextLevel = quote.targetLevel!;
+    final nextInputCapacity =
+        quote.effect('input_capacity')?.nextValue.toInt() ??
+        detail.factory.inputCapacity;
+    final nextOutputCapacity =
+        quote.effect('output_capacity')?.nextValue.toInt() ??
+        detail.factory.outputCapacity;
+    final durationMinutes = quote.durationMinutes;
+    final upgradeCost = quote.cashCost;
 
-        return Padding(
-          padding: EdgeInsets.all(18.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Fabrika Yukseltmesi',
-                style: AppTextStyles.h2.standardCopyWith(
-                  color: AppColors.textPrimary,
-                  fontSize: AppTypography.headline,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                activeUpgrade != null
-                    ? 'Bu fabrikada zaten devam eden bir yukseltme var.'
-                    : 'Her seviye artisinda hammadde ve uretilen urun kapasitesi 2 katina cikar.',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.body,
-                  height: 1.45,
-                ),
-              ),
-              SizedBox(height: 16.h),
-              if (activeUpgrade == null)
-                Container(
-                  padding: EdgeInsets.all(14.w),
-                  decoration: BoxDecoration(
-                    color: AppFx.softOverlay(0.03),
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(
-                      color: AppColors.green.withValues(alpha: 0.22),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Seviye ${detail.factory.level} -> $nextLevel',
-                        style: AppTextStyles.title.standardCopyWith(
-                          color: AppColors.textPrimary,
-                          fontSize: AppTypography.title,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 10.h),
-                      Text(
-                        'Hammadde kapasitesi: ${detail.factory.inputCapacity} adet -> $nextInputCapacity adet',
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.textMuted,
-                          fontSize: AppTypography.body,
-                        ),
-                      ),
-                      SizedBox(height: 6.h),
-                      Text(
-                        'Uretilen urun kapasitesi: ${detail.factory.outputCapacity} adet -> $nextOutputCapacity adet',
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.textMuted,
-                          fontSize: AppTypography.body,
-                        ),
-                      ),
-                      SizedBox(height: 6.h),
-                      Text(
-                        'Sure: $durationMinutes dk',
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.textMuted,
-                          fontSize: AppTypography.body,
-                        ),
-                      ),
-                      SizedBox(height: 6.h),
-                      Text(
-                        'Maliyet: $upgradeCost TL',
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.textMuted,
-                          fontSize: AppTypography.body,
-                        ),
-                      ),
-                      SizedBox(height: 14.h),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton.icon(
-                          onPressed: () async {
-                            Navigator.pop(sheetContext);
-                            final result = await ref
-                                .read(factoryActionProvider)
-                                .startFactoryUpgrade(
-                                  detail.factory.id,
-                                  syncProviders: false,
-                                );
-                            if (!context.mounted) return;
-                            if (result['success'] == true) {
-                              await _refreshFactoryEcosystem();
-                              if (!context.mounted) return;
-                              FloatingFeedback.show(
-                                context,
-                                amount: upgradeCost.toDouble(),
-                                type: FloatingFeedbackType.cashRemove,
-                              );
-                              AppSnackbar.show(
-                                context,
-                                title: 'Basarili',
-                                message: 'Fabrika yukseltmesi baslatildi.',
-                                type: SnackbarType.success,
-                              );
-                            } else {
-                              AppSnackbar.show(
-                                context,
-                                title: 'Hata',
-                                message:
-                                    result['message'] ??
-                                    'Fabrika yukseltmesi baslatilamadi.',
-                                type: SnackbarType.error,
-                              );
-                            }
-                          },
-                          icon: const Icon(AppIcons.upgradeRounded),
-                          label: const Text('Yukseltmeyi Baslat'),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                _buildEmptyCard(
-                  'Aktif yukseltme tamamlanmadan yeni bir yukseltme baslatilamaz.',
-                ),
-            ],
-          ),
-        );
+    await showBuildingUpgradeSheet(
+      context: context,
+      title: 'Fabrika Yukseltmesi',
+      buildingName: detail.factory.name,
+      icon: AppIcons.factory,
+      currentLevel: detail.factory.level,
+      targetLevel: nextLevel,
+      durationLabel: '$durationMinutes dk',
+      costLabel: AppMoney.compact(upgradeCost),
+      requirementLabel: quote.requirementLabel,
+      benefits: [
+        BuildingUpgradeBenefit(
+          icon: AppIcons.inventory2Outlined,
+          label: 'Hammadde kapasitesi',
+          before: '${detail.factory.inputCapacity}',
+          after: '$nextInputCapacity',
+        ),
+        BuildingUpgradeBenefit(
+          icon: AppIcons.inventory2Rounded,
+          label: 'Uretim kapasitesi',
+          before: '${detail.factory.outputCapacity}',
+          after: '$nextOutputCapacity',
+        ),
+      ],
+      canConfirm: quote.canUpgrade,
+      onConfirm: () async {
+        final result = await ref
+            .read(factoryActionProvider)
+            .startFactoryUpgrade(detail.factory.id, syncProviders: false);
+        if (!context.mounted) return;
+        if (result['success'] == true) {
+          await _refreshFactoryEcosystem();
+          if (!context.mounted) return;
+          FloatingFeedback.show(
+            context,
+            amount: upgradeCost,
+            type: FloatingFeedbackType.cashRemove,
+          );
+          AppSnackbar.show(
+            context,
+            title: 'Basarili',
+            message: 'Fabrika yukseltmesi baslatildi.',
+            type: SnackbarType.success,
+          );
+        } else {
+          AppSnackbar.show(
+            context,
+            title: 'Hata',
+            message:
+                result['message'] ?? 'Fabrika yukseltmesi baslatilamadi.',
+            type: SnackbarType.error,
+          );
+        }
       },
     );
   }

@@ -1349,7 +1349,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       _HomeModuleCardData(
         title: 'Nakliye',
-        image: 'nakliyeler.webp',
+        image: 'lojistik.webp',
         accentColor: AppColors.info,
         primaryLabel: 'Arac',
         primaryValue: '${modules?.logistics.vehicleCount ?? 0}',
@@ -1383,7 +1383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       _HomeModuleCardData(
         title: 'Vergi',
-        image: 'cuzdan.webp',
+        image: 'vergi.webp',
         accentColor: taxDebt > 0 ? AppColors.red : AppColors.gold,
         primaryLabel: 'Borç',
         primaryValue: taxDebt > 0 ? AppMoney.compact(taxDebt) : '0',
@@ -1397,9 +1397,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         image: 'banka.webp',
         accentColor: activeLoanDebt > 0 ? AppColors.red : AppColors.gold,
         primaryLabel: 'Kredi',
-        primaryValue: activeLoanDebt > 0 ? AppMoney.compact(activeLoanDebt) : 'Yok',
+        primaryValue: activeLoanDebt > 0
+            ? AppMoney.compact(activeLoanDebt)
+            : 'Yok',
         secondaryLabel: 'Mevduat',
-        secondaryValue: activeDepositTotal > 0 ? AppMoney.compact(activeDepositTotal) : 'Yok',
+        secondaryValue: activeDepositTotal > 0
+            ? AppMoney.compact(activeDepositTotal)
+            : 'Yok',
         badgeText: activeLoanDebt > 0
             ? 'Borc var'
             : (activeDepositTotal > 0 ? 'Mevduat' : 'Bos'),
@@ -1407,7 +1411,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       _HomeModuleCardData(
         title: 'Ihale',
-        image: 'pazar.webp',
+        image: 'ihale.webp',
         accentColor: openTenders > 0 ? AppColors.gold : AppColors.blue,
         primaryLabel: 'Acik',
         primaryValue: '$openTenders',
@@ -1418,7 +1422,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       _HomeModuleCardData(
         title: 'Marka',
-        image: brandCompany != null ? brandCompany.logoId : 'logo1.webp',
+        image: brandCompany != null ? brandCompany.logoId : 'marka.webp',
         accentColor: AppColors.diamond,
         primaryLabel: 'Seviye',
         primaryValue: brandCompany != null ? '${brandCompany.brandLevel}' : '1',
@@ -1489,11 +1493,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         final loansAsync = ref.watch(playerLoansProvider).value;
         final depositsAsync = ref.watch(playerDepositsProvider).value;
 
-        final activeLoans = loansAsync?.where((l) => l.status != 'paid').toList() ?? [];
-        final activeLoanDebt = activeLoans.fold<double>(0, (sum, l) => sum + (l.totalDue - l.totalPaid));
+        final activeLoans =
+            loansAsync?.where((l) => l.status != 'paid').toList() ?? [];
+        final activeLoanDebt = activeLoans.fold<double>(
+          0,
+          (sum, l) => sum + (l.totalDue - l.totalPaid),
+        );
 
-        final activeDeposits = depositsAsync?.where((d) => d.status == 'active').toList() ?? [];
-        final activeDepositTotal = activeDeposits.fold<double>(0, (sum, d) => sum + d.amount);
+        final activeDeposits =
+            depositsAsync?.where((d) => d.status == 'active').toList() ?? [];
+        final activeDepositTotal = activeDeposits.fold<double>(
+          0,
+          (sum, d) => sum + d.amount,
+        );
 
         final modules = _buildModuleCards(
           dashboard?.modules,
@@ -1536,17 +1548,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         16.r,
                       ),
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(5.w, 3.h, 5.w, 4.h),
+                        padding: EdgeInsets.fromLTRB(1.w, 2.h, 1.w, 2.h),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Center(
                               child: SizedBox(
-                                width: 56.w,
-                                height: 56.w,
+                                width: 60.w,
+                                height: 60.w,
                                 child: CachedAssetImage(
                                   fileName: module.image,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
                                 ),
                               ),
                             ),

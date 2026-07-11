@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -12,11 +13,13 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_error_message.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
+import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -1294,137 +1297,85 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       return;
     }
 
-    final targetLevel = detail.field.level + 1;
-    final upgradeCost = (detail.fieldType.cost * targetLevel).toDouble();
-    final durationMinutes =
-        (detail.fieldType.constructionTimeMinutes * targetLevel).clamp(
-          1,
-          999999,
-        );
-    final nextInputCapacity = detail.field.inputCapacity * 2;
-    final nextOutputCapacity = detail.field.outputCapacity * 2;
+    final quote = await ref.read(
+      buildingUpgradeQuoteProvider((
+        buildingKind: 'field',
+        entityId: detail.field.id,
+      )).future,
+    );
+    if (!context.mounted) return;
+    if (quote.isMaximumLevel) {
+      AppSnackbar.show(
+        context,
+        title: 'Maksimum Seviye',
+        message: 'Bu tarla maksimum seviye ${quote.maxLevel}.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+    final targetLevel = quote.targetLevel!;
+    final upgradeCost = quote.cashCost;
+    final durationMinutes = quote.durationMinutes;
+    final nextInputCapacity =
+        quote.effect('input_capacity')?.nextValue.toInt() ??
+        detail.field.inputCapacity;
+    final nextOutputCapacity =
+        quote.effect('output_capacity')?.nextValue.toInt() ??
+        detail.field.outputCapacity;
 
-    await showModalBottomSheet<void>(
+    await showBuildingUpgradeSheet(
       context: context,
-      backgroundColor: AppColors.background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22.r)),
-      ),
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.all(18.w),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ciftlik Yukseltmesi',
-              style: AppTextStyles.h2.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.headline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Container(
-              padding: EdgeInsets.all(14.w),
-              decoration: BoxDecoration(
-                color: AppFx.softOverlay(0.04),
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(
-                  color: AppColors.green.withValues(alpha: 0.22),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Seviye ${detail.field.level} -> $targetLevel',
-                    style: AppTextStyles.title.standardCopyWith(
-                      color: AppColors.textPrimary,
-                      fontSize: AppTypography.title,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Hammadde kapasitesi: ${detail.field.inputCapacity} adet -> $nextInputCapacity adet',
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.body,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    'Uretilen urun kapasitesi: ${detail.field.outputCapacity} adet -> $nextOutputCapacity adet',
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.body,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    'Sure: $durationMinutes dk',
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.body,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    'Maliyet: TL ${upgradeCost.toStringAsFixed(0)}',
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.gold,
-                      fontSize: AppTypography.body,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16.h),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.green,
-                  foregroundColor: AppColors.textPrimary,
-                ),
-                onPressed: () async {
-                  Navigator.pop(sheetContext);
-                  final result = await ref
-                      .read(fieldActionProvider)
-                      .startFieldUpgrade(detail.field.id, syncProviders: false);
-                  if (!context.mounted) return;
-                  if (result['success'] == true) {
-                    await _refreshFieldEcosystem();
-                    if (!context.mounted) return;
-                    FloatingFeedback.show(
-                      context,
-                      amount: upgradeCost,
-                      type: FloatingFeedbackType.cashRemove,
-                    );
-                    AppSnackbar.show(
-                      context,
-                      title: 'Basarili',
-                      message: 'Ciftlik yukseltmesi baslatildi.',
-                      type: SnackbarType.success,
-                    );
-                    return;
-                  }
-                  AppSnackbar.show(
-                    context,
-                    title: 'Hata',
-                    message: result['message'] ?? 'Yukseltme baslatilamadi.',
-                    type: SnackbarType.error,
-                  );
-                },
-                icon: const Icon(AppIcons.upgradeRounded),
-                label: const Text('Yukseltmeyi Baslat'),
-              ),
-            ),
-          ],
+      title: 'Ciftlik Yukseltmesi',
+      buildingName: detail.field.name,
+      icon: AppIcons.agricultureRounded,
+      currentLevel: detail.field.level,
+      targetLevel: targetLevel,
+      durationLabel: '$durationMinutes dk',
+      costLabel: AppMoney.compact(upgradeCost),
+      requirementLabel: quote.requirementLabel,
+      benefits: [
+        BuildingUpgradeBenefit(
+          icon: AppIcons.inventory2Outlined,
+          label: 'Hammadde kapasitesi',
+          before: '${detail.field.inputCapacity}',
+          after: '$nextInputCapacity',
         ),
-      ),
+        BuildingUpgradeBenefit(
+          icon: AppIcons.inventory2Rounded,
+          label: 'Urun kapasitesi',
+          before: '${detail.field.outputCapacity}',
+          after: '$nextOutputCapacity',
+        ),
+      ],
+      canConfirm: quote.canUpgrade,
+      onConfirm: () async {
+        final result = await ref
+            .read(fieldActionProvider)
+            .startFieldUpgrade(detail.field.id, syncProviders: false);
+        if (!context.mounted) return;
+        if (result['success'] == true) {
+          await _refreshFieldEcosystem();
+          if (!context.mounted) return;
+          FloatingFeedback.show(
+            context,
+            amount: upgradeCost,
+            type: FloatingFeedbackType.cashRemove,
+          );
+          AppSnackbar.show(
+            context,
+            title: 'Basarili',
+            message: 'Ciftlik yukseltmesi baslatildi.',
+            type: SnackbarType.success,
+          );
+          return;
+        }
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: result['message'] ?? 'Yukseltme baslatilamadi.',
+          type: SnackbarType.error,
+        );
+      },
     );
   }
 
