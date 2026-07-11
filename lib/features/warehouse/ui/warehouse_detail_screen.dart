@@ -1098,7 +1098,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               Container(
                 width: 66.w,
                 height: 66.w,
-                clipBehavior: Clip.antiAlias,
+                clipBehavior: hasBrand ? Clip.antiAlias : Clip.none,
                 padding: EdgeInsets.all(hasBrand ? 2.w : 0),
                 decoration: hasBrand
                     ? BoxDecoration(
@@ -1322,7 +1322,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       Container(
                         width: 46.w,
                         height: 46.w,
-                        clipBehavior: Clip.antiAlias,
+                        clipBehavior: hasBrand ? Clip.antiAlias : Clip.none,
                         padding: EdgeInsets.all(hasBrand ? 2.w : 0),
                         decoration: hasBrand
                             ? BoxDecoration(
