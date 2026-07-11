@@ -2637,6 +2637,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         return;
       }
 
+      if (basePrice > 0 && parsedPrice > basePrice * 3) {
+        _showWarning(
+          context,
+          'Fiyat baz fiyatın 3 katından fazla olamaz (Maks: ₺${(basePrice * 3).toStringAsFixed(1)}).',
+        );
+        return;
+      }
+
       final result = await ref
           .read(storeActionProvider)
           .setStoreSlotPrice(slotId: slot.id, price: parsedPrice);
@@ -2823,11 +2831,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 4.w),
                           child: Text(
-                            averagePrice > 0
+                            (averagePrice > 0
                                 ? 'Piyasa ortalamasi: ${averagePrice.toStringAsFixed(1)}'
                                 : basePrice > 0
                                 ? 'Kalite ${slot.qualityLevel} piyasa fiyati: ${basePrice.toStringAsFixed(1)} (x${qualityPriceMultiplier.toStringAsFixed(2)})'
-                                : 'Fiyat arttikca talep azalir, dustukce talep artar.',
+                                : 'Fiyat arttikca talep azalir, dustukce talep artar.') +
+                            (basePrice > 0
+                                ? '\nMaksimum fiyat (3x): ₺${(basePrice * 3).toStringAsFixed(1)}'
+                                : ''),
                             style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textMuted,
                               fontSize: AppTypography.bodySmall,
