@@ -93,6 +93,39 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     }
   }
 
+  void _showNewResearchProductSelection(
+    BuildContext context,
+    List<ArgeProductModel> allProducts,
+    int playerLevel,
+    double playerCash,
+    int activeResearchCount,
+    int maxConcurrentResearches,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.transparent,
+      builder: (context) {
+        return _NewResearchProductSelectionSheet(
+          allProducts: allProducts,
+          playerLevel: playerLevel,
+          playerCash: playerCash,
+          activeResearchCount: activeResearchCount,
+          maxConcurrentResearches: maxConcurrentResearches,
+          onSelect: (product) {
+            Navigator.pop(context);
+            _showUpgradeSheet(
+              product,
+              playerLevel: playerLevel,
+              playerCash: playerCash,
+              hasAvailableResearchSlot: activeResearchCount < maxConcurrentResearches,
+            );
+          },
+        );
+      },
+    );
+  }
+
   List<ArgeProductModel> _filter(
     List<ArgeProductModel> products, {
     required int playerLevel,
@@ -102,6 +135,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }) {
     final hasFreeSlot = activeResearchCount < maxConcurrentResearches;
     return products.where((product) {
+      if (product.currentQualityLevel <= 0) return false;
+
       final matchesSearch = _searchQuery.isEmpty ||
           product.urunAdi.toLowerCase().contains(_searchQuery);
       final matchesUnit =
@@ -155,6 +190,34 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.transparent,
+      floatingActionButton: centerAsync.maybeWhen(
+        data: (center) {
+          if (center == null) return null;
+          return productsAsync.maybeWhen(
+            data: (products) => FloatingActionButton.extended(
+              onPressed: () => _showNewResearchProductSelection(
+                context,
+                products,
+                player?.level ?? 1,
+                (player?.cash ?? 0).toDouble(),
+                researchesAsync.value?.length ?? 0,
+                center.maxConcurrentResearches,
+              ),
+              backgroundColor: AppColors.gold,
+              icon: Icon(AppIcons.science, color: AppColors.textOnAccent),
+              label: Text(
+                'Araştırma Yap',
+                style: AppTextStyles.button.standardCopyWith(
+                  color: AppColors.textOnAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            orElse: () => null,
+          );
+        },
+        orElse: () => null,
+      ),
       bottomNavigationBar: AppBottomNav(
         selectedIndex: -1,
         onItemSelected: _onNavSelected,
@@ -1668,21 +1731,40 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }
 
   Widget _buildEmptyState() {
+    final hasSearchFilter = _searchQuery.isNotEmpty || _selectedUnit != 'TUMU' || _selectedScope != 'TUMU';
     return Center(
       child: Padding(
         padding: EdgeInsets.all(40.w),
         child: Column(
           children: [
             SizedBox(height: 40.h),
-            Icon(AppIcons.searchOff, color: AppColors.textMuted, size: AppIconSizes.emptyState),
+            Icon(
+              hasSearchFilter ? AppIcons.searchOff : AppIcons.science,
+              color: AppColors.textMuted,
+              size: AppIconSizes.emptyState,
+            ),
             SizedBox(height: 16.h),
             Text(
-              'Urun bulunamadi.',
+              hasSearchFilter
+                  ? 'Kriterlere uygun ürün bulunamadı.'
+                  : 'Henüz kalitesi artırılmış bir ürününüz yok.',
+              textAlign: TextAlign.center,
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.title,
               ),
             ),
+            if (!hasSearchFilter) ...[
+              SizedBox(height: 12.h),
+              Text(
+                'Yeni bir araştırma başlatmak için sağ alttaki "Araştırma Yap" butonunu kullanabilirsiniz.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textMuted.withValues(alpha: 0.7),
+                  fontSize: AppTypography.bodySmall,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -2221,5 +2303,245 @@ class _UpgradeBottomSheet extends StatelessWidget {
 
   String _formatMoney(double amount) {
     return AppMoney.compact(amount);
+  }
+}
+
+class _NewResearchProductSelectionSheet extends StatefulWidget {
+  final List<ArgeProductModel> allProducts;
+  final int playerLevel;
+  final double playerCash;
+  final int activeResearchCount;
+  final int maxConcurrentResearches;
+  final ValueChanged<ArgeProductModel> onSelect;
+
+  const _NewResearchProductSelectionSheet({
+    required this.allProducts,
+    required this.playerLevel,
+    required this.playerCash,
+    required this.activeResearchCount,
+    required this.maxConcurrentResearches,
+    required this.onSelect,
+  });
+
+  @override
+  State<_NewResearchProductSelectionSheet> createState() =>
+      __NewResearchProductSelectionSheetState();
+}
+
+class __NewResearchProductSelectionSheetState
+    extends State<_NewResearchProductSelectionSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = widget.allProducts.where((product) {
+      if (product.isMaxQuality) return false;
+      if (_query.isEmpty) return true;
+      return product.urunAdi.toLowerCase().contains(_query.toLowerCase());
+    }).toList();
+
+    filtered.sort((a, b) {
+      if (a.isProduced != b.isProduced) {
+        return a.isProduced ? -1 : 1;
+      }
+      return a.urunAdi.compareTo(b.urunAdi);
+    });
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        border: Border(
+          top: BorderSide(
+            color: AppColors.borderGold.withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          SizedBox(height: 8.h),
+          Container(
+            width: 40.w,
+            height: 4.h,
+            decoration: BoxDecoration(
+              color: AppColors.textMuted.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Yeni Araştırma Başlat',
+                  style: AppTextStyles.h1.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.headline,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(AppIcons.close, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _query = val.trim()),
+              style: AppTextStyles.body.standardCopyWith(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Ürün ara...',
+                hintStyle: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+                prefixIcon: Icon(AppIcons.search, color: AppColors.gold),
+                filled: true,
+                fillColor: AppFx.panelWash(0.12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: AppFx.softOverlay(0.15)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: AppColors.gold),
+                ),
+                contentPadding: EdgeInsets.symmetric(vertical: 10.h),
+              ),
+            ),
+          ),
+          Divider(color: AppFx.softOverlay(0.1), height: 1),
+          Expanded(
+            child: filtered.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(AppIcons.searchOff, color: AppColors.textMuted, size: 48.w),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'Aradığınız kriterde ürün bulunamadı.',
+                          style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.all(16.w),
+                    itemCount: filtered.length,
+                    separatorBuilder: (context, index) => SizedBox(height: 8.h),
+                    itemBuilder: (context, index) {
+                      final product = filtered[index];
+                      return InkWell(
+                        onTap: () => widget.onSelect(product),
+                        borderRadius: BorderRadius.circular(12.r),
+                        child: Container(
+                          padding: EdgeInsets.all(10.w),
+                          decoration: BoxDecoration(
+                            color: AppFx.softOverlay(0.02),
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: AppColors.border.withValues(alpha: 0.15),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44.w,
+                                height: 44.w,
+                                padding: EdgeInsets.all(4.w),
+                                decoration: BoxDecoration(
+                                  color: AppFx.panelWash(0.16),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: CachedAssetImage(
+                                  fileName: product.urunIconu,
+                                  fit: BoxFit.contain,
+                                  errorWidget: Icon(
+                                    AppIcons.science,
+                                    color: AppColors.gold,
+                                    size: AppIconSizes.medium,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            product.urunAdi,
+                                            style: AppTextStyles.title.standardCopyWith(
+                                              color: AppColors.textPrimary,
+                                              fontSize: AppTypography.body,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (product.isProduced) ...[
+                                          SizedBox(width: 6.w),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.green.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(4.r),
+                                            ),
+                                            child: Text(
+                                              'Üretiyorsunuz',
+                                              style: TextStyle(
+                                                color: AppColors.green,
+                                                fontSize: 8.sp,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Row(
+                                      children: List.generate(5, (starIdx) {
+                                        final filled = starIdx < product.currentQualityLevel;
+                                        return Icon(
+                                          filled ? AppIcons.star : AppIcons.starBorder,
+                                          color: filled ? AppColors.gold : AppColors.textMuted,
+                                          size: 10.w,
+                                        );
+                                      }),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                AppIcons.chevronRightRounded,
+                                color: AppColors.textMuted,
+                                size: AppIconSizes.compact,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 }
