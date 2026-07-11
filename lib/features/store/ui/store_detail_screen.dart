@@ -695,6 +695,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       ],
                     ),
                   ),
+                  Text(
+                    'Ürün Çeşidi: ${warehouse.slots.length}',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.blue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: AppTypography.caption,
+                    ),
+                  ),
+                  SizedBox(width: 4.w),
                   Icon(
                     AppIcons.chevronRightRounded,
                     color: AppColors.textMuted,
@@ -702,25 +711,39 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   ),
                 ],
               ),
-              SizedBox(height: 12.h),
+              SizedBox(height: 10.h),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: _buildCompactMetricPill(
-                      'Kapasite',
-                      '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)} m3',
-                      icon: AppIcons.straighten,
+                  Text(
+                    'Depo Kapasitesi',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: AppTypography.bodySmall,
                     ),
                   ),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: _buildCompactMetricPill(
-                      'Urun Cesidi',
-                      warehouse.slots.length.toString(),
-                      icon: AppIcons.categoryOutlined,
+                  Text(
+                    '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)} m³',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: AppTypography.bodySmall,
                     ),
                   ),
                 ],
+              ),
+              SizedBox(height: 5.h),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4.r),
+                child: LinearProgressIndicator(
+                  value: warehouse.capacity > 0 
+                      ? (warehouse.usedCapacity / warehouse.capacity).clamp(0.0, 1.0) 
+                      : 0.0,
+                  minHeight: 8.h,
+                  backgroundColor: AppColors.cardBg,
+                  color: AppColors.blue,
+                ),
               ),
               if (warehouse.slots.isNotEmpty) ...[
                 SizedBox(height: 12.h),
@@ -763,62 +786,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
-  Widget _buildCompactMetricPill(
-    String label,
-    String value, {
-    required IconData icon,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: AppColors.textPrimary.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 28.w,
-            height: 28.w,
-            decoration: BoxDecoration(
-              color: AppColors.blue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(9.r),
-            ),
-            child: Icon(icon, color: AppColors.blue, size: AppIconSizes.small),
-          ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.caption,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  value,
-                  style: AppTextStyles.label.standardCopyWith(
-                    color: AppColors.textPrimary,
-                    fontSize: AppTypography.bodySmall,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildMainContent(
     BuildContext context,
