@@ -1848,68 +1848,74 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                               }),
                             ),
                             SizedBox(height: 8.h),
-                            GestureDetector(
-                              onTap: () => _showPriceEditDialog(
-                                context,
-                                ref,
-                                store,
-                                slot,
-                              ),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8.w,
-                                  vertical: 4.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.textPrimary.withValues(
-                                    alpha: 0.05,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  onTap: () => _showPriceEditDialog(
+                                    context,
+                                    ref,
+                                    store,
+                                    slot,
                                   ),
-                                  borderRadius: BorderRadius.circular(8.r),
-                                  border: Border.all(
-                                    color: AppColors.textPrimary.withValues(
-                                      alpha: 0.1,
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10.w,
+                                      vertical: 5.h,
                                     ),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '₺${slot.price?.toStringAsFixed(1) ?? '0'}',
-                                      style: AppTextStyles.label
-                                          .standardCopyWith(
-                                            color: AppColors.gold,
-                                            fontSize: AppTypography.bodyLarge,
-                                            fontWeight: FontWeight.w900,
-                                          ),
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    Icon(
-                                      AppIcons.edit,
-                                      color: AppColors.textMuted,
-                                      size: AppIconSizes.xSmall,
-                                    ),
-                                    SizedBox(width: 8.w),
-                                    Container(
-                                      width: 1.w,
-                                      height: 12.h,
-                                      color: AppColors.textPrimary.withValues(
-                                        alpha: 0.2,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8.r),
+                                      border: Border.all(
+                                        color: AppColors.gold.withValues(alpha: 0.3),
+                                        width: 1.w,
                                       ),
                                     ),
-                                    SizedBox(width: 8.w),
-                                    Text(
-                                      _formatStoreSlotMargin(slot),
-                                      style: AppTextStyles.label
-                                          .standardCopyWith(
-                                            color: _storeSlotMarginColor(slot),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '₺${slot.price?.toStringAsFixed(1) ?? '0'}',
+                                          style: AppTextStyles.label.standardCopyWith(
+                                            color: AppColors.gold,
                                             fontSize: AppTypography.bodySmall,
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight: FontWeight.w900,
                                           ),
+                                        ),
+                                        SizedBox(width: 6.w),
+                                        Icon(
+                                          AppIcons.edit,
+                                          color: AppColors.gold.withValues(alpha: 0.8),
+                                          size: 10.sp,
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
+                                SizedBox(width: 8.w),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w,
+                                    vertical: 4.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _storeSlotMarginColor(slot).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6.r),
+                                    border: Border.all(
+                                      color: _storeSlotMarginColor(slot).withValues(alpha: 0.3),
+                                      width: 1.w,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    _formatStoreSlotMargin(slot),
+                                    style: AppTextStyles.caption.standardCopyWith(
+                                      color: _storeSlotMarginColor(slot),
+                                      fontSize: AppTypography.caption,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
