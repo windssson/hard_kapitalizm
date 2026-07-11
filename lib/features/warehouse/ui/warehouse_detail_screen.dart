@@ -375,6 +375,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     width: 68.w,
                     height: 68.w,
                     padding: EdgeInsets.zero,
+                    clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: AppFx.panelWash(0.3),
                       borderRadius: BorderRadius.circular(16.r),
@@ -392,7 +393,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     ),
                     child: CachedAssetImage(
                       fileName: warehouse.typeIcon ?? 'warehouse.webp',
-                      fit: BoxFit.contain,
+                      fit: BoxFit.cover,
                       errorWidget: Icon(
                         AppIcons.warehouseOutlined,
                         color: AppColors.gold,
@@ -1097,6 +1098,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               Container(
                 width: 66.w,
                 height: 66.w,
+                clipBehavior: Clip.antiAlias,
                 padding: EdgeInsets.all(hasBrand ? 2.w : 0),
                 decoration: hasBrand
                     ? BoxDecoration(
@@ -1114,7 +1116,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   brandId: slot.brandId,
                   brandName: _brandNameForSlot(slot, currentBrandName),
                   productId: slot.productId,
-                  fit: BoxFit.contain,
+                  fit: BoxFit.cover,
                   showFrame: false,
                   company: company,
                   companyProducts: companyProducts,
@@ -1270,6 +1272,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         .read(playerBrandCompanyProvider)
         .value
         ?.brandName;
+    final hasBrand = slot.brandId != _defaultBrandId;
     String priceShortcut(double value) {
       if (value <= 0) return '';
       return value.toStringAsFixed(1);
@@ -1319,20 +1322,23 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       Container(
                         width: 46.w,
                         height: 46.w,
-                        padding: EdgeInsets.all(2.w),
-                        decoration: BoxDecoration(
-                          color: AppFx.panelWash(0.28),
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(
-                            color: AppColors.gold.withValues(alpha: 0.25),
-                          ),
-                        ),
+                        clipBehavior: Clip.antiAlias,
+                        padding: EdgeInsets.all(hasBrand ? 2.w : 0),
+                        decoration: hasBrand
+                            ? BoxDecoration(
+                                color: AppFx.panelWash(0.28),
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(
+                                  color: AppColors.gold.withValues(alpha: 0.25),
+                                ),
+                              )
+                            : null,
                         child: BrandedProductImage(
                           fileName: slot.productIcon ?? 'default.webp',
                           brandId: slot.brandId,
                           brandName: _brandNameForSlot(slot, currentBrandName),
                           productId: slot.productId,
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                           showFrame: false,
                         ),
                       ),
