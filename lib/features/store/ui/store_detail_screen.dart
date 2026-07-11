@@ -1801,351 +1801,356 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               )
             : Opacity(
                 opacity: slot.isActive ? 1.0 : 0.65,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 72.w,
-                          height: 72.w,
-                          decoration: BoxDecoration(
-                            color: AppColors.cardBgLight,
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border.all(
-                              color: AppColors.border.withValues(alpha: 0.3),
+                    // Product image container (larger size: 84.w)
+                    Container(
+                      width: 84.w,
+                      height: 84.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBgLight,
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: AppColors.border.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: BrandedProductImage(
+                        fileName: slot.productIcon ?? 'default',
+                        brandId: slot.brandId,
+                        brandName: _slotBrandName(slot),
+                        productId: slot.productId,
+                        fit: BoxFit.contain,
+                        showFrame: false,
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    // Middle: Product Name, Stars, Price Edit, Profit Margin, and Stock Progress Bar
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            (slot.productName ?? '') +
+                                (slot.brandId != _defaultBrandId
+                                    ? ' (${ref.watch(playerBrandCompanyProvider).value?.brandName ?? 'Markalı'})'
+                                    : ''),
+                            style: AppTextStyles.h2.standardCopyWith(
+                              color: AppColors.textPrimary,
+                              fontSize: AppTypography.bodyLarge,
+                              fontWeight: FontWeight.bold,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          child: BrandedProductImage(
-                            fileName: slot.productIcon ?? 'default',
-                            brandId: slot.brandId,
-                            brandName: _slotBrandName(slot),
-                            productId: slot.productId,
-                            fit: BoxFit.contain,
-                            showFrame: false,
+                          SizedBox(height: 4.h),
+                          Row(
+                            children: List.generate(5, (barIndex) {
+                              return Icon(
+                                AppIcons.starRounded,
+                                color: barIndex < slot.qualityLevel
+                                    ? qColor
+                                    : AppColors.textMuted,
+                                size: AppIconSizes.xSmall,
+                              );
+                            }),
                           ),
-                        ),
-                        SizedBox(width: 12.w),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          SizedBox(height: 6.h),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                (slot.productName ?? '') +
-                                    (slot.brandId != _defaultBrandId
-                                        ? ' (${ref.watch(playerBrandCompanyProvider).value?.brandName ?? 'Markalı'})'
-                                        : ''),
-                                style: AppTextStyles.h2.standardCopyWith(
-                                  color: AppColors.textPrimary,
-                                  fontSize: AppTypography.bodyLarge,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              SizedBox(height: 4.h),
-                              Row(
-                                children: List.generate(5, (barIndex) {
-                                  return Icon(
-                                    AppIcons.starRounded,
-                                    color: barIndex < slot.qualityLevel
-                                        ? qColor
-                                        : AppColors.textMuted,
-                                    size: AppIconSizes.xSmall,
-                                  );
-                                }),
-                              ),
-                              SizedBox(height: 6.h),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => _showPriceEditDialog(
-                                      context,
-                                      ref,
-                                      store,
-                                      slot,
-                                    ),
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 8.w,
-                                        vertical: 3.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.gold.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(6.r),
-                                        border: Border.all(
-                                          color: AppColors.gold.withValues(alpha: 0.3),
-                                          width: 1.w,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            '₺${slot.price?.toStringAsFixed(1) ?? '0'}',
-                                            style: AppTextStyles.label.standardCopyWith(
-                                              color: AppColors.gold,
-                                              fontSize: AppTypography.bodySmall,
-                                              fontWeight: FontWeight.w900,
-                                            ),
-                                          ),
-                                          SizedBox(width: 4.w),
-                                          Icon(
-                                            AppIcons.edit,
-                                            color: AppColors.gold.withValues(alpha: 0.8),
-                                            size: 9.sp,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 6.w),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 6.w,
-                                      vertical: 2.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _storeSlotMarginColor(slot).withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(5.r),
-                                      border: Border.all(
-                                        color: _storeSlotMarginColor(slot).withValues(alpha: 0.25),
-                                        width: 1.w,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      _formatStoreSlotMargin(slot),
-                                      style: AppTextStyles.caption.standardCopyWith(
-                                        color: _storeSlotMarginColor(slot),
-                                        fontSize: AppTypography.caption,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            if (!slot.isActive) ...[
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
-                                decoration: BoxDecoration(
-                                  color: AppColors.red.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(4.r),
-                                  border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
-                                ),
-                                child: Text(
-                                  'PASİF',
-                                  style: AppTextStyles.badgeText.standardCopyWith(
-                                    color: AppColors.red,
-                                    fontSize: 9.sp,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 8.w),
-                            ],
-                            if (canAddStock) ...[
-                              IconButton(
-                                onPressed: () => _startStoreTransferFlow(
+                              GestureDetector(
+                                onTap: () => _showPriceEditDialog(
                                   context,
                                   ref,
                                   store,
                                   slot,
                                 ),
-                                icon: Icon(
-                                  AppIcons.localShipping,
-                                  color: AppColors.green,
-                                  size: AppIconSizes.medium,
-                                ),
-                                style: IconButton.styleFrom(
-                                  backgroundColor: AppColors.green.withValues(alpha: 0.12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8.r),
-                                    side: BorderSide(color: AppColors.green.withValues(alpha: 0.25)),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w,
+                                    vertical: 3.h,
                                   ),
-                                  padding: EdgeInsets.all(6.w),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.gold.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6.r),
+                                    border: Border.all(
+                                      color: AppColors.gold.withValues(alpha: 0.3),
+                                      width: 1.w,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '₺${slot.price?.toStringAsFixed(1) ?? '0'}',
+                                        style: AppTextStyles.label.standardCopyWith(
+                                          color: AppColors.gold,
+                                          fontSize: AppTypography.bodySmall,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      SizedBox(width: 4.w),
+                                      Icon(
+                                        AppIcons.edit,
+                                        color: AppColors.gold.withValues(alpha: 0.8),
+                                        size: 9.sp,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                tooltip: 'Stok Ekle',
                               ),
-                              SizedBox(width: 4.w),
+                              SizedBox(width: 6.w),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 6.w,
+                                  vertical: 2.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _storeSlotMarginColor(slot).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(5.r),
+                                  border: Border.all(
+                                    color: _storeSlotMarginColor(slot).withValues(alpha: 0.25),
+                                    width: 1.w,
+                                  ),
+                                ),
+                                child: Text(
+                                  _formatStoreSlotMargin(slot),
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: _storeSlotMarginColor(slot),
+                                    fontSize: AppTypography.caption,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
                             ],
-                            PopupMenuButton<String>(
-                              padding: EdgeInsets.zero,
-                              color: AppColors.cardBg,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          SizedBox(height: 8.h),
+                          // Stock progress bar side by side under the price
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Stok Doluluğu',
+                                    style: AppTextStyles.caption.standardCopyWith(
+                                      color: AppColors.textSecondary,
+                                      fontSize: AppTypography.micro,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${slot.quantity}/${slot.capacity}',
+                                    style: AppTextStyles.caption.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.micro,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              onSelected: (val) {
-                                if (val == 'send' && canSendStock) {
-                                  _startStoreWarehouseOutboundFlow(
-                                    context,
-                                    ref,
-                                    store,
-                                    slot,
-                                  );
-                                } else if (val == 'toggle') {
-                                  _toggleStoreSlotActive(
-                                    context,
-                                    ref,
-                                    store,
-                                    slot,
-                                  );
-                                } else if (val == 'clear' && canEditProduct) {
-                                  _confirmClearStoreSlot(
-                                    context,
-                                    ref,
-                                    store,
-                                    slot,
-                                  );
-                                } else if (val == 'change' && canEditProduct) {
-                                  _showProductSelectionDialog(
-                                    context,
-                                    ref,
-                                    store,
-                                    slot,
-                                  );
-                                } else if (!canEditProduct &&
-                                    (val == 'change' || val == 'clear')) {
-                                  _showStoreSlotLockedMessage(
-                                    context,
-                                    'Yolda stok varken ürün değiştirilemez.',
-                                  );
-                                }
-                              },
-                              itemBuilder: (ctx) => [
-                                PopupMenuItem(
-                                  value: 'send',
-                                  enabled: canSendStock,
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        AppIcons.localShipping,
-                                        color: AppColors.blue,
-                                        size: AppIconSizes.regular,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        'Mağaza Deposuna Gönder',
-                                        style: AppTextStyles.label.standardCopyWith(
-                                          color: AppColors.textPrimary,
-                                          fontSize: AppTypography.body,
-                                        ),
-                                      ),
-                                    ],
+                              SizedBox(height: 3.h),
+                              _buildMiniProgressStacked(
+                                slot.capacity > 0
+                                    ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
+                                    : 0,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    // Right: Status indicator, Quick Transfer and Settings buttons
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (!slot.isActive) ...[
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.red.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4.r),
+                              border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+                            ),
+                            child: Text(
+                              'PASİF',
+                              style: AppTextStyles.badgeText.standardCopyWith(
+                                color: AppColors.red,
+                                fontSize: 9.sp,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                        ],
+                        if (canAddStock) ...[
+                          IconButton(
+                            onPressed: () => _startStoreTransferFlow(
+                              context,
+                              ref,
+                              store,
+                              slot,
+                            ),
+                            icon: Icon(
+                              AppIcons.localShipping,
+                              color: AppColors.green,
+                              size: AppIconSizes.medium,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: AppColors.green.withValues(alpha: 0.12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.r),
+                                side: BorderSide(color: AppColors.green.withValues(alpha: 0.25)),
+                              ),
+                              padding: EdgeInsets.all(6.w),
+                            ),
+                            tooltip: 'Stok Ekle',
+                          ),
+                          SizedBox(width: 4.w),
+                        ],
+                        PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          color: AppColors.cardBg,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          onSelected: (val) {
+                            if (val == 'send' && canSendStock) {
+                              _startStoreWarehouseOutboundFlow(
+                                context,
+                                ref,
+                                store,
+                                slot,
+                              );
+                            } else if (val == 'toggle') {
+                              _toggleStoreSlotActive(
+                                context,
+                                ref,
+                                store,
+                                slot,
+                              );
+                            } else if (val == 'clear' && canEditProduct) {
+                              _confirmClearStoreSlot(
+                                context,
+                                ref,
+                                store,
+                                slot,
+                              );
+                            } else if (val == 'change' && canEditProduct) {
+                              _showProductSelectionDialog(
+                                context,
+                                ref,
+                                store,
+                                slot,
+                              );
+                            } else if (!canEditProduct &&
+                                (val == 'change' || val == 'clear')) {
+                              _showStoreSlotLockedMessage(
+                                context,
+                                'Yolda stok varken ürün değiştirilemez.',
+                              );
+                            }
+                          },
+                          itemBuilder: (ctx) => [
+                            PopupMenuItem(
+                              value: 'send',
+                              enabled: canSendStock,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    AppIcons.localShipping,
+                                    color: AppColors.blue,
+                                    size: AppIconSizes.regular,
                                   ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'toggle',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        slot.isActive
-                                            ? AppIcons.pauseCircleOutline
-                                            : AppIcons.playCircleOutline,
-                                        color: slot.isActive
-                                            ? AppColors.red
-                                            : AppColors.green,
-                                        size: AppIconSizes.regular,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        slot.isActive ? 'Pasif Yap' : 'Aktif Et',
-                                        style: AppTextStyles.label.standardCopyWith(
-                                          color: AppColors.textPrimary,
-                                          fontSize: AppTypography.body,
-                                        ),
-                                      ),
-                                    ],
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Mağaza Deposuna Gönder',
+                                    style: AppTextStyles.label.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.body,
+                                    ),
                                   ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'change',
-                                  enabled: canEditProduct,
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        AppIcons.swapHoriz,
-                                        color: AppColors.gold,
-                                        size: AppIconSizes.regular,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        'Ürünü Değiştir',
-                                        style: AppTextStyles.label.standardCopyWith(
-                                          color: AppColors.textPrimary,
-                                          fontSize: AppTypography.body,
-                                        ),
-                                      ),
-                                    ],
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'toggle',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    slot.isActive
+                                        ? AppIcons.pauseCircleOutline
+                                        : AppIcons.playCircleOutline,
+                                    color: slot.isActive
+                                        ? AppColors.red
+                                        : AppColors.green,
+                                    size: AppIconSizes.regular,
                                   ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'clear',
-                                  enabled: canEditProduct,
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        AppIcons.cleaningServices,
-                                        color: AppColors.red,
-                                        size: AppIconSizes.regular,
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        'Slotu Temizle',
-                                        style: AppTextStyles.label.standardCopyWith(
-                                          color: AppColors.textPrimary,
-                                          fontSize: AppTypography.body,
-                                        ),
-                                      ),
-                                    ],
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    slot.isActive ? 'Pasif Yap' : 'Aktif Et',
+                                    style: AppTextStyles.label.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.body,
+                                    ),
                                   ),
-                                ),
-                              ],
-                              child: Icon(
-                                AppIcons.moreVert,
-                                color: AppColors.textPrimary,
-                                size: AppIconSizes.mediumLarge,
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'change',
+                              enabled: canEditProduct,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    AppIcons.swapHoriz,
+                                    color: AppColors.gold,
+                                    size: AppIconSizes.regular,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Ürünü Değiştir',
+                                    style: AppTextStyles.label.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.body,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'clear',
+                              enabled: canEditProduct,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    AppIcons.cleaningServices,
+                                    color: AppColors.red,
+                                    size: AppIconSizes.regular,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Slotu Temizle',
+                                    style: AppTextStyles.label.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.body,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Stok Doluluğu',
-                          style: AppTextStyles.caption.standardCopyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: AppTypography.caption,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '${slot.quantity} adet / ${slot.capacity} maks',
-                          style: AppTextStyles.caption.standardCopyWith(
+                          child: Icon(
+                            AppIcons.moreVert,
                             color: AppColors.textPrimary,
-                            fontSize: AppTypography.caption,
-                            fontWeight: FontWeight.bold,
+                            size: AppIconSizes.mediumLarge,
                           ),
                         ),
                       ],
-                    ),
-                    SizedBox(height: 5.h),
-                    _buildMiniProgressStacked(
-                      slot.capacity > 0
-                          ? (slot.quantity / slot.capacity).clamp(0.0, 1.0)
-                          : 0,
                     ),
                   ],
                 ),
