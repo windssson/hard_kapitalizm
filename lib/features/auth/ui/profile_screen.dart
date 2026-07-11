@@ -147,7 +147,85 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  void _showAvatarSelectionSheet(BuildContext context, PlayerModel player) {
+  void _showChangeCompanyNameDialog(BuildContext context, PlayerModel player) {
+    final controller = TextEditingController(text: player.companyName);
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14.r),
+          side: BorderSide(color: AppColors.cardBorder),
+        ),
+        title: Text(
+          'Holding Adını Değiştir',
+          style: AppTextStyles.title.standardCopyWith(color: AppColors.textPrimary),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Yeni holding adını girin:',
+              style: AppTextStyles.body.standardCopyWith(color: AppColors.textSecondary),
+            ),
+            SizedBox(height: 12.h),
+            TextFormField(
+              controller: controller,
+              style: AppTextStyles.input,
+              maxLength: 25,
+              decoration: InputDecoration(
+                hintText: 'Holding Adı',
+                counterStyle: AppTextStyles.caption.standardCopyWith(color: AppColors.textMuted),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Vazgeç', style: AppTextStyles.label.standardCopyWith(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = controller.text.trim();
+              if (newName.isEmpty) {
+                AppSnackbar.show(context, message: 'Holding adı boş bırakılamaz.', type: SnackbarType.error);
+                return;
+              }
+              Navigator.pop(context);
+
+              try {
+                await ref.read(playerActionProvider).updateCompanyName(newName);
+                if (context.mounted) {
+                  AppSnackbar.show(
+                    context,
+                    message: 'Holding adı başarıyla güncellendi.',
+                    type: SnackbarType.success,
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  AppSnackbar.show(context, message: 'Hata: $e', type: SnackbarType.error);
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.textOnAccent,
+            ),
+            child: const Text('Güncelle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAvatarSelectionSheet(
+    BuildContext context,
+    PlayerModel player,
+    String? googleAvatarUrl,
+  ) {
     final avatars = [
       'ae1.webp',
       'ae2.webp',
@@ -155,6 +233,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       'ak1.webp',
       'ak2.webp',
       'ak3.webp',
+    ];
+
+    final hasGoogle = googleAvatarUrl != null && googleAvatarUrl.trim().isNotEmpty;
+    final List<Map<String, dynamic>> options = [
+      if (hasGoogle)
+        {
+          'id': googleAvatarUrl,
+          'widget': Image.network(googleAvatarUrl, fit: BoxFit.cover),
+        },
+      ...avatars.map((av) => {
+            'id': av,
+            'widget': CachedAssetImage(fileName: av, fit: BoxFit.cover),
+          }),
     ];
 
     showModalBottomSheet(
@@ -169,7 +260,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Avatar Sec', style: AppTextStyles.h2),
+              Text('Avatar Seç', style: AppTextStyles.h2),
               SizedBox(height: 16.h),
               GridView.builder(
                 shrinkWrap: true,
@@ -179,32 +270,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   crossAxisSpacing: 16.w,
                   mainAxisSpacing: 16.w,
                 ),
-                itemCount: avatars.length,
+                itemCount: options.length,
                 itemBuilder: (context, index) {
-                  final avatar = avatars[index];
-                  final isSelected = player.avatarId == avatar;
+                  final option = options[index];
+                  final optionId = option['id'] as String;
+                  final optionWidget = option['widget'] as Widget;
+                  final isSelected = player.avatarId == optionId;
                   return GestureDetector(
                     onTap: () async {
                       Navigator.pop(context);
                       await ref
                           .read(playerActionProvider)
-                          .setPlayerAvatar(avatar);
+                          .setPlayerAvatar(optionId);
                     },
                     child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected
-                              ? AppColors.green
-                              : AppColors.border,
+                          color: isSelected ? AppColors.green : AppColors.border,
                           width: isSelected ? 3.w : 1.w,
                         ),
                       ),
                       child: ClipOval(
-                        child: CachedAssetImage(
-                          fileName: avatar,
-                          fit: BoxFit.cover,
-                        ),
+                        child: optionWidget,
                       ),
                     ),
                   );
@@ -223,6 +311,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     AuthIdentityState? authIdentity,
   ) {
     final googleAvatarUrl = authIdentity?.avatarUrl ?? player.googleAvatarUrl;
+    final isUrl = player.avatarId.startsWith('http://') || player.avatarId.startsWith('https://');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,7 +333,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => _showAvatarSelectionSheet(context, player),
+                onTap: () => _showAvatarSelectionSheet(context, player, googleAvatarUrl),
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -257,14 +346,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         border: Border.all(color: AppColors.gold, width: 2.w),
                       ),
                       child: ClipOval(
-                        child:
-                            googleAvatarUrl != null &&
-                                googleAvatarUrl.trim().isNotEmpty
+                        child: isUrl
                             ? Image.network(
-                                googleAvatarUrl,
+                                player.avatarId,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, _, _) => CachedAssetImage(
-                                  fileName: player.avatarId,
+                                  fileName: 'avatar_1.webp',
                                   fit: BoxFit.cover,
                                   placeholder: Icon(
                                     AppIcons.person,
@@ -319,9 +406,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      player.companyName,
-                      style: AppTextStyles.h1.standardCopyWith(fontSize: AppTypography.displaySmall),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            player.companyName,
+                            style: AppTextStyles.h1.standardCopyWith(
+                              fontSize: AppTypography.displaySmall,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(AppIcons.edit, color: AppColors.gold, size: 20.r),
+                          onPressed: () => _showChangeCompanyNameDialog(context, player),
+                          tooltip: 'Holding Adını Değiştir',
+                        ),
+                      ],
                     ),
                     SizedBox(height: 2.h),
                     Text(

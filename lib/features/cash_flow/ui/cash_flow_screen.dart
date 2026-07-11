@@ -1050,12 +1050,57 @@ String _formatDateTime(DateTime value) {
 }
 
 String _formatLabel(String value) {
+  final cleanValue = value.trim().toLowerCase();
+  
+  const Map<String, String> translations = {
+    // Categories
+    'loan_payout': 'Kredi Ödemesi',
+    'loan_payment': 'Kredi Taksit Ödemesi',
+    'loan_payment_auto': 'Otomatik Taksit Tahsilatı',
+    'deposit_placed': 'Vadeli Mevduat Açılışı',
+    'deposit_claimed': 'Mevduat Tahsilatı',
+    'deposit_early_withdrawal': 'Mevduat Erken Kapatma',
+    'building_upgrade': 'Bina Yükseltme',
+    'tax_payment': 'Vergi Ödemesi',
+    'tax_debt_payment': 'Vergi Borcu Ödemesi',
+    'sales_tax': 'Satış Vergisi',
+    'store_sales': 'Mağaza Satışları',
+    'sales': 'Satış Geliri',
+    'vehicle_purchase': 'Araç Satın Alımı',
+    'warehouse_expansion': 'Depo Genişletme',
+    'warehouse_upgrade': 'Depo Yükseltme',
+    'license_purchase': 'Lisans Satın Alımı',
+    'mission_reward': 'Görev Ödülü',
+    'reward': 'Ödül',
+    'tender_bid': 'İhale Teklifi',
+    'tender_award': 'İhale Kazanımı',
+    'transfer_cost': 'Nakliye / Sevk Maliyeti',
+
+    // Reference Kinds / Reference Types
+    'loan': 'Banka Kredisi',
+    'deposit': 'Vadeli Mevduat',
+    'tax': 'Vergi Dairesi',
+    'store': 'Mağaza',
+    'warehouse': 'Depo',
+    'logistics': 'Lojistik',
+    'mission': 'Görev Sistemi',
+    'tender': 'Kamu İhalesi',
+    'building': 'Bina Kurumu',
+    'player': 'Oyuncu İşlemi',
+  };
+
+  if (translations.containsKey(cleanValue)) {
+    return translations[cleanValue]!;
+  }
+
   return value
       .replaceAll('_', ' ')
       .split(' ')
       .where((part) => part.trim().isNotEmpty)
       .map(
-        (part) => '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}',
+        (part) => part.length > 1
+            ? '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}'
+            : part.toUpperCase(),
       )
       .join(' ');
 }

@@ -29,6 +29,19 @@ class PlayerActionNotifier {
     );
     _ref.invalidate(playerProvider);
   }
+
+  Future<void> updateCompanyName(String newName) async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    await supabase
+        .from('players')
+        .update({'company_name': newName})
+        .eq('id', user.id);
+
+    _ref.invalidate(playerProvider);
+  }
 }
 
 final playerActionProvider = Provider<PlayerActionNotifier>((ref) {

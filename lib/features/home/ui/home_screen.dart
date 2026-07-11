@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -24,6 +25,7 @@ import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
+import 'package:hard_kapitalizm/features/bank/data/bank_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
 
@@ -121,7 +123,9 @@ class _GoogleLinkSuccessDialog extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Hesabin Guvenceye Alindi',
-                    style: AppTextStyles.h1.standardCopyWith(fontSize: AppTypography.displaySmall),
+                    style: AppTextStyles.h1.standardCopyWith(
+                      fontSize: AppTypography.displaySmall,
+                    ),
                   ),
                 ),
               ],
@@ -286,7 +290,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final shouldShowAccountSafetyBanner =
         (authIdentity?.isGoogleLinked ?? false) == false;
 
-    return Scaffold(
+    final taxStatus = ref.watch(playerTaxProvider).value;
+    final isTaxBlocked = taxStatus?.isBlocked ?? false;
+
+    final scaffold = Scaffold(
       backgroundColor: AppColors.transparent,
       body: SafeArea(
         child: Column(
@@ -346,6 +353,250 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
       ),
     );
+
+    if (isTaxBlocked) {
+      return Stack(
+        children: [scaffold, _buildTaxBlockOverlay(context, taxStatus!)],
+      );
+    }
+
+    return scaffold;
+  }
+
+  Widget _buildTaxBlockOverlay(BuildContext context, PlayerTaxModel taxStatus) {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.75),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+        child: Center(
+          child: Container(
+            margin: EdgeInsets.all(24.w),
+            padding: EdgeInsets.all(24.w),
+            decoration: AppDecorations.premiumCard(AppColors.red, 24.r),
+            child: Material(
+              color: Colors.transparent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(16.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.red.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.red.withValues(alpha: 0.4),
+                        width: 2.r,
+                      ),
+                    ),
+                    child: Icon(
+                      AppIcons.assuredWorkloadRounded,
+                      color: AppColors.red,
+                      size: 48.r,
+                    ),
+                  ),
+                  SizedBox(height: 20.h),
+                  Text(
+                    'FİNANSAL BLOKAJ',
+                    style: AppTextStyles.h2.standardCopyWith(
+                      color: AppColors.red,
+                      fontSize: AppTypography.titleLarge,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Text(
+                    'Birikmiş vergi borcunuz seviyenize göre belirlenen yasal limiti aşmıştır. Borcunuz ödenene kadar şirketinizin üretim faaliyetleri durdurulmuş ve hesabınız kilitlenmiştir.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.body,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 24.h),
+                  Container(
+                    padding: EdgeInsets.all(16.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBg.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(color: AppColors.border, width: 1.w),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildOverlayDetailRow(
+                          'Birikmiş Borç:',
+                          AppMoney.full(taxStatus.taxDebt, decimals: 0),
+                          AppColors.red,
+                        ),
+                        SizedBox(height: 10.h),
+                        _buildOverlayDetailRow(
+                          'Yasal Borç Limiti:',
+                          AppMoney.full(taxStatus.taxLimit, decimals: 0),
+                          AppColors.textSecondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 24.h),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.push('/tax');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.gold,
+                      foregroundColor: AppColors.textOnAccent,
+                      minimumSize: Size(double.infinity, 48.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      elevation: 4,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          AppIcons.assuredWorkloadRounded,
+                          size: 20.r,
+                          color: AppColors.textOnAccent,
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Vergi Dairesine Git (Borç Öde)',
+                          style: AppTextStyles.button.standardCopyWith(
+                            color: AppColors.textOnAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.push('/bank');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.gold,
+                      foregroundColor: AppColors.textOnAccent,
+                      minimumSize: Size(double.infinity, 48.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      elevation: 4,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          AppIcons.accountBalanceRounded,
+                          size: 20.r,
+                          color: AppColors.textOnAccent,
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Bankaya Git (Kredi / Mevduat)',
+                          style: AppTextStyles.button.standardCopyWith(
+                            color: AppColors.textOnAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  OutlinedButton(
+                    onPressed: () {
+                      context.push('/store');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      side: BorderSide(color: AppColors.border, width: 1.5.w),
+                      minimumSize: Size(double.infinity, 48.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          AppIcons.storefront,
+                          size: 20.r,
+                          color: AppColors.textPrimary,
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Mağazalarıma Git',
+                          style: AppTextStyles.button.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  OutlinedButton(
+                    onPressed: () {
+                      context.push('/warehouses');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      side: BorderSide(color: AppColors.border, width: 1.5.w),
+                      minimumSize: Size(double.infinity, 48.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 20.r,
+                          color: AppColors.textPrimary,
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Depolarıma Git ',
+                          style: AppTextStyles.button.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverlayDetailRow(String label, String value, Color valueColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Text(
+          value,
+          style: AppTextStyles.body.standardCopyWith(
+            color: valueColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildAccountSafetyBanner(BuildContext context) {
@@ -366,7 +617,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             child: Row(
               children: [
-                Icon(AppIcons.securityRounded, color: AppColors.red, size: AppIconSizes.small),
+                Icon(
+                  AppIcons.securityRounded,
+                  color: AppColors.red,
+                  size: AppIconSizes.small,
+                ),
                 SizedBox(width: 8.w),
                 Expanded(
                   child: Text(
@@ -416,76 +671,102 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     // 1. Nakit Akışı Kârlılık Kontrolü
     if (finance.netProfit < 0) {
-      insights.add(_AdvisorInsight(
-        title: 'Mali Risk Uyarısı',
-        description: 'Bugünkü net kârınız eksiye düştü! Giderleri azaltmak için lojistik giderlerini veya pasif işletmeleri gözden geçirin.',
-        icon: AppIcons.trendingDownRounded,
-        color: AppColors.red,
-      ));
+      insights.add(
+        _AdvisorInsight(
+          title: 'Mali Risk Uyarısı',
+          description:
+              'Bugünkü net kârınız eksiye düştü! Giderleri azaltmak için lojistik giderlerini veya pasif işletmeleri gözden geçirin.',
+          icon: AppIcons.trendingDownRounded,
+          color: AppColors.red,
+        ),
+      );
     } else if (finance.netProfit > 0 && dashboard.player.cash > 0) {
-      insights.add(_AdvisorInsight(
-        title: 'Yüksek Finansal Güç',
-        description: 'Bugün oldukça kârlısınız. Bu kazancı yeni Ar-Ge araştırmaları başlatarak veya hammadde depolarını doldurarak yatırıma dönüştürebilirsiniz.',
-        icon: AppIcons.insightsRounded,
-        color: AppColors.green,
-      ));
+      insights.add(
+        _AdvisorInsight(
+          title: 'Yüksek Finansal Güç',
+          description:
+              'Bugün oldukça kârlısınız. Bu kazancı yeni Ar-Ge araştırmaları başlatarak veya hammadde depolarını doldurarak yatırıma dönüştürebilirsiniz.',
+          icon: AppIcons.insightsRounded,
+          color: AppColors.green,
+        ),
+      );
     }
 
     // 2. Fabrika & Mağaza Dengesi Kontrolü
     if (modules.factories.activeCount > 0 && modules.stores.activeCount == 0) {
-      insights.add(_AdvisorInsight(
-        title: 'Dağıtım Kanalı Eksikliği',
-        description: 'Aktif fabrikalarınız var ancak bunları satacak bir mağazanız yok. Ürettiğiniz malları satmak için acilen bir mağaza inşa edin.',
-        icon: AppIcons.storefrontRounded,
-        color: AppColors.warning,
-      ));
-    } else if (modules.stores.activeCount > 0 && modules.factories.activeCount == 0) {
-      insights.add(_AdvisorInsight(
-        title: 'Tedarik Bağımlılığı',
-        description: 'Aktif mağazalarınız var ancak kendi fabrikanız yok. Pazar yerine bağımlılığı azaltmak için kendi üretim tesislerinizi kurabilirsiniz.',
-        icon: AppIcons.precisionManufacturingRounded,
-        color: AppColors.blue,
-      ));
+      insights.add(
+        _AdvisorInsight(
+          title: 'Dağıtım Kanalı Eksikliği',
+          description:
+              'Aktif fabrikalarınız var ancak bunları satacak bir mağazanız yok. Ürettiğiniz malları satmak için acilen bir mağaza inşa edin.',
+          icon: AppIcons.storefrontRounded,
+          color: AppColors.warning,
+        ),
+      );
+    } else if (modules.stores.activeCount > 0 &&
+        modules.factories.activeCount == 0) {
+      insights.add(
+        _AdvisorInsight(
+          title: 'Tedarik Bağımlılığı',
+          description:
+              'Aktif mağazalarınız var ancak kendi fabrikanız yok. Pazar yerine bağımlılığı azaltmak için kendi üretim tesislerinizi kurabilirsiniz.',
+          icon: AppIcons.precisionManufacturingRounded,
+          color: AppColors.blue,
+        ),
+      );
     }
 
     // 3. Lojistik Gider Oranı Kontrolü
-    if (finance.revenue > 0 && (finance.logisticsCost / finance.revenue) > 0.3) {
-      insights.add(_AdvisorInsight(
-        title: 'Yüksek Lojistik Gideri',
-        description: 'Lojistik giderleriniz cironuzun %${((finance.logisticsCost / finance.revenue) * 100).round()}\'ine ulaştı. Verimliliği artırmak için rotaları optimize edin veya özmal araç kullanın.',
-        icon: AppIcons.localShippingRounded,
-        color: AppColors.red,
-      ));
+    if (finance.revenue > 0 &&
+        (finance.logisticsCost / finance.revenue) > 0.3) {
+      insights.add(
+        _AdvisorInsight(
+          title: 'Yüksek Lojistik Gideri',
+          description:
+              'Lojistik giderleriniz cironuzun %${((finance.logisticsCost / finance.revenue) * 100).round()}\'ine ulaştı. Verimliliği artırmak için rotaları optimize edin veya özmal araç kullanın.',
+          icon: AppIcons.localShippingRounded,
+          color: AppColors.red,
+        ),
+      );
     }
 
     // 4. Ar-Ge Merkezi Boşta Kontrolü
     if (modules.arge.count > 0 && modules.arge.activeResearchCount == 0) {
-      insights.add(_AdvisorInsight(
-        title: 'Ar-Ge Çalışmaları Boşta',
-        description: 'Ar-Ge merkezinizde şu an aktif bir araştırma bulunmuyor. Ürün kalitenizi geliştirmek ve rakiplerin önüne geçmek için yeni bir araştırma başlatın.',
-        icon: AppIcons.scienceRounded,
-        color: AppColors.gold,
-      ));
+      insights.add(
+        _AdvisorInsight(
+          title: 'Ar-Ge Çalışmaları Boşta',
+          description:
+              'Ar-Ge merkezinizde şu an aktif bir araştırma bulunmuyor. Ürün kalitenizi geliştirmek ve rakiplerin önüne geçmek için yeni bir araştırma başlatın.',
+          icon: AppIcons.scienceRounded,
+          color: AppColors.gold,
+        ),
+      );
     }
 
     // 5. Araç Filosu Sorunları
     if (modules.logistics.warningCount > 0) {
-      insights.add(_AdvisorInsight(
-        title: 'Araç Filosu Sorunları',
-        description: 'Filodaki bazı araçların yakıtı kritik seviyede veya kondisyonu düşük. Taşımaların aksamaması için araç bakım ve yakıt durumlarını kontrol edin.',
-        icon: AppIcons.buildRounded,
-        color: AppColors.warning,
-      ));
+      insights.add(
+        _AdvisorInsight(
+          title: 'Araç Filosu Sorunları',
+          description:
+              'Filodaki bazı araçların yakıtı kritik seviyede veya kondisyonu düşük. Taşımaların aksamaması için araç bakım ve yakıt durumlarını kontrol edin.',
+          icon: AppIcons.buildRounded,
+          color: AppColors.warning,
+        ),
+      );
     }
 
     // Eğer hiç kritik durum yoksa, genel bir taktik göster
     if (insights.isEmpty) {
-      insights.add(_AdvisorInsight(
-        title: 'Yönetim Tavsiyesi',
-        description: 'Ürünlerinizi mağazanızda satmadan önce Marka Reklam Kampanyası başlatmak, satış hızını ve kâr oranını %40\'a kadar artırır!',
-        icon: AppIcons.lightbulbRounded,
-        color: AppColors.gold,
-      ));
+      insights.add(
+        _AdvisorInsight(
+          title: 'Yönetim Tavsiyesi',
+          description:
+              'Ürünlerinizi mağazanızda satmadan önce Marka Reklam Kampanyası başlatmak, satış hızını ve kâr oranını %40\'a kadar artırır!',
+          icon: AppIcons.lightbulbRounded,
+          color: AppColors.gold,
+        ),
+      );
     }
 
     return insights;
@@ -612,7 +893,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             : '$activeBusinessCount';
 
         return Container(
-          decoration: AppDecorations.premiumCard(AppColors.borderGoldLight.withValues(alpha: 0.55), 18.r),
+          decoration: AppDecorations.premiumCard(
+            AppColors.borderGoldLight.withValues(alpha: 0.55),
+            18.r,
+          ),
           child: Padding(
             padding: EdgeInsets.all(10.w),
             child: Column(
@@ -693,7 +977,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       child: SizedBox(
                         height: 104.h,
                         child: _buildCompanySparklinePanel(
-                          companyValueHistory: company?.companyValueHistory ?? const <double>[],
+                          companyValueHistory:
+                              company?.companyValueHistory ?? const <double>[],
                           companyValue: companyValue,
                           dailyProfit: dailyProfit,
                           activeBusinessCount: activeBusinessCount,
@@ -790,7 +1075,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     horizontal: 12.w,
                     vertical: 10.h,
                   ),
-                  decoration: AppDecorations.premiumCard(isClaimable ? AppColors.gold.withValues(alpha: 0.5) : AppColors.border, 14.r),
+                  decoration: AppDecorations.premiumCard(
+                    isClaimable
+                        ? AppColors.gold.withValues(alpha: 0.5)
+                        : AppColors.border,
+                    14.r,
+                  ),
                   child: Row(
                     children: [
                       Container(
@@ -870,11 +1160,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   SizedBox(height: 3.h),
                                   Text(
                                     '${selectedMission.progressCount}/${selectedMission.targetCount} ilerleme',
-                                    style: AppTextStyles.caption.standardCopyWith(
-                                      color: AppColors.textMuted,
-                                      fontSize: AppTypography.micro,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: AppTextStyles.caption
+                                        .standardCopyWith(
+                                          color: AppColors.textMuted,
+                                          fontSize: AppTypography.micro,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                   ),
                                 ],
                               ),
@@ -944,8 +1235,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return inProgress.isNotEmpty ? inProgress.first : null;
   }
 
-
-
   List<_HomeModuleCardData> _buildModuleCards(
     HomeModulesSummary? modules,
     Set<String> alertedModules, {
@@ -953,6 +1242,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     required int openTenders,
     required int activeTenders,
     required BrandCompanyModel? brandCompany,
+    required double activeLoanDebt,
+    required double activeDepositTotal,
   }) {
     return [
       _HomeModuleCardData(
@@ -1092,7 +1383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       _HomeModuleCardData(
         title: 'Vergi',
-        image: 'banka.webp',
+        image: 'cuzdan.webp',
         accentColor: taxDebt > 0 ? AppColors.red : AppColors.gold,
         primaryLabel: 'Borç',
         primaryValue: taxDebt > 0 ? AppMoney.compact(taxDebt) : '0',
@@ -1100,6 +1391,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         secondaryValue: taxDebt > 0 ? 'Odenmemis' : 'Temiz',
         badgeText: taxDebt > 0 ? 'Borc var' : 'Stabil',
         hasAlert: taxDebt > 0,
+      ),
+      _HomeModuleCardData(
+        title: 'Banka',
+        image: 'banka.webp',
+        accentColor: activeLoanDebt > 0 ? AppColors.red : AppColors.gold,
+        primaryLabel: 'Kredi',
+        primaryValue: activeLoanDebt > 0 ? AppMoney.compact(activeLoanDebt) : 'Yok',
+        secondaryLabel: 'Mevduat',
+        secondaryValue: activeDepositTotal > 0 ? AppMoney.compact(activeDepositTotal) : 'Yok',
+        badgeText: activeLoanDebt > 0
+            ? 'Borc var'
+            : (activeDepositTotal > 0 ? 'Mevduat' : 'Bos'),
+        hasAlert: activeLoanDebt > 0,
       ),
       _HomeModuleCardData(
         title: 'Ihale',
@@ -1120,7 +1424,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         primaryValue: brandCompany != null ? '${brandCompany.brandLevel}' : '1',
         secondaryLabel: 'XP',
         secondaryValue: brandCompany != null ? '${brandCompany.brandXp}' : '0',
-        badgeText: brandCompany != null ? 'Sv. ${brandCompany.brandLevel}' : 'Sv. 1',
+        badgeText: brandCompany != null
+            ? 'Sv. ${brandCompany.brandLevel}'
+            : 'Sv. 1',
         hasAlert: false,
       ),
     ];
@@ -1171,14 +1477,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       builder: (context, ref, child) {
         final dashboard = ref.watch(homeDashboardProvider).value;
         final alertedModules = _collectAlertedModules(dashboard);
-        
+
         final taxDebt = ref.watch(taxDebtProvider).value ?? 0.0;
-        
+
         final tenderCenter = ref.watch(tenderCenterProvider).value;
         final openTenders = tenderCenter?.openTenders.length ?? 0;
         final activeTenders = tenderCenter?.myActiveTenders.length ?? 0;
-        
+
         final brandCompany = ref.watch(playerBrandCompanyProvider).value;
+
+        final loansAsync = ref.watch(playerLoansProvider).value;
+        final depositsAsync = ref.watch(playerDepositsProvider).value;
+
+        final activeLoans = loansAsync?.where((l) => l.status != 'paid').toList() ?? [];
+        final activeLoanDebt = activeLoans.fold<double>(0, (sum, l) => sum + (l.totalDue - l.totalPaid));
+
+        final activeDeposits = depositsAsync?.where((d) => d.status == 'active').toList() ?? [];
+        final activeDepositTotal = activeDeposits.fold<double>(0, (sum, d) => sum + d.amount);
 
         final modules = _buildModuleCards(
           dashboard?.modules,
@@ -1187,6 +1502,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           openTenders: openTenders,
           activeTenders: activeTenders,
           brandCompany: brandCompany,
+          activeLoanDebt: activeLoanDebt,
+          activeDepositTotal: activeDepositTotal,
         );
 
         return GridView.builder(
@@ -1214,7 +1531,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.48), 16.r),
+                      decoration: AppDecorations.premiumCard(
+                        AppColors.borderGold.withValues(alpha: 0.48),
+                        16.r,
+                      ),
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(5.w, 3.h, 5.w, 4.h),
                         child: Column(
@@ -1273,7 +1593,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       },
     );
   }
-
 
   Widget _buildModuleMetricLine(String label, String value, Color valueColor) {
     return Row(
@@ -1357,6 +1676,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case 'Vergi':
         context.push('/tax');
         return;
+      case 'Banka':
+        context.push('/bank');
+        return;
       case 'Ihale':
         context.push('/tenders');
         return;
@@ -1378,7 +1700,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
         return Container(
           padding: EdgeInsets.symmetric(vertical: 14.h),
-          decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.34), 14.r),
+          decoration: AppDecorations.premiumCard(
+            AppColors.borderGold.withValues(alpha: 0.34),
+            14.r,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -1437,7 +1762,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
         return Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-          decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.34), 14.r),
+          decoration: AppDecorations.premiumCard(
+            AppColors.borderGold.withValues(alpha: 0.34),
+            14.r,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1449,8 +1777,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     size: AppIconSizes.small,
                   ),
                   SizedBox(width: 6.w),
-                    Text(
-                      'AKTIF URETIM HATLARI',
+                  Text(
+                    'AKTIF URETIM HATLARI',
                     style: AppTextStyles.titleGoldBold.standardCopyWith(
                       color: AppColors.gold,
                       fontSize: AppTypography.bodySmall,
@@ -1587,11 +1915,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         prod.productName,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: AppTextStyles.body.standardCopyWith(
-                                          color: AppColors.textPrimary,
-                                          fontSize: AppTypography.caption,
-                                          fontWeight: FontWeight.w700,
-                                        ),
+                                        style: AppTextStyles.body
+                                            .standardCopyWith(
+                                              color: AppColors.textPrimary,
+                                              fontSize: AppTypography.caption,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                       ),
                                       SizedBox(height: 1.h),
                                       Row(
@@ -1604,7 +1933,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                                 : AppIcons.starBorderRounded,
                                             color: isFilled
                                                 ? AppColors.gold
-                                                : AppColors.white.withValues(alpha: 0.24),
+                                                : AppColors.white.withValues(
+                                                    alpha: 0.24,
+                                                  ),
                                             size: AppIconSizes.xxSmall,
                                           );
                                         }),
@@ -1631,11 +1962,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         ),
                                         child: Text(
                                           kindLabel,
-                                          style: AppTextStyles.caption.standardCopyWith(
-                                            color: kindColor,
-                                            fontSize: AppTypography.micro,
-                                            fontWeight: FontWeight.w700,
-                                          ),
+                                          style: AppTextStyles.caption
+                                              .standardCopyWith(
+                                                color: kindColor,
+                                                fontSize: AppTypography.micro,
+                                                fontWeight: FontWeight.w700,
+                                              ),
                                         ),
                                       ),
                                     ],
@@ -1916,10 +2248,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return companyValue * multiplier;
   }
 
-
-
-
-
   List<double> _buildCompanySparklinePoints({
     required double companyValue,
     required double dailyProfit,
@@ -1941,8 +2269,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return value.clamp(0.12, 0.95);
     });
   }
-
-
 
   Widget _buildVerticalDivider() {
     return Container(
@@ -2049,7 +2375,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     VoidCallback? onHeaderTap,
   }) {
     return Container(
-      decoration: AppDecorations.premiumCard((headerIconColor ?? AppColors.gold).withValues(alpha: compact ? 0.22 : 0.28), 14.r),
+      decoration: AppDecorations.premiumCard(
+        (headerIconColor ?? AppColors.gold).withValues(
+          alpha: compact ? 0.22 : 0.28,
+        ),
+        14.r,
+      ),
       child: Column(
         children: [
           InkWell(
@@ -2129,7 +2460,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         }
 
         return Container(
-          decoration: AppDecorations.premiumCard(AppColors.borderGold.withValues(alpha: 0.34), 12.r),
+          decoration: AppDecorations.premiumCard(
+            AppColors.borderGold.withValues(alpha: 0.34),
+            12.r,
+          ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 12.h),
             child: Column(

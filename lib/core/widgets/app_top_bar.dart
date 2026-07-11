@@ -147,8 +147,8 @@ class AppTopBar extends ConsumerWidget {
     required bool compact,
   }) {
     final avatarSize = compact ? 52.w : 60.w;
-    final hasGoogleAvatar =
-        googleAvatarUrl != null && googleAvatarUrl.trim().isNotEmpty;
+    final avatarId = player?.avatarId ?? 'avatar_1.webp';
+    final isUrl = avatarId.startsWith('http://') || avatarId.startsWith('https://');
     return SizedBox(
       width: avatarSize,
       height: avatarSize,
@@ -188,12 +188,12 @@ class AppTopBar extends ConsumerWidget {
                 ),
               ),
               child: ClipOval(
-                child: hasGoogleAvatar
+                child: isUrl
                     ? Image.network(
-                        googleAvatarUrl,
+                        avatarId,
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => CachedAssetImage(
-                          fileName: player?.avatarId ?? 'avatar_1.webp',
+                          fileName: 'avatar_1.webp',
                           fit: BoxFit.cover,
                           placeholder: Icon(
                             AppIcons.person,
@@ -212,7 +212,7 @@ class AppTopBar extends ConsumerWidget {
                         ),
                       )
                     : CachedAssetImage(
-                        fileName: player?.avatarId ?? 'avatar_1.webp',
+                        fileName: avatarId,
                         fit: BoxFit.cover,
                         placeholder: Icon(
                           AppIcons.person,

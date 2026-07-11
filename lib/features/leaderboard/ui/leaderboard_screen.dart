@@ -344,12 +344,18 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 ],
               ),
               child: ClipOval(
-                child: CachedAssetImage(
-                  fileName: entry.avatarId,
-                  fit: BoxFit.cover,
-                  placeholder: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.large),
-                  errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.large),
-                ),
+                child: entry.avatarId.startsWith('http')
+                    ? Image.network(
+                        entry.avatarId,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.large),
+                      )
+                    : CachedAssetImage(
+                        fileName: entry.avatarId,
+                        fit: BoxFit.cover,
+                        placeholder: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.large),
+                        errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.large),
+                      ),
               ),
             ),
             if (isFirst)
@@ -493,12 +499,18 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               border: Border.all(color: AppColors.border, width: 1.w),
             ),
             child: ClipOval(
-              child: CachedAssetImage(
-                fileName: entry.avatarId,
-                fit: BoxFit.cover,
-                placeholder: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.regular),
-                errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.regular),
-              ),
+              child: entry.avatarId.startsWith('http')
+                  ? Image.network(
+                      entry.avatarId,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.regular),
+                    )
+                  : CachedAssetImage(
+                      fileName: entry.avatarId,
+                      fit: BoxFit.cover,
+                      placeholder: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.regular),
+                      errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.regular),
+                    ),
             ),
           ),
           SizedBox(width: 12.w),
@@ -598,12 +610,18 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               border: Border.all(color: AppColors.gold, width: 1.5.w),
             ),
             child: ClipOval(
-              child: CachedAssetImage(
-                fileName: entry.avatarId,
-                fit: BoxFit.cover,
-                placeholder: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.medium),
-                errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.medium),
-              ),
+              child: entry.avatarId.startsWith('http')
+                  ? Image.network(
+                      entry.avatarId,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.medium),
+                    )
+                  : CachedAssetImage(
+                      fileName: entry.avatarId,
+                      fit: BoxFit.cover,
+                      placeholder: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.medium),
+                      errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.medium),
+                    ),
             ),
           ),
           SizedBox(width: 12.w),

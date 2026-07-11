@@ -334,6 +334,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildAvatar(ChatMessage msg) {
+    final isUrl = msg.avatarId.startsWith('http://') || msg.avatarId.startsWith('https://');
     return Container(
       width: 28.w,
       height: 28.w,
@@ -343,15 +344,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         border: Border.all(color: AppColors.cardBorder, width: 1.w),
       ),
       child: ClipOval(
-        child: Image.asset(
-          'assets/avatars/${msg.avatarId}',
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => Icon(
-            AppIcons.person,
-            color: AppColors.textMuted,
-            size: AppIconSizes.compact,
-          ),
-        ),
+        child: isUrl
+            ? Image.network(
+                msg.avatarId,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Icon(
+                  AppIcons.person,
+                  color: AppColors.textMuted,
+                  size: AppIconSizes.compact,
+                ),
+              )
+            : Image.asset(
+                'assets/avatars/${msg.avatarId}',
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Icon(
+                  AppIcons.person,
+                  color: AppColors.textMuted,
+                  size: AppIconSizes.compact,
+                ),
+              ),
       ),
     );
   }

@@ -30,7 +30,11 @@ mixin RouteRefreshMixin<T extends ConsumerStatefulWidget> on ConsumerState<T>
 
   @override
   void didPopNext() {
-    refreshRouteData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        refreshRouteData();
+      }
+    });
   }
 
   @override

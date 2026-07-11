@@ -164,15 +164,13 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
               border: Border.all(color: AppColors.gold, width: 2.w),
             ),
             child: ClipOval(
-              child:
-                  player.googleAvatarUrl != null &&
-                      player.googleAvatarUrl!.trim().isNotEmpty
+              child: player.avatarId.startsWith('http')
                   ? Image.network(
-                      player.googleAvatarUrl!,
+                      player.avatarId,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) =>
                           CachedAssetImage(
-                            fileName: player.avatarId,
+                            fileName: 'avatar_1.webp',
                             fit: BoxFit.cover,
                           ),
                     )
