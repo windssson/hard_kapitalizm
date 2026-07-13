@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/ads/transfer_finish_rewarded_ad_service.dart';
 import 'package:hard_kapitalizm/core/constants/supabase_constants.dart';
 import 'package:hard_kapitalizm/features/home/ui/home_screen.dart';
 import 'package:hard_kapitalizm/features/splash/ui/splash_screen.dart';
@@ -14,22 +16,18 @@ import 'package:hard_kapitalizm/features/store/ui/store_history_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_performance_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_warehouse_detail_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/city_selection_screen.dart';
-import 'package:hard_kapitalizm/features/store/ui/store_type_selection_screen.dart';
+import 'package:hard_kapitalizm/core/widgets/building_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/auth/ui/profile_screen.dart';
 import 'package:hard_kapitalizm/features/auth/ui/public_profile_screen.dart';
 import 'package:hard_kapitalizm/features/premium/ui/premium_store_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_screen.dart';
 import 'package:hard_kapitalizm/features/field/ui/field_detail_screen.dart';
-import 'package:hard_kapitalizm/features/field/ui/field_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/farm/ui/farm_screen.dart';
 import 'package:hard_kapitalizm/features/farm/ui/farm_detail_screen.dart';
-import 'package:hard_kapitalizm/features/farm/ui/farm_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_detail_screen.dart';
-import 'package:hard_kapitalizm/features/factory/ui/factory_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_detail_screen.dart';
-import 'package:hard_kapitalizm/features/mine/ui/mine_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/market/ui/market_screen.dart';
 import 'package:hard_kapitalizm/features/company/ui/company_screen.dart';
 import 'package:hard_kapitalizm/features/company/ui/brand_design_screen.dart';
@@ -39,7 +37,6 @@ import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_scree
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_setup_screen.dart';
 import 'package:hard_kapitalizm/features/transfer_map/ui/transfer_map_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_screen.dart';
-import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_detail_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_history_screen.dart';
 import 'package:hard_kapitalizm/features/arge/ui/arge_screen.dart';
@@ -69,6 +66,10 @@ Future<void> main() async {
     url: SupabaseConstants.supabaseUrl,
     publishableKey: SupabaseConstants.supabaseAnonKey,
   );
+
+  if (TransferFinishRewardedAdService.appId != null) {
+    await MobileAds.instance.initialize();
+  }
 
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   await SystemChrome.setPreferredOrientations([
@@ -131,7 +132,10 @@ final _router = GoRouter(
           path: 'new/type',
           builder: (context, state) {
             final city = state.extra as CityModel;
-            return StoreTypeSelectionScreen(selectedCity: city);
+            return BuildingTypeSelectionScreen(
+              selectedCity: city,
+              buildingKind: 'store',
+            );
           },
         ),
         GoRoute(
@@ -187,7 +191,10 @@ final _router = GoRouter(
           path: 'new/type',
           builder: (context, state) {
             final city = state.extra as CityModel;
-            return FieldTypeSelectionScreen(selectedCity: city);
+            return BuildingTypeSelectionScreen(
+              selectedCity: city,
+              buildingKind: 'field',
+            );
           },
         ),
         GoRoute(
@@ -210,7 +217,10 @@ final _router = GoRouter(
           path: 'new/type',
           builder: (context, state) {
             final city = state.extra as CityModel;
-            return FarmTypeSelectionScreen(selectedCity: city);
+            return BuildingTypeSelectionScreen(
+              selectedCity: city,
+              buildingKind: 'farm',
+            );
           },
         ),
         GoRoute(
@@ -233,7 +243,10 @@ final _router = GoRouter(
           path: 'new/type',
           builder: (context, state) {
             final city = state.extra as CityModel;
-            return FactoryTypeSelectionScreen(selectedCity: city);
+            return BuildingTypeSelectionScreen(
+              selectedCity: city,
+              buildingKind: 'factory',
+            );
           },
         ),
         GoRoute(
@@ -256,7 +269,10 @@ final _router = GoRouter(
           path: 'new/type',
           builder: (context, state) {
             final city = state.extra as CityModel;
-            return MineTypeSelectionScreen(selectedCity: city);
+            return BuildingTypeSelectionScreen(
+              selectedCity: city,
+              buildingKind: 'mine',
+            );
           },
         ),
         GoRoute(
@@ -335,7 +351,10 @@ final _router = GoRouter(
           path: 'new/type',
           builder: (context, state) {
             final city = state.extra as CityModel;
-            return WarehouseTypeSelectionScreen(selectedCity: city);
+            return BuildingTypeSelectionScreen(
+              selectedCity: city,
+              buildingKind: 'warehouse',
+            );
           },
         ),
         GoRoute(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
@@ -21,6 +22,7 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
+import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
@@ -152,6 +154,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           upgrade: activeUpgrade,
                           onFinishWithGold: () =>
                               _finishMineUpgradeWithGold(activeUpgrade),
+                          onReduceTimeWithAd: () =>
+                              _reduceMineUpgradeTimeWithAd(activeUpgrade),
                           calculateStarCost: _calculateUpgradeStarCost,
                           formatCountdown: _formatCountdown,
                         ),
@@ -1493,6 +1497,22 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       message: result['message'] ?? 'Yukseltme tamamlanamadi.',
       type: SnackbarType.error,
     );
+  }
+
+  Future<void> _reduceMineUpgradeTimeWithAd(
+    BuildingUpgradeModel upgrade,
+  ) async {
+    final success = await RewardedTimeReductionFlow.run(
+      context,
+      onApplyReduction: () => ref
+          .read(mineActionProvider)
+          .reduceMineUpgradeTimeWithAd(upgrade.id, syncProviders: false),
+      successMessage: 'Maden yukseltme suresi 10 dakika kisaltildi.',
+    );
+
+    if (success) {
+      await _refreshMineEcosystem();
+    }
   }
 
   Future<void> _showProductDialog(
@@ -2923,12 +2943,14 @@ class _ActiveMineBoostCard extends ConsumerWidget {
 class _ActiveMineUpgradeCard extends ConsumerWidget {
   final BuildingUpgradeModel upgrade;
   final Future<void> Function() onFinishWithGold;
+  final Future<void> Function()? onReduceTimeWithAd;
   final int Function(DateTime finishAt) calculateStarCost;
   final String Function(Duration remaining) formatCountdown;
 
   const _ActiveMineUpgradeCard({
     required this.upgrade,
     required this.onFinishWithGold,
+    this.onReduceTimeWithAd,
     required this.calculateStarCost,
     required this.formatCountdown,
   });
@@ -3029,6 +3051,14 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
               ),
             ),
           ),
+          if (remaining.inSeconds > 0 && onReduceTimeWithAd != null) ...[
+            SizedBox(height: 10.h),
+            RewardedTimeReduceButton(
+              onPressed: () => onReduceTimeWithAd!.call(),
+              caption:
+                  'Bir reklam odulu al ve maden yukseltme suresini 10 dakika kisalt.',
+            ),
+          ],
         ],
       ),
     );

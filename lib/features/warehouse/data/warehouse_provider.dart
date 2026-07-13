@@ -417,6 +417,26 @@ class WarehouseActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
+    String constructionId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'reduce_construction_time_with_ad',
+        params: {
+          'p_player_id': user.id,
+          'p_construction_id': constructionId,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -490,6 +510,39 @@ class WarehouseActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_warehouse_upgrade_with_gold',
+        params: {
+          'p_player_id': user.id,
+          'p_upgrade_id': upgradeId,
+        },
+      );
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders && responseMap['success'] == true) {
+        final entityId = responseMap['entity_id']?.toString();
+        _ref.invalidate(warehouseListProvider);
+        if (entityId != null && entityId.isNotEmpty) {
+          _ref.invalidate(activeWarehouseUpgradeProvider(entityId));
+          _ref.invalidate(warehouseDetailProvider(entityId));
+        }
+        _ref.invalidate(playerProvider);
+      }
+      return responseMap;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> reduceWarehouseUpgradeTimeWithAd(
+    String upgradeId, {
+    bool syncProviders = true,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'reduce_warehouse_upgrade_time_with_ad',
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,
@@ -648,6 +701,25 @@ class WarehouseActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_logistics_transfer_with_gold',
+        params: {'p_transfer_id': transferId},
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> finishLogisticsTransferWithAdReward(
+    String transferId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'finish_logistics_transfer_with_ad_reward',
         params: {'p_transfer_id': transferId},
       );
       return Map<String, dynamic>.from(response as Map);

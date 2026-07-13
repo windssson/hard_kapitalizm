@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
@@ -22,6 +23,7 @@ import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
+import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -38,6 +40,8 @@ import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart'
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
+import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 
 class FarmDetailScreen extends ConsumerStatefulWidget {
   final String farmId;
@@ -155,6 +159,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                           upgrade: activeUpgrade,
                           onFinishWithGold: () =>
                               _finishFarmUpgradeWithGold(activeUpgrade),
+                          onReduceTimeWithAd: () =>
+                              _reduceFarmUpgradeTimeWithAd(activeUpgrade),
                           calculateStarCost: _calculateUpgradeStarCost,
                           formatCountdown: _formatCountdown,
                         ),
@@ -823,7 +829,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                         ),
                       )
                     else
-                      _buildSlotStatsRow(slot, outputInventory, activeBoost),
+                      _buildSlotStatsRow(slot, outputInventory, activeBoost, detail.farm.cityId),
                   ],
                 ),
               ),
@@ -844,6 +850,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     FarmProductionSlotModel slot,
     FarmProductionInventoryModel? outputInventory,
     BuildingBoostModel? activeBoost,
+    String cityId,
   ) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
@@ -924,13 +931,32 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(width: 3.w),
                   Text(
-                    _estimateProductionPerHour(slot, activeBoost).toString(),
+                    _estimateProductionPerHour(slot, activeBoost, cityId).toString(),
                     style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (slot.product != null && _getCityProductBonus(cityId, slot.product!.kategori) > 1.0) ...[
+                    SizedBox(width: 4.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4.r),
+                        border: Border.all(color: Colors.green, width: 0.5),
+                      ),
+                      child: Text(
+                        'x${_getCityProductBonus(cityId, slot.product!.kategori).toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 8.5.sp,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -1373,6 +1399,22 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       message: result['message'] ?? 'Yukseltme tamamlanamadi.',
       type: SnackbarType.error,
     );
+  }
+
+  Future<void> _reduceFarmUpgradeTimeWithAd(
+    BuildingUpgradeModel upgrade,
+  ) async {
+    final success = await RewardedTimeReductionFlow.run(
+      context,
+      onApplyReduction: () => ref
+          .read(farmActionProvider)
+          .reduceFarmUpgradeTimeWithAd(upgrade.id, syncProviders: false),
+      successMessage: 'Tarla yukseltme suresi 10 dakika kisaltildi.',
+    );
+
+    if (success) {
+      await _refreshFarmEcosystem(includePlayer: false);
+    }
   }
 
   Widget _buildSlotFlowGroup(
@@ -2177,7 +2219,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 ? ' (${_currentBrandName ?? 'Markali'})'
                 : ''),
         subtitle:
-            'Saatlik üretim: ${(product.uretimAdedi * (1.0 + (slot.qualityLevel - 1) * 0.20)).toInt()}',
+            'Saatlik üretim: ${(product.uretimAdedi * (1.0 + (slot.qualityLevel - 1) * 0.20) * _getCityProductBonus(detail.farm.cityId, product.kategori)).toInt()}'
+            '${_getCityProductBonus(detail.farm.cityId, product.kategori) > 1.0 ? " (x${_getCityProductBonus(detail.farm.cityId, product.kategori).toStringAsFixed(2)} Bölge)" : ""}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
             '${selectableProduct.hasPreferredBrand ? ' • Marka Hazir' : ''}',
@@ -4668,14 +4711,17 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   String _estimateProductionPerHour(
     FarmProductionSlotModel slot,
     BuildingBoostModel? activeBoost,
+    String cityId,
   ) {
     final product = slot.product;
     if (product == null) return '0';
     final qualityMultiplier = 1.0 + (slot.qualityLevel - 1) * 0.20;
+    final double cityBonus = _getCityProductBonus(cityId, product.kategori);
     final perHour =
         product.uretimAdedi *
         (activeBoost?.multiplier ?? 1) *
-        qualityMultiplier;
+        qualityMultiplier *
+        cityBonus;
     return perHour.toStringAsFixed(perHour >= 10 ? 0 : 1);
   }
 
@@ -4693,6 +4739,38 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         );
       }),
     );
+  }
+
+  double _getCityProductBonus(String cityId, String? productCategory) {
+    if (productCategory == null || productCategory.isEmpty) return 1.0;
+    final cities = ref.watch(citiesProvider).value;
+    if (cities == null) return 1.0;
+
+    final city = cities.cast<CityModel?>().firstWhere(
+          (c) => c != null && c.id == cityId,
+          orElse: () => null,
+        );
+    if (city == null) return 1.0;
+
+    String clean = productCategory.toLowerCase().trim();
+    clean = clean
+        .replaceAll('â', 'a')
+        .replaceAll('î', 'i')
+        .replaceAll('û', 'u')
+        .replaceAll('ç', 'c')
+        .replaceAll('ğ', 'g')
+        .replaceAll('ı', 'i')
+        .replaceAll('i̇', 'i')
+        .replaceAll('ö', 'o')
+        .replaceAll('ş', 's')
+        .replaceAll('ü', 'u')
+        .replaceAll(' ', '_')
+        .replaceAll('-', '_')
+        .replaceAll('/', '_')
+        .replaceAll('&', 've');
+
+    final String key = 'bonus_$clean';
+    return city.categoryBonuses[key] ?? 1.0;
   }
 }
 
@@ -4869,12 +4947,14 @@ class _ActiveFarmBoostCard extends ConsumerWidget {
 class _ActiveFarmUpgradeCard extends ConsumerWidget {
   final BuildingUpgradeModel upgrade;
   final Future<void> Function() onFinishWithGold;
+  final Future<void> Function()? onReduceTimeWithAd;
   final int Function(DateTime finishAt) calculateStarCost;
   final String Function(Duration remaining) formatCountdown;
 
   const _ActiveFarmUpgradeCard({
     required this.upgrade,
     required this.onFinishWithGold,
+    this.onReduceTimeWithAd,
     required this.calculateStarCost,
     required this.formatCountdown,
   });
@@ -4975,6 +5055,14 @@ class _ActiveFarmUpgradeCard extends ConsumerWidget {
               ),
             ),
           ),
+          if (remaining.inSeconds > 0 && onReduceTimeWithAd != null) ...[
+            SizedBox(height: 10.h),
+            RewardedTimeReduceButton(
+              onPressed: () => onReduceTimeWithAd!.call(),
+              caption:
+                  'Bir reklam odulu al ve tarla yukseltme suresini 10 dakika kisalt.',
+            ),
+          ],
         ],
       ),
     );

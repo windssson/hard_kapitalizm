@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
@@ -122,6 +123,16 @@ class _MineScreenState extends ConsumerState<MineScreen>
       title: 'Hata',
       message: result['message'] ?? 'Yildiz ile bitirme basarisiz oldu.',
       type: SnackbarType.error,
+    );
+  }
+
+  Future<void> _reduceConstructionTimeWithAd(String constructionId) async {
+    await RewardedTimeReductionFlow.run(
+      context,
+      onApplyReduction: () => ref
+          .read(mineActionProvider)
+          .reduceConstructionTimeWithAd(constructionId),
+      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
     );
   }
 
@@ -262,6 +273,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
           finishAt: finishAt.toLocal(),
           icon: AppIcons.diamondOutlined,
           onFinished: () => _completeConstruction(constructionId),
+          onReduceTimeWithAd: () => _reduceConstructionTimeWithAd(constructionId),
         ),
         if (starCost > 0)
           Padding(

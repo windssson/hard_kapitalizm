@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/transfer_finish_rewarded_ad_service.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
@@ -383,6 +384,54 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                   );
                                 },
                               ),
+                              if (_canFinishWithRewardedAd(remaining)) ...[
+                                SizedBox(height: 10.h),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 44.h,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _finishTransferWithRewardedAd(
+                                      context,
+                                      ref,
+                                      transfer,
+                                      remaining,
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.gold,
+                                      side: BorderSide(
+                                        color: AppColors.gold.withValues(alpha: 0.55),
+                                      ),
+                                      backgroundColor: AppColors.gold.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12.r),
+                                      ),
+                                    ),
+                                    icon: Icon(
+                                      AppIcons.playCircleFill,
+                                      size: AppIconSizes.regular,
+                                    ),
+                                    label: Text(
+                                      'Reklam izle ve hemen bitir',
+                                      style: AppTextStyles.button.standardCopyWith(
+                                        color: AppColors.gold,
+                                        fontSize: AppTypography.bodyLarge,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 8.h),
+                                Text(
+                                  'Sadece son 10 dakika icindeki transferlerde aktif olur.',
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: AppColors.textMuted,
+                                    fontSize: AppTypography.bodySmall,
+                                  ),
+                                ),
+                              ],
                             ],
                           ],
                         ),
@@ -528,6 +577,112 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         Navigator.of(context).pop(); // Pop loading dialog
       }
       if (context.mounted) {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: e.toString(),
+          type: SnackbarType.error,
+        );
+      }
+    }
+  }
+
+  bool _canFinishWithRewardedAd(Duration remaining) {
+    return remaining.inSeconds > 0 &&
+        remaining <= TransferFinishRewardedAdService.maxEligibleRemaining;
+  }
+
+  Future<void> _finishTransferWithRewardedAd(
+    BuildContext context,
+    WidgetRef ref,
+    TransferMapItemModel transfer,
+    Duration remaining,
+  ) async {
+    if (!_canFinishWithRewardedAd(remaining)) {
+      AppSnackbar.show(
+        context,
+        title: 'Reklamla Hizli Bitir Kilitli',
+        message:
+            'Bu ozellik sadece transferin bitmesine 10 dakika veya daha az kaldiysa kullanilabilir.',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    AppSnackbar.show(
+      context,
+      title: 'Test Reklami Hazirlaniyor',
+      message: 'Google AdMob test reklami yukleniyor.',
+      type: SnackbarType.info,
+    );
+
+    final adResult = await TransferFinishRewardedAdService.showAd();
+    if (!context.mounted) return;
+
+    if (!adResult.rewardEarned) {
+      AppSnackbar.show(
+        context,
+        title: 'Odul Alinamadi',
+        message: adResult.message,
+        type: SnackbarType.warning,
+      );
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: AppLoadingIndicator(
+          color: AppColors.gold,
+        ),
+      ),
+    );
+
+    try {
+      final result = await ref
+          .read(warehouseActionProvider)
+          .finishLogisticsTransferWithAdReward(transfer.id);
+
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (result['success'] == true) {
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+
+        ref.invalidate(buyerTransferMapProvider);
+        ref.invalidate(buyerTransferHistoryProvider);
+        ref.invalidate(playerProvider);
+        ref.invalidate(warehouseListProvider);
+        _invalidateAffectedTransferTargets(transfer);
+
+        if (context.mounted) {
+          AppSnackbar.show(
+            context,
+            title: 'Transfer Tamamlandi',
+            message:
+                'Reklam odulu kullanildi ve transfer aninda tamamlandi.',
+            type: SnackbarType.success,
+          );
+        }
+      } else {
+        if (context.mounted) {
+          AppSnackbar.show(
+            context,
+            title: 'Tamamlama Basarisiz',
+            message:
+                result['message'] ??
+                'Transfer reklam odulu ile tamamlanamadi.',
+            type: SnackbarType.error,
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
         AppSnackbar.show(
           context,
           title: 'Hata',

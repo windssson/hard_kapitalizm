@@ -28,6 +28,7 @@ import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:hard_kapitalizm/features/bank/data/bank_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
+import 'package:hard_kapitalizm/features/home/data/hourly_income_estimate_provider.dart';
 
 class _HomeModuleCardData {
   final String title;
@@ -39,6 +40,7 @@ class _HomeModuleCardData {
   final String badgeText;
   final bool hasAlert;
   final Color accentColor;
+  final int requiredLevel;
 
   const _HomeModuleCardData({
     required this.title,
@@ -50,6 +52,7 @@ class _HomeModuleCardData {
     required this.badgeText,
     required this.hasAlert,
     required this.accentColor,
+    required this.requiredLevel,
   });
 }
 
@@ -313,10 +316,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     _buildAdvisorInsightsCard(),
                     SizedBox(height: 8.h),
                     _buildModuleGrid(),
-                    SizedBox(height: 8.h),
-                    _buildFinancialStats(),
-                    SizedBox(height: 8.h),
-                    _buildActiveProductionsCard(),
                     SizedBox(height: 8.h),
                     _buildOperationsSection(),
                     SizedBox(height: 8.h),
@@ -882,12 +881,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Consumer(
       builder: (context, ref, child) {
         final dashboard = ref.watch(homeDashboardProvider).value;
+        final hourlyIncome = ref.watch(hourlyIncomeEstimateProvider).value;
         final company = dashboard?.company;
         final dailyProfit = company?.todayProfit ?? 0;
         final activeBusinessCount = company?.activeBusinessCount ?? 0;
         final totalBusinessCount = company?.totalBusinessCount ?? 0;
         final companyValue = company?.companyValue ?? 0;
-        final headquarters = company?.headquartersCityName ?? '-';
         final activeBusinessText = totalBusinessCount > 0
             ? '$activeBusinessCount / $totalBusinessCount'
             : '$activeBusinessCount';
@@ -963,10 +962,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                           SizedBox(height: 6.h),
                           _buildSummaryStatLine(
-                            AppIcons.placeRounded,
-                            'Merkez Sehir:',
-                            headquarters,
-                            AppColors.goldLight,
+                            AppIcons.paymentsRounded,
+                            'Tahmini Saatlik Gelir:',
+                            _formatEstimatedHourlyIncome(hourlyIncome?.total),
+                            AppColors.green,
                           ),
                         ],
                       ),
@@ -1044,6 +1043,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
       ],
     );
+  }
+
+  String _formatEstimatedHourlyIncome(double? value) {
+    if (value == null) return 'Hesaplaniyor';
+    if (value <= 0) return '0 / saat';
+    return '${AppMoney.compact(value)} / saat';
   }
 
   Widget _buildMissionHighlightCard() {
@@ -1261,6 +1266,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('stores') ||
             (modules?.stores.warningCount ?? 0) > 0,
+        requiredLevel: 1,
       ),
       _HomeModuleCardData(
         title: 'Depolar',
@@ -1276,6 +1282,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('warehouses') ||
             (modules?.warehouses.warningCount ?? 0) > 0,
+        requiredLevel: 2,
       ),
       _HomeModuleCardData(
         title: 'Tarlalar',
@@ -1294,6 +1301,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('farms') ||
             (modules?.farms.warningCount ?? 0) > 0,
+        requiredLevel: 3,
+      ),
+      _HomeModuleCardData(
+        title: 'Nakliye',
+        image: 'lojistik.webp',
+        accentColor: AppColors.info,
+        primaryLabel: 'Arac',
+        primaryValue: '${modules?.logistics.vehicleCount ?? 0}',
+        secondaryLabel: 'Sefer',
+        secondaryValue: '${modules?.logistics.activeTripCount ?? 0}',
+        badgeText: (modules?.logistics.warningCount ?? 0) > 0
+            ? '${modules!.logistics.warningCount} uyari'
+            : 'Akista',
+        hasAlert:
+            alertedModules.contains('logistics') ||
+            (modules?.logistics.warningCount ?? 0) > 0,
+        requiredLevel: 4,
       ),
       _HomeModuleCardData(
         title: 'Ciftlikler',
@@ -1312,6 +1336,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('fields') ||
             (modules?.fields.warningCount ?? 0) > 0,
+        requiredLevel: 5,
+      ),
+      _HomeModuleCardData(
+        title: 'Banka',
+        image: 'banka.webp',
+        accentColor: activeLoanDebt > 0 ? AppColors.red : AppColors.gold,
+        primaryLabel: 'Kredi',
+        primaryValue: activeLoanDebt > 0
+            ? AppMoney.compact(activeLoanDebt)
+            : 'Yok',
+        secondaryLabel: 'Mevduat',
+        secondaryValue: activeDepositTotal > 0
+            ? AppMoney.compact(activeDepositTotal)
+            : 'Yok',
+        badgeText: activeLoanDebt > 0
+            ? 'Borc var'
+            : (activeDepositTotal > 0 ? 'Mevduat' : 'Bos'),
+        hasAlert: activeLoanDebt > 0,
+        requiredLevel: 6,
+      ),
+      _HomeModuleCardData(
+        title: 'Vergi',
+        image: 'vergi.webp',
+        accentColor: taxDebt > 0 ? AppColors.red : AppColors.gold,
+        primaryLabel: 'Borç',
+        primaryValue: taxDebt > 0 ? AppMoney.compact(taxDebt) : '0',
+        secondaryLabel: 'Durum',
+        secondaryValue: taxDebt > 0 ? 'Odenmemis' : 'Temiz',
+        badgeText: taxDebt > 0 ? 'Borc var' : 'Stabil',
+        hasAlert: taxDebt > 0,
+        requiredLevel: 7,
+      ),
+      _HomeModuleCardData(
+        title: 'Ihale',
+        image: 'ihale.webp',
+        accentColor: openTenders > 0 ? AppColors.gold : AppColors.blue,
+        primaryLabel: 'Acik',
+        primaryValue: '$openTenders',
+        secondaryLabel: 'Aktif',
+        secondaryValue: '$activeTenders',
+        badgeText: openTenders > 0 ? 'Ihale' : 'Yok',
+        hasAlert: openTenders > 0,
+        requiredLevel: 8,
       ),
       _HomeModuleCardData(
         title: 'Fabrikalar',
@@ -1328,39 +1395,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('factories') ||
             (modules?.factories.blockedCount ?? 0) > 0,
+        requiredLevel: 10,
       ),
       _HomeModuleCardData(
-        title: 'Madenler',
-        image: 'madenler.webp',
-        accentColor: AppColors.warning,
-        primaryLabel: 'Aktif',
-        primaryValue:
-            '${modules?.mines.activeCount ?? 0}/${modules?.mines.count ?? 0}',
-        secondaryLabel: 'Doluluk',
-        secondaryValue: _formatRatio(modules?.mines.productionRatio ?? 0),
-        badgeText: (modules?.mines.warningCount ?? 0) > 0
-            ? '${modules!.mines.warningCount} uyari'
-            : (modules?.mines.count ?? 0) > 0
-            ? 'Kazida'
-            : 'Bos',
-        hasAlert:
-            alertedModules.contains('mines') ||
-            (modules?.mines.warningCount ?? 0) > 0,
-      ),
-      _HomeModuleCardData(
-        title: 'Nakliye',
-        image: 'lojistik.webp',
-        accentColor: AppColors.info,
-        primaryLabel: 'Arac',
-        primaryValue: '${modules?.logistics.vehicleCount ?? 0}',
-        secondaryLabel: 'Sefer',
-        secondaryValue: '${modules?.logistics.activeTripCount ?? 0}',
-        badgeText: (modules?.logistics.warningCount ?? 0) > 0
-            ? '${modules!.logistics.warningCount} uyari'
-            : 'Akista',
-        hasAlert:
-            alertedModules.contains('logistics') ||
-            (modules?.logistics.warningCount ?? 0) > 0,
+        title: 'Marka',
+        image: brandCompany != null ? brandCompany.logoId : 'marka.webp',
+        accentColor: AppColors.diamond,
+        primaryLabel: 'Seviye',
+        primaryValue: brandCompany != null ? '${brandCompany.brandLevel}' : '1',
+        secondaryLabel: 'XP',
+        secondaryValue: brandCompany != null ? '${brandCompany.brandXp}' : '0',
+        badgeText: brandCompany != null
+            ? 'Sv. ${brandCompany.brandLevel}'
+            : 'Sv. 1',
+        hasAlert: false,
+        requiredLevel: 12,
       ),
       _HomeModuleCardData(
         title: 'AR-GE',
@@ -1380,58 +1429,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('arge') ||
             (modules?.arge.warningCount ?? 0) > 0,
+        requiredLevel: 13,
       ),
       _HomeModuleCardData(
-        title: 'Vergi',
-        image: 'vergi.webp',
-        accentColor: taxDebt > 0 ? AppColors.red : AppColors.gold,
-        primaryLabel: 'Borç',
-        primaryValue: taxDebt > 0 ? AppMoney.compact(taxDebt) : '0',
-        secondaryLabel: 'Durum',
-        secondaryValue: taxDebt > 0 ? 'Odenmemis' : 'Temiz',
-        badgeText: taxDebt > 0 ? 'Borc var' : 'Stabil',
-        hasAlert: taxDebt > 0,
-      ),
-      _HomeModuleCardData(
-        title: 'Banka',
-        image: 'banka.webp',
-        accentColor: activeLoanDebt > 0 ? AppColors.red : AppColors.gold,
-        primaryLabel: 'Kredi',
-        primaryValue: activeLoanDebt > 0
-            ? AppMoney.compact(activeLoanDebt)
-            : 'Yok',
-        secondaryLabel: 'Mevduat',
-        secondaryValue: activeDepositTotal > 0
-            ? AppMoney.compact(activeDepositTotal)
-            : 'Yok',
-        badgeText: activeLoanDebt > 0
-            ? 'Borc var'
-            : (activeDepositTotal > 0 ? 'Mevduat' : 'Bos'),
-        hasAlert: activeLoanDebt > 0,
-      ),
-      _HomeModuleCardData(
-        title: 'Ihale',
-        image: 'ihale.webp',
-        accentColor: openTenders > 0 ? AppColors.gold : AppColors.blue,
-        primaryLabel: 'Acik',
-        primaryValue: '$openTenders',
-        secondaryLabel: 'Aktif',
-        secondaryValue: '$activeTenders',
-        badgeText: openTenders > 0 ? 'Ihale' : 'Yok',
-        hasAlert: openTenders > 0,
-      ),
-      _HomeModuleCardData(
-        title: 'Marka',
-        image: brandCompany != null ? brandCompany.logoId : 'marka.webp',
-        accentColor: AppColors.diamond,
-        primaryLabel: 'Seviye',
-        primaryValue: brandCompany != null ? '${brandCompany.brandLevel}' : '1',
-        secondaryLabel: 'XP',
-        secondaryValue: brandCompany != null ? '${brandCompany.brandXp}' : '0',
-        badgeText: brandCompany != null
-            ? 'Sv. ${brandCompany.brandLevel}'
-            : 'Sv. 1',
-        hasAlert: false,
+        title: 'Madenler',
+        image: 'madenler.webp',
+        accentColor: AppColors.warning,
+        primaryLabel: 'Aktif',
+        primaryValue:
+            '${modules?.mines.activeCount ?? 0}/${modules?.mines.count ?? 0}',
+        secondaryLabel: 'Doluluk',
+        secondaryValue: _formatRatio(modules?.mines.productionRatio ?? 0),
+        badgeText: (modules?.mines.warningCount ?? 0) > 0
+            ? '${modules!.mines.warningCount} uyari'
+            : (modules?.mines.count ?? 0) > 0
+            ? 'Kazida'
+            : 'Bos',
+        hasAlert:
+            alertedModules.contains('mines') ||
+            (modules?.mines.warningCount ?? 0) > 0,
+        requiredLevel: 15,
       ),
     ];
   }
@@ -1518,6 +1535,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           activeDepositTotal: activeDepositTotal,
         );
 
+        final playerLevel =
+            dashboard?.player.level ??
+            ref.watch(playerProvider).value?.level ??
+            1;
+
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -1530,21 +1552,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           itemCount: modules.length,
           itemBuilder: (context, index) {
             final module = modules[index];
+            final isLocked = playerLevel < module.requiredLevel;
 
             return Material(
               color: AppColors.transparent,
               borderRadius: BorderRadius.circular(16.r),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
-                onTap: () async {
-                  await _handleModuleTap(module.title);
-                },
+                onTap: isLocked
+                    ? null
+                    : () async {
+                        await _handleModuleTap(module.title);
+                      },
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Container(
                       decoration: AppDecorations.premiumCard(
-                        AppColors.borderGold.withValues(alpha: 0.48),
+                        isLocked
+                            ? AppColors.border.withValues(alpha: 0.16)
+                            : AppColors.borderGold.withValues(alpha: 0.48),
                         16.r,
                       ),
                       child: Padding(
@@ -1555,11 +1582,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             Center(
                               child: SizedBox(
                                 width: 60.w,
-                                height: 60.w,
-                                child: CachedAssetImage(
-                                  fileName: module.image,
-                                  fit: BoxFit.contain,
-                                ),
+                                height: 58.w,
+                                child: isLocked
+                                    ? Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          ColorFiltered(
+                                            colorFilter: ColorFilter.mode(
+                                              Colors.black.withValues(
+                                                alpha: 0.55,
+                                              ),
+                                              BlendMode.srcATop,
+                                            ),
+                                            child: Opacity(
+                                              opacity: 0.35,
+                                              child: CachedAssetImage(
+                                                fileName: module.image,
+                                                fit: BoxFit.contain,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            AppIcons.lock,
+                                            color: AppColors.textMuted
+                                                .withValues(alpha: 0.85),
+                                            size: 20.r,
+                                          ),
+                                        ],
+                                      )
+                                    : CachedAssetImage(
+                                        fileName: module.image,
+                                        fit: BoxFit.contain,
+                                      ),
                               ),
                             ),
                             SizedBox(height: 1.h),
@@ -1569,28 +1623,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               textAlign: TextAlign.center,
                               overflow: TextOverflow.ellipsis,
                               style: AppTextStyles.body.standardCopyWith(
-                                color: AppColors.textPrimary,
+                                color: isLocked
+                                    ? AppColors.textMuted
+                                    : AppColors.textPrimary,
                                 fontSize: AppTypography.label,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                             SizedBox(height: 2.h),
-                            _buildModuleMetricLine(
-                              module.primaryLabel,
-                              module.primaryValue,
-                              module.accentColor,
-                            ),
-                            SizedBox(height: 1.h),
-                            _buildModuleMetricLine(
-                              module.secondaryLabel,
-                              module.secondaryValue,
-                              AppColors.textPrimary,
-                            ),
+                            if (isLocked) ...[
+                              SizedBox(height: 6.h),
+                              Text(
+                                _getUnlockText(module.requiredLevel),
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.gold,
+                                  fontSize: AppTypography.micro,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                'açılır',
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.textMuted,
+                                  fontSize: AppTypography.micro,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ] else ...[
+                              _buildModuleMetricLine(
+                                module.primaryLabel,
+                                module.primaryValue,
+                                module.accentColor,
+                              ),
+                              SizedBox(height: 1.h),
+                              _buildModuleMetricLine(
+                                module.secondaryLabel,
+                                module.secondaryValue,
+                                AppColors.textPrimary,
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     ),
-                    if (module.hasAlert)
+                    if (module.hasAlert && !isLocked)
                       Positioned(
                         top: 6.h,
                         right: 6.w,
@@ -1604,6 +1680,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         );
       },
     );
+  }
+
+  String _getUnlockText(int requiredLevel) {
+    switch (requiredLevel) {
+      case 1:
+        return 'Seviye 1\'de';
+      case 2:
+        return 'Seviye 2\'de';
+      case 3:
+        return 'Seviye 3\'te';
+      case 4:
+        return 'Seviye 4\'te';
+      case 5:
+        return 'Seviye 5\'te';
+      case 6:
+        return 'Seviye 6\'da';
+      case 7:
+        return 'Seviye 7\'de';
+      case 8:
+        return 'Seviye 8\'de';
+      case 10:
+        return 'Seviye 10\'da';
+      case 12:
+        return 'Seviye 12\'de';
+      case 13:
+        return 'Seviye 13\'te';
+      case 15:
+        return 'Seviye 15\'te';
+      default:
+        return 'Seviye $requiredLevel\'de';
+    }
   }
 
   Widget _buildModuleMetricLine(String label, String value, Color valueColor) {
@@ -1698,328 +1805,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         context.push('/company');
         return;
     }
-  }
-
-  Widget _buildFinancialStats() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final dashboard = ref.watch(homeDashboardProvider).value;
-        final finance = dashboard?.financeToday;
-        final revenue = finance?.revenue ?? 0;
-        final productionCost = finance?.productionCost ?? 0;
-        final logisticsCost = finance?.logisticsCost ?? 0;
-        final netProfit = finance?.netProfit ?? 0;
-
-        return Container(
-          padding: EdgeInsets.symmetric(vertical: 14.h),
-          decoration: AppDecorations.premiumCard(
-            AppColors.borderGold.withValues(alpha: 0.34),
-            14.r,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildFinStatItem(
-                'Gelir',
-                AppMoney.compact(revenue, signed: true),
-                'Bugun',
-                AppColors.green,
-                AppIcons.paymentsRounded,
-                AppColors.green,
-              ),
-              _buildVerticalDivider(),
-              _buildFinStatItem(
-                'Uretim',
-                AppMoney.compact(-productionCost, signed: true),
-                'Maliyet',
-                AppColors.red,
-                AppIcons.precisionManufacturingRounded,
-                AppColors.warning,
-              ),
-              _buildVerticalDivider(),
-              _buildFinStatItem(
-                'Nakliye',
-                AppMoney.compact(-logisticsCost, signed: true),
-                'Gider',
-                AppColors.red,
-                AppIcons.localShippingRounded,
-                AppColors.blue,
-              ),
-              _buildVerticalDivider(),
-              _buildFinStatItem(
-                'Net Kar',
-                AppMoney.compact(netProfit, signed: true),
-                'Bugun',
-                netProfit >= 0 ? AppColors.green : AppColors.red,
-                AppIcons.monetizationOnRounded,
-                AppColors.gold,
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildActiveProductionsCard() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final dashboard = ref.watch(homeDashboardProvider).value;
-        final activeProductions = dashboard?.activeProductions ?? const [];
-
-        int totalActiveSlots = 0;
-        for (final prod in activeProductions) {
-          totalActiveSlots += prod.activeSlots;
-        }
-
-        return Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-          decoration: AppDecorations.premiumCard(
-            AppColors.borderGold.withValues(alpha: 0.34),
-            14.r,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    AppIcons.precisionManufacturingRounded,
-                    color: AppColors.gold,
-                    size: AppIconSizes.small,
-                  ),
-                  SizedBox(width: 6.w),
-                  Text(
-                    'AKTIF URETIM HATLARI',
-                    style: AppTextStyles.titleGoldBold.standardCopyWith(
-                      color: AppColors.gold,
-                      fontSize: AppTypography.bodySmall,
-                      letterSpacing: 0.25,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (activeProductions.isNotEmpty)
-                    Text(
-                      '$totalActiveSlots Aktif Slot',
-                      style: AppTextStyles.caption.standardCopyWith(
-                        color: AppColors.textMuted,
-                        fontSize: AppTypography.caption,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                ],
-              ),
-              SizedBox(height: 10.h),
-              if (activeProductions.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.h),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Aktif uretim bulunmuyor.',
-                          style: AppTextStyles.body.standardCopyWith(
-                            color: AppColors.textMuted,
-                            fontSize: AppTypography.label,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        SizedBox(height: 6.h),
-                        ElevatedButton(
-                          onPressed: () {
-                            context.go('/factories');
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.gold.withValues(
-                              alpha: 0.15,
-                            ),
-                            foregroundColor: AppColors.gold,
-                            elevation: 0,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16.w,
-                              vertical: 4.h,
-                            ),
-                            side: BorderSide(
-                              color: AppColors.gold.withValues(alpha: 0.4),
-                              width: 1,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                          ),
-                          child: Text(
-                            'Uretime Basla',
-                            style: AppTextStyles.button.standardCopyWith(
-                              fontSize: AppTypography.caption,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                SizedBox(
-                  height: 76.h,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: activeProductions.length,
-                    separatorBuilder: (context, index) => SizedBox(width: 8.w),
-                    itemBuilder: (context, index) {
-                      final prod = activeProductions[index];
-                      Color kindColor;
-                      String kindLabel;
-                      switch (prod.ownerKind.toLowerCase()) {
-                        case 'factory':
-                          kindColor = AppColors.gold;
-                          kindLabel = 'Fabrika';
-                          break;
-                        case 'farm':
-                          kindColor = AppColors.green;
-                          kindLabel = 'Tarla';
-                          break;
-                        case 'field':
-                          kindColor = AppColors.green;
-                          kindLabel = 'Ciftlik';
-                          break;
-                        case 'mine':
-                          kindColor = AppColors.warning;
-                          kindLabel = 'Maden';
-                          break;
-                        default:
-                          kindColor = AppColors.gold;
-                          kindLabel = 'Uretim';
-                      }
-
-                      return Container(
-                        width: 125.w,
-                        padding: EdgeInsets.all(6.w),
-                        decoration: BoxDecoration(
-                          color: AppColors.cardBgLight.withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(10.r),
-                          border: Border.all(
-                            color: AppColors.borderGold.withValues(alpha: 0.18),
-                            width: 1,
-                          ),
-                        ),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Row(
-                              children: [
-                                SizedBox(
-                                  width: 32.w,
-                                  height: 32.w,
-                                  child: CachedAssetImage(
-                                    fileName: prod.productIcon,
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                                SizedBox(width: 6.w),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        prod.productName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: AppTextStyles.body
-                                            .standardCopyWith(
-                                              color: AppColors.textPrimary,
-                                              fontSize: AppTypography.caption,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
-                                      SizedBox(height: 1.h),
-                                      Row(
-                                        children: List.generate(5, (i) {
-                                          final isFilled =
-                                              i < prod.qualityLevel;
-                                          return Icon(
-                                            isFilled
-                                                ? AppIcons.starRounded
-                                                : AppIcons.starBorderRounded,
-                                            color: isFilled
-                                                ? AppColors.gold
-                                                : AppColors.white.withValues(
-                                                    alpha: 0.24,
-                                                  ),
-                                            size: AppIconSizes.xxSmall,
-                                          );
-                                        }),
-                                      ),
-                                      SizedBox(height: 2.h),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 4.w,
-                                          vertical: 1.h,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: kindColor.withValues(
-                                            alpha: 0.12,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            4.r,
-                                          ),
-                                          border: Border.all(
-                                            color: kindColor.withValues(
-                                              alpha: 0.3,
-                                            ),
-                                            width: 0.5,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          kindLabel,
-                                          style: AppTextStyles.caption
-                                              .standardCopyWith(
-                                                color: kindColor,
-                                                fontSize: AppTypography.micro,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Positioned(
-                              top: -2.h,
-                              right: -2.w,
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 4.w,
-                                  vertical: 1.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.gold.withValues(alpha: 0.85),
-                                  borderRadius: BorderRadius.circular(6.r),
-                                ),
-                                child: Text(
-                                  'x${prod.activeSlots}',
-                                  style: AppTextStyles.caption.standardCopyWith(
-                                    color: AppColors.textOnAccent,
-                                    fontSize: AppTypography.micro,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   List<double> _normalizeCompanyValues(List<double> values) {
@@ -2280,67 +2065,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final value = 0.28 + (progress * 0.42 * activityRatio) + wave;
       return value.clamp(0.12, 0.95);
     });
-  }
-
-  Widget _buildVerticalDivider() {
-    return Container(
-      height: 38.h,
-      width: 1.w,
-      color: AppColors.borderGold.withValues(alpha: 0.18),
-    );
-  }
-
-  Widget _buildFinStatItem(
-    String title,
-    String value,
-    String subtitle,
-    Color valueColor,
-    IconData icon,
-    Color iconColor,
-  ) {
-    return Expanded(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 28.w,
-            height: 28.w,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8.r),
-              border: Border.all(color: iconColor.withValues(alpha: 0.22)),
-            ),
-            child: Icon(icon, color: iconColor, size: AppIconSizes.compact),
-          ),
-          SizedBox(height: 5.h),
-          Text(
-            title,
-            style: AppTextStyles.body.standardCopyWith(
-              fontSize: AppTypography.caption,
-              color: AppColors.textMuted,
-            ),
-          ),
-          SizedBox(height: 1.h),
-          Text(
-            value,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.body.standardCopyWith(
-              color: valueColor,
-              fontSize: AppTypography.body,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          SizedBox(height: 1.h),
-          Text(
-            subtitle,
-            style: AppTextStyles.body.standardCopyWith(
-              fontSize: AppTypography.micro,
-              color: AppColors.textMuted,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildModuleAlertBadge() {

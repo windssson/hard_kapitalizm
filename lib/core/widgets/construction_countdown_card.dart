@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 
 class ConstructionCountdownCard extends ConsumerStatefulWidget {
   final String title;
   final String subtitle;
   final DateTime finishAt;
   final Future<void> Function() onFinished;
+  final Future<void> Function()? onReduceTimeWithAd;
   final IconData icon;
 
   const ConstructionCountdownCard({
@@ -17,6 +19,7 @@ class ConstructionCountdownCard extends ConsumerStatefulWidget {
     required this.subtitle,
     required this.finishAt,
     required this.onFinished,
+    this.onReduceTimeWithAd,
     this.icon = AppIcons.construction,
   });
 
@@ -84,6 +87,14 @@ class _ConstructionCountdownCardState
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (safe.inSeconds > 0 && widget.onReduceTimeWithAd != null) ...[
+                  SizedBox(height: 10.h),
+                  RewardedTimeReduceButton(
+                    onPressed: () => widget.onReduceTimeWithAd!.call(),
+                    label: 'Reklam izle -10 dk',
+                    caption: 'Bir reklam odulu al ve insaat suresini 10 dakika kisalt.',
+                  ),
+                ],
               ],
             ),
           ),

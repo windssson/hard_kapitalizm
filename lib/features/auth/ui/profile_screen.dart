@@ -128,9 +128,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       authIdentityAsync.asData?.value,
                     );
                   },
-                  loading: () => Center(
-                    child: AppLoadingIndicator(color: AppColors.gold),
-                  ),
+                  loading: () =>
+                      Center(child: AppLoadingIndicator(color: AppColors.gold)),
                   error: (err, stack) => Center(
                     child: Text('Hata: $err', style: AppTextStyles.body),
                   ),
@@ -159,7 +158,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         title: Text(
           'Holding Adını Değiştir',
-          style: AppTextStyles.title.standardCopyWith(color: AppColors.textPrimary),
+          style: AppTextStyles.title.standardCopyWith(
+            color: AppColors.textPrimary,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -167,7 +168,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             Text(
               'Yeni holding adını girin:',
-              style: AppTextStyles.body.standardCopyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
             SizedBox(height: 12.h),
             TextFormField(
@@ -176,7 +179,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               maxLength: 25,
               decoration: InputDecoration(
                 hintText: 'Holding Adı',
-                counterStyle: AppTextStyles.caption.standardCopyWith(color: AppColors.textMuted),
+                counterStyle: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                ),
               ),
             ),
           ],
@@ -184,13 +189,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Vazgeç', style: AppTextStyles.label.standardCopyWith(color: AppColors.textMuted)),
+            child: Text(
+              'Vazgeç',
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
               final newName = controller.text.trim();
               if (newName.isEmpty) {
-                AppSnackbar.show(context, message: 'Holding adı boş bırakılamaz.', type: SnackbarType.error);
+                AppSnackbar.show(
+                  context,
+                  message: 'Holding adı boş bırakılamaz.',
+                  type: SnackbarType.error,
+                );
                 return;
               }
               Navigator.pop(context);
@@ -206,7 +220,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 }
               } catch (e) {
                 if (context.mounted) {
-                  AppSnackbar.show(context, message: 'Hata: $e', type: SnackbarType.error);
+                  AppSnackbar.show(
+                    context,
+                    message: 'Hata: $e',
+                    type: SnackbarType.error,
+                  );
                 }
               }
             },
@@ -235,17 +253,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       'ak3.webp',
     ];
 
-    final hasGoogle = googleAvatarUrl != null && googleAvatarUrl.trim().isNotEmpty;
+    final hasGoogle =
+        googleAvatarUrl != null && googleAvatarUrl.trim().isNotEmpty;
     final List<Map<String, dynamic>> options = [
       if (hasGoogle)
         {
           'id': googleAvatarUrl,
           'widget': Image.network(googleAvatarUrl, fit: BoxFit.cover),
         },
-      ...avatars.map((av) => {
-            'id': av,
-            'widget': CachedAssetImage(fileName: av, fit: BoxFit.cover),
-          }),
+      ...avatars.map(
+        (av) => {
+          'id': av,
+          'widget': CachedAssetImage(fileName: av, fit: BoxFit.cover),
+        },
+      ),
     ];
 
     showModalBottomSheet(
@@ -287,13 +308,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected ? AppColors.green : AppColors.border,
+                          color: isSelected
+                              ? AppColors.green
+                              : AppColors.border,
                           width: isSelected ? 3.w : 1.w,
                         ),
                       ),
-                      child: ClipOval(
-                        child: optionWidget,
-                      ),
+                      child: ClipOval(child: optionWidget),
                     ),
                   );
                 },
@@ -311,7 +332,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     AuthIdentityState? authIdentity,
   ) {
     final googleAvatarUrl = authIdentity?.avatarUrl ?? player.googleAvatarUrl;
-    final isUrl = player.avatarId.startsWith('http://') || player.avatarId.startsWith('https://');
+    final isUrl =
+        player.avatarId.startsWith('http://') ||
+        player.avatarId.startsWith('https://');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,7 +356,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => _showAvatarSelectionSheet(context, player, googleAvatarUrl),
+                onTap: () =>
+                    _showAvatarSelectionSheet(context, player, googleAvatarUrl),
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -351,7 +375,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 player.avatarId,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, _, _) => CachedAssetImage(
-                                  fileName: 'avatar_1.webp',
+                                  fileName: 'ae1.webp',
                                   fit: BoxFit.cover,
                                   placeholder: Icon(
                                     AppIcons.person,
@@ -419,8 +443,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: Icon(AppIcons.edit, color: AppColors.gold, size: 20.r),
-                          onPressed: () => _showChangeCompanyNameDialog(context, player),
+                          icon: Icon(
+                            AppIcons.edit,
+                            color: AppColors.gold,
+                            size: 20.r,
+                          ),
+                          onPressed: () =>
+                              _showChangeCompanyNameDialog(context, player),
                           tooltip: 'Holding Adını Değiştir',
                         ),
                       ],
@@ -499,7 +528,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     child: Text(
                       'LV ${player.level}',
-                      style: AppTextStyles.titleGold.standardCopyWith(fontSize: AppTypography.body),
+                      style: AppTextStyles.titleGold.standardCopyWith(
+                        fontSize: AppTypography.body,
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -827,7 +858,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   isGoogleLinked
                       ? 'Google Hesabi Bagli'
                       : 'Hesabi Guvenceye Al',
-                  style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.titleLarge),
+                  style: AppTextStyles.h2.standardCopyWith(
+                    fontSize: AppTypography.titleLarge,
+                  ),
                 ),
               ),
             ],
@@ -1100,7 +1133,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         title: Text(
           'Kayitli Hesaba Gec',
-          style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.headline),
+          style: AppTextStyles.h2.standardCopyWith(
+            fontSize: AppTypography.headline,
+          ),
         ),
         content: Text(
           'Bu islem mevcut cihaz oturumundan cikarak Google hesabina bagli kayitli oyun hesabina gecis yapar.',
@@ -1111,7 +1146,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
               'Vazgec',
-              style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+              ),
             ),
           ),
           ElevatedButton(
@@ -1257,7 +1294,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               color: color.withValues(alpha: 0.12),
               border: Border.all(color: color.withValues(alpha: 0.3)),
             ),
-            child: Icon(_badgeIcon(badge.badgeKey), color: color, size: AppIconSizes.regular),
+            child: Icon(
+              _badgeIcon(badge.badgeKey),
+              color: color,
+              size: AppIconSizes.regular,
+            ),
           ),
           SizedBox(width: 8.w),
           Expanded(

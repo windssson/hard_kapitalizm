@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -11,6 +12,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/arge/data/arge_provider.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
@@ -295,6 +297,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                                         upgrade: upgrade,
                                         onFinishWithGold: () =>
                                             _finishCenterUpgradeWithGold(upgrade),
+                                        onReduceTimeWithAd: () =>
+                                            _reduceCenterUpgradeTimeWithAd(upgrade),
                                         calculateStarCost:
                                             _calculateUpgradeStarCost,
                                         formatCountdown: _formatCountdown,
@@ -1252,6 +1256,22 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     }
   }
 
+  Future<void> _reduceCenterUpgradeTimeWithAd(
+    BuildingUpgradeModel upgrade,
+  ) async {
+    final success = await RewardedTimeReductionFlow.run(
+      context,
+      onApplyReduction: () => ref
+          .read(argeActionProvider)
+          .reduceCenterUpgradeTimeWithAd(upgrade.id),
+      successMessage: 'Merkez yukseltme suresi 10 dakika kisaltildi.',
+    );
+
+    if (success) {
+      _refreshCenterEcosystem(upgrade.entityId);
+    }
+  }
+
   Widget _buildSetupState(dynamic player) {
     final playerCash = double.tryParse(player?.cash?.toString() ?? '0') ?? 0;
     const setupCost = 25000.0;
@@ -1827,12 +1847,14 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 class _ActiveArgeUpgradeCard extends ConsumerWidget {
   final BuildingUpgradeModel upgrade;
   final Future<void> Function() onFinishWithGold;
+  final Future<void> Function()? onReduceTimeWithAd;
   final int Function(DateTime finishAt) calculateStarCost;
   final String Function(DateTime finishAt) formatCountdown;
 
   const _ActiveArgeUpgradeCard({
     required this.upgrade,
     required this.onFinishWithGold,
+    this.onReduceTimeWithAd,
     required this.calculateStarCost,
     required this.formatCountdown,
   });
@@ -1966,6 +1988,14 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
                   ),
                 ),
               ),
+            ),
+          ],
+          if (upgrade.finishAt.isAfter(now) && onReduceTimeWithAd != null) ...[
+            SizedBox(height: 10.h),
+            RewardedTimeReduceButton(
+              onPressed: () => onReduceTimeWithAd!.call(),
+              caption:
+                  'Bir reklam odulu al ve merkez yukseltme suresini 10 dakika kisalt.',
             ),
           ],
         ],

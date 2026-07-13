@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -11,6 +12,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
+import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -132,6 +134,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                             formatCountdown: _formatCountdown,
                             onFinishWithGold: () =>
                                 _finishWarehouseUpgradeWithGold(
+                                  visibleActiveUpgrade,
+                                ),
+                            onReduceTimeWithAd: () =>
+                                _reduceWarehouseUpgradeTimeWithAd(
                                   visibleActiveUpgrade,
                                 ),
                           ),
@@ -3384,6 +3390,22 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
+  Future<void> _reduceWarehouseUpgradeTimeWithAd(
+    BuildingUpgradeModel upgrade,
+  ) async {
+    final success = await RewardedTimeReductionFlow.run(
+      context,
+      onApplyReduction: () => ref
+          .read(warehouseActionProvider)
+          .reduceWarehouseUpgradeTimeWithAd(upgrade.id, syncProviders: false),
+      successMessage: 'Depo yukseltme suresi 10 dakika kisaltildi.',
+    );
+
+    if (success) {
+      await _refreshWarehouseEcosystem();
+    }
+  }
+
   Future<void> _showIntercityWarehouseTransferVehiclePicker(
     BuildContext context,
     WidgetRef ref,
@@ -3574,12 +3596,14 @@ class _ActiveWarehouseUpgradeCard extends ConsumerWidget {
   const _ActiveWarehouseUpgradeCard({
     required this.upgrade,
     required this.onFinishWithGold,
+    this.onReduceTimeWithAd,
     required this.calculateStarCost,
     required this.formatCountdown,
   });
 
   final BuildingUpgradeModel upgrade;
   final Future<void> Function() onFinishWithGold;
+  final Future<void> Function()? onReduceTimeWithAd;
   final int Function(DateTime finishAt) calculateStarCost;
   final String Function(Duration remaining) formatCountdown;
 
@@ -3679,6 +3703,14 @@ class _ActiveWarehouseUpgradeCard extends ConsumerWidget {
               ),
             ),
           ),
+          if (remaining.inSeconds > 0 && onReduceTimeWithAd != null) ...[
+            SizedBox(height: 10.h),
+            RewardedTimeReduceButton(
+              onPressed: () => onReduceTimeWithAd!.call(),
+              caption:
+                  'Bir reklam odulu al ve depo yukseltme suresini 10 dakika kisalt.',
+            ),
+          ],
         ],
       ),
     );

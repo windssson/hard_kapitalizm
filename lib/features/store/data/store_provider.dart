@@ -508,6 +508,28 @@ class StoreActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
+    String constructionId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'reduce_construction_time_with_ad',
+        params: {
+          'p_player_id': user.id,
+          'p_construction_id': constructionId,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -596,6 +618,28 @@ class StoreActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
+        params: {
+          'p_player_id': user.id,
+          'p_upgrade_id': upgradeId,
+        },
+      );
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> reduceStoreUpgradeTimeWithAd(
+    String upgradeId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'reduce_building_upgrade_time_with_ad',
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,

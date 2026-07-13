@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -11,6 +12,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
+import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
@@ -1430,6 +1432,16 @@ class _LogisticsManagementScreenState
             finishAt: finishAt,
             onFinishWithGold: (id) => _handleFinishWithGold(context, id),
           ),
+          SizedBox(height: 10.h),
+          RewardedTimeReduceButton(
+            onPressed: () => _handleReduceConstructionTimeWithAd(
+              context,
+              ref,
+              constructionId,
+            ),
+            caption:
+                'Bir reklam odulu al ve lojistik firma insaat suresini 10 dakika kisalt.',
+          ),
         ],
       ],
     );
@@ -2068,6 +2080,25 @@ class _LogisticsManagementScreenState
       );
       await showExperienceFeedbackFromResult(context, result);
     }
+  }
+
+  Future<void> _handleReduceConstructionTimeWithAd(
+    BuildContext context,
+    WidgetRef ref,
+    String constructionId,
+  ) async {
+    await RewardedTimeReductionFlow.run(
+      context,
+      onApplyReduction: () => ref
+          .read(logisticsActionProvider)
+          .reduceConstructionTimeWithAd(constructionId, syncProviders: false),
+      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+    );
+
+    if (!context.mounted) return;
+    ref.invalidate(playerLogisticsCompanyProvider);
+    ref.invalidate(playerLogisticsConstructionProvider);
+    ref.invalidate(playerProvider);
   }
 
   Future<void> _showPurchaseVehicleSheet({

@@ -21,6 +21,7 @@ class ProductModel {
   final int piyasadakiStok;
   final double iscilikMaliyeti;
   final DateTime createdAt;
+  final String? kategori;
 
   ProductModel({
     required this.id,
@@ -45,6 +46,7 @@ class ProductModel {
     required this.piyasadakiStok,
     this.iscilikMaliyeti = 0.0,
     required this.createdAt,
+    this.kategori,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -73,6 +75,7 @@ class ProductModel {
       createdAt: json['created_at'] != null 
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
+      kategori: json['kategori']?.toString(),
     );
   }
 
@@ -100,6 +103,7 @@ class ProductModel {
       'piyasadaki_stok': piyasadakiStok,
       'iscilik_maliyeti': iscilikMaliyeti,
       'created_at': createdAt.toIso8601String(),
+      'kategori': kategori,
     };
   }
 

@@ -314,7 +314,8 @@ CREATE TABLE products (
     ortalama_fiyat numeric,
     satici_sayisi integer,
     created_at timestamp with time zone,
-    piyasadaki_stok integer
+    piyasadaki_stok integer,
+    kategori text
 );
 
 CREATE TABLE farm_types (
@@ -465,7 +466,14 @@ CREATE TABLE cities (
     map_position_x numeric NOT NULL,
     map_position_y numeric NOT NULL,
     is_active boolean NOT NULL DEFAULT true,
-    created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())
+    created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+    -- Dynamic category bonuses (examples seeded by migrations)
+    bonus_meyve_bahcesi numeric NOT NULL DEFAULT 1.0,
+    bonus_tahil_tarlasi numeric NOT NULL DEFAULT 1.0,
+    bonus_demir_madeni numeric NOT NULL DEFAULT 1.0,
+    bonus_komur_madeni numeric NOT NULL DEFAULT 1.0,
+    bonus_tekstil_fabrikasi numeric NOT NULL DEFAULT 1.0,
+    bonus_elektronik_fabrikasi numeric NOT NULL DEFAULT 1.0
 );
 
 CREATE TABLE mission_definitions (
@@ -1208,10 +1216,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION process_field_farm_production_entry(
-    
-) RETURNS void AS $$
+    p_player_id uuid,
+    p_owner_kind text,
+    p_owner_id uuid,
+    p_tick_minutes integer DEFAULT 10,
+    p_max_ticks integer DEFAULT 6
+) RETURNS jsonb AS $$
 BEGIN
-    -- Implementation details not available in OpenAPI spec
+    -- Implementation details updated to apply city category production bonuses
 END;
 $$ LANGUAGE plpgsql;
 

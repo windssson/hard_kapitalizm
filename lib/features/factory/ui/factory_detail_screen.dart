@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
@@ -19,6 +20,7 @@ import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
+import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -157,6 +159,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           upgrade: activeUpgrade,
                           onFinishWithGold: () =>
                               _finishFactoryUpgradeWithGold(activeUpgrade),
+                          onReduceTimeWithAd: () =>
+                              _reduceFactoryUpgradeTimeWithAd(activeUpgrade),
                           calculateStarCost: _calculateUpgradeStarCost,
                           formatCountdown: _formatCountdown,
                         ),
@@ -2023,6 +2027,22 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       message: result['message'] ?? 'Yukseltme tamamlanamadi.',
       type: SnackbarType.error,
     );
+  }
+
+  Future<void> _reduceFactoryUpgradeTimeWithAd(
+    BuildingUpgradeModel upgrade,
+  ) async {
+    final success = await RewardedTimeReductionFlow.run(
+      context,
+      onApplyReduction: () => ref
+          .read(factoryActionProvider)
+          .reduceFactoryUpgradeTimeWithAd(upgrade.id, syncProviders: false),
+      successMessage: 'Fabrika yukseltme suresi 10 dakika kisaltildi.',
+    );
+
+    if (success) {
+      await _refreshFactoryEcosystem(includePlayer: false);
+    }
   }
 
   Future<void> _showProductDialog(
@@ -4695,12 +4715,14 @@ class _ActiveFactoryBoostCard extends ConsumerWidget {
 class _ActiveFactoryUpgradeCard extends ConsumerWidget {
   final BuildingUpgradeModel upgrade;
   final Future<void> Function() onFinishWithGold;
+  final Future<void> Function()? onReduceTimeWithAd;
   final int Function(DateTime finishAt) calculateStarCost;
   final String Function(Duration remaining) formatCountdown;
 
   const _ActiveFactoryUpgradeCard({
     required this.upgrade,
     required this.onFinishWithGold,
+    this.onReduceTimeWithAd,
     required this.calculateStarCost,
     required this.formatCountdown,
   });
@@ -4801,6 +4823,14 @@ class _ActiveFactoryUpgradeCard extends ConsumerWidget {
               ),
             ),
           ),
+          if (remaining.inSeconds > 0 && onReduceTimeWithAd != null) ...[
+            SizedBox(height: 10.h),
+            RewardedTimeReduceButton(
+              onPressed: () => onReduceTimeWithAd!.call(),
+              caption:
+                  'Bir reklam odulu al ve fabrika yukseltme suresini 10 dakika kisalt.',
+            ),
+          ],
         ],
       ),
     );

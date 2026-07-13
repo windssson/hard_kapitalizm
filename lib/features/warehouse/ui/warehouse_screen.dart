@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
@@ -11,6 +12,7 @@ import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
+import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
@@ -549,6 +551,15 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                           fontSize: AppTypography.bodySmall,
                         ),
                       ),
+                    if (finishAt != null) ...[
+                      SizedBox(height: 10.h),
+                      RewardedTimeReduceButton(
+                        onPressed: () =>
+                            _handleReduceConstructionTimeWithAd(warehouse.id),
+                        caption:
+                            'Bir reklam odulu al ve depo insaat suresini 10 dakika kisalt.',
+                      ),
+                    ]
                   ],
                 ),
               ),
@@ -654,6 +665,22 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         message: result['message'] ?? 'Altin ile bitirme islemi basarisiz.',
         type: SnackbarType.error,
       );
+    }
+  }
+
+  Future<void> _handleReduceConstructionTimeWithAd(String constructionId) async {
+    final success = await RewardedTimeReductionFlow.run(
+      context,
+      onApplyReduction: () => ref
+          .read(warehouseActionProvider)
+          .reduceConstructionTimeWithAd(constructionId),
+      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+    );
+
+    if (success) {
+      await ref.read(warehouseListProvider.notifier).refresh();
+      ref.invalidate(playerProvider);
+      ref.invalidate(playerBrandCompanyProvider);
     }
   }
 

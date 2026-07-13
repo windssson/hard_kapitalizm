@@ -266,6 +266,34 @@ class MineActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
+    String constructionId, {
+    bool syncProviders = true,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'reduce_construction_time_with_ad',
+        params: {
+          'p_player_id': user.id,
+          'p_construction_id': constructionId,
+        },
+      );
+      if (syncProviders) {
+        _ref.invalidate(mineListProvider);
+        _ref.invalidate(mineConstructionProvider);
+        _ref.invalidate(playerProvider);
+      }
+      return response as Map<String, dynamic>;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> startMineUpgrade(
     String mineId, {
     bool syncProviders = true,
@@ -328,6 +356,38 @@ class MineActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
+        params: {
+          'p_player_id': user.id,
+          'p_upgrade_id': upgradeId,
+        },
+      );
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders) {
+        _ref.invalidate(mineListProvider);
+        final entityId = responseMap['entity_id']?.toString();
+        if (entityId != null && entityId.isNotEmpty) {
+          _ref.invalidate(mineDetailProvider(entityId));
+        }
+        _ref.invalidate(playerProvider);
+      }
+      return responseMap;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> reduceMineUpgradeTimeWithAd(
+    String upgradeId, {
+    bool syncProviders = true,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'reduce_building_upgrade_time_with_ad',
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,

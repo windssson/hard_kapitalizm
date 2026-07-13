@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
@@ -122,6 +123,16 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     );
   }
 
+  Future<void> _reduceConstructionTimeWithAd(String constructionId) async {
+    await RewardedTimeReductionFlow.run(
+      context,
+      onApplyReduction: () => ref
+          .read(farmActionProvider)
+          .reduceConstructionTimeWithAd(constructionId),
+      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final farmsAsync = ref.watch(farmListProvider);
@@ -238,6 +249,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
           finishAt: finishAt.toLocal(),
           icon: AppIcons.agriculture,
           onFinished: () => _completeConstruction(constructionId),
+          onReduceTimeWithAd: () => _reduceConstructionTimeWithAd(constructionId),
         ),
         if (starCost > 0)
           Padding(

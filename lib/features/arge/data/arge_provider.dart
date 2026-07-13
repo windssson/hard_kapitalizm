@@ -235,6 +235,29 @@ class ArgeActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
+    String constructionId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'reduce_construction_time_with_ad',
+        params: {
+          'p_player_id': user.id,
+          'p_construction_id': constructionId,
+        },
+      );
+      _ref.invalidate(playerArgeCenterProvider);
+      _ref.invalidate(playerArgeConstructionProvider);
+      _ref.invalidate(playerProvider);
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> startCenterUpgrade(String centerId) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -279,6 +302,28 @@ class ArgeActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
+        params: {
+          'p_player_id': user.id,
+          'p_upgrade_id': upgradeId,
+        },
+      );
+      _ref.invalidate(playerArgeCenterProvider);
+      _ref.invalidate(playerProvider);
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> reduceCenterUpgradeTimeWithAd(
+    String upgradeId,
+  ) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'reduce_building_upgrade_time_with_ad',
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,

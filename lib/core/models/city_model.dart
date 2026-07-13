@@ -6,6 +6,7 @@ class CityModel {
   final double mapPositionX;
   final double mapPositionY;
   final bool isActive;
+  final Map<String, double> categoryBonuses;
 
   CityModel({
     required this.id,
@@ -15,6 +16,7 @@ class CityModel {
     required this.mapPositionX,
     required this.mapPositionY,
     required this.isActive,
+    required this.categoryBonuses,
   });
 
   factory CityModel.fromJson(Map<String, dynamic> json) {
@@ -25,6 +27,13 @@ class CityModel {
       return 0.0;
     }
 
+    final bonuses = <String, double>{};
+    json.forEach((key, val) {
+      if (key.startsWith('bonus_')) {
+        bonuses[key] = parseDouble(val);
+      }
+    });
+
     return CityModel(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
@@ -33,6 +42,7 @@ class CityModel {
       mapPositionX: parseDouble(json['map_position_x']),
       mapPositionY: parseDouble(json['map_position_y']),
       isActive: json['is_active'] as bool? ?? true,
+      categoryBonuses: bonuses,
     );
   }
 
@@ -45,6 +55,7 @@ class CityModel {
       'map_position_x': mapPositionX,
       'map_position_y': mapPositionY,
       'is_active': isActive,
+      ...categoryBonuses,
     };
   }
 }
