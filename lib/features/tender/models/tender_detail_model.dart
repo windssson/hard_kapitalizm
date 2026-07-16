@@ -101,6 +101,7 @@ class TenderDetailTenderModel {
   final String productName;
   final String productIcon;
   final double productUnitVolume;
+  final double productBasePrice;
   final int qualityLevel;
   final int requiredQuantity;
   final double rewardCash;
@@ -120,6 +121,7 @@ class TenderDetailTenderModel {
     required this.productName,
     required this.productIcon,
     required this.productUnitVolume,
+    required this.productBasePrice,
     required this.qualityLevel,
     required this.requiredQuantity,
     required this.rewardCash,
@@ -141,6 +143,7 @@ class TenderDetailTenderModel {
       productName: (json['product_name'] ?? '-').toString(),
       productIcon: (json['product_icon'] ?? 'default.webp').toString(),
       productUnitVolume: (json['product_unit_volume'] as num?)?.toDouble() ?? 0,
+      productBasePrice: (json['product_base_price'] as num?)?.toDouble() ?? 0,
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
       requiredQuantity: (json['required_quantity'] as num?)?.toInt() ?? 0,
       rewardCash: (json['reward_cash'] as num?)?.toDouble() ?? 0,
@@ -305,6 +308,7 @@ class TenderWarehouseOptionModel {
   final String cityId;
   final String cityName;
   final int availableQuantity;
+  final double unitCost;
   final bool sameCity;
   final double distanceKm;
   final int? estimatedDurationMinutes;
@@ -317,6 +321,7 @@ class TenderWarehouseOptionModel {
     required this.cityId,
     required this.cityName,
     required this.availableQuantity,
+    required this.unitCost,
     required this.sameCity,
     required this.distanceKm,
     required this.estimatedDurationMinutes,
@@ -331,6 +336,7 @@ class TenderWarehouseOptionModel {
       cityId: (json['city_id'] ?? '').toString(),
       cityName: (json['city_name'] ?? '-').toString(),
       availableQuantity: (json['available_quantity'] as num?)?.toInt() ?? 0,
+      unitCost: (json['unit_cost'] as num?)?.toDouble() ?? 0,
       sameCity: json['same_city'] as bool? ?? false,
       distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0,
       estimatedDurationMinutes:

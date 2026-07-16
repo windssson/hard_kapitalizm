@@ -8,6 +8,8 @@ enum FloatingFeedbackType {
   cashRemove,
   xp,
   gold,
+  timeReduce,
+  boostAdd,
 }
 
 class FloatingFeedback {
@@ -148,6 +150,18 @@ class _FloatingTextWidgetState extends State<_FloatingTextWidget>
             prefix = '+';
             suffix = ' Altin';
             icon = AppIcons.starsRounded;
+            break;
+          case FloatingFeedbackType.timeReduce:
+            textColor = AppColors.gold;
+            prefix = '-';
+            suffix = ' dk';
+            icon = AppIcons.flashOnRounded;
+            break;
+          case FloatingFeedbackType.boostAdd:
+            textColor = AppColors.green;
+            prefix = '+';
+            suffix = ' dk Boost';
+            icon = AppIcons.flashOnRounded;
             break;
         }
 

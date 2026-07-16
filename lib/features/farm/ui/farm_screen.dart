@@ -126,6 +126,8 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   Future<void> _reduceConstructionTimeWithAd(String constructionId) async {
     await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'construction_time_reduce',
+      resourceId: constructionId,
       onApplyReduction: () => ref
           .read(farmActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
@@ -249,7 +251,8 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
           finishAt: finishAt.toLocal(),
           icon: AppIcons.agriculture,
           onFinished: () => _completeConstruction(constructionId),
-          onReduceTimeWithAd: () => _reduceConstructionTimeWithAd(constructionId),
+          onReduceTimeWithAd: () =>
+              _reduceConstructionTimeWithAd(constructionId),
         ),
         if (starCost > 0)
           Padding(

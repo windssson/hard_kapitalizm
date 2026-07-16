@@ -53,7 +53,10 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   @override
   Widget build(BuildContext context) {
     final warehousesAsync = ref.watch(warehouseListProvider);
-    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
+    final currentBrandName = ref
+        .watch(playerBrandCompanyProvider)
+        .value
+        ?.brandName;
 
     return Scaffold(
       backgroundColor: AppColors.transparent,
@@ -67,7 +70,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         icon: Icon(AppIcons.addHomeWork, color: AppColors.textOnAccent),
         label: Text(
           'Yeni Depo',
-          style: AppTextStyles.button.standardCopyWith(fontWeight: FontWeight.bold),
+          style: AppTextStyles.button.standardCopyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       body: SafeArea(
@@ -114,9 +119,8 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     ),
                   );
                 },
-                loading: () => Center(
-                  child: AppLoadingIndicator(color: AppColors.gold),
-                ),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (error, stack) => _buildErrorState(error),
               ),
             ),
@@ -350,7 +354,8 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                             scrollDirection: Axis.horizontal,
                             physics: const BouncingScrollPhysics(),
                             itemCount: filledSlots.length,
-                            separatorBuilder: (context, index) => SizedBox(width: 8.w),
+                            separatorBuilder: (context, index) =>
+                                SizedBox(width: 8.w),
                             itemBuilder: (context, index) => _buildMiniSlot(
                               filledSlots[index],
                               currentBrandName,
@@ -559,7 +564,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                         caption:
                             'Bir reklam odulu al ve depo insaat suresini 10 dakika kisalt.',
                       ),
-                    ]
+                    ],
                   ],
                 ),
               ),
@@ -668,9 +673,13 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     }
   }
 
-  Future<void> _handleReduceConstructionTimeWithAd(String constructionId) async {
+  Future<void> _handleReduceConstructionTimeWithAd(
+    String constructionId,
+  ) async {
     final success = await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'construction_time_reduce',
+      resourceId: constructionId,
       onApplyReduction: () => ref
           .read(warehouseActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
@@ -684,9 +693,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     }
   }
 
-  Widget _buildEmptyState({
-    required bool hasAnyWarehouse,
-  }) {
+  Widget _buildEmptyState({required bool hasAnyWarehouse}) {
     final title = hasAnyWarehouse
         ? 'Secili filtreye uygun depo bulunamadi.'
         : 'Henuz deponuz bulunmuyor.';
@@ -703,10 +710,10 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
           SizedBox(height: 16.h),
           Text(
             title,
-          style: AppTextStyles.body.standardCopyWith(
-            color: AppColors.textMuted,
-            fontSize: AppTypography.title,
-          ),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.title,
+            ),
           ),
         ],
       ),
@@ -720,7 +727,11 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(AppIcons.errorOutline, color: AppColors.red, size: AppIconSizes.displayLarge),
+            Icon(
+              AppIcons.errorOutline,
+              color: AppColors.red,
+              size: AppIconSizes.displayLarge,
+            ),
             SizedBox(height: 12.h),
             Text(
               'Depo listesi yuklenemedi.',

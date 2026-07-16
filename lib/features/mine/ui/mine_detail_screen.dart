@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_ad_action_flow.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
@@ -37,6 +38,8 @@ import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_detail_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
+import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 
 class MineDetailScreen extends ConsumerStatefulWidget {
   final String mineId;
@@ -135,6 +138,90 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
                     children: [
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final listAsync = ref.watch(mineListProvider);
+                          return listAsync.maybeWhen(
+                            data: (list) {
+                              if (list.length <= 1) return const SizedBox.shrink();
+                              final hasCurrent = list.any(
+                                (item) => item.mine.id == widget.mineId,
+                              );
+                              if (!hasCurrent) return const SizedBox.shrink();
+
+                              return Container(
+                                margin: EdgeInsets.only(bottom: 8.h),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 14.w,
+                                  vertical: 2.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBg,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: AppColors.borderGold.withValues(
+                                      alpha: 0.25,
+                                    ),
+                                    width: 1.w,
+                                  ),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: widget.mineId,
+                                    isExpanded: true,
+                                    dropdownColor: AppColors.cardBg,
+                                    icon: Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: AppColors.gold,
+                                    ),
+                                    items: list.map((item) {
+                                      final f = item.mine;
+                                      final displayCity = item.cityName;
+                                      return DropdownMenuItem<String>(
+                                        value: f.id,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              AppIcons.landscapeRounded,
+                                              color: AppColors.gold,
+                                              size: 18.sp,
+                                            ),
+                                            SizedBox(width: 8.w),
+                                            Expanded(
+                                              child: Text(
+                                                '${f.name} ($displayCity)',
+                                                style: AppTextStyles.body
+                                                    .standardCopyWith(
+                                                      color:
+                                                          AppColors.textPrimary,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize:
+                                                          AppTypography
+                                                              .bodySmall,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (newId) {
+                                      if (newId != null &&
+                                          newId != widget.mineId) {
+                                        context.pushReplacement(
+                                          '/mines/$newId',
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                            orElse: () => const SizedBox.shrink(),
+                          );
+                        },
+                      ),
                       _buildHero(detail),
                       SizedBox(height: 10.h),
                       _buildQuickActions(
@@ -941,6 +1028,25 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (detail.product != null && _getCityProductBonus(detail.mine.cityId, detail.product!.kategori) > 1.0) ...[
+                    SizedBox(width: 4.w),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4.r),
+                        border: Border.all(color: Colors.green, width: 0.5),
+                      ),
+                      child: Text(
+                        'x${_getCityProductBonus(detail.mine.cityId, detail.product!.kategori).toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 8.5.sp,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -1201,13 +1307,47 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final product = detail.product;
     if (product == null) return '-';
     final qualityMultiplier = 1.0 + (detail.mine.qualityLevel - 1) * 0.20;
+    final cityBonus = _getCityProductBonus(detail.mine.cityId, product.kategori);
     final amount =
         product.uretimAdedi *
         (activeBoost?.multiplier ?? 1) *
-        qualityMultiplier;
+        qualityMultiplier *
+        cityBonus;
     return amount % 1 == 0
         ? amount.toInt().toString()
         : amount.toStringAsFixed(1);
+  }
+
+  double _getCityProductBonus(String cityId, String? productCategory) {
+    if (productCategory == null || productCategory.isEmpty) return 1.0;
+    final cities = ref.watch(citiesProvider).value;
+    if (cities == null) return 1.0;
+
+    final city = cities.cast<CityModel?>().firstWhere(
+          (c) => c != null && c.id == cityId,
+          orElse: () => null,
+        );
+    if (city == null) return 1.0;
+
+    String clean = productCategory.toLowerCase().trim();
+    clean = clean
+        .replaceAll('â', 'a')
+        .replaceAll('î', 'i')
+        .replaceAll('û', 'u')
+        .replaceAll('ç', 'c')
+        .replaceAll('ğ', 'g')
+        .replaceAll('ı', 'i')
+        .replaceAll('i̇', 'i')
+        .replaceAll('ö', 'o')
+        .replaceAll('ş', 's')
+        .replaceAll('ü', 'u')
+        .replaceAll(' ', '_')
+        .replaceAll('-', '_')
+        .replaceAll('/', '_')
+        .replaceAll('&', 've');
+
+    final String key = 'bonus_$clean';
+    return city.categoryBonuses[key] ?? 1.0;
   }
 
   int _calculateUpgradeStarCost(DateTime finishAt) {
@@ -1264,6 +1404,89 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               ),
             ),
             SizedBox(height: 16.h),
+            if (activeBoost == null) ...[
+              Padding(
+                padding: EdgeInsets.only(bottom: 10.h),
+                child: InkWell(
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    await RewardedAdActionFlow.run(
+                      context,
+                      rewardKind: 'building_boost_start',
+                      resourceId: 'mine:${detail.mine.id}',
+                      loadingMessage: '30 dakikalik boost reklami yukleniyor.',
+                      successTitle: 'Boost Baslatildi',
+                      successMessage: 'Maden boostu 30 dakika icin baslatildi.',
+                      feedbackAmount: 30,
+                      feedbackType: FloatingFeedbackType.boostAdd,
+                      onApplyAction: () async {
+                        final result = await ref
+                            .read(mineActionProvider)
+                            .startMineBoostWithAdReward(
+                              mineId: detail.mine.id,
+                              syncProviders: false,
+                            );
+                        if (result['success'] == true) {
+                          await _refreshMineEcosystem();
+                        }
+                        return result;
+                      },
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(16.r),
+                  child: Container(
+                    padding: EdgeInsets.all(14.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.green.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.green.withValues(alpha: 0.28),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.green.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(
+                            AppIcons.playCircleFill,
+                            color: AppColors.green,
+                            size: AppIconSizes.regular,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Reklam izle, 30 dk boost al',
+                                style: AppTextStyles.title.standardCopyWith(
+                                  color: AppColors.textPrimary,
+                                  fontSize: AppTypography.body,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                'Uretim hizini 30 dakika boyunca yildiz harcamadan ikiye katla.',
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.textMuted,
+                                  fontSize: AppTypography.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (activeBoost == null)
               ..._mineBoostStarCosts.entries.map(
                 (entry) => Padding(
@@ -1504,6 +1727,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   ) async {
     final success = await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'upgrade_time_reduce',
+      resourceId: upgrade.id,
       onApplyReduction: () => ref
           .read(mineActionProvider)
           .reduceMineUpgradeTimeWithAd(upgrade.id, syncProviders: false),
@@ -1554,7 +1779,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 ? ' (${_currentBrandName ?? 'Markali'})'
                 : ''),
         subtitle:
-            'Saatlik uretim: ${(product.uretimAdedi * (1.0 + (detail.mine.qualityLevel - 1) * 0.20)).toInt()}',
+            'Saatlik uretim: ${(product.uretimAdedi * (1.0 + (detail.mine.qualityLevel - 1) * 0.20) * _getCityProductBonus(detail.mine.cityId, product.kategori)).toInt()}'
+            '${_getCityProductBonus(detail.mine.cityId, product.kategori) > 1.0 ? " (x${_getCityProductBonus(detail.mine.cityId, product.kategori).toStringAsFixed(2)} Bölge)" : ""}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
             '${selectableProduct.hasPreferredBrand ? ' ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Marka Hazir' : ''}',
@@ -1715,6 +1941,11 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         warehouse,
         productionCityId: detail.mine.cityId,
       );
+      final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
+      final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
+      final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
+      final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
+
       options.add(
         WarehouseSelectionOption(
           id: warehouseOption.id,
@@ -1725,6 +1956,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               : 'Lojistik Transfer',
           infoText: '${eligibleInventories.length} uygun stok secilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
+          capacityRatio: capacityRatio,
+          capacityLabel: capacityLabel,
+          distanceLabel: warehouseOption.isSameCity ? 'Aynı Şehir' : 'Lojistik',
           onTap: () async {
             Navigator.pop(context);
             WarehouseCapacityStatusModel? capacityStatus;
@@ -2531,11 +2765,20 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               ),
                               SizedBox(width: 8.w),
                               OutlinedButton(
-                                onPressed: () => openQuantityEditor(
-                                  sheetContext,
-                                  modalSetState,
-                                  item,
-                                ),
+                                onPressed: () {
+                                  if (!isSelected) {
+                                    modalSetState(() {
+                                      selectedQuantities[item.id] =
+                                          item.quantity;
+                                    });
+                                    return;
+                                  }
+                                  openQuantityEditor(
+                                    sheetContext,
+                                    modalSetState,
+                                    item,
+                                  );
+                                },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: isSelected
                                       ? AppColors.green
@@ -2545,6 +2788,13 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   isSelected
                                       ? 'Adet: $selectedQuantity'
                                       : 'Ekle',
+                                  style: AppTextStyles.button.standardCopyWith(
+                                    color: isSelected
+                                        ? AppColors.green
+                                        : AppColors.goldLight,
+                                    fontSize: AppTypography.bodySmall,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -2905,7 +3155,7 @@ class _ActiveMineBoostCard extends ConsumerWidget {
                     ),
                     SizedBox(height: 2.h),
                     Text(
-                      '${boost.durationHours} saat | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost} yildiz',
+                      '${boost.durationLabel} | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost > 0 ? '${boost.starCost} yildiz' : 'Reklam odulu'}',
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
                         fontSize: AppTypography.bodySmall,

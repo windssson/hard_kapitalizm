@@ -641,7 +641,11 @@ class _LogisticsManagementScreenState
             children: [
               Row(
                 children: [
-                  Icon(AppIcons.bolt, color: AppColors.gold, size: AppIconSizes.xSmall),
+                  Icon(
+                    AppIcons.bolt,
+                    color: AppColors.gold,
+                    size: AppIconSizes.xSmall,
+                  ),
                   SizedBox(width: 4.w),
                   Text(
                     'MERKEZ YAKIT REZERVİ',
@@ -686,7 +690,10 @@ class _LogisticsManagementScreenState
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                   ),
-                  icon: Icon(AppIcons.localGasStationRounded, size: AppIconSizes.small),
+                  icon: Icon(
+                    AppIcons.localGasStationRounded,
+                    size: AppIconSizes.small,
+                  ),
                   label: Text(
                     company.currentFuel >= company.fuelCapacity
                         ? 'REZERV DOLU'
@@ -713,7 +720,10 @@ class _LogisticsManagementScreenState
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                   ),
-                  icon: Icon(AppIcons.analyticsOutlined, size: AppIconSizes.small),
+                  icon: Icon(
+                    AppIcons.analyticsOutlined,
+                    size: AppIconSizes.small,
+                  ),
                   label: Text(
                     'FİNANS RAPORU',
                     style: AppTextStyles.caption.standardCopyWith(
@@ -748,7 +758,11 @@ class _LogisticsManagementScreenState
         children: [
           Row(
             children: [
-              Icon(icon, color: color.withValues(alpha: 0.7), size: AppIconSizes.small),
+              Icon(
+                icon,
+                color: color.withValues(alpha: 0.7),
+                size: AppIconSizes.small,
+              ),
               SizedBox(width: 6.w),
               Text(
                 label,
@@ -1220,7 +1234,11 @@ class _LogisticsManagementScreenState
         ),
         child: Row(
           children: [
-            Icon(AppIcons.altRoute, color: AppColors.textMuted, size: AppIconSizes.small),
+            Icon(
+              AppIcons.altRoute,
+              color: AppColors.textMuted,
+              size: AppIconSizes.small,
+            ),
             SizedBox(width: 8.w),
             Text(
               'Rota atanmadı',
@@ -1399,7 +1417,11 @@ class _LogisticsManagementScreenState
             children: [
               Row(
                 children: [
-                  Icon(AppIcons.construction, color: AppColors.gold, size: AppIconSizes.xLarge),
+                  Icon(
+                    AppIcons.construction,
+                    color: AppColors.gold,
+                    size: AppIconSizes.xLarge,
+                  ),
                   SizedBox(width: 12.w),
                   Expanded(
                     child: Text(
@@ -1454,7 +1476,9 @@ class _LogisticsManagementScreenState
         Text(title, style: AppTextStyles.titleGold),
         Text(
           count,
-          style: AppTextStyles.body.standardCopyWith(fontWeight: FontWeight.bold),
+          style: AppTextStyles.body.standardCopyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ],
     );
@@ -1660,7 +1684,11 @@ class _LogisticsManagementScreenState
           children: [
             Row(
               children: [
-                Icon(icon, color: AppColors.textMuted, size: AppIconSizes.xxSmall),
+                Icon(
+                  icon,
+                  color: AppColors.textMuted,
+                  size: AppIconSizes.xxSmall,
+                ),
                 SizedBox(width: 4.w),
                 Text(
                   label,
@@ -1876,10 +1904,7 @@ class _LogisticsManagementScreenState
                   color: AppColors.gold.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(
-                  AppIcons.localGasStation,
-                  color: AppColors.gold,
-                ),
+                child: Icon(AppIcons.localGasStation, color: AppColors.gold),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -2089,6 +2114,8 @@ class _LogisticsManagementScreenState
   ) async {
     await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'construction_time_reduce',
+      resourceId: constructionId,
       onApplyReduction: () => ref
           .read(logisticsActionProvider)
           .reduceConstructionTimeWithAd(constructionId, syncProviders: false),
@@ -2189,8 +2216,7 @@ class _LogisticsManagementScreenState
                         },
                       ),
                     ),
-                    loading: () =>
-                        const Center(child: AppLoadingIndicator()),
+                    loading: () => const Center(child: AppLoadingIndicator()),
                     error: (error, stack) =>
                         Center(child: Text('Hata: $error')),
                   ),
@@ -2399,15 +2425,15 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
                 backgroundColor: AppColors.gold,
                 disabledBackgroundColor: AppColors.border,
               ),
-                child: Text(
-                  isFleetFull
-                      ? 'FILO DOLU'
-                      : (canAfford ? 'SATIN AL' : 'NAKIT YETERSIZ'),
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.textOnAccent,
-                    fontWeight: FontWeight.bold,
-                  ),
+              child: Text(
+                isFleetFull
+                    ? 'FILO DOLU'
+                    : (canAfford ? 'SATIN AL' : 'NAKIT YETERSIZ'),
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textOnAccent,
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
             ),
           ),
         ],

@@ -6,6 +6,7 @@ class HomeDashboardModel {
   final HomeCompanySummary company;
   final HomeFinanceToday financeToday;
   final HomeModulesSummary modules;
+  final HomeHourlyIncomeEstimate hourlyIncomeEstimate;
   final List<HomeOngoingActivity> ongoingActivities;
   final List<PlayerNotificationModel> notifications;
   final List<HomeActiveProduction> activeProductions;
@@ -18,6 +19,7 @@ class HomeDashboardModel {
     required this.company,
     required this.financeToday,
     required this.modules,
+    required this.hourlyIncomeEstimate,
     required this.ongoingActivities,
     required this.notifications,
     required this.activeProductions,
@@ -30,6 +32,7 @@ class HomeDashboardModel {
     final companyMap = _asMap(json['company']);
     final financeMap = _asMap(json['finance_today']);
     final modulesMap = _asMap(json['modules']);
+    final hourlyIncomeMap = _asMap(json['hourly_income_estimate']);
     final ongoingList = _asList(json['ongoing_activities']);
     final notificationList = _asList(json['notifications']);
     final summaryMap = _asMap(json['notification_summary']);
@@ -41,9 +44,13 @@ class HomeDashboardModel {
       company: HomeCompanySummary.fromJson(companyMap),
       financeToday: HomeFinanceToday.fromJson(financeMap),
       modules: HomeModulesSummary.fromJson(modulesMap),
+      hourlyIncomeEstimate: HomeHourlyIncomeEstimate.fromJson(hourlyIncomeMap),
       ongoingActivities: ongoingList
           .whereType<Map>()
-          .map((item) => HomeOngoingActivity.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) =>
+                HomeOngoingActivity.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
       notifications: notificationList
           .whereType<Map>()
@@ -55,7 +62,10 @@ class HomeDashboardModel {
           .toList(),
       activeProductions: activeProdList
           .whereType<Map>()
-          .map((item) => HomeActiveProduction.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) =>
+                HomeActiveProduction.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
       unreadNotificationCount:
           (summaryMap['unread_count'] as num?)?.toInt() ?? 0,
@@ -74,6 +84,26 @@ class HomeDashboardModel {
     if (value is List<dynamic>) return value;
     if (value is List) return List<dynamic>.from(value);
     return const <dynamic>[];
+  }
+}
+
+class HomeHourlyIncomeEstimate {
+  final double total;
+  final double storeRevenue;
+  final double productionValue;
+
+  const HomeHourlyIncomeEstimate({
+    required this.total,
+    required this.storeRevenue,
+    required this.productionValue,
+  });
+
+  factory HomeHourlyIncomeEstimate.fromJson(Map<String, dynamic> json) {
+    return HomeHourlyIncomeEstimate(
+      total: (json['total'] as num?)?.toDouble() ?? 0,
+      storeRevenue: (json['store_revenue'] as num?)?.toDouble() ?? 0,
+      productionValue: (json['production_value'] as num?)?.toDouble() ?? 0,
+    );
   }
 }
 
@@ -150,12 +180,11 @@ class HomeCompanySummary {
       todayProfit: (json['today_profit'] as num?)?.toDouble() ?? 0,
       activeBusinessCount:
           (json['active_business_count'] as num?)?.toInt() ?? 0,
-      totalBusinessCount:
-          (json['total_business_count'] as num?)?.toInt() ?? 0,
-      headquartersCityName:
-          (json['headquarters_city_name'] ?? '-').toString(),
+      totalBusinessCount: (json['total_business_count'] as num?)?.toInt() ?? 0,
+      headquartersCityName: (json['headquarters_city_name'] ?? '-').toString(),
       companyStatus: (json['company_status'] ?? 'istikrarli').toString(),
-      companyValueHistory: (json['company_value_history'] as List?)
+      companyValueHistory:
+          (json['company_value_history'] as List?)
               ?.map((item) => (item as num).toDouble())
               .toList() ??
           const <double>[],
@@ -209,16 +238,24 @@ class HomeModulesSummary {
 
   factory HomeModulesSummary.fromJson(Map<String, dynamic> json) {
     return HomeModulesSummary(
-      stores: HomeModuleMetrics.fromJson(HomeDashboardModel._asMap(json['stores'])),
+      stores: HomeModuleMetrics.fromJson(
+        HomeDashboardModel._asMap(json['stores']),
+      ),
       warehouses: HomeModuleMetrics.fromJson(
         HomeDashboardModel._asMap(json['warehouses']),
       ),
       factories: HomeModuleMetrics.fromJson(
         HomeDashboardModel._asMap(json['factories']),
       ),
-      fields: HomeModuleMetrics.fromJson(HomeDashboardModel._asMap(json['fields'])),
-      farms: HomeModuleMetrics.fromJson(HomeDashboardModel._asMap(json['farms'])),
-      mines: HomeModuleMetrics.fromJson(HomeDashboardModel._asMap(json['mines'])),
+      fields: HomeModuleMetrics.fromJson(
+        HomeDashboardModel._asMap(json['fields']),
+      ),
+      farms: HomeModuleMetrics.fromJson(
+        HomeDashboardModel._asMap(json['farms']),
+      ),
+      mines: HomeModuleMetrics.fromJson(
+        HomeDashboardModel._asMap(json['mines']),
+      ),
       logistics: HomeModuleMetrics.fromJson(
         HomeDashboardModel._asMap(json['logistics']),
       ),
@@ -326,8 +363,10 @@ class HomeOngoingActivity {
   double get progressRatio {
     final totalMs = totalDuration.inMilliseconds;
     if (totalMs <= 0) return 1;
-    final elapsedMs =
-        DateTime.now().toUtc().difference(startedAt.toUtc()).inMilliseconds;
+    final elapsedMs = DateTime.now()
+        .toUtc()
+        .difference(startedAt.toUtc())
+        .inMilliseconds;
     final ratio = elapsedMs / totalMs;
     if (ratio < 0) return 0;
     if (ratio > 1) return 1;

@@ -129,6 +129,8 @@ class _MineScreenState extends ConsumerState<MineScreen>
   Future<void> _reduceConstructionTimeWithAd(String constructionId) async {
     await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'construction_time_reduce',
+      resourceId: constructionId,
       onApplyReduction: () => ref
           .read(mineActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
@@ -273,7 +275,8 @@ class _MineScreenState extends ConsumerState<MineScreen>
           finishAt: finishAt.toLocal(),
           icon: AppIcons.diamondOutlined,
           onFinished: () => _completeConstruction(constructionId),
-          onReduceTimeWithAd: () => _reduceConstructionTimeWithAd(constructionId),
+          onReduceTimeWithAd: () =>
+              _reduceConstructionTimeWithAd(constructionId),
         ),
         if (starCost > 0)
           Padding(

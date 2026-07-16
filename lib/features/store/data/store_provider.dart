@@ -678,6 +678,31 @@ class StoreActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> startStoreBoostWithAdReward({
+    required String storeId,
+    int durationMinutes = 30,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_building_boost_with_ad_reward',
+        params: {
+          'p_player_id': user.id,
+          'p_building_kind': 'store',
+          'p_entity_id': storeId,
+          'p_duration_minutes': durationMinutes,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> getAvailableProductsForStore(String storeId) async {
     try {
       final response = await _supabase.rpc(

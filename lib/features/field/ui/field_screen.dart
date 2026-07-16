@@ -123,6 +123,8 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
   Future<void> _reduceConstructionTimeWithAd(String constructionId) async {
     await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'construction_time_reduce',
+      resourceId: constructionId,
       onApplyReduction: () => ref
           .read(fieldActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
@@ -253,7 +255,8 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
           finishAt: finishAt.toLocal(),
           icon: AppIcons.grass,
           onFinished: () => _completeConstruction(constructionId),
-          onReduceTimeWithAd: () => _reduceConstructionTimeWithAd(constructionId),
+          onReduceTimeWithAd: () =>
+              _reduceConstructionTimeWithAd(constructionId),
         ),
         if (starCost > 0)
           Padding(

@@ -355,11 +355,12 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     if (finishAt != null) ...[
                       SizedBox(height: 10.h),
                       RewardedTimeReduceButton(
-                        onPressed: () => _handleReduceConstructionTimeWithAd(store.id),
+                        onPressed: () =>
+                            _handleReduceConstructionTimeWithAd(store.id),
                         caption:
                             'Bir reklam odulu al ve magaza insaat suresini 10 dakika kisalt.',
                       ),
-                    ]
+                    ],
                   ],
                 ),
               ),
@@ -475,6 +476,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   ) async {
     final success = await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'construction_time_reduce',
+      resourceId: constructionId,
       onApplyReduction: () => ref
           .read(storeActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
@@ -648,22 +651,22 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
     return Container(
       margin: EdgeInsets.only(right: 8.w),
-      width: 48.w,
-      height: 48.w,
+      width: 44.w,
+      height: 44.w,
       child: Stack(
         alignment: Alignment.center,
         children: [
           if (!slot.isEmpty && slot.isActive) ...[
             AppProgressRing.stock(
               value: fillRatio,
-              diameter: 48.w,
-              strokeWidth: 2.5.w,
+              diameter: 44.w,
+              strokeWidth: 2.2.w,
               semanticsLabel: 'Slot stok dolulugu',
             ),
           ] else
             Container(
-              width: 48.w,
-              height: 48.w,
+              width: 44.w,
+              height: 44.w,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -672,9 +675,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               ),
             ),
           Container(
-            width: 38.w,
-            height: 38.w,
-            padding: EdgeInsets.all(5.w),
+            width: 32.w,
+            height: 32.w,
+            padding: EdgeInsets.all(4.w),
             decoration: BoxDecoration(
               color: AppColors.cardBgLight.withValues(alpha: 0.45),
               shape: BoxShape.circle,
@@ -699,8 +702,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           // Pasif indicator
           if (!slot.isEmpty && !slot.isActive)
             Container(
-              width: 48.w,
-              height: 48.w,
+              width: 44.w,
+              height: 44.w,
               decoration: BoxDecoration(
                 color: AppFx.panelWash(0.62),
                 shape: BoxShape.circle,

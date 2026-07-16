@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_ad_action_flow.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
@@ -806,6 +807,74 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     return Column(
       children: [
         SecondaryTopBar(title: 'Magaza Yonetimi'),
+        Consumer(
+          builder: (context, ref, _) {
+            final listAsync = ref.watch(storesListProvider);
+            return listAsync.maybeWhen(
+              data: (list) {
+                if (list.length <= 1) return const SizedBox.shrink();
+                final hasCurrent = list.any((item) => item.id == store.id);
+                if (!hasCurrent) return const SizedBox.shrink();
+
+                return Container(
+                  margin: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 4.h),
+                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBg,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: AppColors.borderGold.withValues(alpha: 0.25),
+                      width: 1.w,
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: store.id,
+                      isExpanded: true,
+                      dropdownColor: AppColors.cardBg,
+                      icon: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: AppColors.gold,
+                      ),
+                      items: list.map((item) {
+                        final displayCity = item.cityName ?? 'Bilinmeyen Sehir';
+                        return DropdownMenuItem<String>(
+                          value: item.id,
+                          child: Row(
+                            children: [
+                              Icon(
+                                AppIcons.pointOfSale,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                              SizedBox(width: 8.w),
+                              Expanded(
+                                child: Text(
+                                  '${item.name} ($displayCity)',
+                                  style: AppTextStyles.body.standardCopyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: AppTypography.bodySmall,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (newId) {
+                        if (newId != null && newId != store.id) {
+                          context.pushReplacement('/store/$newId');
+                        }
+                      },
+                    ),
+                  ),
+                );
+              },
+              orElse: () => const SizedBox.shrink(),
+            );
+          },
+        ),
         Expanded(
           child: RefreshIndicator(
             color: AppColors.gold,
@@ -1317,6 +1386,91 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               ),
             ),
             SizedBox(height: 16.h),
+            if (activeBoost == null) ...[
+              Padding(
+                padding: EdgeInsets.only(bottom: 10.h),
+                child: InkWell(
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    await RewardedAdActionFlow.run(
+                      context,
+                      rewardKind: 'building_boost_start',
+                      resourceId: 'store:${store.id}',
+                      loadingMessage: '30 dakikalik boost reklami yukleniyor.',
+                      successTitle: 'Boost Baslatildi',
+                      successMessage:
+                          'Magaza boostu 30 dakika icin baslatildi.',
+                      feedbackAmount: 30,
+                      feedbackType: FloatingFeedbackType.boostAdd,
+                      onApplyAction: () async {
+                        final result = await ref
+                            .read(storeActionProvider)
+                            .startStoreBoostWithAdReward(storeId: store.id);
+
+                        if (result['success'] == true) {
+                          await _refreshStorePageAndSync(
+                            store.id,
+                            refreshPlayer: true,
+                          );
+                        }
+                        return result;
+                      },
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(16.r),
+                  child: Container(
+                    padding: EdgeInsets.all(14.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.green.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.green.withValues(alpha: 0.28),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.green.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(
+                            AppIcons.playCircleFill,
+                            color: AppColors.green,
+                            size: AppIconSizes.regular,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Reklam izle, 30 dk boost al',
+                                style: AppTextStyles.title.standardCopyWith(
+                                  color: AppColors.textPrimary,
+                                  fontSize: AppTypography.body,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                'Yildiz harcamadan tum slotlari 30 dakika boyunca hizlandir.',
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.textMuted,
+                                  fontSize: AppTypography.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (activeBoost == null)
               ..._storeBoostStarCosts.entries.map(
                 (entry) => Padding(
@@ -1522,6 +1676,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   ) async {
     final success = await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'upgrade_time_reduce',
+      resourceId: upgrade.id,
       onApplyReduction: () => ref
           .read(storeActionProvider)
           .reduceStoreUpgradeTimeWithAd(upgrade.id),
@@ -3857,7 +4013,7 @@ class _ActiveBoostCard extends ConsumerWidget {
                     ),
                     SizedBox(height: 2.h),
                     Text(
-                      '${boost.durationHours} saat | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost} yildiz',
+                      '${boost.durationLabel} | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost > 0 ? '${boost.starCost} yildiz' : 'Reklam odulu'}',
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
                         fontSize: AppTypography.bodySmall,

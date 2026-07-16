@@ -450,6 +450,38 @@ class FieldActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> startFieldBoostWithAdReward({
+    required String fieldId,
+    int durationMinutes = 30,
+    bool syncProviders = true,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc(
+        'start_building_boost_with_ad_reward',
+        params: {
+          'p_player_id': user.id,
+          'p_building_kind': 'field',
+          'p_entity_id': fieldId,
+          'p_duration_minutes': durationMinutes,
+        },
+      );
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (syncProviders) {
+        _ref.invalidate(activeFieldBoostProvider(fieldId));
+        _ref.invalidate(fieldDetailProvider(fieldId));
+        _ref.invalidate(playerProvider);
+      }
+      return responseMap;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> addProductionSlot(
     String fieldId, {
     bool syncProviders = true,

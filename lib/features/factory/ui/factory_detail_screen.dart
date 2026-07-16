@@ -140,6 +140,90 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
                     children: [
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final listAsync = ref.watch(factoryListProvider);
+                          return listAsync.maybeWhen(
+                            data: (list) {
+                              if (list.length <= 1) return const SizedBox.shrink();
+                              final hasCurrent = list.any(
+                                (item) => item.factory.id == widget.factoryId,
+                              );
+                              if (!hasCurrent) return const SizedBox.shrink();
+
+                              return Container(
+                                margin: EdgeInsets.only(bottom: 8.h),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 14.w,
+                                  vertical: 2.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBg,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: AppColors.borderGold.withValues(
+                                      alpha: 0.25,
+                                    ),
+                                    width: 1.w,
+                                  ),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: widget.factoryId,
+                                    isExpanded: true,
+                                    dropdownColor: AppColors.cardBg,
+                                    icon: Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: AppColors.gold,
+                                    ),
+                                    items: list.map((item) {
+                                      final f = item.factory;
+                                      final displayCity = item.cityName;
+                                      return DropdownMenuItem<String>(
+                                        value: f.id,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              AppIcons.factory,
+                                              color: AppColors.gold,
+                                              size: 18.sp,
+                                            ),
+                                            SizedBox(width: 8.w),
+                                            Expanded(
+                                              child: Text(
+                                                '${f.name} ($displayCity)',
+                                                style: AppTextStyles.body
+                                                    .standardCopyWith(
+                                                      color:
+                                                          AppColors.textPrimary,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize:
+                                                          AppTypography
+                                                              .bodySmall,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (newId) {
+                                      if (newId != null &&
+                                          newId != widget.factoryId) {
+                                        context.pushReplacement(
+                                          '/factories/$newId',
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                            orElse: () => const SizedBox.shrink(),
+                          );
+                        },
+                      ),
                       _buildHero(detail),
                       SizedBox(height: 10.h),
                       _buildQuickActions(
@@ -2034,6 +2118,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   ) async {
     final success = await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'upgrade_time_reduce',
+      resourceId: upgrade.id,
       onApplyReduction: () => ref
           .read(factoryActionProvider)
           .reduceFactoryUpgradeTimeWithAd(upgrade.id, syncProviders: false),

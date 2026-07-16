@@ -32,6 +32,7 @@ import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
+import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 
 class WarehouseDetailScreen extends ConsumerStatefulWidget {
   final String warehouseId;
@@ -111,6 +112,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           data: (warehouse) => Column(
             children: [
               SecondaryTopBar(title: '${warehouse.name} Yonetimi'),
+              _buildWarehouseSwitcher(context, ref, warehouse),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () => _refreshWarehouse(ref),
@@ -165,6 +167,76 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
+  Widget _buildWarehouseSwitcher(
+    BuildContext context,
+    WidgetRef ref,
+    WarehouseModel currentWarehouse,
+  ) {
+    final listAsync = ref.watch(warehouseListProvider);
+    return listAsync.maybeWhen(
+      data: (list) {
+        final warehouses = list.where((w) => w.isActive).toList();
+        if (warehouses.length <= 1) return const SizedBox.shrink();
+
+        return Container(
+          margin: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 4.h),
+          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 2.h),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color: AppColors.borderGold.withValues(alpha: 0.25),
+              width: 1.w,
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: currentWarehouse.id,
+              isExpanded: true,
+              dropdownColor: AppColors.cardBg,
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: AppColors.gold,
+              ),
+              items: warehouses.map((w) {
+                final displayCity = w.cityName ?? 'Bilinmeyen Sehir';
+                return DropdownMenuItem<String>(
+                  value: w.id,
+                  child: Row(
+                    children: [
+                      Icon(
+                        AppIcons.inventory,
+                        color: AppColors.gold,
+                        size: 18.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          '${w.name} ($displayCity)',
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: AppTypography.bodySmall,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (newId) {
+                if (newId != null && newId != currentWarehouse.id) {
+                  context.pushReplacement('/warehouses/$newId');
+                }
+              },
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+
   Future<void> _refreshWarehouse(WidgetRef ref) async {
     await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
     final warehouse = await ref
@@ -181,6 +253,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
     ref.invalidate(anyActiveWarehouseUpgradeProvider);
     ref.invalidate(warehouseListProvider);
+    ref.invalidate(buyerTransferMapProvider);
+    ref.invalidate(buyerTransferHistoryProvider);
     if (refreshPlayer) {
       ref.invalidate(playerProvider);
     }
@@ -1826,6 +1900,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         totalCapacity,
       );
 
+      final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
+      final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
+
       return WarehouseSelectionOption(
         id: target['id'].toString(),
         title: (target['name'] ?? 'Depo').toString(),
@@ -1833,6 +1910,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         badgeText: sameCity ? 'Ayni Sehir' : 'Sehirler Arasi',
         infoText: '~${_formatValue(roughAvailable)} m3 bos',
         isHighlightBadge: sameCity,
+        capacityRatio: capacityRatio,
+        capacityLabel: capacityLabel,
+        distanceLabel: sameCity ? 'Aynı Şehir' : 'Şehirler Arası',
         onTap: () {
           Navigator.pop(context);
           _openTargetAwareWarehouseTransferPicker(
@@ -2819,11 +2899,20 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                               OutlinedButton(
                                 onPressed: isDisabled
                                     ? null
-                                    : () => openQuantityEditor(
-                                        sheetContext,
-                                        modalSetState,
-                                        slot,
-                                      ),
+                                    : () {
+                                        if (!isSelected) {
+                                          modalSetState(() {
+                                            selectedQuantities[slot.id] =
+                                                maxForSlot;
+                                          });
+                                          return;
+                                        }
+                                        openQuantityEditor(
+                                          sheetContext,
+                                          modalSetState,
+                                          slot,
+                                        );
+                                      },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: isSelected
                                       ? AppColors.green
@@ -2848,6 +2937,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                       ? 'Adet: $selectedQuantity'
                                       : 'Ekle',
                                   style: AppTextStyles.button.standardCopyWith(
+                                    color: isSelected
+                                        ? AppColors.green
+                                        : AppColors.goldLight,
                                     fontSize: AppTypography.bodySmall,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -3395,6 +3487,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
   ) async {
     final success = await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'upgrade_time_reduce',
+      resourceId: upgrade.id,
       onApplyReduction: () => ref
           .read(warehouseActionProvider)
           .reduceWarehouseUpgradeTimeWithAd(upgrade.id, syncProviders: false),

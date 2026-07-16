@@ -11,6 +11,7 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_dashboard_model.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_model.dart';
+import 'package:hard_kapitalizm/features/mission/data/daily_streak_provider.dart';
 
 enum _MissionTab {
   main('Ana Görev'),
@@ -383,6 +384,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             .toList();
 
         return [
+          _buildDailyStreakCalendarCard(),
           if (active.isEmpty)
             _buildDailiesAllCompletedState(claimed.isNotEmpty)
           else
@@ -961,5 +963,229 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
 
   String _formatMoney(dynamic amount) {
     return AppMoney.compact(double.tryParse(amount.toString()) ?? 0);
+  }
+
+  Widget _buildDailyStreakCalendarCard() {
+    final streakAsync = ref.watch(dailyStreakProvider);
+    
+    return streakAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (err, stack) => const SizedBox.shrink(),
+      data: (streak) {
+        return Container(
+          margin: EdgeInsets.only(bottom: 16.h),
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(
+              color: AppColors.borderGold.withValues(alpha: 0.25),
+              width: 1.w,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    color: AppColors.gold,
+                    size: 18.sp,
+                  ),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Günlük Giriş Serisi',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: AppTypography.body,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (streak.streakCount > 0)
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Text(
+                        '${streak.streakCount} Günlük Seri!',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.bold,
+                          fontSize: AppTypography.micro,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final itemWidth = (constraints.maxWidth - 24.w) / 4;
+                  return Wrap(
+                    spacing: 8.w,
+                    runSpacing: 8.h,
+                    children: List.generate(7, (index) {
+                      final dayNum = index + 1;
+                      final isClaimed = dayNum <= streak.streakCount;
+                      final isToday = dayNum == streak.streakCount + 1 && streak.canClaimToday;
+                      final isFuture = dayNum > streak.streakCount + (streak.canClaimToday ? 1 : 0);
+                      
+                      String rewardText = '';
+                      IconData rewardIcon = Icons.monetization_on_rounded;
+                      Color rewardColor = AppColors.green;
+                      
+                      switch (dayNum) {
+                        case 1:
+                          rewardText = '10K TL';
+                          rewardIcon = Icons.payments_rounded;
+                          rewardColor = AppColors.green;
+                          break;
+                        case 2:
+                          rewardText = '25K TL';
+                          rewardIcon = Icons.payments_rounded;
+                          rewardColor = AppColors.green;
+                          break;
+                        case 3:
+                          rewardText = '5 Altın';
+                          rewardIcon = Icons.stars_rounded;
+                          rewardColor = AppColors.gold;
+                          break;
+                        case 4:
+                          rewardText = '50K TL';
+                          rewardIcon = Icons.payments_rounded;
+                          rewardColor = AppColors.green;
+                          break;
+                        case 5:
+                          rewardText = '10 Altın';
+                          rewardIcon = Icons.stars_rounded;
+                          rewardColor = AppColors.gold;
+                          break;
+                        case 6:
+                          rewardText = '100K TL';
+                          rewardIcon = Icons.payments_rounded;
+                          rewardColor = AppColors.green;
+                          break;
+                        case 7:
+                          rewardText = '50 Altın';
+                          rewardIcon = Icons.stars_rounded;
+                          rewardColor = AppColors.gold;
+                          break;
+                      }
+
+                      final width = dayNum == 7 ? (itemWidth * 2 + 8.w) : itemWidth;
+                      
+                      return Container(
+                        width: width,
+                        padding: EdgeInsets.symmetric(vertical: 8.h),
+                        decoration: BoxDecoration(
+                          color: isToday
+                              ? AppColors.gold.withValues(alpha: 0.08)
+                              : (isClaimed ? AppColors.cardBgLight.withValues(alpha: 0.3) : AppColors.cardBgLight),
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(
+                            color: isToday
+                                ? AppColors.gold
+                                : (isClaimed ? AppColors.green.withValues(alpha: 0.5) : AppColors.borderGold.withValues(alpha: 0.15)),
+                            width: isToday ? 1.5.w : 1.w,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$dayNum. Gün',
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: isToday ? AppColors.gold : AppColors.textMuted,
+                                fontWeight: FontWeight.bold,
+                                fontSize: AppTypography.micro,
+                              ),
+                            ),
+                            SizedBox(height: 4.h),
+                            Icon(
+                              isClaimed ? Icons.check_circle_rounded : rewardIcon,
+                              color: isClaimed ? AppColors.green : (isFuture ? AppColors.textMuted : rewardColor),
+                              size: 18.sp,
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              isClaimed ? 'Alındı' : rewardText,
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: isClaimed
+                                    ? AppColors.green
+                                    : (isToday ? AppColors.textPrimary : AppColors.textSecondary),
+                                fontWeight: FontWeight.w800,
+                                fontSize: AppTypography.micro,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  );
+                }
+              ),
+              
+              SizedBox(height: 12.h),
+              
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: streak.canClaimToday
+                      ? () async {
+                          final success = await ref.read(dailyStreakProvider.notifier).claimReward();
+                          if (success) {
+                            if (!mounted) return;
+                            
+                            final nextDay = streak.streakCount + 1;
+                            String rewardStr = '';
+                            if (nextDay == 1) rewardStr = '10.000 TL';
+                            if (nextDay == 2) rewardStr = '25.000 TL';
+                            if (nextDay == 3) rewardStr = '5 Altın';
+                            if (nextDay == 4) rewardStr = '50.000 TL';
+                            if (nextDay == 5) rewardStr = '10 Altın';
+                            if (nextDay == 6) rewardStr = '100.000 TL';
+                            if (nextDay == 7) rewardStr = '50 Altın';
+
+                            AppSnackbar.show(
+                              context,
+                              title: 'Giriş Ödülü Alındı!',
+                              message: '$nextDay. Gün ödülü ($rewardStr) hesabınıza eklendi.',
+                              type: SnackbarType.success,
+                            );
+                          }
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: AppColors.textOnAccent,
+                    disabledBackgroundColor: AppColors.cardBgLight,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                  ),
+                  child: Text(
+                    streak.canClaimToday ? 'GÜNLÜK ÖDÜLÜ AL' : 'Yarın Tekrar Gel!',
+                    style: AppTextStyles.button.standardCopyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: AppTypography.bodySmall,
+                      color: streak.canClaimToday ? AppColors.textOnAccent : AppColors.textMuted,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

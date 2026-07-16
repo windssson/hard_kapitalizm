@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_ad_action_flow.dart';
 import 'package:hard_kapitalizm/core/ads/transfer_finish_rewarded_ad_service.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -20,6 +21,11 @@ import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart'
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:city_picker_from_map/city_picker_from_map.dart';
+// ignore: implementation_imports
+import 'package:city_picker_from_map/src/parser.dart';
+// ignore: implementation_imports
+import 'package:city_picker_from_map/src/size_controller.dart';
 
 class TransferMapScreen extends ConsumerStatefulWidget {
   const TransferMapScreen({super.key});
@@ -30,6 +36,48 @@ class TransferMapScreen extends ConsumerStatefulWidget {
 
 class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   final int _selectedIndex = 2;
+  List<City> _cityList = [];
+  bool _isLoadingMap = true;
+  late TransformationController _transformationController;
+  bool _hasCenteredMap = false;
+
+  String _normalizeString(String input) {
+    return input
+        .trim()
+        .toLowerCase()
+        .replaceAll('ç', 'c')
+        .replaceAll('ğ', 'g')
+        .replaceAll('ı', 'i')
+        .replaceAll('i̇', 'i')
+        .replaceAll('ö', 'o')
+        .replaceAll('ş', 's')
+        .replaceAll('ü', 'u')
+        .replaceAll('â', 'a')
+        .replaceAll('î', 'i')
+        .replaceAll('û', 'u');
+  }
+
+  Future<void> _loadCityList() async {
+    try {
+      final list = await Parser.instance.svgToCityList(Maps.TURKEY);
+      setState(() {
+        _cityList = list;
+        _isLoadingMap = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMap = false;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _transformationController = TransformationController();
+    _loadCityList();
+  }
+
   int _selectedTab = 0;
   String? _selectedTransferId;
   String? _expandedHistoryId;
@@ -39,6 +87,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
   @override
   void dispose() {
+    _transformationController.dispose();
     _activeScrollController.dispose();
     _historyScrollController.dispose();
     super.dispose();
@@ -64,7 +113,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         break;
     }
   }
-
 
   String _transferTitle({
     required bool isMultiItem,
@@ -185,7 +233,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 14.h),
             child: Consumer(
               builder: (context, ref, _) {
-                final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+                final now =
+                    ref.watch(secondTickerProvider).value ?? DateTime.now();
                 final remaining = transfer.finishAt.difference(now);
 
                 return Column(
@@ -217,7 +266,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                   productName: transfer.product.name,
                                   itemCount: transfer.itemCount,
                                 ),
-                                style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.headline),
+                                style: AppTextStyles.h2.standardCopyWith(
+                                  fontSize: AppTypography.headline,
+                                ),
                               ),
                               SizedBox(height: 4.h),
                               Text(
@@ -360,11 +411,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                     child: Text(
                                       'Kalan Sure: ${_formatRemaining(remaining)}',
                                       textAlign: TextAlign.center,
-                                      style: AppTextStyles.body.standardCopyWith(
-                                        color: accentColor,
-                                        fontSize: AppTypography.title,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: AppTextStyles.body
+                                          .standardCopyWith(
+                                            color: accentColor,
+                                            fontSize: AppTypography.title,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -375,7 +427,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                               GoldFinishButton(
                                 starCost: (remaining.inSeconds / 600.0).ceil(),
                                 onPressed: () {
-                                  final starCost = (remaining.inSeconds / 600.0).ceil();
+                                  final starCost = (remaining.inSeconds / 600.0)
+                                      .ceil();
                                   _confirmFinishWithStars(
                                     context,
                                     ref,
@@ -390,22 +443,26 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                   width: double.infinity,
                                   height: 44.h,
                                   child: OutlinedButton.icon(
-                                    onPressed: () => _finishTransferWithRewardedAd(
-                                      context,
-                                      ref,
-                                      transfer,
-                                      remaining,
-                                    ),
+                                    onPressed: () =>
+                                        _finishTransferWithRewardedAd(
+                                          context,
+                                          ref,
+                                          transfer,
+                                          remaining,
+                                        ),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: AppColors.gold,
                                       side: BorderSide(
-                                        color: AppColors.gold.withValues(alpha: 0.55),
+                                        color: AppColors.gold.withValues(
+                                          alpha: 0.55,
+                                        ),
                                       ),
-                                      backgroundColor: AppColors.gold.withValues(
-                                        alpha: 0.08,
-                                      ),
+                                      backgroundColor: AppColors.gold
+                                          .withValues(alpha: 0.08),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
                                       ),
                                     ),
                                     icon: Icon(
@@ -414,11 +471,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                     ),
                                     label: Text(
                                       'Reklam izle ve hemen bitir',
-                                      style: AppTextStyles.button.standardCopyWith(
-                                        color: AppColors.gold,
-                                        fontSize: AppTypography.bodyLarge,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                      style: AppTextStyles.button
+                                          .standardCopyWith(
+                                            color: AppColors.gold,
+                                            fontSize: AppTypography.bodyLarge,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                     ),
                                   ),
                                 ),
@@ -460,7 +518,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       AppSnackbar.show(
         context,
         title: 'Yetersiz Yıldız',
-        message: 'Bu işlemi gerçekleştirmek için yeterli yıldızınız yok. Gerekli: $starCost, Mevcut: ${currentGold.toInt()}',
+        message:
+            'Bu işlemi gerçekleştirmek için yeterli yıldızınız yok. Gerekli: $starCost, Mevcut: ${currentGold.toInt()}',
         type: SnackbarType.error,
       );
       return;
@@ -476,11 +535,17 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         ),
         title: Row(
           children: [
-            Icon(AppIcons.starRounded, color: AppColors.gold, size: AppIconSizes.large),
+            Icon(
+              AppIcons.starRounded,
+              color: AppColors.gold,
+              size: AppIconSizes.large,
+            ),
             SizedBox(width: 8.w),
             Text(
               'Hemen Bitir',
-              style: AppTextStyles.body.standardCopyWith(color: AppColors.textPrimary),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+              ),
             ),
           ],
         ),
@@ -527,11 +592,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Center(
-        child: AppLoadingIndicator(
-          color: AppColors.gold,
-        ),
-      ),
+      builder: (context) =>
+          Center(child: AppLoadingIndicator(color: AppColors.gold)),
     );
 
     try {
@@ -567,7 +629,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           AppSnackbar.show(
             context,
             title: 'Hata',
-            message: result['message'] ?? 'Transfer tamamlanırken bir hata oluştu.',
+            message:
+                result['message'] ?? 'Transfer tamamlanırken bir hata oluştu.',
             type: SnackbarType.error,
           );
         }
@@ -609,87 +672,32 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       return;
     }
 
-    AppSnackbar.show(
+    final success = await RewardedAdActionFlow.run(
       context,
-      title: 'Test Reklami Hazirlaniyor',
-      message: 'Google AdMob test reklami yukleniyor.',
-      type: SnackbarType.info,
+      rewardKind: 'transfer_finish',
+      resourceId: transfer.id,
+      loadingMessage: 'Google AdMob test reklami yukleniyor.',
+      successTitle: 'Transfer Tamamlandi',
+      successMessage: 'Reklam odulu kullanildi ve transfer aninda tamamlandi.',
+      onApplyAction: () async {
+        final result = await ref
+            .read(warehouseActionProvider)
+            .finishLogisticsTransferWithAdReward(transfer.id);
+
+        if (result['success'] == true) {
+          ref.invalidate(buyerTransferMapProvider);
+          ref.invalidate(buyerTransferHistoryProvider);
+          ref.invalidate(playerProvider);
+          ref.invalidate(warehouseListProvider);
+          _invalidateAffectedTransferTargets(transfer);
+        }
+
+        return result;
+      },
     );
 
-    final adResult = await TransferFinishRewardedAdService.showAd();
-    if (!context.mounted) return;
-
-    if (!adResult.rewardEarned) {
-      AppSnackbar.show(
-        context,
-        title: 'Odul Alinamadi',
-        message: adResult.message,
-        type: SnackbarType.warning,
-      );
-      return;
-    }
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: AppLoadingIndicator(
-          color: AppColors.gold,
-        ),
-      ),
-    );
-
-    try {
-      final result = await ref
-          .read(warehouseActionProvider)
-          .finishLogisticsTransferWithAdReward(transfer.id);
-
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
-
-      if (result['success'] == true) {
-        if (context.mounted) {
-          Navigator.of(context).pop();
-        }
-
-        ref.invalidate(buyerTransferMapProvider);
-        ref.invalidate(buyerTransferHistoryProvider);
-        ref.invalidate(playerProvider);
-        ref.invalidate(warehouseListProvider);
-        _invalidateAffectedTransferTargets(transfer);
-
-        if (context.mounted) {
-          AppSnackbar.show(
-            context,
-            title: 'Transfer Tamamlandi',
-            message:
-                'Reklam odulu kullanildi ve transfer aninda tamamlandi.',
-            type: SnackbarType.success,
-          );
-        }
-      } else {
-        if (context.mounted) {
-          AppSnackbar.show(
-            context,
-            title: 'Tamamlama Basarisiz',
-            message:
-                result['message'] ??
-                'Transfer reklam odulu ile tamamlanamadi.',
-            type: SnackbarType.error,
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop();
-        AppSnackbar.show(
-          context,
-          title: 'Hata',
-          message: e.toString(),
-          type: SnackbarType.error,
-        );
-      }
+    if (success && context.mounted) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -706,6 +714,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       }
     } catch (_) {}
   }
+
   Widget _buildDialogInfoRow(IconData icon, String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -757,11 +766,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             child: Text(
               value,
               textAlign: TextAlign.right,
-            style: AppTextStyles.body.standardCopyWith(
-              color: AppColors.textPrimary,
-              fontSize: AppTypography.title,
-              fontWeight: FontWeight.w600,
-            ),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.title,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -816,8 +825,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                           },
                           child: transfers.isEmpty
                               ? ListView(
-                                  physics: const AlwaysScrollableScrollPhysics(),
-                                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 16.w,
+                                  ),
                                   children: [
                                     SizedBox(height: 120.h),
                                     _buildEmptyState(),
@@ -868,25 +880,24 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                         24.h,
                                       ),
                                       sliver: SliverList(
-                                        delegate: SliverChildBuilderDelegate(
-                                          (context, index) {
-                                            final transfer =
-                                                transfers[index];
-                                            return KeyedSubtree(
-                                              key: _cardKeyFor(transfer.id),
-                                              child: RepaintBoundary(
-                                                child: _buildTransferSummaryCard(
-                                                  transfer,
-                                                  isSelected:
-                                                      transfer.id ==
-                                                      (selectedTransfer?.id ??
-                                                          _selectedTransferId),
-                                                ),
+                                        delegate: SliverChildBuilderDelegate((
+                                          context,
+                                          index,
+                                        ) {
+                                          final transfer = transfers[index];
+                                          return KeyedSubtree(
+                                            key: _cardKeyFor(transfer.id),
+                                            child: RepaintBoundary(
+                                              child: _buildTransferSummaryCard(
+                                                transfer,
+                                                isSelected:
+                                                    transfer.id ==
+                                                    (selectedTransfer?.id ??
+                                                        _selectedTransferId),
                                               ),
-                                            );
-                                          },
-                                          childCount: transfers.length,
-                                        ),
+                                            ),
+                                          );
+                                        }, childCount: transfers.length),
                                       ),
                                     ),
                                   ],
@@ -907,7 +918,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     )
                   : historyAsync.when(
                       data: (history) {
-                        final sortedHistory = [...history]..sort((a, b) {
+                        final sortedHistory = [...history]
+                          ..sort((a, b) {
                             final aDate = a.completedAt ?? a.finishAt;
                             final bDate = b.completedAt ?? b.finishAt;
                             return bDate.compareTo(aDate);
@@ -918,29 +930,33 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                             ref.invalidate(buyerTransferHistoryProvider);
                           },
                           child: sortedHistory.isEmpty
-                            ? ListView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                                children: [
-                                  SizedBox(height: 120.h),
-                                  _buildHistoryEmptyState(),
-                                ],
-                              )
-                            : ListView.separated(
-                                controller: _historyScrollController,
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                padding: EdgeInsets.fromLTRB(
-                                  16.w,
-                                  12.h,
-                                  16.w,
-                                  24.h,
+                              ? ListView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 16.w,
+                                  ),
+                                  children: [
+                                    SizedBox(height: 120.h),
+                                    _buildHistoryEmptyState(),
+                                  ],
+                                )
+                              : ListView.separated(
+                                  controller: _historyScrollController,
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: EdgeInsets.fromLTRB(
+                                    16.w,
+                                    12.h,
+                                    16.w,
+                                    24.h,
+                                  ),
+                                  itemCount: sortedHistory.length,
+                                  itemBuilder: (context, index) =>
+                                      _buildHistoryCard(sortedHistory[index]),
+                                  separatorBuilder: (context, index) =>
+                                      SizedBox(height: 12.h),
                                 ),
-                                itemCount: sortedHistory.length,
-                                itemBuilder: (context, index) =>
-                                    _buildHistoryCard(sortedHistory[index]),
-                                separatorBuilder: (context, index) =>
-                                    SizedBox(height: 12.h),
-                              ),
                         );
                       },
                       loading: () => Center(
@@ -973,7 +989,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       ),
       child: Row(
         children: [
-          Icon(AppIcons.notificationsActive, color: AppColors.gold, size: AppIconSizes.compact),
+          Icon(
+            AppIcons.notificationsActive,
+            color: AppColors.gold,
+            size: AppIconSizes.compact,
+          ),
           SizedBox(width: 6.w),
           Expanded(
             child: Text(
@@ -1035,23 +1055,23 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           ),
         ],
       ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _buildModeButton(
-                index: 0,
-                label: 'Aktif',
-                icon: AppIcons.route,
-              ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildModeButton(
+              index: 0,
+              label: 'Aktif',
+              icon: AppIcons.route,
             ),
-            SizedBox(width: 6.w),
-            Expanded(
-              child: _buildModeButton(
-                index: 1,
-                label: 'Gecmis',
-                icon: AppIcons.history,
-              ),
+          ),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: _buildModeButton(
+              index: 1,
+              label: 'Gecmis',
+              icon: AppIcons.history,
             ),
+          ),
         ],
       ),
     );
@@ -1128,6 +1148,20 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     List<TransferMapItemModel> transfers, {
     String? selectedTransferId,
   }) {
+    if (_isLoadingMap) {
+      return Container(
+        height: 180.h,
+        decoration: BoxDecoration(
+          color: AppColors.cardBg.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(24.r),
+          border: Border.all(
+            color: AppColors.borderGold.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Center(child: AppLoadingIndicator(color: AppColors.gold)),
+      );
+    }
+
     final cities = <TransferMapCityModel>[
       for (final transfer in transfers) transfer.sellerWarehouse.city,
       for (final transfer in transfers) transfer.buyerWarehouse.city,
@@ -1148,11 +1182,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         ifAbsent: () => 1,
       );
     }
-
-    const double minLat = 35.9;
-    const double maxLat = 42.7;
-    const double minLon = 25.7;
-    const double maxLon = 47.0;
 
     return Container(
       decoration: BoxDecoration(
@@ -1177,10 +1206,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      AppFx.softOverlay(0.05),
-                      AppColors.transparent,
-                    ],
+                    colors: [AppFx.softOverlay(0.05), AppColors.transparent],
                   ),
                 ),
               ),
@@ -1229,172 +1255,226 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final width = constraints.maxWidth;
-                    final mapHeight = width / 1.35; // Sabit en/boy orani
+                    final mapHeight =
+                        280.h; // Türkiye haritası daha geniş görünüm alanı
 
-                    Offset project(TransferMapCityModel city) {
-                      final normalizedX = (city.y - minLon) / (maxLon - minLon);
-                      final normalizedY = (maxLat - city.x) / (maxLat - minLat);
-                      return Offset(
-                        normalizedX * width,
-                        normalizedY * mapHeight,
+                    Offset project(TransferMapCityModel cityModel) {
+                      if (_cityList.isEmpty) return Offset.zero;
+                      final matched = _cityList.cast<City?>().firstWhere(
+                        (c) =>
+                            c != null &&
+                            _normalizeString(c.title) ==
+                                _normalizeString(cityModel.name),
+                        orElse: () => null,
                       );
+                      if (matched == null) return Offset.zero;
+                      return matched.path.getBounds().center;
+                    }
+
+                    final childWidth = SizeController.instance.mapSize.width;
+                    final childHeight = SizeController.instance.mapSize.height;
+                    final initialScale = (width / childWidth) * 1.25;
+
+                    if (!_hasCenteredMap) {
+                      _hasCenteredMap = true;
+                      final tx = (width - childWidth * initialScale) / 2;
+                      final ty = (mapHeight - childHeight * initialScale) / 2;
+                      // ignore: deprecated_member_use
+                      _transformationController.value = Matrix4.identity()
+                        // ignore: deprecated_member_use
+                        ..translate(tx, ty)
+                        // ignore: deprecated_member_use
+                        ..scale(initialScale);
                     }
 
                     return SizedBox(
                       height: mapHeight,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                image: DecorationImage(
-                                  image: const AssetImage('assets/backmap.webp'),
-                                  fit: BoxFit.fill,
-                                  colorFilter: ColorFilter.mode(
-                                    AppFx.panelWash(0.5),
-                                    BlendMode.darken,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24.r),
+                        child: InteractiveViewer(
+                          transformationController: _transformationController,
+                          boundaryMargin: EdgeInsets.symmetric(
+                            horizontal: childWidth,
+                            vertical: childHeight,
+                          ),
+                          constrained: false,
+                          clipBehavior: Clip.none,
+                          minScale: 0.1,
+                          maxScale: 5.0,
+                          scaleEnabled: true,
+                          panEnabled: true,
+                          child: SizedBox(
+                            width: childWidth,
+                            height: childHeight,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Positioned.fill(
+                                  child: CustomPaint(
+                                    painter:
+                                        _TurkeyTransferMapBackgroundPainter(
+                                          cities: _cityList,
+                                          transfers: transfers,
+                                          selectedTransferId:
+                                              selectedTransferId,
+                                          normalizeFn: _normalizeString,
+                                        ),
                                   ),
                                 ),
-                              ),
-                            ),
-                          ),
-                          Positioned.fill(
-                            child: CustomPaint(
-                              painter: _TransferMapPainter(
-                                transfers: transfers,
-                                projector: project,
-                                selectedTransferId: selectedTransferId,
-                              ),
-                            ),
-                          ),
-                          ...uniqueCities.map((city) {
-                            final position = project(city);
-                            const markerWidth = 80.0;
-                            return Positioned(
-                              left: position.dx - markerWidth / 2,
-                              top: position.dy - 8.w,
-                              width: markerWidth,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      Container(
-                                        width: 16.w,
-                                        height: 16.w,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.gold,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: AppColors.textPrimary,
-                                            width: 2,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.gold.withValues(
-                                                alpha: 0.4,
+                                Positioned.fill(
+                                  child: CustomPaint(
+                                    painter: _TransferMapPainter(
+                                      transfers: transfers,
+                                      projector: project,
+                                      selectedTransferId: selectedTransferId,
+                                    ),
+                                  ),
+                                ),
+                                ...uniqueCities.map((city) {
+                                  final position = project(city);
+                                  if (position == Offset.zero) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  const markerWidth = 80.0;
+                                  return Positioned(
+                                    left: position.dx - markerWidth / 2,
+                                    top: position.dy - 8.w,
+                                    width: markerWidth,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            Container(
+                                              width: 16.w,
+                                              height: 16.w,
+                                              decoration: BoxDecoration(
+                                                color: AppColors.gold,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: AppColors.textPrimary,
+                                                  width: 2,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: AppColors.gold
+                                                        .withValues(alpha: 0.4),
+                                                    blurRadius: 8,
+                                                    spreadRadius: 1,
+                                                  ),
+                                                ],
                                               ),
-                                              blurRadius: 8,
-                                              spreadRadius: 1,
+                                            ),
+                                            Positioned(
+                                              right: -10.w,
+                                              top: -8.h,
+                                              child: Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 4.w,
+                                                  vertical: 1.h,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.red,
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        999.r,
+                                                      ),
+                                                ),
+                                                child: Text(
+                                                  '${cityTransferCounts[city.id] ?? 0}',
+                                                  style: AppTextStyles.caption
+                                                      .standardCopyWith(
+                                                        color: AppColors
+                                                            .textPrimary,
+                                                        fontSize:
+                                                            AppTypography.micro,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      Positioned(
-                                        right: -10.w,
-                                        top: -8.h,
-                                        child: Container(
+                                        SizedBox(height: 4.h),
+                                        Container(
                                           padding: EdgeInsets.symmetric(
-                                            horizontal: 4.w,
-                                            vertical: 1.h,
+                                            horizontal: 6.w,
+                                            vertical: 2.h,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: AppColors.red,
-                                            borderRadius:
-                                                BorderRadius.circular(999.r),
-                                          ),
-                                          child: Text(
-                                            '${cityTransferCounts[city.id] ?? 0}',
-                                            style: AppTextStyles.caption.standardCopyWith(
-                                              color: AppColors.textPrimary,
-                                              fontSize: AppTypography.micro,
-                                              fontWeight: FontWeight.bold,
+                                            color: AppFx.panelWash(0.8),
+                                            borderRadius: BorderRadius.circular(
+                                              12.r,
+                                            ),
+                                            border: Border.all(
+                                              color: AppColors.gold.withValues(
+                                                alpha: 0.3,
+                                              ),
                                             ),
                                           ),
+                                          child: Text(
+                                            city.name,
+                                            style: AppTextStyles.caption
+                                                .standardCopyWith(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize: AppTypography.micro,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
+                                  );
+                                }),
+                                Positioned.fill(
+                                  child: Consumer(
+                                    builder: (context, ref, _) {
+                                      final now =
+                                          ref
+                                              .watch(secondTickerProvider)
+                                              .value ??
+                                          DateTime.now();
+                                      return Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          for (final transfer in transfers)
+                                            _TransferMapMovingMarker(
+                                              transfer: transfer,
+                                              selectedTransferId:
+                                                  selectedTransferId,
+                                              start: project(
+                                                transfer.sellerWarehouse.city,
+                                              ),
+                                              end: project(
+                                                transfer.buyerWarehouse.city,
+                                              ),
+                                              progress: _calculateProgress(
+                                                transfer,
+                                                now: now,
+                                              ),
+                                              onTap: () {
+                                                setState(() {
+                                                  _selectedTransferId =
+                                                      transfer.id;
+                                                });
+                                                _focusTransferCard(
+                                                  transfers,
+                                                  transfer.id,
+                                                );
+                                                _showTransferInfo(transfer);
+                                              },
+                                            ),
+                                        ],
+                                      );
+                                    },
                                   ),
-                                  SizedBox(height: 4.h),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 6.w,
-                                      vertical: 2.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppFx.panelWash(0.8),
-                                      borderRadius: BorderRadius.circular(12.r),
-                                      border: Border.all(
-                                        color: AppColors.gold.withValues(
-                                          alpha: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      city.name,
-                                      style: AppTextStyles.caption.standardCopyWith(
-                                        color: AppColors.textPrimary,
-                                        fontSize: AppTypography.micro,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                          Positioned.fill(
-                            child: Consumer(
-                              builder: (context, ref, _) {
-                                final now =
-                                    ref.watch(secondTickerProvider).value ??
-                                    DateTime.now();
-                                return Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    for (final transfer in transfers)
-                                      _TransferMapMovingMarker(
-                                        transfer: transfer,
-                                        selectedTransferId: selectedTransferId,
-                                        start: project(
-                                          transfer.sellerWarehouse.city,
-                                        ),
-                                        end: project(
-                                          transfer.buyerWarehouse.city,
-                                        ),
-                                        progress: _calculateProgress(
-                                          transfer,
-                                          now: now,
-                                        ),
-                                        onTap: () {
-                                          setState(() {
-                                            _selectedTransferId = transfer.id;
-                                          });
-                                          _focusTransferCard(
-                                            transfers,
-                                            transfer.id,
-                                          );
-                                          _showTransferInfo(transfer);
-                                        },
-                                      ),
-                                  ],
-                                );
-                              },
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     );
                   },
@@ -1487,7 +1567,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                 productName: transfer.product.name,
                                 itemCount: transfer.itemCount,
                               ),
-                              style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.title),
+                              style: AppTextStyles.h2.standardCopyWith(
+                                fontSize: AppTypography.title,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -1512,9 +1594,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 8.h),
-            
+
             // Collapsed view progress & remaining time (Compact)
             if (!isSelected) ...[
               Row(
@@ -1532,7 +1614,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   SizedBox(width: 10.w),
                   Consumer(
                     builder: (context, ref, _) {
-                      final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+                      final now =
+                          ref.watch(secondTickerProvider).value ??
+                          DateTime.now();
                       final remaining = transfer.finishAt.difference(now);
                       return Text(
                         _formatRemaining(remaining),
@@ -1550,11 +1634,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
             // Expanded view details
             if (isSelected) ...[
-              Divider(
-                color: AppFx.softOverlay(0.08),
-                height: 16.h,
-              ),
-              
+              Divider(color: AppFx.softOverlay(0.08), height: 16.h),
+
               Text(
                 _transferRouteSummary(
                   sourceName: transfer.sellerWarehouse.name,
@@ -1569,7 +1650,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 maxLines: 2,
               ),
               SizedBox(height: 8.h),
-              
+
               Wrap(
                 spacing: 6.w,
                 runSpacing: 6.h,
@@ -1593,14 +1674,16 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ],
               ),
               SizedBox(height: 10.h),
-              
+
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
                 decoration: BoxDecoration(
                   color: accentColor.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10.r),
-                  border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.18),
+                  ),
                 ),
                 child: _TransferLiveMeta(
                   transfer: transfer,
@@ -1610,7 +1693,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ),
               ),
               SizedBox(height: 10.h),
-              
+
               _buildCompactMetaRow(
                 leftIcon: AppIcons.inventory2Outlined,
                 leftText: _transferQuantitySummary(
@@ -1624,7 +1707,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               SizedBox(height: 6.h),
               _buildCompactMetaRow(
                 leftIcon: AppIcons.localShippingOutlined,
-                leftText: _formatCurrency(transfer.transportCost + transfer.rentalCost),
+                leftText: _formatCurrency(
+                  transfer.transportCost + transfer.rentalCost,
+                ),
                 rightIcon: transfer.isRental
                     ? AppIcons.localShippingOutlined
                     : AppIcons.directionsCarOutlined,
@@ -1640,7 +1725,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ),
               ],
               SizedBox(height: 10.h),
-              
+
               ClipRRect(
                 borderRadius: BorderRadius.circular(4.r),
                 child: _TransferProgressBar(
@@ -1650,13 +1735,17 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ),
               ),
               SizedBox(height: 6.h),
-              
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton.icon(
                     onPressed: () => _showTransferInfo(transfer),
-                    icon: Icon(AppIcons.openInFull, size: AppIconSizes.small, color: AppColors.gold),
+                    icon: Icon(
+                      AppIcons.openInFull,
+                      size: AppIconSizes.small,
+                      color: AppColors.gold,
+                    ),
                     label: Text(
                       'Tüm İrsaliye Detayları',
                       style: AppTextStyles.body.standardCopyWith(
@@ -1687,13 +1776,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   }) {
     return Row(
       children: [
-        Expanded(
-          child: _buildMetaLine(leftIcon, leftText),
-        ),
+        Expanded(child: _buildMetaLine(leftIcon, leftText)),
         SizedBox(width: 12.w),
-        Expanded(
-          child: _buildMetaLine(rightIcon, rightText),
-        ),
+        Expanded(child: _buildMetaLine(rightIcon, rightText)),
       ],
     );
   }
@@ -1770,12 +1855,16 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           SizedBox(height: 20.h),
           Text(
             'Aktif Transfer Yok',
-            style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.headline),
+            style: AppTextStyles.h2.standardCopyWith(
+              fontSize: AppTypography.headline,
+            ),
           ),
           SizedBox(height: 12.h),
           Text(
             'Marketten satın aldığınız ürünler yola çıktığında veya bir satışa gönderdiğinizde burada canlı olarak takip edebilirsiniz.',
-            style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1816,12 +1905,16 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           SizedBox(height: 20.h),
           Text(
             'Geçmiş Kayıt Bulunamadı',
-            style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.headline),
+            style: AppTextStyles.h2.standardCopyWith(
+              fontSize: AppTypography.headline,
+            ),
           ),
           SizedBox(height: 12.h),
           Text(
             'Tamamlanan veya iptal edilen tüm sevkiyatlarınız burada loglanacaktır.',
-            style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1898,12 +1991,17 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                 productName: item.product.name,
                                 itemCount: item.itemCount,
                               ),
-                              style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.title),
+                              style: AppTextStyles.h2.standardCopyWith(
+                                fontSize: AppTypography.title,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           SizedBox(width: 6.w),
-                          _buildTransferChip(_statusLabel(item.status), statusColor),
+                          _buildTransferChip(
+                            _statusLabel(item.status),
+                            statusColor,
+                          ),
                         ],
                       ),
                       SizedBox(height: 4.h),
@@ -1920,9 +2018,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 8.h),
-            
+
             // Collapsed view summary
             if (!isExpanded) ...[
               Row(
@@ -1949,11 +2047,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
             // Expanded view details
             if (isExpanded) ...[
-              Divider(
-                color: AppFx.softOverlay(0.08),
-                height: 16.h,
-              ),
-              
+              Divider(color: AppFx.softOverlay(0.08), height: 16.h),
+
               Text(
                 _transferRouteSummary(
                   sourceName: item.sellerWarehouse.name,
@@ -1968,7 +2063,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 maxLines: 2,
               ),
               SizedBox(height: 8.h),
-              
+
               Wrap(
                 spacing: 6.w,
                 runSpacing: 6.h,
@@ -1989,7 +2084,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ],
               ),
               SizedBox(height: 12.h),
-              
+
               _buildCompactMetaRow(
                 leftIcon: AppIcons.inventory2Outlined,
                 leftText: _transferQuantitySummary(
@@ -2021,7 +2116,10 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 ),
               ],
               SizedBox(height: 8.h),
-              _buildMetaLine(AppIcons.eventOutlined, 'Bitiş Tarihi: $completedText'),
+              _buildMetaLine(
+                AppIcons.eventOutlined,
+                'Bitiş Tarihi: $completedText',
+              ),
             ],
           ],
         ),
@@ -2029,10 +2127,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     );
   }
 
-  double _calculateProgress(
-    TransferMapItemModel transfer, {
-    DateTime? now,
-  }) {
+  double _calculateProgress(TransferMapItemModel transfer, {DateTime? now}) {
     final total = transfer.finishAt.difference(transfer.startedAt).inSeconds;
     if (total <= 0) return 1;
     final elapsed = (now ?? DateTime.now())
@@ -2111,7 +2206,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       ),
     );
   }
-
 }
 
 class _TransferLiveMeta extends ConsumerWidget {
@@ -2156,7 +2250,6 @@ class _TransferLiveMeta extends ConsumerWidget {
       ],
     );
   }
-
 }
 
 class _TransferProgressBar extends ConsumerWidget {
@@ -2223,10 +2316,7 @@ class _TransferMapMovingMarker extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.cardBg,
             shape: BoxShape.circle,
-            border: Border.all(
-              color: color,
-              width: isSelected ? 3 : 2,
-            ),
+            border: Border.all(color: color, width: isSelected ? 3 : 2),
             boxShadow: [
               BoxShadow(
                 color: color.withValues(alpha: 0.4),
@@ -2240,7 +2330,9 @@ class _TransferMapMovingMarker extends StatelessWidget {
             children: [
               Center(
                 child: Icon(
-                  transfer.isRental ? AppIcons.localShipping : AppIcons.directionsCar,
+                  transfer.isRental
+                      ? AppIcons.localShipping
+                      : AppIcons.directionsCar,
                   color: transfer.isRental ? AppColors.warning : AppColors.gold,
                   size: AppIconSizes.small,
                 ),
@@ -2362,6 +2454,79 @@ class _TransferMapPainter extends CustomPainter {
   }
 }
 
+class _TurkeyTransferMapBackgroundPainter extends CustomPainter {
+  final List<City> cities;
+  final List<TransferMapItemModel> transfers;
+  final String? selectedTransferId;
+  final String Function(String) normalizeFn;
 
+  _TurkeyTransferMapBackgroundPainter({
+    required this.cities,
+    required this.transfers,
+    this.selectedTransferId,
+    required this.normalizeFn,
+  });
 
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Border and Fill paints
+    final strokePaint = Paint()
+      ..color = AppColors.white.withValues(alpha: 0.35)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
 
+    final defaultFillPaint = Paint()
+      ..color = AppColors.cardBg.withValues(alpha: 0.55)
+      ..style = PaintingStyle.fill;
+
+    // Active cities paint (involved in active transfers)
+    final activeFillPaint = Paint()
+      ..color = AppColors.white.withValues(alpha: 0.12)
+      ..style = PaintingStyle.fill;
+
+    final selectedFillPaint = Paint()
+      ..color = AppColors.gold.withValues(alpha: 0.4)
+      ..style = PaintingStyle.fill;
+
+    // Collect all city names involved in transfers
+    final activeCityNames = <String>{};
+    String? selectedSellerCityName;
+    String? selectedBuyerCityName;
+
+    for (final transfer in transfers) {
+      activeCityNames.add(normalizeFn(transfer.sellerWarehouse.city.name));
+      activeCityNames.add(normalizeFn(transfer.buyerWarehouse.city.name));
+      if (transfer.id == selectedTransferId) {
+        selectedSellerCityName = normalizeFn(
+          transfer.sellerWarehouse.city.name,
+        );
+        selectedBuyerCityName = normalizeFn(transfer.buyerWarehouse.city.name);
+      }
+    }
+
+    for (final city in cities) {
+      final cityTitleNormalized = normalizeFn(city.title);
+      Paint fillPaint = defaultFillPaint;
+
+      if (cityTitleNormalized == selectedSellerCityName ||
+          cityTitleNormalized == selectedBuyerCityName) {
+        fillPaint = selectedFillPaint;
+      } else if (activeCityNames.contains(cityTitleNormalized)) {
+        fillPaint = activeFillPaint;
+      }
+
+      canvas.drawPath(city.path, fillPaint);
+      canvas.drawPath(city.path, strokePaint);
+
+    }
+  }
+
+  @override
+  bool shouldRepaint(
+    covariant _TurkeyTransferMapBackgroundPainter oldDelegate,
+  ) {
+    return oldDelegate.cities != cities ||
+        oldDelegate.transfers != transfers ||
+        oldDelegate.selectedTransferId != selectedTransferId;
+  }
+}

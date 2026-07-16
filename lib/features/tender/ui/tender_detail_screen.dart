@@ -552,10 +552,18 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                                         final unitReward = totalRequired > 0
                                             ? (totalReward / totalRequired)
                                             : 0.0;
+                                        final double realUnitCost = selectedWarehouse.unitCost > 0
+                                            ? selectedWarehouse.unitCost
+                                            : (detail.tender.productBasePrice > 0
+                                                ? detail.tender.productBasePrice
+                                                : 0.0);
+                                        final bool isCostEstimated = realUnitCost <= 0;
 
                                         return _DeliveryProfitCalculator(
                                           quantity: _selectedQuantity,
                                           unitRewardCash: unitReward,
+                                          unitCost: isCostEstimated ? (unitReward * 0.60) : realUnitCost,
+                                          isCostEstimated: isCostEstimated,
                                           sameCity: selectedWarehouse.sameCity,
                                           transportCost: transportCost,
                                         );
@@ -1170,59 +1178,25 @@ class _QuantityCard extends StatelessWidget {
             ),
           ),
           SizedBox(height: 12.h),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: quantity <= 0
-                      ? null
-                      : () => onChanged(
-                          (quantity - 100).clamp(0, safeMax).toInt(),
-                        ),
-                  child: const Text('-100'),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: safeMax <= 0 ? null : () => onChanged(safeMax),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppColors.gold, width: 1.w),
+                padding: EdgeInsets.symmetric(vertical: 10.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.r),
                 ),
               ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: quantity <= 0
-                      ? null
-                      : () => onChanged(
-                          (quantity - 10).clamp(0, safeMax).toInt(),
-                        ),
-                  child: const Text('-10'),
+              child: Text(
+                'Tamamı',
+                style: AppTextStyles.button.standardCopyWith(
+                  color: AppColors.goldLight,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: FilledButton(
-                  onPressed: safeMax <= 0 ? null : () => onChanged(safeMax),
-                  child: const Text('Tumunu'),
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: quantity >= safeMax
-                      ? null
-                      : () => onChanged(
-                          (quantity + 10).clamp(0, safeMax).toInt(),
-                        ),
-                  child: const Text('+10'),
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: quantity >= safeMax
-                      ? null
-                      : () => onChanged(
-                          (quantity + 100).clamp(0, safeMax).toInt(),
-                        ),
-                  child: const Text('+100'),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -1709,12 +1683,16 @@ class _DeliveryProfitCalculator extends StatelessWidget {
   const _DeliveryProfitCalculator({
     required this.quantity,
     required this.unitRewardCash,
+    required this.unitCost,
+    required this.isCostEstimated,
     required this.sameCity,
     required this.transportCost,
   });
 
   final int quantity;
   final double unitRewardCash;
+  final double unitCost;
+  final bool isCostEstimated;
   final bool sameCity;
   final double transportCost;
 
@@ -1722,9 +1700,7 @@ class _DeliveryProfitCalculator extends StatelessWidget {
   Widget build(BuildContext context) {
     if (quantity <= 0) return const SizedBox.shrink();
 
-    // 60% estimate of production cost
-    final estUnitCost = unitRewardCash * 0.60;
-    final totalProdCost = quantity * estUnitCost;
+    final totalProdCost = quantity * unitCost;
     final totalCost = totalProdCost + transportCost;
     final estRevenue = quantity * unitRewardCash;
     final netProfit = estRevenue - totalCost;
@@ -1757,7 +1733,7 @@ class _DeliveryProfitCalculator extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Tahmini Ürün Maliyeti (Est. %60):',
+                isCostEstimated ? 'Tahmini Ürün Maliyeti (Est. %60):' : 'Gerçek Ürün Maliyeti:',
                 style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
               ),
               Text(

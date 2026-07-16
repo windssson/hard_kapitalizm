@@ -67,7 +67,20 @@ class TransferVehicleOptionCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16.r),
       child: Container(
         padding: EdgeInsets.all(12.w),
-        decoration: AppDecorations.premiumCard(accentColor, 16.r),
+        decoration: isSelected
+            ? BoxDecoration(
+                color: accentColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: AppColors.gold, width: 2.w),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    spreadRadius: 1.5,
+                  ),
+                ],
+              )
+            : AppDecorations.premiumCard(accentColor, 16.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -92,13 +105,40 @@ class TransferVehicleOptionCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        vehicleName,
-                        style: AppTextStyles.title.standardCopyWith(
-                          color: AppColors.white,
-                          fontSize: AppTypography.title,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              vehicleName,
+                              style: AppTextStyles.title.standardCopyWith(
+                                color: AppColors.white,
+                                fontSize: AppTypography.title,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isSelected) ...[
+                            SizedBox(width: 4.w),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6.r),
+                                border: Border.all(color: AppColors.gold, width: 0.5),
+                              ),
+                              child: Text(
+                                'SEÇİLİ',
+                                style: TextStyle(
+                                  color: AppColors.gold,
+                                  fontSize: 8.sp,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       SizedBox(height: 4.h),
                       Container(

@@ -47,7 +47,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
+      setState(
+        () => _searchQuery = _searchController.text.trim().toLowerCase(),
+      );
     });
   }
 
@@ -120,7 +122,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               product,
               playerLevel: playerLevel,
               playerCash: playerCash,
-              hasAvailableResearchSlot: activeResearchCount < maxConcurrentResearches,
+              hasAvailableResearchSlot:
+                  activeResearchCount < maxConcurrentResearches,
             );
           },
         );
@@ -139,7 +142,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     return products.where((product) {
       if (product.currentQualityLevel <= 0) return false;
 
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           product.urunAdi.toLowerCase().contains(_searchQuery);
       final matchesUnit =
           _selectedUnit == 'TUMU' || product.uretimBirimi == _selectedUnit;
@@ -148,7 +152,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       if (_selectedScope == 'URETTIKLERIM') {
         matchesScope = product.isProduced;
       } else if (_selectedScope == 'ARASTIRILABILIR') {
-        matchesScope = !product.isMaxQuality &&
+        matchesScope =
+            !product.isMaxQuality &&
             product.canUpgrade(
               playerLevel: playerLevel,
               playerCash: playerCash,
@@ -161,15 +166,15 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<ArgeResearchModel?>>(
-      activeArgeResearchProvider,
-      (previous, next) {
-        final research = next.value;
-        if (research != null && research.isDone) {
-          ref.read(argeActionProvider).completeResearch(research.id);
-        }
-      },
-    );
+    ref.listen<AsyncValue<ArgeResearchModel?>>(activeArgeResearchProvider, (
+      previous,
+      next,
+    ) {
+      final research = next.value;
+      if (research != null && research.isDone) {
+        ref.read(argeActionProvider).completeResearch(research.id);
+      }
+    });
 
     final centerAsync = ref.watch(playerArgeCenterProvider);
     final centerId = centerAsync.value?.id ?? '';
@@ -230,9 +235,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             const SecondaryTopBar(title: 'AR-GE Merkezi'),
             Expanded(
               child: centerAsync.when(
-                loading: () => Center(
-                  child: AppLoadingIndicator(color: AppColors.gold),
-                ),
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (error, _) => _buildError(error),
                 data: (center) {
                   if (center == null) {
@@ -291,14 +295,22 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                               data: (upgrade) => upgrade == null
                                   ? const SizedBox.shrink()
                                   : Padding(
-                                      padding:
-                                          EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                                      padding: EdgeInsets.fromLTRB(
+                                        10.w,
+                                        12.h,
+                                        10.w,
+                                        0,
+                                      ),
                                       child: _ActiveArgeUpgradeCard(
                                         upgrade: upgrade,
                                         onFinishWithGold: () =>
-                                            _finishCenterUpgradeWithGold(upgrade),
+                                            _finishCenterUpgradeWithGold(
+                                              upgrade,
+                                            ),
                                         onReduceTimeWithAd: () =>
-                                            _reduceCenterUpgradeTimeWithAd(upgrade),
+                                            _reduceCenterUpgradeTimeWithAd(
+                                              upgrade,
+                                            ),
                                         calculateStarCost:
                                             _calculateUpgradeStarCost,
                                         formatCountdown: _formatCountdown,
@@ -311,11 +323,18 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                               loading: () => const SizedBox.shrink(),
                               error: (e, s) => Container(
                                 padding: EdgeInsets.all(10.w),
-                                margin: EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                                margin: EdgeInsets.fromLTRB(
+                                  10.w,
+                                  12.h,
+                                  10.w,
+                                  0,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppColors.red.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12.r),
-                                  border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+                                  border: Border.all(
+                                    color: AppColors.red.withValues(alpha: 0.3),
+                                  ),
                                 ),
                                 child: Text(
                                   'Araştırmalar yüklenirken hata oluştu: $e',
@@ -328,16 +347,22 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                               data: (researches) => researches.isEmpty
                                   ? const SizedBox.shrink()
                                   : Padding(
-                                      padding:
-                                          EdgeInsets.fromLTRB(10.w, 12.h, 10.w, 0),
+                                      padding: EdgeInsets.fromLTRB(
+                                        10.w,
+                                        12.h,
+                                        10.w,
+                                        0,
+                                      ),
                                       child: Column(
                                         children: [
-                                          for (final research in researches) ...[
+                                          for (final research
+                                              in researches) ...[
                                             LiveActiveResearchCard(
                                               research: research,
                                               isUpgrading: _isUpgrading,
                                               onCollect: _onCollect,
-                                              onFinishWithGold: _onFinishWithGold,
+                                              onFinishWithGold:
+                                                  _onFinishWithGold,
                                             ),
                                             if (research != researches.last)
                                               SizedBox(height: 10.h),
@@ -373,8 +398,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                                 products,
                                 playerLevel: player?.level ?? 1,
                                 playerCash: (player?.cash ?? 0).toDouble(),
-                                activeResearchCount: researchesAsync.value?.length ?? 0,
-                                maxConcurrentResearches: center.maxConcurrentResearches,
+                                activeResearchCount:
+                                    researchesAsync.value?.length ?? 0,
+                                maxConcurrentResearches:
+                                    center.maxConcurrentResearches,
                               ),
                               player?.level ?? 1,
                               (player?.cash ?? 0).toDouble(),
@@ -461,7 +488,11 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(AppIcons.inventory2Outlined, color: AppColors.blue, size: AppIconSizes.compact),
+                  Icon(
+                    AppIcons.inventory2Outlined,
+                    color: AppColors.blue,
+                    size: AppIconSizes.compact,
+                  ),
                   SizedBox(width: 8.w),
                   Expanded(
                     child: Text(
@@ -516,7 +547,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
     final nextSlots =
         (activeUpgrade.params['next_concurrent_researches'] as num?)?.toInt() ??
-            center.maxConcurrentResearches;
+        center.maxConcurrentResearches;
     return '${center.maxConcurrentResearches} -> $nextSlots';
   }
 
@@ -590,16 +621,25 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       ),
       child: TextField(
         controller: _searchController,
-        style: AppTextStyles.body.standardCopyWith(color: AppColors.textPrimary),
+        style: AppTextStyles.body.standardCopyWith(
+          color: AppColors.textPrimary,
+        ),
         decoration: InputDecoration(
           hintText: 'Urun ara...',
           hintStyle: AppTextStyles.body.standardCopyWith(
             color: AppColors.textMuted,
             fontSize: AppTypography.body,
           ),
-          prefixIcon: Icon(AppIcons.search, color: AppColors.textMuted, size: AppIconSizes.regular),
+          prefixIcon: Icon(
+            AppIcons.search,
+            color: AppColors.textMuted,
+            size: AppIconSizes.regular,
+          ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 12.w,
+            vertical: 10.h,
+          ),
         ),
       ),
     );
@@ -632,8 +672,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 child: Text(
                   filter.$2,
                   style: AppTextStyles.caption.standardCopyWith(
-                    color:
-                        isSelected ? AppColors.goldLight : AppColors.textSecondary,
+                    color: isSelected
+                        ? AppColors.goldLight
+                        : AppColors.textSecondary,
                     fontSize: AppTypography.bodySmall,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   ),
@@ -679,7 +720,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 child: Text(
                   filter.$2,
                   style: AppTextStyles.caption.standardCopyWith(
-                    color: isSelected ? AppColors.blue : AppColors.textSecondary,
+                    color: isSelected
+                        ? AppColors.blue
+                        : AppColors.textSecondary,
                     fontSize: AppTypography.bodySmall,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                   ),
@@ -731,10 +774,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     final hasLevel = product.hasLevelRequirement(playerLevel: playerLevel);
     final hasCash = product.hasCashRequirement(playerCash: playerCash);
     final hasFreeResearchSlot = activeResearchCount < maxConcurrentResearches;
-    final canUpgrade = product.canUpgrade(
-          playerLevel: playerLevel,
-          playerCash: playerCash,
-        ) &&
+    final canUpgrade =
+        product.canUpgrade(playerLevel: playerLevel, playerCash: playerCash) &&
         hasFreeResearchSlot;
 
     return Container(
@@ -765,9 +806,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             decoration: BoxDecoration(
               color: AppFx.panelWash(0.22),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.gold.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
             child: CachedAssetImage(
               fileName: product.urunIconu,
@@ -801,11 +840,16 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     if (product.isProduced) ...[
                       SizedBox(width: 6.w),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.w,
+                          vertical: 2.h,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.green.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(4.r),
-                          border: Border.all(color: AppColors.green.withValues(alpha: 0.35)),
+                          border: Border.all(
+                            color: AppColors.green.withValues(alpha: 0.35),
+                          ),
                         ),
                         child: Text(
                           'ÜRETİLİYOR',
@@ -821,7 +865,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 ),
                 SizedBox(height: 4.h),
                 Row(
-                  children: List.generate(ArgeProductModel.maxQualityLevel, (index) {
+                  children: List.generate(ArgeProductModel.maxQualityLevel, (
+                    index,
+                  ) {
                     final filled = index < product.currentQualityLevel;
                     return Padding(
                       padding: EdgeInsets.only(right: 1.w),
@@ -878,15 +924,18 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                   onPressed: product.isMaxQuality
                       ? null
                       : () => _showUpgradeSheet(
-                            product,
-                            playerLevel: playerLevel,
-                            playerCash: playerCash,
-                            hasAvailableResearchSlot: hasFreeResearchSlot,
-                          ),
+                          product,
+                          playerLevel: playerLevel,
+                          playerCash: playerCash,
+                          hasAvailableResearchSlot: hasFreeResearchSlot,
+                        ),
                   style: FilledButton.styleFrom(
-                    backgroundColor:
-                        canUpgrade ? AppColors.gold : AppColors.cardBgLight,
-                    foregroundColor: canUpgrade ? AppColors.textOnAccent : AppColors.textMuted,
+                    backgroundColor: canUpgrade
+                        ? AppColors.gold
+                        : AppColors.cardBgLight,
+                    foregroundColor: canUpgrade
+                        ? AppColors.textOnAccent
+                        : AppColors.textMuted,
                     disabledBackgroundColor: AppColors.cardBgLight,
                     disabledForegroundColor: AppColors.textMuted,
                     padding: EdgeInsets.zero,
@@ -944,7 +993,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }) {
     final hasLevel = product.hasLevelRequirement(playerLevel: playerLevel);
     final hasCash = product.hasCashRequirement(playerCash: playerCash);
-    final canStart = hasLevel &&
+    final canStart =
+        hasLevel &&
         hasCash &&
         hasAvailableResearchSlot &&
         !product.isMaxQuality;
@@ -993,7 +1043,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
   Future<void> _onCollect(String researchId) async {
     setState(() => _isUpgrading = true);
-    final result = await ref.read(argeActionProvider).completeResearch(researchId);
+    final result = await ref
+        .read(argeActionProvider)
+        .completeResearch(researchId);
     setState(() => _isUpgrading = false);
 
     if (!mounted) return;
@@ -1076,7 +1128,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     if (confirm != true || !mounted) return;
 
     setState(() => _isUpgrading = true);
-    final result = await ref.read(argeActionProvider).finishWithGold(researchId);
+    final result = await ref
+        .read(argeActionProvider)
+        .finishWithGold(researchId);
     setState(() => _isUpgrading = false);
 
     if (!mounted) return;
@@ -1121,10 +1175,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     final nextSlots = nextLevel >= 6
         ? 4
         : nextLevel >= 4
-            ? 3
-            : nextLevel >= 2
-                ? 2
-                : 1;
+        ? 3
+        : nextLevel >= 2
+        ? 2
+        : 1;
     final nextDurationReduction = switch (nextLevel) {
       1 => 0.0,
       2 => 5.0,
@@ -1181,7 +1235,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     Navigator.of(context).pop();
                     await _startCenterUpgrade(center.id);
                   },
-                  icon: Icon(AppIcons.upgradeRounded, size: AppIconSizes.regular),
+                  icon: Icon(
+                    AppIcons.upgradeRounded,
+                    size: AppIconSizes.regular,
+                  ),
                   label: Text(
                     'Yukseltmeyi Baslat',
                     style: AppTextStyles.body.standardCopyWith(
@@ -1208,7 +1265,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
   Future<void> _startCenterUpgrade(String centerId) async {
     setState(() => _isCenterSubmitting = true);
-    final result = await ref.read(argeActionProvider).startCenterUpgrade(centerId);
+    final result = await ref
+        .read(argeActionProvider)
+        .startCenterUpgrade(centerId);
     setState(() => _isCenterSubmitting = false);
 
     if (!mounted) return;
@@ -1230,7 +1289,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     }
   }
 
-  Future<void> _finishCenterUpgradeWithGold(BuildingUpgradeModel upgrade) async {
+  Future<void> _finishCenterUpgradeWithGold(
+    BuildingUpgradeModel upgrade,
+  ) async {
     final result = await ref
         .read(argeActionProvider)
         .finishCenterUpgradeWithGold(upgrade.id);
@@ -1261,6 +1322,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   ) async {
     final success = await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'upgrade_time_reduce',
+      resourceId: upgrade.id,
       onApplyReduction: () => ref
           .read(argeActionProvider)
           .reduceCenterUpgradeTimeWithAd(upgrade.id),
@@ -1308,7 +1371,11 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     color: AppColors.blue.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(16.r),
                   ),
-                  child: Icon(AppIcons.scienceOutlined, color: AppColors.blue, size: AppIconSizes.xLarge),
+                  child: Icon(
+                    AppIcons.scienceOutlined,
+                    color: AppColors.blue,
+                    size: AppIconSizes.xLarge,
+                  ),
                 ),
                 SizedBox(width: 14.w),
                 Expanded(
@@ -1317,7 +1384,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     children: [
                       Text(
                         'AR-GE Merkezi Kur',
-                        style: AppTextStyles.h2.standardCopyWith(color: AppColors.gold),
+                        style: AppTextStyles.h2.standardCopyWith(
+                          color: AppColors.gold,
+                        ),
                       ),
                       SizedBox(height: 4.h),
                       Text(
@@ -1344,13 +1413,13 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              Text(
-                'Merkez Bilgileri',
-                style: AppTextStyles.h2.standardCopyWith(
-                  color: AppColors.textPrimary,
-                  fontSize: AppTypography.titleLarge,
-                  fontWeight: FontWeight.w800,
-                ),
+                Text(
+                  'Merkez Bilgileri',
+                  style: AppTextStyles.h2.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.titleLarge,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 SizedBox(height: 12.h),
                 _buildSetupRow('Kurulum Maliyeti', _formatMoney(setupCost)),
@@ -1410,7 +1479,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                       height: 16.w,
                       child: const AppLoadingIndicator(strokeWidth: 2),
                     )
-                  : Icon(AppIcons.constructionOutlined, size: AppIconSizes.regular),
+                  : Icon(
+                      AppIcons.constructionOutlined,
+                      size: AppIconSizes.regular,
+                    ),
               label: Text(
                 _isCenterSubmitting ? 'Kuruluyor...' : 'AR-GE MERKEZINI KUR',
                 style: AppTextStyles.body.standardCopyWith(
@@ -1438,17 +1510,27 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   Widget _buildConstructionState(Map<String, dynamic> construction) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
     final params = construction['params'] is Map<String, dynamic>
-        ? Map<String, dynamic>.from(construction['params'] as Map<String, dynamic>)
+        ? Map<String, dynamic>.from(
+            construction['params'] as Map<String, dynamic>,
+          )
         : construction['params'] is Map
-            ? Map<String, dynamic>.from(construction['params'] as Map)
-            : <String, dynamic>{};
-    final finishAt = DateTime.tryParse(construction['finish_at']?.toString() ?? '');
-    final remaining = finishAt == null ? Duration.zero : finishAt.difference(now);
-    final isDone = !remaining.isNegative && remaining.inSeconds == 0 || (finishAt != null && !finishAt.isAfter(now));
+        ? Map<String, dynamic>.from(construction['params'] as Map)
+        : <String, dynamic>{};
+    final finishAt = DateTime.tryParse(
+      construction['finish_at']?.toString() ?? '',
+    );
+    final remaining = finishAt == null
+        ? Duration.zero
+        : finishAt.difference(now);
+    final isDone =
+        !remaining.isNegative && remaining.inSeconds == 0 ||
+        (finishAt != null && !finishAt.isAfter(now));
     final remainingMinutes = remaining.isNegative
         ? 0
         : (remaining.inSeconds / 60).ceil();
-    final goldCost = remainingMinutes <= 0 ? 0 : ((remainingMinutes + 29) ~/ 30);
+    final goldCost = remainingMinutes <= 0
+        ? 0
+        : ((remainingMinutes + 29) ~/ 30);
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -1472,7 +1554,11 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     color: AppColors.gold.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(16.r),
                   ),
-                  child: Icon(AppIcons.construction, color: AppColors.gold, size: AppIconSizes.xLarge),
+                  child: Icon(
+                    AppIcons.construction,
+                    color: AppColors.gold,
+                    size: AppIconSizes.xLarge,
+                  ),
                 ),
                 SizedBox(width: 14.w),
                 Expanded(
@@ -1481,7 +1567,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     children: [
                       Text(
                         (params['name'] ?? 'AR-GE Merkezi').toString(),
-                        style: AppTextStyles.h2.standardCopyWith(color: AppColors.gold),
+                        style: AppTextStyles.h2.standardCopyWith(
+                          color: AppColors.gold,
+                        ),
                       ),
                       SizedBox(height: 4.h),
                       Text(
@@ -1531,8 +1619,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             child: FilledButton(
               onPressed: isDone
                   ? () => _onCompleteCenterConstruction(
-                        construction['id'].toString(),
-                      )
+                      construction['id'].toString(),
+                    )
                   : null,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.green,
@@ -1560,10 +1648,14 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 onPressed: goldCost <= 0
                     ? null
                     : () => _onFinishCenterConstructionWithGold(
-                          construction['id'].toString(),
-                          goldCost,
-                        ),
-                icon: Icon(AppIcons.bolt, size: AppIconSizes.compact, color: AppColors.gold),
+                        construction['id'].toString(),
+                        goldCost,
+                      ),
+                icon: Icon(
+                  AppIcons.bolt,
+                  size: AppIconSizes.compact,
+                  color: AppColors.gold,
+                ),
                 label: Text(
                   '$goldCost yildiz ile hemen bitir',
                   style: AppTextStyles.body.standardCopyWith(
@@ -1572,7 +1664,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                   ),
                 ),
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: AppColors.gold.withValues(alpha: 0.35)),
+                  side: BorderSide(
+                    color: AppColors.gold.withValues(alpha: 0.35),
+                  ),
                   padding: EdgeInsets.symmetric(vertical: 13.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14.r),
@@ -1751,7 +1845,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }
 
   Widget _buildEmptyState() {
-    final hasSearchFilter = _searchQuery.isNotEmpty || _selectedUnit != 'TUMU' || _selectedScope != 'TUMU';
+    final hasSearchFilter =
+        _searchQuery.isNotEmpty ||
+        _selectedUnit != 'TUMU' ||
+        _selectedScope != 'TUMU';
     return Center(
       child: Padding(
         padding: EdgeInsets.all(40.w),
@@ -1796,7 +1893,11 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(AppIcons.errorOutline, color: AppColors.red, size: AppIconSizes.hero),
+          Icon(
+            AppIcons.errorOutline,
+            color: AppColors.red,
+            size: AppIconSizes.hero,
+          ),
           SizedBox(height: 12.h),
           Text(
             error.toString(),
@@ -1869,11 +1970,15 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
     final nextSlots =
         (upgrade.params['next_concurrent_researches'] as num?)?.toInt() ?? 1;
     final prevSlots =
-        (upgrade.params['previous_concurrent_researches'] as num?)?.toInt() ?? 1;
+        (upgrade.params['previous_concurrent_researches'] as num?)?.toInt() ??
+        1;
     final nextReduction =
-        (upgrade.params['next_duration_reduction_pct'] as num?)?.toDouble() ?? 0;
+        (upgrade.params['next_duration_reduction_pct'] as num?)?.toDouble() ??
+        0;
     final prevReduction =
-        (upgrade.params['previous_duration_reduction_pct'] as num?)?.toDouble() ?? 0;
+        (upgrade.params['previous_duration_reduction_pct'] as num?)
+            ?.toDouble() ??
+        0;
 
     return Container(
       padding: EdgeInsets.all(14.w),
@@ -1901,7 +2006,11 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
                   color: AppColors.gold.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(AppIcons.upgradeRounded, color: AppColors.gold, size: AppIconSizes.regular),
+                child: Icon(
+                  AppIcons.upgradeRounded,
+                  color: AppColors.gold,
+                  size: AppIconSizes.regular,
+                ),
               ),
               SizedBox(width: 10.w),
               Expanded(
@@ -1982,7 +2091,10 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.gold,
                   foregroundColor: AppColors.textOnAccent,
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 10.h,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
                   ),
@@ -2008,10 +2120,7 @@ class _ArgeUpgradeMeta extends StatelessWidget {
   final String label;
   final String value;
 
-  const _ArgeUpgradeMeta({
-    required this.label,
-    required this.value,
-  });
+  const _ArgeUpgradeMeta({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -2198,7 +2307,11 @@ class _UpgradeBottomSheet extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(AppIcons.infoOutline, color: AppColors.gold, size: AppIconSizes.compact),
+                Icon(
+                  AppIcons.infoOutline,
+                  color: AppColors.gold,
+                  size: AppIconSizes.compact,
+                ),
                 SizedBox(width: 8.w),
                 Expanded(
                   child: Text(
@@ -2219,9 +2332,7 @@ class _UpgradeBottomSheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(
-                  color: AppColors.red.withValues(alpha: 0.3),
-                ),
+                border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -2232,13 +2343,13 @@ class _UpgradeBottomSheet extends StatelessWidget {
                   ),
                   SizedBox(width: 8.w),
                   Expanded(
-                  child: Text(
-                    'Tum arastirma slotlariniz dolu.',
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.red,
-                      fontSize: AppTypography.bodySmall,
+                    child: Text(
+                      'Tum arastirma slotlariniz dolu.',
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                        fontSize: AppTypography.bodySmall,
+                      ),
                     ),
-                  ),
                   ),
                 ],
               ),
@@ -2259,9 +2370,12 @@ class _UpgradeBottomSheet extends StatelessWidget {
                 ),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    canStart ? AppColors.gold : AppColors.cardBgLight,
-                foregroundColor: canStart ? AppColors.textOnAccent : AppColors.textMuted,
+                backgroundColor: canStart
+                    ? AppColors.gold
+                    : AppColors.cardBgLight,
+                foregroundColor: canStart
+                    ? AppColors.textOnAccent
+                    : AppColors.textMuted,
                 disabledBackgroundColor: AppColors.cardBgLight,
                 disabledForegroundColor: AppColors.textMuted,
                 shape: RoundedRectangleBorder(
@@ -2287,7 +2401,9 @@ class _UpgradeBottomSheet extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(6.w),
           decoration: BoxDecoration(
-            color: (ok ? AppColors.green : AppColors.red).withValues(alpha: 0.12),
+            color: (ok ? AppColors.green : AppColors.red).withValues(
+              alpha: 0.12,
+            ),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -2433,10 +2549,14 @@ class __NewResearchProductSelectionSheetState
             child: TextField(
               controller: _searchController,
               onChanged: (val) => setState(() => _query = val.trim()),
-              style: AppTextStyles.body.standardCopyWith(color: AppColors.textPrimary),
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+              ),
               decoration: InputDecoration(
                 hintText: 'Ürün ara...',
-                hintStyle: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+                hintStyle: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textMuted,
+                ),
                 prefixIcon: Icon(AppIcons.search, color: AppColors.gold),
                 filled: true,
                 fillColor: AppFx.panelWash(0.12),
@@ -2459,11 +2579,17 @@ class __NewResearchProductSelectionSheetState
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(AppIcons.searchOff, color: AppColors.textMuted, size: 48.w),
+                        Icon(
+                          AppIcons.searchOff,
+                          color: AppColors.textMuted,
+                          size: 48.w,
+                        ),
                         SizedBox(height: 12.h),
                         Text(
                           'Aradığınız kriterde ürün bulunamadı.',
-                          style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ],
                     ),
@@ -2516,21 +2642,28 @@ class __NewResearchProductSelectionSheetState
                                         Flexible(
                                           child: Text(
                                             product.urunAdi,
-                                            style: AppTextStyles.title.standardCopyWith(
-                                              color: AppColors.textPrimary,
-                                              fontSize: AppTypography.body,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            style: AppTextStyles.title
+                                                .standardCopyWith(
+                                                  color: AppColors.textPrimary,
+                                                  fontSize: AppTypography.body,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                         if (product.isProduced) ...[
                                           SizedBox(width: 6.w),
                                           Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 4.w,
+                                              vertical: 1.h,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: AppColors.green.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(4.r),
+                                              color: AppColors.green.withValues(
+                                                alpha: 0.1,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4.r),
                                             ),
                                             child: Text(
                                               'Üretiyorsunuz',
@@ -2547,10 +2680,16 @@ class __NewResearchProductSelectionSheetState
                                     SizedBox(height: 4.h),
                                     Row(
                                       children: List.generate(5, (starIdx) {
-                                        final filled = starIdx < product.currentQualityLevel;
+                                        final filled =
+                                            starIdx <
+                                            product.currentQualityLevel;
                                         return Icon(
-                                          filled ? AppIcons.star : AppIcons.starBorder,
-                                          color: filled ? AppColors.gold : AppColors.textMuted,
+                                          filled
+                                              ? AppIcons.star
+                                              : AppIcons.starBorder,
+                                          color: filled
+                                              ? AppColors.gold
+                                              : AppColors.textMuted,
                                           size: 10.w,
                                         );
                                       }),

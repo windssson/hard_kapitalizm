@@ -1,11 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:hard_kapitalizm/features/chat/models/chat_message.dart';
 import 'package:hard_kapitalizm/features/chat/data/chat_service.dart';
+import 'package:hard_kapitalizm/features/chat/models/chat_message.dart';
+import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-// ─────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────
 class ChatState {
   final List<ChatMessage> messages;
   final bool isLoading;
@@ -38,9 +37,6 @@ class ChatState {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Notifier (Riverpod 3.x)
-// ─────────────────────────────────────────────────────────────────
 class ChatNotifier extends Notifier<ChatState> {
   RealtimeChannel? _channel;
   DateTime? _lastSentAt;
@@ -48,7 +44,6 @@ class ChatNotifier extends Notifier<ChatState> {
   @override
   ChatState build() => const ChatState();
 
-  /// İlk yükleme
   Future<void> loadInitial() async {
     if (state.isLoading) return;
     state = state.copyWith(isLoading: true, error: null);
@@ -64,7 +59,6 @@ class ChatNotifier extends Notifier<ChatState> {
     }
   }
 
-  /// Yukarı kaydırınca eski mesajları yükle
   Future<void> loadMore() async {
     if (state.isLoading || !state.hasMore || state.messages.isEmpty) return;
     state = state.copyWith(isLoading: true, error: null);
@@ -81,7 +75,6 @@ class ChatNotifier extends Notifier<ChatState> {
     }
   }
 
-  /// Realtime subscription başlat
   void subscribeRealtime() {
     _channel = ChatService.subscribeToNewMessages(
       onInsert: (msg) {
@@ -93,49 +86,45 @@ class ChatNotifier extends Notifier<ChatState> {
     );
   }
 
-  /// Realtime subscription durdur
   void unsubscribeRealtime() {
     _channel?.unsubscribe();
     _channel = null;
   }
 
-  /// Mesaj gönder (3 sn spam koruması)
-  Future<void> sendMessage({
-    required String playerId,
-    required String playerName,
-    required String avatarId,
-    required int playerLevel,
+  Future<bool> sendMessage({
     required String content,
+    MarketListingModel? linkedListing,
   }) async {
     final now = DateTime.now();
     if (_lastSentAt != null && now.difference(_lastSentAt!).inSeconds < 3) {
-      state = state.copyWith(error: '3 saniyede bir mesaj gönderilebilir.');
-      return;
+      state = state.copyWith(error: '3 saniyede bir mesaj gonderilebilir.');
+      return false;
     }
-    if (content.trim().isEmpty) return;
+    if (content.trim().isEmpty && linkedListing == null) {
+      return false;
+    }
 
     state = state.copyWith(isSending: true, error: null);
     _lastSentAt = now;
 
     try {
       await ChatService.sendMessage(
-        playerId: playerId,
-        playerName: playerName,
-        avatarId: avatarId,
-        playerLevel: playerLevel,
         content: content,
+        linkedListing: linkedListing,
       );
       state = state.copyWith(isSending: false);
-    } catch (e) {
+      return true;
+    } catch (e, st) {
+      debugPrint(
+        '[CHAT][PROVIDER][SEND][ERROR] type=${e.runtimeType} error=$e',
+      );
+      debugPrint('[CHAT][PROVIDER][SEND][STACK] $st');
       state = state.copyWith(isSending: false, error: e.toString());
+      return false;
     }
   }
 
   void clearError() => state = state.copyWith(error: null);
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────────
-final chatProvider =
-    NotifierProvider<ChatNotifier, ChatState>(ChatNotifier.new);
+final chatProvider = NotifierProvider<ChatNotifier, ChatState>(ChatNotifier.new);

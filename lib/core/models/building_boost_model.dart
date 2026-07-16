@@ -24,6 +24,24 @@ class BuildingBoostModel {
   });
 
   bool get isInProgress => status == 'in_progress';
+  Duration get totalDuration => finishAt.difference(startedAt);
+  int get durationMinutes {
+    final derived = totalDuration.inMinutes;
+    if (derived > 0) return derived;
+    return durationHours > 0 ? durationHours * 60 : 0;
+  }
+
+  String get durationLabel {
+    final minutes = durationMinutes;
+    if (minutes <= 0) {
+      return durationHours > 0 ? '$durationHours saat' : '0 dk';
+    }
+    if (minutes < 60) return '$minutes dk';
+    final hours = minutes ~/ 60;
+    final extraMinutes = minutes % 60;
+    if (extraMinutes == 0) return '$hours saat';
+    return '$hours sa $extraMinutes dk';
+  }
 
   factory BuildingBoostModel.fromJson(Map<String, dynamic> json) {
     return BuildingBoostModel(

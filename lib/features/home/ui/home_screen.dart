@@ -28,7 +28,6 @@ import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:hard_kapitalizm/features/bank/data/bank_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
-import 'package:hard_kapitalizm/features/home/data/hourly_income_estimate_provider.dart';
 
 class _HomeModuleCardData {
   final String title;
@@ -53,20 +52,6 @@ class _HomeModuleCardData {
     required this.hasAlert,
     required this.accentColor,
     required this.requiredLevel,
-  });
-}
-
-class _AdvisorInsight {
-  final String title;
-  final String description;
-  final IconData icon;
-  final Color color;
-
-  const _AdvisorInsight({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.color,
   });
 }
 
@@ -312,8 +297,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     _buildCompanySummaryCard(),
                     SizedBox(height: 8.h),
                     _buildMissionHighlightCard(),
-                    SizedBox(height: 8.h),
-                    _buildAdvisorInsightsCard(),
                     SizedBox(height: 8.h),
                     _buildModuleGrid(),
                     SizedBox(height: 8.h),
@@ -662,226 +645,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
     );
   }
-
-  List<_AdvisorInsight> _getAdvisorInsights(HomeDashboardModel dashboard) {
-    final insights = <_AdvisorInsight>[];
-    final finance = dashboard.financeToday;
-    final modules = dashboard.modules;
-
-    // 1. Nakit Akışı Kârlılık Kontrolü
-    if (finance.netProfit < 0) {
-      insights.add(
-        _AdvisorInsight(
-          title: 'Mali Risk Uyarısı',
-          description:
-              'Bugünkü net kârınız eksiye düştü! Giderleri azaltmak için lojistik giderlerini veya pasif işletmeleri gözden geçirin.',
-          icon: AppIcons.trendingDownRounded,
-          color: AppColors.red,
-        ),
-      );
-    } else if (finance.netProfit > 0 && dashboard.player.cash > 0) {
-      insights.add(
-        _AdvisorInsight(
-          title: 'Yüksek Finansal Güç',
-          description:
-              'Bugün oldukça kârlısınız. Bu kazancı yeni Ar-Ge araştırmaları başlatarak veya hammadde depolarını doldurarak yatırıma dönüştürebilirsiniz.',
-          icon: AppIcons.insightsRounded,
-          color: AppColors.green,
-        ),
-      );
-    }
-
-    // 2. Fabrika & Mağaza Dengesi Kontrolü
-    if (modules.factories.activeCount > 0 && modules.stores.activeCount == 0) {
-      insights.add(
-        _AdvisorInsight(
-          title: 'Dağıtım Kanalı Eksikliği',
-          description:
-              'Aktif fabrikalarınız var ancak bunları satacak bir mağazanız yok. Ürettiğiniz malları satmak için acilen bir mağaza inşa edin.',
-          icon: AppIcons.storefrontRounded,
-          color: AppColors.warning,
-        ),
-      );
-    } else if (modules.stores.activeCount > 0 &&
-        modules.factories.activeCount == 0) {
-      insights.add(
-        _AdvisorInsight(
-          title: 'Tedarik Bağımlılığı',
-          description:
-              'Aktif mağazalarınız var ancak kendi fabrikanız yok. Pazar yerine bağımlılığı azaltmak için kendi üretim tesislerinizi kurabilirsiniz.',
-          icon: AppIcons.precisionManufacturingRounded,
-          color: AppColors.blue,
-        ),
-      );
-    }
-
-    // 3. Lojistik Gider Oranı Kontrolü
-    if (finance.revenue > 0 &&
-        (finance.logisticsCost / finance.revenue) > 0.3) {
-      insights.add(
-        _AdvisorInsight(
-          title: 'Yüksek Lojistik Gideri',
-          description:
-              'Lojistik giderleriniz cironuzun %${((finance.logisticsCost / finance.revenue) * 100).round()}\'ine ulaştı. Verimliliği artırmak için rotaları optimize edin veya özmal araç kullanın.',
-          icon: AppIcons.localShippingRounded,
-          color: AppColors.red,
-        ),
-      );
-    }
-
-    // 4. Ar-Ge Merkezi Boşta Kontrolü
-    if (modules.arge.count > 0 && modules.arge.activeResearchCount == 0) {
-      insights.add(
-        _AdvisorInsight(
-          title: 'Ar-Ge Çalışmaları Boşta',
-          description:
-              'Ar-Ge merkezinizde şu an aktif bir araştırma bulunmuyor. Ürün kalitenizi geliştirmek ve rakiplerin önüne geçmek için yeni bir araştırma başlatın.',
-          icon: AppIcons.scienceRounded,
-          color: AppColors.gold,
-        ),
-      );
-    }
-
-    // 5. Araç Filosu Sorunları
-    if (modules.logistics.warningCount > 0) {
-      insights.add(
-        _AdvisorInsight(
-          title: 'Araç Filosu Sorunları',
-          description:
-              'Filodaki bazı araçların yakıtı kritik seviyede veya kondisyonu düşük. Taşımaların aksamaması için araç bakım ve yakıt durumlarını kontrol edin.',
-          icon: AppIcons.buildRounded,
-          color: AppColors.warning,
-        ),
-      );
-    }
-
-    // Eğer hiç kritik durum yoksa, genel bir taktik göster
-    if (insights.isEmpty) {
-      insights.add(
-        _AdvisorInsight(
-          title: 'Yönetim Tavsiyesi',
-          description:
-              'Ürünlerinizi mağazanızda satmadan önce Marka Reklam Kampanyası başlatmak, satış hızını ve kâr oranını %40\'a kadar artırır!',
-          icon: AppIcons.lightbulbRounded,
-          color: AppColors.gold,
-        ),
-      );
-    }
-
-    return insights;
-  }
-
-  Widget _buildAdvisorInsightsCard() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final dashboard = ref.watch(homeDashboardProvider).value;
-        if (dashboard == null || !dashboard.success) {
-          return const SizedBox.shrink();
-        }
-
-        final insights = _getAdvisorInsights(dashboard);
-
-        return Container(
-          decoration: AppDecorations.premiumCard(AppColors.borderGold, 14.r),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 0),
-                child: Row(
-                  children: [
-                    Icon(
-                      AppIcons.assistantRounded,
-                      color: AppColors.gold,
-                      size: AppIconSizes.compact,
-                    ),
-                    SizedBox(width: 6.w),
-                    Text(
-                      'CEO STRATEJIK DANISMAN',
-                      style: AppTextStyles.titleGoldBold.standardCopyWith(
-                        color: AppColors.gold,
-                        fontSize: AppTypography.bodySmall,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 6.h),
-              SizedBox(
-                height: 72.h,
-                child: PageView.builder(
-                  itemCount: insights.length,
-                  itemBuilder: (context, index) {
-                    final insight = insights[index];
-                    return Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 32.w,
-                            height: 32.w,
-                            decoration: BoxDecoration(
-                              color: insight.color.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8.r),
-                              border: Border.all(
-                                color: insight.color.withValues(alpha: 0.32),
-                                width: 1.w,
-                              ),
-                            ),
-                            child: Icon(
-                              insight.icon,
-                              color: insight.color,
-                              size: AppIconSizes.compact,
-                            ),
-                          ),
-                          SizedBox(width: 10.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  insight.title,
-                                  style: AppTextStyles.body.standardCopyWith(
-                                    color: AppColors.textPrimary,
-                                    fontSize: AppTypography.bodySmall,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                SizedBox(height: 2.h),
-                                Text(
-                                  insight.description,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTextStyles.caption.standardCopyWith(
-                                    color: AppColors.textSecondary,
-                                    fontSize: AppTypography.caption,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.25,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildCompanySummaryCard() {
     return Consumer(
       builder: (context, ref, child) {
         final dashboard = ref.watch(homeDashboardProvider).value;
-        final hourlyIncome = ref.watch(hourlyIncomeEstimateProvider).value;
+        final hourlyIncome = dashboard?.hourlyIncomeEstimate;
         final company = dashboard?.company;
         final dailyProfit = company?.todayProfit ?? 0;
         final activeBusinessCount = company?.activeBusinessCount ?? 0;
@@ -1060,7 +828,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           loading: () => const SizedBox.shrink(),
           error: (_, _) => const SizedBox.shrink(),
           data: (dashboard) {
-            final selectedMission = _selectHomeMission(dashboard.allMissions);
+            final selectedMission = _selectHomeMission(
+              dashboard.allMissions
+                  .where((mission) => mission.missionType == 'main')
+                  .toList(),
+            );
             if (!dashboard.success || selectedMission == null) {
               return const SizedBox.shrink();
             }
@@ -1115,17 +887,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              selectedMission.missionTypeLabel,
-                              style: AppTextStyles.caption.standardCopyWith(
-                                color: isClaimable
-                                    ? AppColors.gold
-                                    : AppColors.textMuted,
-                                fontSize: AppTypography.micro,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            SizedBox(height: 3.h),
-                            Text(
                               selectedMission.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1133,6 +894,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 color: AppColors.textPrimary,
                                 fontSize: AppTypography.bodySmall,
                                 fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            SizedBox(height: 5.h),
+                            Text(
+                              selectedMission.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: AppTypography.micro,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             SizedBox(height: 5.h),
@@ -1867,16 +1639,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14.r),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.cardBgLight,
-            AppColors.cardBg,
-            AppColors.background,
-          ],
-        ),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.16)),
+        color: AppColors.transparent,
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(9.w, 9.h, 9.w, 8.h),
@@ -3018,3 +2781,4 @@ class _SparklinePainter extends CustomPainter {
         oldDelegate.glowColor != glowColor;
   }
 }
+

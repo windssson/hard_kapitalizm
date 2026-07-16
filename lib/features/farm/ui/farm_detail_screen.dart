@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/ads/rewarded_ad_action_flow.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
@@ -140,6 +141,90 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
                     children: [
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final listAsync = ref.watch(farmListProvider);
+                          return listAsync.maybeWhen(
+                            data: (list) {
+                              if (list.length <= 1) return const SizedBox.shrink();
+                              final hasCurrent = list.any(
+                                (item) => item.farm.id == widget.farmId,
+                              );
+                              if (!hasCurrent) return const SizedBox.shrink();
+
+                              return Container(
+                                margin: EdgeInsets.only(bottom: 8.h),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 14.w,
+                                  vertical: 2.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBg,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: AppColors.borderGold.withValues(
+                                      alpha: 0.25,
+                                    ),
+                                    width: 1.w,
+                                  ),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: widget.farmId,
+                                    isExpanded: true,
+                                    dropdownColor: AppColors.cardBg,
+                                    icon: Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: AppColors.gold,
+                                    ),
+                                    items: list.map((item) {
+                                      final f = item.farm;
+                                      final displayCity = item.cityName;
+                                      return DropdownMenuItem<String>(
+                                        value: f.id,
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              AppIcons.agriculture,
+                                              color: AppColors.gold,
+                                              size: 18.sp,
+                                            ),
+                                            SizedBox(width: 8.w),
+                                            Expanded(
+                                              child: Text(
+                                                '${f.name} ($displayCity)',
+                                                style: AppTextStyles.body
+                                                    .standardCopyWith(
+                                                      color:
+                                                          AppColors.textPrimary,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize:
+                                                          AppTypography
+                                                              .bodySmall,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (newId) {
+                                      if (newId != null &&
+                                          newId != widget.farmId) {
+                                        context.pushReplacement(
+                                          '/farms/$newId',
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                            orElse: () => const SizedBox.shrink(),
+                          );
+                        },
+                      ),
                       _buildHero(detail),
                       SizedBox(height: 10.h),
                       _buildQuickActions(
@@ -829,7 +914,12 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                         ),
                       )
                     else
-                      _buildSlotStatsRow(slot, outputInventory, activeBoost, detail.farm.cityId),
+                      _buildSlotStatsRow(
+                        slot,
+                        outputInventory,
+                        activeBoost,
+                        detail.farm.cityId,
+                      ),
                   ],
                 ),
               ),
@@ -931,17 +1021,26 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(width: 3.w),
                   Text(
-                    _estimateProductionPerHour(slot, activeBoost, cityId).toString(),
+                    _estimateProductionPerHour(
+                      slot,
+                      activeBoost,
+                      cityId,
+                    ).toString(),
                     style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: AppTypography.label,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (slot.product != null && _getCityProductBonus(cityId, slot.product!.kategori) > 1.0) ...[
+                  if (slot.product != null &&
+                      _getCityProductBonus(cityId, slot.product!.kategori) >
+                          1.0) ...[
                     SizedBox(width: 4.w),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 4.w,
+                        vertical: 1.h,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.green.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4.r),
@@ -1151,6 +1250,90 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               ),
             ),
             SizedBox(height: 16.h),
+            if (activeBoost == null) ...[
+              Padding(
+                padding: EdgeInsets.only(bottom: 10.h),
+                child: InkWell(
+                  onTap: () async {
+                    Navigator.pop(sheetContext);
+                    await RewardedAdActionFlow.run(
+                      context,
+                      rewardKind: 'building_boost_start',
+                      resourceId: 'farm:${detail.farm.id}',
+                      loadingMessage: '30 dakikalik boost reklami yukleniyor.',
+                      successTitle: 'Boost Baslatildi',
+                      successMessage:
+                          'Ciftlik boostu 30 dakika icin baslatildi.',
+                      feedbackAmount: 30,
+                      feedbackType: FloatingFeedbackType.boostAdd,
+                      onApplyAction: () async {
+                        final result = await ref
+                            .read(farmActionProvider)
+                            .startFarmBoostWithAdReward(
+                              farmId: detail.farm.id,
+                              syncProviders: false,
+                            );
+                        if (result['success'] == true) {
+                          await _refreshFarmEcosystem();
+                        }
+                        return result;
+                      },
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(16.r),
+                  child: Container(
+                    padding: EdgeInsets.all(14.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.green.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: AppColors.green.withValues(alpha: 0.28),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.green.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(
+                            AppIcons.playCircleFill,
+                            color: AppColors.green,
+                            size: AppIconSizes.regular,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Reklam izle, 30 dk boost al',
+                                style: AppTextStyles.title.standardCopyWith(
+                                  color: AppColors.textPrimary,
+                                  fontSize: AppTypography.body,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                'Tum slotlari 30 dakika boyunca yildiz harcamadan hizlandir.',
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.textMuted,
+                                  fontSize: AppTypography.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (activeBoost == null)
               ..._farmBoostStarCosts.entries.map(
                 (entry) => Padding(
@@ -1406,6 +1589,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   ) async {
     final success = await RewardedTimeReductionFlow.run(
       context,
+      rewardKind: 'upgrade_time_reduce',
+      resourceId: upgrade.id,
       onApplyReduction: () => ref
           .read(farmActionProvider)
           .reduceFarmUpgradeTimeWithAd(upgrade.id, syncProviders: false),
@@ -2432,6 +2617,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       final name = (warehouse['name'] ?? 'Depo').toString();
       final cityName = (warehouse['city']?['name'] ?? detail.cityName)
           .toString();
+      final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
+      final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
       warehouseChoices.add(
         _FarmInboundWarehouseChoice(
           warehouseId: warehouseId,
@@ -2440,6 +2627,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           cityName: cityName,
           isSameCity: _isSameCity(cityId, detail.farm.cityId),
           slots: eligibleSlots,
+          capacity: totalCapacity,
+          reservedCapacity: reservedCapacity,
         ),
       );
     }
@@ -2459,25 +2648,34 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     final options =
         warehouseChoices
             .map(
-              (warehouse) => WarehouseSelectionOption(
-                id: warehouse.warehouseId,
-                title: warehouse.warehouseName,
-                subtitle: warehouse.cityName,
-                badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
-                infoText:
-                    '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity adet',
-                isHighlightBadge: warehouse.isSameCity,
-                onTap: () {
-                  Navigator.pop(context);
-                  _showFarmInboundSelectionSheet(
-                    context: context,
-                    ref: ref,
-                    detail: detail,
-                    warehouse: warehouse,
-                    remainingInputCapacity: remainingInputCapacity,
-                  );
-                },
-              ),
+              (warehouse) {
+                final double capacityRatio = warehouse.capacity > 0
+                    ? (warehouse.reservedCapacity / warehouse.capacity)
+                    : 0.0;
+                final capacityLabel = '${warehouse.reservedCapacity.toStringAsFixed(0)}/${warehouse.capacity.toStringAsFixed(0)} m³';
+                return WarehouseSelectionOption(
+                  id: warehouse.warehouseId,
+                  title: warehouse.warehouseName,
+                  subtitle: warehouse.cityName,
+                  badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
+                  infoText:
+                      '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity adet',
+                  isHighlightBadge: warehouse.isSameCity,
+                  capacityRatio: capacityRatio,
+                  capacityLabel: capacityLabel,
+                  distanceLabel: warehouse.isSameCity ? 'Aynı Şehir' : 'Lojistik',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showFarmInboundSelectionSheet(
+                      context: context,
+                      ref: ref,
+                      detail: detail,
+                      warehouse: warehouse,
+                      remainingInputCapacity: remainingInputCapacity,
+                    );
+                  },
+                );
+              },
             )
             .toList()
           ..sort((a, b) {
@@ -2544,6 +2742,11 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         warehouse,
         productionCityId: detail.farm.cityId,
       );
+      final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
+      final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
+      final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
+      final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
+
       options.add(
         WarehouseSelectionOption(
           id: warehouseOption.id,
@@ -2554,6 +2757,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               : 'Lojistik Transfer',
           infoText: '${eligibleInventories.length} uygun stok secilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
+          capacityRatio: capacityRatio,
+          capacityLabel: capacityLabel,
+          distanceLabel: warehouseOption.isSameCity ? 'Aynı Şehir' : 'Lojistik',
           onTap: () async {
             Navigator.pop(context);
             WarehouseCapacityStatusModel? capacityStatus;
@@ -3338,11 +3544,22 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                               OutlinedButton(
                                 onPressed: maxQuantity <= 0
                                     ? null
-                                    : () => openQuantityEditor(
-                                        sheetContext,
-                                        modalSetState,
-                                        slot,
-                                      ),
+                                    : () {
+                                        if (!isSelected) {
+                                          modalSetState(() {
+                                            selectedQuantities[
+                                                  slot.warehouseSlotId
+                                                ] =
+                                                maxQuantity;
+                                          });
+                                          return;
+                                        }
+                                        openQuantityEditor(
+                                          sheetContext,
+                                          modalSetState,
+                                          slot,
+                                        );
+                                      },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: isSelected
                                       ? AppColors.green
@@ -3352,6 +3569,13 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                   isSelected
                                       ? 'Adet: $selectedQuantity'
                                       : 'Ekle',
+                                  style: AppTextStyles.button.standardCopyWith(
+                                    color: isSelected
+                                        ? AppColors.green
+                                        : AppColors.goldLight,
+                                    fontSize: AppTypography.bodySmall,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -4322,11 +4546,20 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                               ),
                               SizedBox(width: 8.w),
                               OutlinedButton(
-                                onPressed: () => openQuantityEditor(
-                                  sheetContext,
-                                  modalSetState,
-                                  item,
-                                ),
+                                onPressed: () {
+                                  if (!isSelected) {
+                                    modalSetState(() {
+                                      selectedQuantities[item.id] =
+                                          item.quantity;
+                                    });
+                                    return;
+                                  }
+                                  openQuantityEditor(
+                                    sheetContext,
+                                    modalSetState,
+                                    item,
+                                  );
+                                },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: isSelected
                                       ? AppColors.green
@@ -4336,6 +4569,13 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                   isSelected
                                       ? 'Adet: $selectedQuantity'
                                       : 'Ekle',
+                                  style: AppTextStyles.button.standardCopyWith(
+                                    color: isSelected
+                                        ? AppColors.green
+                                        : AppColors.goldLight,
+                                    fontSize: AppTypography.bodySmall,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
@@ -4747,9 +4987,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     if (cities == null) return 1.0;
 
     final city = cities.cast<CityModel?>().firstWhere(
-          (c) => c != null && c.id == cityId,
-          orElse: () => null,
-        );
+      (c) => c != null && c.id == cityId,
+      orElse: () => null,
+    );
     if (city == null) return 1.0;
 
     String clean = productCategory.toLowerCase().trim();
@@ -4791,6 +5031,8 @@ class _FarmInboundWarehouseChoice {
   final String cityName;
   final bool isSameCity;
   final List<_FarmInboundWarehouseSlotOption> slots;
+  final double capacity;
+  final double reservedCapacity;
 
   const _FarmInboundWarehouseChoice({
     required this.warehouseId,
@@ -4799,6 +5041,8 @@ class _FarmInboundWarehouseChoice {
     required this.cityName,
     required this.isSameCity,
     required this.slots,
+    required this.capacity,
+    required this.reservedCapacity,
   });
 }
 
@@ -4909,7 +5153,7 @@ class _ActiveFarmBoostCard extends ConsumerWidget {
                     ),
                     SizedBox(height: 2.h),
                     Text(
-                      '${boost.durationHours} saat | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost} yildiz',
+                      '${boost.durationLabel} | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost > 0 ? '${boost.starCost} yildiz' : 'Reklam odulu'}',
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
                         fontSize: AppTypography.bodySmall,

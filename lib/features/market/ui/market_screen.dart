@@ -61,6 +61,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   late String _selectedProductId;
   late String _selectedWarehouseId;
   late String _selectedCityId;
+  String _selectedSortOption = 'fiyat';
 
   @override
   void initState() {
@@ -1890,9 +1891,15 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 8.h),
                       sliver: SliverToBoxAdapter(
-                        child: _buildSectionHeader(
-                          'SATIS NOKTALARI',
-                          'Pazar Listesi',
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'SATIS NOKTALARI',
+                              style: AppTextStyles.titleGold.standardCopyWith(letterSpacing: 1.2),
+                            ),
+                            _buildSortDropdown(),
+                          ],
                         ),
                       ),
                     ),
@@ -1909,7 +1916,36 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           final filteredListings = _applyCartCityRules(
                             baseListings,
                           );
-                          final finalMarketListings = filteredListings;
+                          var finalMarketListings = [...filteredListings];
+
+                          final targetCityX = _resolveCoordinate(
+                            buyerWarehouseAsync.value?.cityX,
+                            fallbackCityAsync.value?['map_position_x'],
+                          );
+                          final targetCityY = _resolveCoordinate(
+                            buyerWarehouseAsync.value?.cityY,
+                            fallbackCityAsync.value?['map_position_y'],
+                          );
+
+                          double getDistance(MarketListingModel l) {
+                            final hasTarget = _hasUsableCoordinates(targetCityX, targetCityY) &&
+                                _hasUsableCoordinates(l.cityX, l.cityY);
+                            return hasTarget
+                                ? _calculateDistanceKm(targetCityX, targetCityY, l.cityX, l.cityY)
+                                : 999999.0;
+                          }
+
+                          if (_selectedSortOption == 'fiyat') {
+                            finalMarketListings.sort((a, b) => a.price.compareTo(b.price));
+                          } else if (_selectedSortOption == 'kalite') {
+                            finalMarketListings.sort((a, b) => b.qualityLevel.compareTo(a.qualityLevel));
+                          } else if (_selectedSortOption == 'mesafe') {
+                            finalMarketListings.sort((a, b) => getDistance(a).compareTo(getDistance(b)));
+                          }
+
+                          if (finalMarketListings.length > 50) {
+                            finalMarketListings = finalMarketListings.take(50).toList();
+                          }
 
                           MarketListingModel? cheapestListing;
                           if (finalMarketListings.isNotEmpty) {
@@ -2044,7 +2080,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             children: [
               Container(
                 width: 5.w,
-                decoration: BoxDecoration(color: distanceColor),
+                decoration: BoxDecoration(color: AppColors.green),
               ),
               Expanded(
                 child: Padding(
@@ -2193,50 +2229,55 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8.w,
-                              vertical: 4.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.green.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10.r),
-                              border: Border.all(
-                                color: AppColors.green.withValues(alpha: 0.35),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8.w,
+                                  vertical: 4.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.green.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(
+                                    color: AppColors.green.withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                child: Text(
+                                  '₺${listing.price.toStringAsFixed(1)}',
+                                  style: AppTextStyles.body.standardCopyWith(
+                                    color: AppColors.green,
+                                    fontSize: AppTypography.bodySmall,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              '₺${listing.price.toStringAsFixed(1)}',
-                              style: AppTextStyles.body.standardCopyWith(
-                                color: AppColors.green,
-                                fontSize: AppTypography.bodySmall,
-                                fontWeight: FontWeight.w800,
+                              SizedBox(width: 6.w),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8.w,
+                                  vertical: 4.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: distanceColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(
+                                    color: distanceColor.withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                child: Text(
+                                  '${distanceKm.toStringAsFixed(0)} km',
+                                  style: AppTextStyles.label.standardCopyWith(
+                                    color: distanceColor,
+                                    fontSize: AppTypography.label,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                          SizedBox(height: 6.h),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 8.w,
-                              vertical: 4.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: distanceColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10.r),
-                              border: Border.all(
-                                color: distanceColor.withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Text(
-                              '${distanceKm.toStringAsFixed(0)} km',
-                              style: AppTextStyles.label.standardCopyWith(
-                                color: distanceColor,
-                                fontSize: AppTypography.label,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 6.h),
+                          SizedBox(height: 8.h),
                           SizedBox(
                             height: 28.h,
                             child: ElevatedButton(
@@ -2362,22 +2403,51 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, String subtitle) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: AppTextStyles.titleGold.standardCopyWith(letterSpacing: 1.2),
+
+  Widget _buildSortDropdown() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w),
+      height: 32.h,
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight,
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(
+          color: AppColors.borderGold.withValues(alpha: 0.3),
         ),
-        Text(
-          subtitle,
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedSortOption,
+          dropdownColor: AppColors.cardBg,
+          icon: Icon(Icons.arrow_drop_down, color: AppColors.gold, size: 18.sp),
           style: AppTextStyles.body.standardCopyWith(
             fontSize: AppTypography.label,
             fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
           ),
+          onChanged: (String? newValue) {
+            if (newValue != null) {
+              setState(() {
+                _selectedSortOption = newValue;
+              });
+            }
+          },
+          items: const [
+            DropdownMenuItem<String>(
+              value: 'fiyat',
+              child: Text('Fiyat (En Düşük)'),
+            ),
+            DropdownMenuItem<String>(
+              value: 'kalite',
+              child: Text('Kalite (En Yüksek)'),
+            ),
+            DropdownMenuItem<String>(
+              value: 'mesafe',
+              child: Text('Mesafe (En Yakın)'),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -3765,16 +3835,21 @@ Map<String, int> _neededCapacityByProductForStore(StoreModel? store) {
 }
 
 double _resolvePriceDeltaPercent(ProductModel? product, double listingPrice) {
-  final averagePrice = product?.ortalamaFiyat ?? 0;
-  if (averagePrice <= 0) return 0;
-  return ((listingPrice - averagePrice) / averagePrice) * 100;
+  final basePrice = product?.bazSatisFiyati ?? 0;
+  if (basePrice <= 0) return 0;
+  return ((listingPrice - basePrice) / basePrice) * 100;
 }
 
 (String, Color)? _buildPriceDeltaBadge(double deltaPercent) {
-  if (deltaPercent <= -8) {
-    return ('Ort. alti', AppColors.green);
+  if (deltaPercent <= -3) {
+    final absPercent = deltaPercent.abs().toStringAsFixed(0);
+    return ('%$absPercent Ucuz', AppColors.green);
+  } else if (deltaPercent >= 3) {
+    final absPercent = deltaPercent.toStringAsFixed(0);
+    return ('%$absPercent Pahalı', AppColors.red);
+  } else {
+    return ('Normal', AppColors.gold);
   }
-  return null;
 }
 
 extension<T> on Iterable<T> {

@@ -341,12 +341,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       children: [
         Text('Profilim', style: AppTextStyles.h1),
         SizedBox(height: 16.h),
+        
+        // --- SECTION 1: HEADER CARD ---
         Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
             color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.borderGold),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.4)),
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -499,14 +501,71 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
         SizedBox(height: 24.h),
+
+        // --- SECTION 2: CORPORATE FINANCES (Unified Card) ---
+        Text('Finansal Durum', style: AppTextStyles.h2),
+        SizedBox(height: 12.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sirket Degeri',
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.body,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Text(
+                '₺${player.companyValue.toStringAsFixed(0)}',
+                style: AppTextStyles.h1.standardCopyWith(
+                  fontSize: AppTypography.display,
+                  color: AppColors.gold,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Divider(color: AppColors.border, height: 1),
+              SizedBox(height: 16.h),
+              Row(
+                children: [
+                  _buildStatCard(
+                    AppIcons.attachMoney,
+                    'Nakit',
+                    player.cash.toString(),
+                    AppColors.green,
+                  ),
+                  SizedBox(width: 12.w),
+                  _buildStatCard(
+                    AppIcons.star,
+                    'Altin',
+                    player.gold.toString(),
+                    AppColors.gold,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 24.h),
+
+        // --- SECTION 3: LEVEL PROGRESS ---
         Text('Seviye Ilerlemesi', style: AppTextStyles.h2),
         SizedBox(height: 12.h),
         Container(
           width: double.infinity,
-          padding: EdgeInsets.all(14.w),
+          padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
             color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(16.r),
             border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
           ),
           child: Column(
@@ -544,7 +603,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ],
               ),
-              SizedBox(height: 12.h),
+              SizedBox(height: 14.h),
               ClipRRect(
                 borderRadius: BorderRadius.circular(999.r),
                 child: AppProgressBar(
@@ -567,233 +626,186 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
         SizedBox(height: 24.h),
-        _buildAccountLinkCard(authIdentity),
-        SizedBox(height: 24.h),
-        Text('Rozetler ve Basarilar', style: AppTextStyles.h2),
+
+        // --- SECTION 4: ACHIEVEMENTS & LEADERBOARD (Unified Social Card) ---
+        Text('Basarilar ve Siralama', style: AppTextStyles.h2),
         SizedBox(height: 12.h),
         Container(
           width: double.infinity,
-          padding: EdgeInsets.all(14.w),
           decoration: BoxDecoration(
             color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(16.r),
             border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${player.achievementUnlockedCount} / ${player.achievementTotalCount} rozet acildi',
-                      style: AppTextStyles.body.standardCopyWith(
-                        color: AppColors.textPrimary,
-                        fontSize: AppTypography.bodyLarge,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/achievements'),
-                    child: Text(
-                      'Tumunu Gor',
-                      style: AppTextStyles.caption.standardCopyWith(
-                        color: AppColors.gold,
-                        fontSize: AppTypography.bodySmall,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12.h),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildAchievementStatCard(
-                      label: 'Acilan',
-                      value: player.achievementUnlockedCount.toString(),
-                      color: AppColors.green,
-                      icon: AppIcons.workspacePremiumRounded,
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                  Expanded(
-                    child: _buildAchievementStatCard(
-                      label: 'Kalan',
-                      value:
-                          (player.achievementTotalCount -
-                                  player.achievementUnlockedCount)
-                              .clamp(0, player.achievementTotalCount)
-                              .toString(),
-                      color: AppColors.gold,
-                      icon: AppIcons.lockOpenRounded,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12.h),
-              if (player.featuredBadges.isEmpty)
-                Text(
-                  'Ilk rozetlerini acmak icin gorevlerini ve buyume adimlarini tamamla.',
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.body,
-                  ),
-                )
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'One Cikan Rozetler',
-                      style: AppTextStyles.caption.standardCopyWith(
-                        color: AppColors.textMuted,
-                        fontSize: AppTypography.bodySmall,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 10.h),
-                    SizedBox(
-                      height: 82.h,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: player.featuredBadges.length,
-                        separatorBuilder: (context, index) =>
-                            SizedBox(width: 10.w),
-                        itemBuilder: (_, index) =>
-                            _buildBadgeChip(player.featuredBadges[index]),
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-        ),
-        SizedBox(height: 24.h),
-        Text('Liderlik ve Siralama', style: AppTextStyles.h2),
-        SizedBox(height: 12.h),
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
-          ),
-          child: Material(
-            color: AppColors.transparent,
-            borderRadius: BorderRadius.circular(12.r),
-            child: InkWell(
-              onTap: () => context.go('/leaderboard'),
-              borderRadius: BorderRadius.circular(12.r),
-              child: Padding(
-                padding: EdgeInsets.all(14.w),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 12.h),
                 child: Row(
                   children: [
-                    Container(
-                      width: 36.w,
-                      height: 36.w,
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.gold.withValues(alpha: 0.3),
+                    Expanded(
+                      child: Text(
+                        '${player.achievementUnlockedCount} / ${player.achievementTotalCount} rozet acildi',
+                        style: AppTextStyles.body.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: AppTypography.bodyLarge,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      child: Icon(
-                        AppIcons.emojiEventsRounded,
-                        color: AppColors.gold,
-                        size: AppIconSizes.regular,
-                      ),
                     ),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Liderlik Tablosu',
-                            style: AppTextStyles.body.standardCopyWith(
-                              color: AppColors.textPrimary,
-                              fontSize: AppTypography.bodyLarge,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 2.h),
-                          Text(
-                            'Diger oyuncular arasindaki yerini gor',
-                            style: AppTextStyles.body.standardCopyWith(
-                              color: AppColors.textSecondary,
-                              fontSize: AppTypography.bodySmall,
-                            ),
-                          ),
-                        ],
+                    TextButton(
+                      onPressed: () => context.go('/achievements'),
+                      child: Text(
+                        'Tumunu Gor',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.gold,
+                          fontSize: AppTypography.bodySmall,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                    Icon(
-                      AppIcons.chevronRightRounded,
-                      color: AppColors.gold,
-                      size: AppIconSizes.medium,
                     ),
                   ],
                 ),
               ),
-            ),
-          ),
-        ),
-        SizedBox(height: 24.h),
-        Text('Finansal Durum', style: AppTextStyles.h2),
-        SizedBox(height: 12.h),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(14.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Sirket Degeri',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.body,
-                  fontWeight: FontWeight.w700,
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildAchievementStatCard(
+                        label: 'Acilan',
+                        value: player.achievementUnlockedCount.toString(),
+                        color: AppColors.green,
+                        icon: AppIcons.workspacePremiumRounded,
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: _buildAchievementStatCard(
+                        label: 'Kalan',
+                        value: (player.achievementTotalCount -
+                                player.achievementUnlockedCount)
+                            .clamp(0, player.achievementTotalCount)
+                            .toString(),
+                        color: AppColors.gold,
+                        icon: AppIcons.lockOpenRounded,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(height: 6.h),
-              Text(
-                player.companyValue.toStringAsFixed(0),
-                style: AppTextStyles.h1.standardCopyWith(
-                  fontSize: AppTypography.display,
-                  color: AppColors.gold,
+              if (player.featuredBadges.isNotEmpty) ...[
+                SizedBox(height: 16.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Text(
+                    'One Cikan Rozetler',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontSize: AppTypography.bodySmall,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 10.h),
+                SizedBox(
+                  height: 82.h,
+                  child: ListView.separated(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: player.featuredBadges.length,
+                    separatorBuilder: (context, index) => SizedBox(width: 10.w),
+                    itemBuilder: (_, index) => _buildBadgeChip(player.featuredBadges[index]),
+                  ),
+                ),
+              ] else ...[
+                SizedBox(height: 12.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Text(
+                    'Ilk rozetlerini acmak icin gorevlerini ve buyume adimlarini tamamla.',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontSize: AppTypography.body,
+                    ),
+                  ),
+                ),
+              ],
+              SizedBox(height: 16.h),
+              Divider(color: AppColors.border, height: 1),
+              Material(
+                color: AppColors.transparent,
+                child: InkWell(
+                  onTap: () => context.go('/leaderboard'),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(16.r),
+                    bottomRight: Radius.circular(16.r),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36.w,
+                          height: 36.w,
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Icon(
+                            AppIcons.emojiEventsRounded,
+                            color: AppColors.gold,
+                            size: AppIconSizes.regular,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Liderlik Tablosu',
+                                style: AppTextStyles.body.standardCopyWith(
+                                  color: AppColors.textPrimary,
+                                  fontSize: AppTypography.bodyLarge,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                'Diger oyuncular arasindaki yerini gor',
+                                style: AppTextStyles.body.standardCopyWith(
+                                  color: AppColors.textSecondary,
+                                  fontSize: AppTypography.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          AppIcons.chevronRightRounded,
+                          color: AppColors.gold,
+                          size: AppIconSizes.medium,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        SizedBox(height: 12.h),
-        Row(
-          children: [
-            _buildStatCard(
-              AppIcons.attachMoney,
-              'Nakit',
-              player.cash.toString(),
-              AppColors.green,
-            ),
-            SizedBox(width: 12.w),
-            _buildStatCard(
-              AppIcons.star,
-              'Altin',
-              player.gold.toString(),
-              AppColors.gold,
-            ),
-          ],
-        ),
         SizedBox(height: 24.h),
+
+        // --- SECTION 5: ACCOUNT LINKAGE (Google Auth at the bottom) ---
+        _buildAccountLinkCard(authIdentity),
+        SizedBox(height: 24.h),
+
+        // --- LOGOUT BUTTON ---
         SizedBox(
           width: double.infinity,
           height: 48.h,

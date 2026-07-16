@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class RewardedAdResult {
@@ -15,8 +16,11 @@ class RewardedAdResult {
 
 class RewardedAdService {
   static const Duration timeReductionPerAd = Duration(minutes: 10);
+  static const Duration boostDurationPerAd = Duration(minutes: 30);
+  static bool _requestInFlight = false;
 
   static String? get appId {
+    if (kIsWeb) return null;
     if (Platform.isAndroid) {
       return 'ca-app-pub-3940256099942544~3347511713';
     }
@@ -27,6 +31,7 @@ class RewardedAdService {
   }
 
   static String? get _rewardedAdUnitId {
+    if (kIsWeb) return null;
     if (Platform.isAndroid) {
       return 'ca-app-pub-3940256099942544/5224354917';
     }
@@ -37,6 +42,13 @@ class RewardedAdService {
   }
 
   static Future<RewardedAdResult> showAd() async {
+    if (_requestInFlight) {
+      return const RewardedAdResult(
+        rewardEarned: false,
+        message: 'Baska bir reklam islemi zaten devam ediyor.',
+      );
+    }
+
     final adUnitId = _rewardedAdUnitId;
     if (adUnitId == null) {
       return const RewardedAdResult(
@@ -45,40 +57,57 @@ class RewardedAdService {
       );
     }
 
+    _requestInFlight = true;
     final completer = Completer<RewardedAdResult>();
+    RewardedAd? loadedAd;
+    var isDisposed = false;
+
+    void disposeAd() {
+      if (isDisposed) return;
+      isDisposed = true;
+      loadedAd?.dispose();
+      loadedAd = null;
+    }
+
+    void completeIfNeeded(RewardedAdResult result) {
+      if (completer.isCompleted) return;
+      completer.complete(result);
+    }
 
     RewardedAd.load(
       adUnitId: adUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
+          if (completer.isCompleted) {
+            ad.dispose();
+            return;
+          }
+
+          loadedAd = ad;
           var rewardEarned = false;
 
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              if (!completer.isCompleted) {
-                completer.complete(
-                  RewardedAdResult(
-                    rewardEarned: rewardEarned,
-                    message: rewardEarned
-                        ? 'Reklam odulu alindi.'
-                        : 'Odul almak icin reklami kapanana kadar izlemeniz gerekiyor.',
-                  ),
-                );
-              }
+              disposeAd();
+              completeIfNeeded(
+                RewardedAdResult(
+                  rewardEarned: rewardEarned,
+                  message: rewardEarned
+                      ? 'Reklam odulu alindi.'
+                      : 'Odul almak icin reklami kapanana kadar izlemeniz gerekiyor.',
+                ),
+              );
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
-              ad.dispose();
-              if (!completer.isCompleted) {
-                completer.complete(
-                  RewardedAdResult(
-                    rewardEarned: false,
-                    message:
-                        'Reklam gosterilemedi. Lutfen birazdan tekrar deneyin. (${error.code})',
-                  ),
-                );
-              }
+              disposeAd();
+              completeIfNeeded(
+                RewardedAdResult(
+                  rewardEarned: false,
+                  message:
+                      'Reklam gosterilemedi. Lutfen birazdan tekrar deneyin. (${error.code})',
+                ),
+              );
             },
           );
 
@@ -89,26 +118,32 @@ class RewardedAdService {
           );
         },
         onAdFailedToLoad: (error) {
-          if (!completer.isCompleted) {
-            completer.complete(
-              RewardedAdResult(
-                rewardEarned: false,
-                message:
-                    'Test reklami su anda yuklenemedi. Lutfen internet baglantinizi kontrol edip tekrar deneyin. (${error.code})',
-              ),
-            );
-          }
+          completeIfNeeded(
+            RewardedAdResult(
+              rewardEarned: false,
+              message:
+                  'Test reklami su anda yuklenemedi. Lutfen internet baglantinizi kontrol edip tekrar deneyin. (${error.code})',
+            ),
+          );
         },
       ),
     );
 
-    return completer.future.timeout(
-      const Duration(seconds: 90),
-      onTimeout: () => const RewardedAdResult(
-        rewardEarned: false,
-        message: 'Reklam yaniti zamaninda gelmedi. Lutfen tekrar deneyin.',
-      ),
-    );
+    try {
+      return await completer.future.timeout(
+        const Duration(seconds: 90),
+        onTimeout: () {
+          disposeAd();
+          return const RewardedAdResult(
+            rewardEarned: false,
+            message: 'Reklam yaniti zamaninda gelmedi. Lutfen tekrar deneyin.',
+          );
+        },
+      );
+    } finally {
+      disposeAd();
+      _requestInFlight = false;
+    }
   }
 }
 
