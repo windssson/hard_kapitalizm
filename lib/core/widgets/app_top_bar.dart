@@ -37,7 +37,7 @@ class AppTopBar extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
-                      flex: compact ? 52 : 54,
+                      flex: compact ? 42 : 44,
                       child: _buildProfilePanel(
                         context: context,
                         player: player,
@@ -48,7 +48,7 @@ class AppTopBar extends ConsumerWidget {
                     ),
                     SizedBox(width: compact ? 4.w : 6.w),
                     Expanded(
-                      flex: compact ? 26 : 26,
+                      flex: compact ? 38 : 36,
                       child: _buildResourceColumn(
                         context,
                         player,

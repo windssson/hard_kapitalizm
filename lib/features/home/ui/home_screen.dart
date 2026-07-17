@@ -1012,6 +1012,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return inProgress.isNotEmpty ? inProgress.first : null;
   }
 
+  bool _isModuleWorking(_HomeModuleCardData module) {
+    if (module.title == 'Fabrikalar' ||
+        module.title == 'AR-GE' ||
+        module.title == 'Madenler' ||
+        module.title == 'Tarlalar' ||
+        module.title == 'Ciftlikler') {
+      final val = module.primaryValue;
+      if (val != '0' && val != '0/0' && !val.startsWith('0/')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   List<_HomeModuleCardData> _buildModuleCards(
     HomeModulesSummary? modules,
     Set<String> alertedModules, {
@@ -1325,6 +1339,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           itemBuilder: (context, index) {
             final module = modules[index];
             final isLocked = playerLevel < module.requiredLevel;
+            final isWorking = !isLocked && _isModuleWorking(module);
 
             return Material(
               color: AppColors.transparent,
@@ -1339,13 +1354,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Container(
-                      decoration: AppDecorations.premiumCard(
-                        isLocked
-                            ? AppColors.border.withValues(alpha: 0.16)
-                            : AppColors.borderGold.withValues(alpha: 0.48),
-                        16.r,
-                      ),
+                    _PulsingModuleContainer(
+                      color: module.accentColor,
+                      isLocked: isLocked,
+                      hasAlert: module.hasAlert,
+                      gradient: isLocked
+                          ? null
+                          : LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppColors.cardBg,
+                                module.accentColor.withValues(alpha: 0.08),
+                              ],
+                            ),
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(1.w, 2.h, 1.w, 2.h),
                         child: Column(
@@ -1382,9 +1404,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                           ),
                                         ],
                                       )
-                                    : CachedAssetImage(
-                                        fileName: module.image,
-                                        fit: BoxFit.contain,
+                                    : Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          CachedAssetImage(
+                                            fileName: module.image,
+                                            fit: BoxFit.contain,
+                                          ),
+                                          if (isWorking)
+                                            Positioned(
+                                              top: 2.h,
+                                              right: 2.w,
+                                              child: _WorkingIndicator(
+                                                icon: Icons.settings_rounded,
+                                                color: module.accentColor,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                               ),
                             ),
@@ -2779,6 +2815,172 @@ class _SparklinePainter extends CustomPainter {
     return oldDelegate.points != points ||
         oldDelegate.lineColor != lineColor ||
         oldDelegate.glowColor != glowColor;
+  }
+}
+
+class _PulsingModuleContainer extends StatefulWidget {
+  final Widget child;
+  final Color color;
+  final bool isLocked;
+  final bool hasAlert;
+  final Gradient? gradient;
+
+  const _PulsingModuleContainer({
+    required this.child,
+    required this.color,
+    required this.isLocked,
+    required this.hasAlert,
+    this.gradient,
+  });
+
+  @override
+  State<_PulsingModuleContainer> createState() => _PulsingModuleContainerState();
+}
+
+class _PulsingModuleContainerState extends State<_PulsingModuleContainer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _animation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    if (widget.hasAlert && !widget.isLocked) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _PulsingModuleContainer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.hasAlert && !widget.isLocked && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    } else if ((!widget.hasAlert || widget.isLocked) && _controller.isAnimating) {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double radiusValue = 16.r;
+    final radius = BorderRadius.circular(radiusValue);
+
+    if (widget.isLocked) {
+      return Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: radius,
+          border: Border.all(
+            color: AppColors.border.withValues(alpha: 0.16),
+            width: 1.w,
+          ),
+        ),
+        child: widget.child,
+      );
+    }
+
+    if (!widget.hasAlert) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: widget.gradient,
+          borderRadius: radius,
+          border: Border.all(
+            color: AppColors.borderGold.withValues(alpha: 0.48),
+            width: 1.2.w,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: widget.color.withValues(alpha: 0.05),
+              blurRadius: 10.r,
+              offset: Offset(0, 4.h),
+            ),
+          ],
+        ),
+        child: widget.child,
+      );
+    }
+
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: widget.gradient,
+            borderRadius: radius,
+            border: Border.all(
+              color: AppColors.red.withValues(alpha: 0.25 + (_animation.value * 0.35)),
+              width: 1.4.w,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.red.withValues(alpha: 0.04 + (_animation.value * 0.12)),
+                blurRadius: 8.r + (_animation.value * 8.r),
+                spreadRadius: _animation.value * 1.w,
+                offset: Offset(0, 3.h),
+              ),
+            ],
+          ),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _WorkingIndicator extends StatefulWidget {
+  final IconData icon;
+  final Color color;
+
+  const _WorkingIndicator({required this.icon, required this.color});
+
+  @override
+  State<_WorkingIndicator> createState() => _WorkingIndicatorState();
+}
+
+class _WorkingIndicatorState extends State<_WorkingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 6),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RotationTransition(
+      turns: _controller,
+      child: Icon(
+        widget.icon,
+        color: widget.color.withValues(alpha: 0.55),
+        size: 13.sp,
+      ),
+    );
   }
 }
 
