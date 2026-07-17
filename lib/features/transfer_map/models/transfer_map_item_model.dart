@@ -318,3 +318,41 @@ String _normalizeEndpointName(String name, String kind) {
 
   return trimmed;
 }
+
+class TransferItemDetail {
+  final String id;
+  final String productId;
+  final String productName;
+  final String productIcon;
+  final int qualityLevel;
+  final String brandId;
+  final String brandName;
+  final int quantity;
+  final double totalPrice;
+
+  const TransferItemDetail({
+    required this.id,
+    required this.productId,
+    required this.productName,
+    required this.productIcon,
+    required this.qualityLevel,
+    required this.brandId,
+    required this.brandName,
+    required this.quantity,
+    required this.totalPrice,
+  });
+
+  factory TransferItemDetail.fromJson(Map<String, dynamic> json) {
+    return TransferItemDetail(
+      id: json['id']?.toString() ?? '',
+      productId: json['product_id']?.toString() ?? '',
+      productName: json['product_name']?.toString() ?? 'Urun',
+      productIcon: json['product_icon']?.toString() ?? 'default.webp',
+      qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
+      brandId: json['brand_id']?.toString() ?? '00000000-0000-0000-0000-000000000000',
+      brandName: json['brand_name']?.toString() ?? 'Standart',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+      totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}

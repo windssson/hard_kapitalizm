@@ -136,6 +136,47 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
   }
 
   Future<void> _patentProduct(String productId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        title: Text(
+          'Ürün Patentleme',
+          style: AppTextStyles.h2.standardCopyWith(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'Bu ürünü markanız altına tescil etmek istiyor musunuz?\n\n'
+          'Maliyet: 50.000 ₺',
+          style: AppTextStyles.body.standardCopyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'İptal',
+              style: AppTextStyles.button.standardCopyWith(color: AppColors.textMuted),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.textOnAccent,
+            ),
+            child: Text(
+              'Patent Al',
+              style: AppTextStyles.button.standardCopyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     final result = await ref
         .read(companyActionProvider)
         .patentBrandProduct(productId: productId);
@@ -1151,7 +1192,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   ? BorderSide(color: brandColor.withValues(alpha: 0.35))
                   : null,
             ),
-            child: Text(readOnly ? 'Markalı' : 'Patent Al'),
+            child: Text(readOnly ? 'Markalı' : 'Patent Al (50.000 ₺)'),
           ),
         ],
       ),

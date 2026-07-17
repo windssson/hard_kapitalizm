@@ -120,14 +120,18 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
     }
 
 
-    // Update in database via RPC:
-    await supabase.rpc(
-      'claim_daily_streak_reward',
-      params: {
-        'p_reward_cash': rewardCash,
-        'p_reward_gold': rewardGold,
-      },
-    );
+    try {
+      // Update in database via RPC:
+      await supabase.rpc(
+        'claim_daily_streak_reward',
+        params: {
+          'p_reward_cash': rewardCash,
+          'p_reward_gold': rewardGold,
+        },
+      );
+    } catch (e) {
+      return false;
+    }
 
     // Save locally:
     final prefs = await SharedPreferences.getInstance();

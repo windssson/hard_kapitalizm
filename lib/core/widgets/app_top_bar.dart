@@ -145,8 +145,9 @@ class AppTopBar extends ConsumerWidget {
     required bool compact,
   }) {
     final avatarSize = compact ? 52.w : 60.w;
-    final avatarId = player?.avatarId ?? 'avatar_1.webp';
-    final isUrl = avatarId.startsWith('http://') || avatarId.startsWith('https://');
+    final avatarId = player?.avatarId ?? 'ae1.webp';
+    final isUrl =
+        avatarId.startsWith('http://') || avatarId.startsWith('https://');
     return SizedBox(
       width: avatarSize,
       height: avatarSize,
@@ -191,7 +192,7 @@ class AppTopBar extends ConsumerWidget {
                         avatarId,
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => CachedAssetImage(
-                          fileName: 'avatar_1.webp',
+                          fileName: 'ae1.webp',
                           fit: BoxFit.cover,
                           placeholder: Icon(
                             AppIcons.person,
@@ -439,8 +440,6 @@ class AppTopBar extends ConsumerWidget {
       ],
     );
   }
-
-
 
   String _formatMoney(dynamic amount) {
     return AppMoney.compact(double.tryParse(amount?.toString() ?? '0') ?? 0);

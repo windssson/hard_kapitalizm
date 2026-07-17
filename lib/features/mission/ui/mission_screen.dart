@@ -1160,6 +1160,14 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                               message: '$nextDay. Gün ödülü ($rewardStr) hesabınıza eklendi.',
                               type: SnackbarType.success,
                             );
+                          } else {
+                            if (!mounted) return;
+                            AppSnackbar.show(
+                              context,
+                              title: 'Hata',
+                              message: 'Giriş ödülü alınırken bir hata oluştu. Lütfen tekrar deneyin.',
+                              type: SnackbarType.error,
+                            );
                           }
                         }
                       : null,

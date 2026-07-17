@@ -1497,13 +1497,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       transfer.sellerWarehouse.city,
       transfer.buyerWarehouse.city,
     );
-    final totalCost = transfer.totalPrice + transfer.transportCost;
-    final unitLogisticsCost = transfer.displayQuantity > 0
-        ? transfer.transportCost / transfer.displayQuantity
-        : 0.0;
-    final logisticsLabel = transfer.isRental
-        ? 'Nakliye ${_formatCurrency(unitLogisticsCost)} / adet'
-        : 'Ozmal transfer';
+    final totalCost = transfer.totalPrice + transfer.transportCost + transfer.rentalCost;
 
     return GestureDetector(
       onTap: () {
@@ -1595,42 +1589,38 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
               ],
             ),
 
-            SizedBox(height: 8.h),
-
-            // Collapsed view progress & remaining time (Compact)
-            if (!isSelected) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4.r),
-                      child: _TransferProgressBar(
-                        transfer: transfer,
-                        accentColor: accentColor,
-                        calculateProgress: _calculateProgress,
-                      ),
+            SizedBox(height: 10.h),
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4.r),
+                    child: _TransferProgressBar(
+                      transfer: transfer,
+                      accentColor: accentColor,
+                      calculateProgress: _calculateProgress,
                     ),
                   ),
-                  SizedBox(width: 10.w),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final now =
-                          ref.watch(secondTickerProvider).value ??
-                          DateTime.now();
-                      final remaining = transfer.finishAt.difference(now);
-                      return Text(
-                        _formatRemaining(remaining),
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: accentColor,
-                          fontSize: AppTypography.bodySmall,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
+                ),
+                SizedBox(width: 10.w),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final now =
+                        ref.watch(secondTickerProvider).value ??
+                        DateTime.now();
+                    final remaining = transfer.finishAt.difference(now);
+                    return Text(
+                      _formatRemaining(remaining),
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: accentColor,
+                        fontSize: AppTypography.bodySmall,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
 
             // Expanded view details
             if (isSelected) ...[
@@ -1655,10 +1645,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                 spacing: 6.w,
                 runSpacing: 6.h,
                 children: [
-                  _buildInlineMetaChip(
-                    '${transfer.sellerKindLabel} ➔ ${transfer.buyerKindLabel}',
-                    AppColors.gold,
-                  ),
                   if (!transfer.isMultiItem)
                     _buildInlineMetaChip(
                       _buildQualityBrandSummary(
@@ -1692,49 +1678,46 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   formatDateTime: _formatDateTime,
                 ),
               ),
-              SizedBox(height: 10.h),
+              if (transfer.isMultiItem) ...[
+                SizedBox(height: 12.h),
+                Divider(color: AppFx.softOverlay(0.08), height: 16.h),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Sevkiyat İçeriği (${transfer.itemCount} Kalem)',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: AppTypography.bodySmall,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                _NestedTransferItemsList(transferId: transfer.id),
+              ],
+
+              SizedBox(height: 12.h),
+              Divider(color: AppFx.softOverlay(0.08), height: 16.h),
+              SizedBox(height: 8.h),
 
               _buildCompactMetaRow(
                 leftIcon: AppIcons.inventory2Outlined,
-                leftText: _transferQuantitySummary(
+                leftText: 'Miktar: ${_transferQuantitySummary(
                   quantity: transfer.displayQuantity,
                   isMultiItem: transfer.isMultiItem,
                   itemCount: transfer.itemCount,
-                ),
+                )}',
                 rightIcon: AppIcons.paymentsOutlined,
-                rightText: _formatCurrency(transfer.totalPrice),
+                rightText: 'Ürün Bedeli: ${_formatCurrency(transfer.totalPrice)}',
               ),
               SizedBox(height: 6.h),
               _buildCompactMetaRow(
                 leftIcon: AppIcons.localShippingOutlined,
-                leftText: _formatCurrency(
-                  transfer.transportCost + transfer.rentalCost,
-                ),
-                rightIcon: transfer.isRental
-                    ? AppIcons.localShippingOutlined
-                    : AppIcons.directionsCarOutlined,
-                rightText: logisticsLabel,
+                leftText: 'Lojistik: ${_formatCurrency(transfer.transportCost + transfer.rentalCost)}',
+                rightIcon: AppIcons.paymentsOutlined,
+                rightText: 'Toplam: ${_formatCurrency(totalCost)}',
               ),
-              if (transfer.isMultiItem) ...[
-                SizedBox(height: 6.h),
-                _buildCompactMetaRow(
-                  leftIcon: AppIcons.paymentsOutlined,
-                  leftText: _formatCurrency(totalCost),
-                  rightIcon: AppIcons.listAltOutlined,
-                  rightText: '${transfer.itemCount} kalem',
-                ),
-              ],
               SizedBox(height: 10.h),
-
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4.r),
-                child: _TransferProgressBar(
-                  transfer: transfer,
-                  accentColor: accentColor,
-                  calculateProgress: _calculateProgress,
-                ),
-              ),
-              SizedBox(height: 6.h),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -2083,6 +2066,23 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   _buildInlineMetaChip('$totalMinutes dk', statusColor),
                 ],
               ),
+              if (item.isMultiItem) ...[
+                SizedBox(height: 12.h),
+                Divider(color: AppFx.softOverlay(0.08), height: 16.h),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Sevkiyat İçeriği (${item.itemCount} Kalem)',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: AppTypography.bodySmall,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                _NestedTransferItemsList(transferId: item.id),
+              ],
               SizedBox(height: 12.h),
 
               _buildCompactMetaRow(
@@ -2528,5 +2528,120 @@ class _TurkeyTransferMapBackgroundPainter extends CustomPainter {
     return oldDelegate.cities != cities ||
         oldDelegate.transfers != transfers ||
         oldDelegate.selectedTransferId != selectedTransferId;
+  }
+}
+
+class _NestedTransferItemsList extends ConsumerWidget {
+  final String transferId;
+  const _NestedTransferItemsList({required this.transferId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final itemsAsync = ref.watch(transferItemsProvider(transferId));
+
+    return itemsAsync.when(
+      data: (items) {
+        if (items.isEmpty) {
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: 4.h),
+            child: Text(
+              'İçerik bulunamadı.',
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodySmall,
+              ),
+            ),
+          );
+        }
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final brandLabel = item.brandName.toLowerCase() == 'standart' ? '' : ' | ${item.brandName}';
+            return Padding(
+              padding: EdgeInsets.symmetric(vertical: 4.h),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32.w,
+                    height: 32.w,
+                    padding: EdgeInsets.all(4.w),
+                    decoration: BoxDecoration(
+                      color: AppFx.panelWash(0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
+                    ),
+                    child: BrandedProductImage(
+                      fileName: item.productIcon,
+                      productId: item.productId,
+                      brandId: item.brandId,
+                      brandName: item.brandName,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.productName,
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: AppTypography.bodySmall,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Q${item.qualityLevel}$brandLabel',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: AppTypography.micro,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${AppMoney.full(item.quantity, withSymbol: false)} adet',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.blue,
+                      fontSize: AppTypography.bodySmall,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Text(
+                    AppMoney.full(item.totalPrice),
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+      loading: () => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+            ),
+          ),
+        ),
+      ),
+      error: (err, stack) => Text(
+        'İçerik yüklenemedi: $err',
+        style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
+      ),
+    );
   }
 }

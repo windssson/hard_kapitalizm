@@ -244,7 +244,7 @@ CREATE TABLE warehouse_types (
 CREATE TABLE players (
     id uuid NOT NULL PRIMARY KEY,
     company_name text NOT NULL DEFAULT 'Yeni Holding',
-    avatar_id text NOT NULL DEFAULT 'avatar_1.webp',
+    avatar_id text NOT NULL DEFAULT 'ae1.webp',
     level integer NOT NULL DEFAULT 1,
     experience integer NOT NULL,
     cash numeric NOT NULL DEFAULT 100000,

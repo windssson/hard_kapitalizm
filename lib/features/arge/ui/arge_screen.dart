@@ -124,6 +124,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               playerCash: playerCash,
               hasAvailableResearchSlot:
                   activeResearchCount < maxConcurrentResearches,
+              allProducts: allProducts,
             );
           },
         );
@@ -157,6 +158,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             product.canUpgrade(
               playerLevel: playerLevel,
               playerCash: playerCash,
+              allProducts: products,
             ) &&
             hasFreeSlot;
       }
@@ -407,6 +409,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                               (player?.cash ?? 0).toDouble(),
                               researchesAsync.value?.length ?? 0,
                               center.maxConcurrentResearches,
+                              products,
                             ),
                           ),
                         ],
@@ -742,6 +745,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     double playerCash,
     int activeResearchCount,
     int maxConcurrentResearches,
+    List<ArgeProductModel> allProducts,
   ) {
     if (products.isEmpty) {
       return SliverToBoxAdapter(child: _buildEmptyState());
@@ -757,6 +761,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             playerCash: playerCash,
             activeResearchCount: activeResearchCount,
             maxConcurrentResearches: maxConcurrentResearches,
+            allProducts: allProducts,
           ),
         ),
         childCount: products.length,
@@ -770,12 +775,18 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     required double playerCash,
     required int activeResearchCount,
     required int maxConcurrentResearches,
+    required List<ArgeProductModel> allProducts,
   }) {
     final hasLevel = product.hasLevelRequirement(playerLevel: playerLevel);
     final hasCash = product.hasCashRequirement(playerCash: playerCash);
+    final meetsRawMaterials = product.meetsRawMaterialQualityRequirements(allProducts);
     final hasFreeResearchSlot = activeResearchCount < maxConcurrentResearches;
     final canUpgrade =
-        product.canUpgrade(playerLevel: playerLevel, playerCash: playerCash) &&
+        product.canUpgrade(
+          playerLevel: playerLevel,
+          playerCash: playerCash,
+          allProducts: allProducts,
+        ) &&
         hasFreeResearchSlot;
 
     return Container(
@@ -908,6 +919,14 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     'Lv.${product.requiredPlayerLevel}',
                     hasLevel ? AppColors.green : AppColors.red,
                   ),
+                  if (product.hammadde1Id != null && product.hammadde1Id!.isNotEmpty) ...[
+                    SizedBox(width: 4.w),
+                    _buildMiniReqBadge(
+                      AppIcons.categoryOutlined,
+                      'Hamm.',
+                      meetsRawMaterials ? AppColors.green : AppColors.red,
+                    ),
+                  ],
                   SizedBox(width: 4.w),
                   _buildMiniReqBadge(
                     AppIcons.schedule,
@@ -928,6 +947,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                           playerLevel: playerLevel,
                           playerCash: playerCash,
                           hasAvailableResearchSlot: hasFreeResearchSlot,
+                          allProducts: allProducts,
                         ),
                   style: FilledButton.styleFrom(
                     backgroundColor: canUpgrade
@@ -990,12 +1010,15 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     required int playerLevel,
     required double playerCash,
     required bool hasAvailableResearchSlot,
+    required List<ArgeProductModel> allProducts,
   }) {
     final hasLevel = product.hasLevelRequirement(playerLevel: playerLevel);
     final hasCash = product.hasCashRequirement(playerCash: playerCash);
+    final meetsRawMaterials = product.meetsRawMaterialQualityRequirements(allProducts);
     final canStart =
         hasLevel &&
         hasCash &&
+        meetsRawMaterials &&
         hasAvailableResearchSlot &&
         !product.isMaxQuality;
 
@@ -1009,6 +1032,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
         playerCash: playerCash,
         canStart: canStart,
         hasActiveResearch: !hasAvailableResearchSlot,
+        allProducts: allProducts,
         onStart: () async {
           Navigator.of(context).pop();
           await _onStartResearch(product.id);
@@ -2163,6 +2187,7 @@ class _UpgradeBottomSheet extends StatelessWidget {
   final bool canStart;
   final bool hasActiveResearch;
   final VoidCallback onStart;
+  final List<ArgeProductModel> allProducts;
 
   const _UpgradeBottomSheet({
     required this.product,
@@ -2171,12 +2196,76 @@ class _UpgradeBottomSheet extends StatelessWidget {
     required this.canStart,
     required this.hasActiveResearch,
     required this.onStart,
+    required this.allProducts,
   });
+
+  List<Widget> _buildRawMaterialRequirementsList(BuildContext context) {
+    final List<Widget> widgets = [];
+    final requiredQuality = product.targetQuality - 1;
+
+    void addRMRow(String? rmId) {
+      if (rmId == null || rmId.isEmpty) return;
+      final rm = allProducts.firstWhere(
+        (p) => p.id == rmId,
+        orElse: () => const ArgeProductModel(
+          id: '',
+          urunAdi: '',
+          urunIconu: '',
+          bazSatisFiyati: 0,
+          uretimBirimi: '',
+          currentQualityLevel: 1,
+          isProduced: false,
+        ),
+      );
+      if (rm.id.isNotEmpty) {
+        final ok = rm.currentQualityLevel >= requiredQuality;
+        widgets.add(
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 4.h),
+            child: Row(
+              children: [
+                Icon(
+                  ok ? AppIcons.checkCircleRounded : AppIcons.cancelRounded,
+                  color: ok ? AppColors.green : AppColors.red,
+                  size: AppIconSizes.small,
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    rm.urunAdi,
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.body,
+                    ),
+                  ),
+                ),
+                Text(
+                  'Mevcut: Q${rm.currentQualityLevel} / Gerekli: Q$requiredQuality',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: ok ? AppColors.green : AppColors.red,
+                    fontSize: AppTypography.bodySmall,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+
+    addRMRow(product.hammadde1Id);
+    addRMRow(product.hammadde2Id);
+    addRMRow(product.hammadde3Id);
+
+    return widgets;
+  }
 
   @override
   Widget build(BuildContext context) {
     final hasLevel = product.hasLevelRequirement(playerLevel: playerLevel);
     final hasCash = product.hasCashRequirement(playerCash: playerCash);
+    final meetsRawMaterials = product.meetsRawMaterialQualityRequirements(allProducts);
 
     return Container(
       decoration: BoxDecoration(
@@ -2293,6 +2382,24 @@ class _UpgradeBottomSheet extends StatelessWidget {
             ok: true,
             currentValue: 'Her 30 dk = 1 yildiz',
           ),
+          if (product.hammadde1Id != null && product.hammadde1Id!.isNotEmpty) ...[
+            SizedBox(height: 16.h),
+            Divider(color: AppColors.border, height: 1),
+            SizedBox(height: 12.h),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Gerekli Hammadde Kaliteleri (En Az Q${product.targetQuality - 1})',
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: AppTypography.bodySmall,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            SizedBox(height: 8.h),
+            ..._buildRawMaterialRequirementsList(context),
+          ],
           SizedBox(height: 16.h),
           Divider(color: AppColors.border, height: 1),
           SizedBox(height: 14.h),
@@ -2345,6 +2452,35 @@ class _UpgradeBottomSheet extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Tum arastirma slotlariniz dolu.',
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.red,
+                        fontSize: AppTypography.bodySmall,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (!meetsRawMaterials) ...[
+            SizedBox(height: 12.h),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: AppColors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    AppIcons.warningAmberRounded,
+                    color: AppColors.red,
+                    size: AppIconSizes.small,
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      'Hammaddelerin kalitesi yetersiz.',
                       style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.red,
                         fontSize: AppTypography.bodySmall,

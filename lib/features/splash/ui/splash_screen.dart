@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
@@ -36,6 +37,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (_isStarting) return;
     _isStarting = true;
     try {
+      // 1. Internet connection lookup check
+      try {
+        final result = await InternetAddress.lookup('lpiixtfxldhoyyppavyn.supabase.co')
+            .timeout(const Duration(seconds: 5));
+        if (result.isEmpty || result.first.address.isEmpty) {
+          throw const SocketException('No internet');
+        }
+      } catch (_) {
+        throw const SocketException('İnternet bağlantısı bulunamadı. Lütfen bağlantınızı kontrol edip tekrar deneyin.');
+      }
+
       final authManager = ref.read(authManagerProvider);
       await authManager.signInAnonymouslyIfNeeded();
       try {
@@ -102,8 +114,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String friendlyError = e.toString();
+        if (friendlyError.contains('SocketException') ||
+            friendlyError.contains('Failed host lookup') ||
+            friendlyError.contains('ClientException') ||
+            friendlyError.contains('HandshakeException')) {
+          friendlyError = 'İnternet bağlantısı bulunamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.';
+        }
         setState(() {
-          _error = e.toString();
+          _error = friendlyError;
         });
       }
     } finally {

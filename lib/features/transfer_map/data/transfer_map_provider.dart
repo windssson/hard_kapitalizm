@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_history_item_model.dart';
@@ -67,6 +68,32 @@ final buyerTransferHistoryProvider =
             message.contains('not found')) {
           return const [];
         }
+        rethrow;
+      }
+    });
+
+final transferItemsProvider =
+    FutureProvider.family.autoDispose<List<TransferItemDetail>, String>((
+      ref,
+      transferId,
+    ) async {
+      try {
+        final supabase = Supabase.instance.client;
+        final response = await supabase.rpc(
+          'get_logistics_transfer_items',
+          params: {'p_transfer_id': transferId},
+        ).timeout(const Duration(seconds: 10));
+        
+        final list = response as List<dynamic>;
+        return list
+            .map(
+              (item) => TransferItemDetail.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ),
+            )
+            .toList();
+      } catch (e, stack) {
+        debugPrint('Error in transferItemsProvider for $transferId: $e\n$stack');
         rethrow;
       }
     });

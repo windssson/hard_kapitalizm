@@ -6,6 +6,9 @@ class ArgeProductModel {
   final String uretimBirimi;
   final int currentQualityLevel;
   final bool isProduced;
+  final String? hammadde1Id;
+  final String? hammadde2Id;
+  final String? hammadde3Id;
 
   const ArgeProductModel({
     required this.id,
@@ -15,6 +18,9 @@ class ArgeProductModel {
     required this.uretimBirimi,
     required this.currentQualityLevel,
     required this.isProduced,
+    this.hammadde1Id,
+    this.hammadde2Id,
+    this.hammadde3Id,
   });
 
   factory ArgeProductModel.fromJson(
@@ -30,6 +36,9 @@ class ArgeProductModel {
       uretimBirimi: product['uretim_birimi']?.toString() ?? 'FABRIKA',
       currentQualityLevel: qualityLevel,
       isProduced: product['is_produced'] == true,
+      hammadde1Id: product['hammadde_1_id']?.toString(),
+      hammadde2Id: product['hammadde_2_id']?.toString(),
+      hammadde3Id: product['hammadde_3_id']?.toString(),
     );
   }
 
@@ -58,9 +67,119 @@ class ArgeProductModel {
     return _durationHours[currentQualityLevel];
   }
 
-  bool canUpgrade({required int playerLevel, required double playerCash}) {
+  bool canUpgrade({
+    required int playerLevel,
+    required double playerCash,
+    required List<ArgeProductModel> allProducts,
+  }) {
     if (isMaxQuality) return false;
-    return playerLevel >= requiredPlayerLevel && playerCash >= upgradeCost;
+    return playerLevel >= requiredPlayerLevel &&
+        playerCash >= upgradeCost &&
+        meetsRawMaterialQualityRequirements(allProducts);
+  }
+
+  bool meetsRawMaterialQualityRequirements(List<ArgeProductModel> allProducts) {
+    if (isMaxQuality) return true;
+    final reqQuality = targetQuality - 1;
+
+    // Check hammadde 1
+    if (hammadde1Id != null && hammadde1Id!.isNotEmpty) {
+      final rm = allProducts.firstWhere(
+        (p) => p.id == hammadde1Id,
+        orElse: () => const ArgeProductModel(
+          id: '',
+          urunAdi: '',
+          urunIconu: '',
+          bazSatisFiyati: 0,
+          uretimBirimi: '',
+          currentQualityLevel: 1,
+          isProduced: false,
+        ),
+      );
+      if (rm.id.isNotEmpty && rm.currentQualityLevel < reqQuality) {
+        return false;
+      }
+    }
+
+    // Check hammadde 2
+    if (hammadde2Id != null && hammadde2Id!.isNotEmpty) {
+      final rm = allProducts.firstWhere(
+        (p) => p.id == hammadde2Id,
+        orElse: () => const ArgeProductModel(
+          id: '',
+          urunAdi: '',
+          urunIconu: '',
+          bazSatisFiyati: 0,
+          uretimBirimi: '',
+          currentQualityLevel: 1,
+          isProduced: false,
+        ),
+      );
+      if (rm.id.isNotEmpty && rm.currentQualityLevel < reqQuality) {
+        return false;
+      }
+    }
+
+    // Check hammadde 3
+    if (hammadde3Id != null && hammadde3Id!.isNotEmpty) {
+      final rm = allProducts.firstWhere(
+        (p) => p.id == hammadde3Id,
+        orElse: () => const ArgeProductModel(
+          id: '',
+          urunAdi: '',
+          urunIconu: '',
+          bazSatisFiyati: 0,
+          uretimBirimi: '',
+          currentQualityLevel: 1,
+          isProduced: false,
+        ),
+      );
+      if (rm.id.isNotEmpty && rm.currentQualityLevel < reqQuality) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  List<({String name, int current, int required})> getUnmetRawMaterials(
+    List<ArgeProductModel> allProducts,
+  ) {
+    if (isMaxQuality) return [];
+    final reqQuality = targetQuality - 1;
+    final List<({String name, int current, int required})> unmet = [];
+
+    void check(String? rmId) {
+      if (rmId != null && rmId.isNotEmpty) {
+        final rm = allProducts.firstWhere(
+          (p) => p.id == rmId,
+          orElse: () => const ArgeProductModel(
+            id: '',
+            urunAdi: '',
+            urunIconu: '',
+            bazSatisFiyati: 0,
+            uretimBirimi: '',
+            currentQualityLevel: 1,
+            isProduced: false,
+          ),
+        );
+        if (rm.id.isNotEmpty) {
+          if (rm.currentQualityLevel < reqQuality) {
+            unmet.add((
+              name: rm.urunAdi,
+              current: rm.currentQualityLevel,
+              required: reqQuality,
+            ));
+          }
+        }
+      }
+    }
+
+    check(hammadde1Id);
+    check(hammadde2Id);
+    check(hammadde3Id);
+
+    return unmet;
   }
 
   bool hasLevelRequirement({required int playerLevel}) {

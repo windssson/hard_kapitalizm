@@ -170,7 +170,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) =>
                           CachedAssetImage(
-                            fileName: 'avatar_1.webp',
+                            fileName: 'ae1.webp',
                             fit: BoxFit.cover,
                           ),
                     )
