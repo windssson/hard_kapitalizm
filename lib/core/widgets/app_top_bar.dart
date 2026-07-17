@@ -37,7 +37,7 @@ class AppTopBar extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
-                      flex: compact ? 42 : 44,
+                      flex: compact ? 52 : 54,
                       child: _buildProfilePanel(
                         context: context,
                         player: player,
@@ -48,15 +48,13 @@ class AppTopBar extends ConsumerWidget {
                     ),
                     SizedBox(width: compact ? 4.w : 6.w),
                     Expanded(
-                      flex: compact ? 38 : 36,
+                      flex: compact ? 32 : 30,
                       child: _buildResourceColumn(
                         context,
                         player,
                         compact: compact,
                       ),
                     ),
-                    SizedBox(width: compact ? 4.w : 6.w),
-                    _buildLeaderboardAction(context: context, compact: compact),
                     SizedBox(width: compact ? 4.w : 6.w),
                     _buildNotificationAction(
                       context: context,
@@ -442,41 +440,7 @@ class AppTopBar extends ConsumerWidget {
     );
   }
 
-  Widget _buildLeaderboardAction({
-    required BuildContext context,
-    required bool compact,
-  }) {
-    return InkWell(
-      onTap: () => context.push('/leaderboard'),
-      borderRadius: BorderRadius.circular(compact ? 12.r : 14.r),
-      child: Container(
-        width: compact ? 38.w : 42.w,
-        height: compact ? 50.h : 56.h,
-        decoration: AppDecorations.card(),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              AppIcons.emojiEventsRounded,
-              color: AppColors.goldLight,
-              size: compact ? AppIconSizes.regular : AppIconSizes.medium,
-            ),
-            if (!compact) ...[
-              SizedBox(height: 2.h),
-              Text(
-                'Sıralama',
-                style: AppTextStyles.caption.standardCopyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: AppTypography.micro,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+
 
   String _formatMoney(dynamic amount) {
     return AppMoney.compact(double.tryParse(amount?.toString() ?? '0') ?? 0);
