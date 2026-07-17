@@ -35,10 +35,10 @@ class PlayerActionNotifier {
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
-    await supabase
-        .from('players')
-        .update({'company_name': newName})
-        .eq('id', user.id);
+    await supabase.rpc(
+      'update_company_name',
+      params: {'p_company_name': newName},
+    );
 
     _ref.invalidate(playerProvider);
   }

@@ -16,61 +16,51 @@ class PlayerActiveProductsService {
     }
 
     try {
-      // 1. Query all stores of the player along with their slots and product details
-      final List<dynamic> storesResponse = await _supabase
-          .from('stores')
-          .select('id, name, store_slots(product_id, quantity, products(urun_adi, urun_iconu))')
-          .eq('player_id', user.id);
+      // Single RPC call replacing 6 separate database queries:
+      final response = await _supabase.rpc(
+        'get_player_active_products_data',
+        params: {'p_player_id': user.id},
+      );
 
-      // 2. Query all production entities of the player (factories, farms, mines, fields)
-      final List<dynamic> factoriesResponse = await _supabase
-          .from('factories')
-          .select('id, name')
-          .eq('player_id', user.id);
+      if (response == null) return [];
 
-      final List<dynamic> farmsResponse = await _supabase
-          .from('farms')
-          .select('id, name')
-          .eq('player_id', user.id);
+      final data = Map<String, dynamic>.from(response as Map);
 
-      final List<dynamic> minesResponse = await _supabase
-          .from('mines')
-          .select('id, name')
-          .eq('player_id', user.id);
-
-      final List<dynamic> fieldsResponse = await _supabase
-          .from('fields')
-          .select('id, name')
-          .eq('player_id', user.id);
+      final storesList = data['stores'] as List<dynamic>? ?? const [];
+      final factoriesList = data['factories'] as List<dynamic>? ?? const [];
+      final farmsList = data['farms'] as List<dynamic>? ?? const [];
+      final minesList = data['mines'] as List<dynamic>? ?? const [];
+      final fieldsList = data['fields'] as List<dynamic>? ?? const [];
+      final inventoriesList = data['inventories'] as List<dynamic>? ?? const [];
 
       // Group production unit IDs and names
       final productionUnits = <String, Map<String, String>>{}; // id -> {name, kind}
-      
-      for (final row in factoriesResponse) {
+
+      for (final row in factoriesList) {
         final map = Map<String, dynamic>.from(row as Map);
         productionUnits[map['id'].toString()] = {
           'name': map['name'].toString(),
           'kind': 'factory',
         };
       }
-      
-      for (final row in farmsResponse) {
+
+      for (final row in farmsList) {
         final map = Map<String, dynamic>.from(row as Map);
         productionUnits[map['id'].toString()] = {
           'name': map['name'].toString(),
           'kind': 'farm',
         };
       }
-      
-      for (final row in minesResponse) {
+
+      for (final row in minesList) {
         final map = Map<String, dynamic>.from(row as Map);
         productionUnits[map['id'].toString()] = {
           'name': map['name'].toString(),
           'kind': 'mine',
         };
       }
-      
-      for (final row in fieldsResponse) {
+
+      for (final row in fieldsList) {
         final map = Map<String, dynamic>.from(row as Map);
         productionUnits[map['id'].toString()] = {
           'name': map['name'].toString(),
@@ -81,7 +71,7 @@ class PlayerActiveProductsService {
       final results = <PlayerActiveProductModel>[];
 
       // Process store slots (Role: 'sale')
-      for (final storeRow in storesResponse) {
+      for (final storeRow in storesList) {
         final store = Map<String, dynamic>.from(storeRow as Map);
         final storeId = store['id'].toString();
         final storeName = store['name'].toString();
@@ -91,7 +81,7 @@ class PlayerActiveProductsService {
           final productId = slot['product_id'] as String?;
           final quantity = (slot['quantity'] as num?)?.toInt() ?? 0;
           if (productId != null && quantity > 0) {
-            final productMap = slot['products'] != null 
+            final productMap = slot['products'] != null
                 ? Map<String, dynamic>.from(slot['products'] as Map)
                 : null;
             results.add(PlayerActiveProductModel(
@@ -108,45 +98,33 @@ class PlayerActiveProductsService {
         }
       }
 
-      // If there are production units, query their inventories (both input and output)
-      if (productionUnits.isNotEmpty) {
-        final unitIds = productionUnits.keys.toList();
-        final List<dynamic> inventoryResponse = await _supabase
-            .from('production_inventory')
-            .select('owner_id, product_id, inventory_type, quantity, products(urun_adi, urun_iconu)')
-            .inFilter('owner_id', unitIds);
+      // Process production unit inventories (Role: 'input' or 'output')
+      for (final itemRow in inventoriesList) {
+        final item = Map<String, dynamic>.from(itemRow as Map);
+        final ownerId = item['owner_id'].toString();
+        final productId = item['product_id'] as String?;
+        final quantity = (item['quantity'] as num?)?.toInt() ?? 0;
+        final inventoryType = (item['inventory_type'] ?? 'output').toString();
 
-        for (final itemRow in inventoryResponse) {
-          final item = Map<String, dynamic>.from(itemRow as Map);
-          final ownerId = item['owner_id'].toString();
-          final productId = item['product_id'] as String?;
-          final quantity = (item['quantity'] as num?)?.toInt() ?? 0;
-          final inventoryType = (item['inventory_type'] ?? 'output').toString();
-          
-          if (productId != null && quantity > 0) {
-            final unitInfo = productionUnits[ownerId];
-            final productMap = item['products'] != null
-                ? Map<String, dynamic>.from(item['products'] as Map)
-                : null;
-            results.add(PlayerActiveProductModel(
-              productId: productId,
-              quantity: quantity,
-              sourceKind: unitInfo?['kind'] ?? 'production',
-              sourceName: unitInfo?['name'] ?? 'Uretim Birimi',
-              sourceId: ownerId,
-              role: inventoryType == 'input' ? 'input' : 'output',
-              productName: productMap?['urun_adi']?.toString(),
-              productIcon: productMap?['urun_iconu']?.toString(),
-            ));
-          }
+        if (productId != null && quantity > 0) {
+          final unitInfo = productionUnits[ownerId];
+          final productMap = item['products'] != null
+              ? Map<String, dynamic>.from(item['products'] as Map)
+              : null;
+          results.add(PlayerActiveProductModel(
+            productId: productId,
+            quantity: quantity,
+            sourceKind: unitInfo?['kind'] ?? 'production',
+            sourceName: unitInfo?['name'] ?? 'Uretim Birimi',
+            sourceId: ownerId,
+            role: inventoryType == 'input' ? 'input' : 'output',
+            productName: productMap?['urun_adi']?.toString(),
+            productIcon: productMap?['urun_iconu']?.toString(),
+          ));
         }
       }
 
       developer.log('getPlayerActiveProducts: Loaded ${results.length} active products/inputs', name: 'PlayerActiveProducts');
-      for (final p in results) {
-        developer.log(' - [${p.role.toUpperCase()}] Product: ${p.productName ?? p.productId} (${p.quantity}) from ${p.sourceKind}:${p.sourceName}', name: 'PlayerActiveProducts');
-      }
-
       return results;
     } catch (e, stack) {
       developer.log('getPlayerActiveProducts: Error fetching player active products', error: e, stackTrace: stack, name: 'PlayerActiveProducts');

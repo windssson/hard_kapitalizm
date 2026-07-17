@@ -38,11 +38,7 @@ final activeMarketingCampaignsProvider =
       if (user == null) return const [];
 
       try {
-        final response = await supabase
-            .from('brand_marketing_campaigns')
-            .select()
-            .gt('active_until', DateTime.now().toUtc().toIso8601String())
-            .order('created_at', ascending: false);
+        final response = await supabase.rpc('get_active_marketing_campaigns');
 
         final rows = response as List<dynamic>? ?? const [];
         return rows

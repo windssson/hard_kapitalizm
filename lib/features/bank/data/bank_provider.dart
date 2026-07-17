@@ -10,11 +10,10 @@ final playerLoansProvider = FutureProvider<List<LoanModel>>((ref) async {
   if (user == null) return const [];
 
   try {
-    final response = await supabase
-        .from('player_loans')
-        .select('*')
-        .eq('player_id', user.id)
-        .order('created_at', ascending: false);
+    final response = await supabase.rpc(
+      'get_player_loans',
+      params: {'p_player_id': user.id},
+    );
 
     return (response as List<dynamic>)
         .map((json) => LoanModel.fromJson(Map<String, dynamic>.from(json as Map)))
@@ -30,11 +29,10 @@ final playerDepositsProvider = FutureProvider<List<DepositModel>>((ref) async {
   if (user == null) return const [];
 
   try {
-    final response = await supabase
-        .from('player_deposits')
-        .select('*')
-        .eq('player_id', user.id)
-        .order('created_at', ascending: false);
+    final response = await supabase.rpc(
+      'get_player_deposits',
+      params: {'p_player_id': user.id},
+    );
 
     return (response as List<dynamic>)
         .map((json) => DepositModel.fromJson(Map<String, dynamic>.from(json as Map)))

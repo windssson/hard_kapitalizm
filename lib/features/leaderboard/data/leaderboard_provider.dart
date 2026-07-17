@@ -15,11 +15,13 @@ final leaderboardProvider = FutureProvider.family<List<LeaderboardEntryModel>, S
     }
   }
 
-  final response = await supabase
-      .from('player_leaderboard_stats')
-      .select()
-      .order(sortByField, ascending: false)
-      .limit(100);
+  final response = await supabase.rpc(
+    'get_leaderboard',
+    params: {
+      'p_sort_by_field': sortByField,
+      'p_limit': 100,
+    },
+  );
 
   final rows = response as List<dynamic>? ?? const [];
   return rows.map((row) => LeaderboardEntryModel.fromJson(Map<String, dynamic>.from(row as Map))).toList();
@@ -48,34 +50,23 @@ final currentPlayerRankProvider = FutureProvider.family<PlayerRankInfo?, String>
     );
   }
 
-  // If not in top 100, fetch the player's entry from leaderboard stats
-  final entryResponse = await supabase
-      .from('player_leaderboard_stats')
-      .select()
-      .eq('player_id', user.id)
-      .maybeSingle();
+  // Fetch the player's rank and entry data via a single unified RPC:
+  final response = await supabase.rpc(
+    'get_player_leaderboard_rank_info',
+    params: {
+      'p_player_id': user.id,
+      'p_sort_by_field': sortByField,
+    },
+  );
 
-  if (entryResponse == null) {
-    return null;
-  }
+  if (response == null) return null;
 
-  final entry = LeaderboardEntryModel.fromJson(Map<String, dynamic>.from(entryResponse as Map));
-
-  // Count how many players have a strictly greater value
-  final metricValue = entryResponse[sortByField];
-  if (metricValue == null) {
-    return PlayerRankInfo(rank: 999, entry: entry);
-  }
-
-  final countResponse = await supabase
-      .from('player_leaderboard_stats')
-      .select('player_id')
-      .gt(sortByField, metricValue);
-
-  final count = (countResponse as List<dynamic>).length;
+  final responseMap = Map<String, dynamic>.from(response as Map);
+  final entryMap = responseMap['entry'];
+  if (entryMap == null) return null;
 
   return PlayerRankInfo(
-    rank: count + 1,
-    entry: entry,
+    rank: (responseMap['rank'] as num).toInt(),
+    entry: LeaderboardEntryModel.fromJson(Map<String, dynamic>.from(entryMap as Map)),
   );
 });

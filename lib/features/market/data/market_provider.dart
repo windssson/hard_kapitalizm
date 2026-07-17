@@ -182,12 +182,15 @@ final playerMarketListingsProvider =
 final productPriceHistoryProvider =
     FutureProvider.family<ProductPriceHistoryModel?, String>((ref, productId) async {
   final supabase = Supabase.instance.client;
-  final response = await supabase
-      .from('product_price_history')
-      .select()
-      .eq('product_id', productId)
-      .maybeSingle();
+  final response = await supabase.rpc(
+    'get_product_price_history',
+    params: {'p_product_id': productId},
+  );
 
   if (response == null) return null;
-  return ProductPriceHistoryModel.fromJson(response);
+  return ProductPriceHistoryModel.fromJson(
+    response is Map<String, dynamic>
+        ? response
+        : Map<String, dynamic>.from(response as Map),
+  );
 });

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 
 class DailyStreakData {
   final int streakCount; // 0 to 7
@@ -87,7 +86,6 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
     );
     if (response == null) return false;
 
-    final player = PlayerModel.fromJson(Map<String, dynamic>.from(response as Map));
 
     // Determine rewards:
     double rewardCash = 0;
@@ -121,14 +119,15 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
         break;
     }
 
-    final nextCash = player.cash + rewardCash;
-    final nextGold = player.gold + rewardGold;
 
-    // Update in database:
-    await supabase
-        .from('players')
-        .update({'cash': nextCash, 'gold': nextGold})
-        .eq('id', user.id);
+    // Update in database via RPC:
+    await supabase.rpc(
+      'claim_daily_streak_reward',
+      params: {
+        'p_reward_cash': rewardCash,
+        'p_reward_gold': rewardGold,
+      },
+    );
 
     // Save locally:
     final prefs = await SharedPreferences.getInstance();
