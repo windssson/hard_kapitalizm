@@ -83,11 +83,13 @@ class StoreDetailPageChangedModel {
   final PlayerModel? player;
   final bool historyDirty;
   final bool performanceDirty;
+  final bool taxDirty;
 
   const StoreDetailPageChangedModel({
     required this.player,
     required this.historyDirty,
     required this.performanceDirty,
+    required this.taxDirty,
   });
 
   factory StoreDetailPageChangedModel.fromJson(Map<String, dynamic> json) {
@@ -100,6 +102,7 @@ class StoreDetailPageChangedModel {
               : null,
       historyDirty: json['history_dirty'] as bool? ?? false,
       performanceDirty: json['performance_dirty'] as bool? ?? false,
+      taxDirty: json['tax_dirty'] as bool? ?? false,
     );
   }
 
@@ -107,11 +110,13 @@ class StoreDetailPageChangedModel {
     PlayerModel? player,
     bool? historyDirty,
     bool? performanceDirty,
+    bool? taxDirty,
   }) {
     return StoreDetailPageChangedModel(
       player: player ?? this.player,
       historyDirty: historyDirty ?? this.historyDirty,
       performanceDirty: performanceDirty ?? this.performanceDirty,
+      taxDirty: taxDirty ?? this.taxDirty,
     );
   }
 }

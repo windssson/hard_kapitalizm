@@ -13,6 +13,7 @@ import 'package:hard_kapitalizm/features/store/models/store_detail_page_model.da
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_history_item_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_performance_model.dart';
+import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final storeHistoryDirtyProvider = StateProvider.family<bool, String>(
@@ -239,8 +240,11 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     if (page.changed.player != null) {
       ref.read(playerProvider.notifier).replacePlayer(page.changed.player!);
     }
-    // TODO: taxDebt patch — open_store_detail_page response'una tax_dirty eklenmesi gerekiyor.
-    // Şu an tax provider invalidate yapılmıyor; tax ekranı açıldığında yeniden fetch eder.
+    // Tax debt patch — open_store_detail_page response'unda tax_dirty true ise vergi sağlayıcılarını geçersiz kıl
+    if (page.changed.taxDirty) {
+      ref.invalidate(taxDebtProvider);
+      ref.invalidate(playerTaxProvider);
+    }
   }
 
   void replacePage(StoreDetailPageModel page) {

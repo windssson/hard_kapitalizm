@@ -535,7 +535,8 @@ class FactoryActionNotifier {
         final entityId = result['entity_id']?.toString();
         if (entityId != null && entityId.isNotEmpty) {
           // Level artışı: detay notifier'ını patch et
-          final newLevel = (result['new_level'] as num?)?.toInt();
+          final newLevel = (result['target_level'] as num?)?.toInt() ??
+              (result['new_level'] as num?)?.toInt();
           if (newLevel != null) {
             _ref
                 .read(factoryDetailProvider(entityId).notifier)
@@ -544,8 +545,7 @@ class FactoryActionNotifier {
                 .read(factoryListProvider.notifier)
                 .patchFactoryLevel(factoryId: entityId, level: newLevel);
           } else {
-            // new_level response'da yoksa fallback invalidate
-            // TODO: start_building_upgrade/finish RPC'lerine new_level eklenirse patch'e dönüştür
+            // target_level/new_level response'da yoksa fallback invalidate
             _ref.invalidate(factoryDetailProvider(entityId));
           }
           _ref.invalidate(activeFactoryUpgradeProvider(entityId));
@@ -669,7 +669,6 @@ class FactoryActionNotifier {
       final result = Map<String, dynamic>.from(response as Map);
       if (syncProviders) {
         // Ürün seçimi: detail + list provider'ı patch et
-        // TODO: set_factory_product RPC'si ürün bilgisini döndürmüyorsa fallback invalidate
         final productJson = result['product'];
         ProductModel? product;
         if (productJson is Map) {
