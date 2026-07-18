@@ -468,7 +468,6 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       if (res['success'] == true) {
         ref.invalidate(playerLogisticsCompanyProvider);
         ref.invalidate(playerLogisticsConstructionProvider);
-        ref.invalidate(playerProvider);
         AppSnackbar.show(
           context,
           title: 'Basarili',

@@ -39,4 +39,24 @@ class FactoryListItemModel {
 
   bool get isOutputFull =>
       factory.outputCapacity > 0 && outputStockQuantity >= factory.outputCapacity;
+
+  FactoryListItemModel copyWith({
+    FactoryModel? factory,
+    String? cityName,
+    String? factoryTypeName,
+    String? factoryTypeIcon,
+    int? inputStockQuantity,
+    int? outputStockQuantity,
+    ProductModel? selectedProduct,
+  }) {
+    return FactoryListItemModel(
+      factory: factory ?? this.factory,
+      cityName: cityName ?? this.cityName,
+      factoryTypeName: factoryTypeName ?? this.factoryTypeName,
+      factoryTypeIcon: factoryTypeIcon ?? this.factoryTypeIcon,
+      inputStockQuantity: inputStockQuantity ?? this.inputStockQuantity,
+      outputStockQuantity: outputStockQuantity ?? this.outputStockQuantity,
+      selectedProduct: selectedProduct ?? this.selectedProduct,
+    );
+  }
 }

@@ -29,7 +29,6 @@ import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
     show warehouseCapacityStatusProvider;
@@ -74,7 +73,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     _refreshMineDetail();
     ref.invalidate(mineListProvider);
     if (includePlayer) {
-      ref.invalidate(playerProvider);
     }
 
     if (includeWarehouseList ||

@@ -30,7 +30,6 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(taxDebtProvider);
       ref.invalidate(playerTaxProvider);
-      ref.invalidate(playerProvider);
     });
   }
 

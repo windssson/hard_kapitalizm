@@ -55,6 +55,42 @@ class FactoryModel {
     );
   }
 
+  FactoryModel copyWith({
+    String? id,
+    String? playerId,
+    String? factoryTypeId,
+    String? cityId,
+    String? name,
+    int? level,
+    String? productId,
+    String? brandId,
+    int? qualityLevel,
+    int? inputCapacity,
+    int? outputCapacity,
+    double? boostMultiplier,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return FactoryModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      factoryTypeId: factoryTypeId ?? this.factoryTypeId,
+      cityId: cityId ?? this.cityId,
+      name: name ?? this.name,
+      level: level ?? this.level,
+      productId: productId ?? this.productId,
+      brandId: brandId ?? this.brandId,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      inputCapacity: inputCapacity ?? this.inputCapacity,
+      outputCapacity: outputCapacity ?? this.outputCapacity,
+      boostMultiplier: boostMultiplier ?? this.boostMultiplier,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

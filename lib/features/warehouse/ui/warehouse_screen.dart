@@ -14,7 +14,6 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
@@ -538,7 +537,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                             await ref
                                 .read(warehouseListProvider.notifier)
                                 .refresh();
-                            ref.invalidate(playerProvider);
                             if (mounted) {
                               await showExperienceFeedbackFromResult(
                                 context,
@@ -653,7 +651,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
 
     if (result['success'] == true) {
       await ref.read(warehouseListProvider.notifier).refresh();
-      ref.invalidate(playerProvider);
       if (mounted) {
         AppSnackbar.show(
           context,
@@ -688,7 +685,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
 
     if (success) {
       await ref.read(warehouseListProvider.notifier).refresh();
-      ref.invalidate(playerProvider);
       ref.invalidate(playerBrandCompanyProvider);
     }
   }

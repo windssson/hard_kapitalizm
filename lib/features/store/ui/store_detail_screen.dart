@@ -23,7 +23,6 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/auth/models/experience_gain_model.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -159,7 +158,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
       // Automatic store sales change the player's cash balance, but the
       // backend response does not always flag player changes explicitly.
-      ref.invalidate(playerProvider);
 
       // Clear the sale result from the provider so it doesn't pop up again when returning to this screen
       ref
@@ -1257,7 +1255,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
     if (result['success'] == true) {
       ref.read(storesListProvider.notifier).removeStore(store.id);
-      ref.invalidate(playerProvider);
       _showSuccess(
         context,
         'Magaza satildi. ${((result['total_refund'] as num?)?.toDouble() ?? totalRefund).toStringAsFixed(1)} TL eklendi.',
@@ -1289,7 +1286,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     ref.read(storesListProvider.notifier).replaceStore(page.store);
 
     if (refreshPlayer || page.changed.player != null) {
-      ref.invalidate(playerProvider);
     }
 
     if (historyDirty || page.changed.historyDirty) {

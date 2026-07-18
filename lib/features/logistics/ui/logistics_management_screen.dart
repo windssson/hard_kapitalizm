@@ -280,7 +280,6 @@ class _LogisticsManagementScreenState
         ref.invalidate(playerLogisticsCompanyProvider);
       }
       if (includePlayer) {
-        ref.invalidate(playerProvider);
       }
       AppSnackbar.show(
         context,
@@ -2067,7 +2066,6 @@ class _LogisticsManagementScreenState
     if (result['success'] == true) {
       ref.invalidate(playerLogisticsCompanyProvider);
       ref.invalidate(playerLogisticsConstructionProvider);
-      ref.invalidate(playerProvider);
       AppSnackbar.show(
         context,
         title: 'Başarılı',
@@ -2096,7 +2094,6 @@ class _LogisticsManagementScreenState
     if (result['success'] == true) {
       ref.invalidate(playerLogisticsCompanyProvider);
       ref.invalidate(playerLogisticsConstructionProvider);
-      ref.invalidate(playerProvider);
       AppSnackbar.show(
         context,
         title: 'Başarılı',
@@ -2125,7 +2122,6 @@ class _LogisticsManagementScreenState
     if (!context.mounted) return;
     ref.invalidate(playerLogisticsCompanyProvider);
     ref.invalidate(playerLogisticsConstructionProvider);
-    ref.invalidate(playerProvider);
   }
 
   Future<void> _showPurchaseVehicleSheet({
@@ -2193,7 +2189,6 @@ class _LogisticsManagementScreenState
                           if (result['success'] == true) {
                             ref.invalidate(playerLogisticsCompanyProvider);
                             ref.invalidate(logisticsVehicleListProvider);
-                            ref.invalidate(playerProvider);
                             if (context.mounted) {
                               Navigator.pop(context);
                               AppSnackbar.show(

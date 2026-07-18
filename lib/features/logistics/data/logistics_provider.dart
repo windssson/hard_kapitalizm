@@ -8,7 +8,6 @@ import 'package:hard_kapitalizm/features/logistics/models/logistics_finance_summ
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_performance_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_type_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const logisticsFuelProductId = 'YAKIT';
@@ -243,7 +242,6 @@ class LogisticsActionNotifier {
       if (syncProviders) {
         _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(playerLogisticsConstructionProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -292,7 +290,6 @@ class LogisticsActionNotifier {
       if (syncProviders) {
         _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(playerLogisticsConstructionProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -317,7 +314,6 @@ class LogisticsActionNotifier {
       if (syncProviders) {
         _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(playerLogisticsConstructionProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -349,7 +345,6 @@ class LogisticsActionNotifier {
         _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(logisticsFinanceSummaryProvider);
         _ref.invalidate(logisticsFinanceEntriesProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -422,7 +417,6 @@ class LogisticsActionNotifier {
         params: {'p_player_id': user.id, 'p_vehicle_id': vehicleId},
       );
       _ref.invalidate(logisticsVehicleListProvider);
-      _ref.invalidate(playerProvider);
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
       return response as Map<String, dynamic>;

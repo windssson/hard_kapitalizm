@@ -510,7 +510,7 @@ begin
         continue;
       end if;
 
-      if coalesce(v_slot.baz_sait_fiyati, v_slot.baz_satis_fiyati, 0) <= 0 then
+      if coalesce(v_slot.baz_satis_fiyati, 0) <= 0 then
         v_price_multiplier := 1.0;
       else
         v_price_ratio := v_slot.price / (v_slot.baz_satis_fiyati * public.store_quality_price_multiplier(v_slot.quality_level) * v_mkt_price_mult * v_brand_price_tolerance);

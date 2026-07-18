@@ -38,7 +38,6 @@ class _MineScreenState extends ConsumerState<MineScreen>
   void refreshRouteData() {
     ref.invalidate(mineListProvider);
     ref.invalidate(mineConstructionProvider);
-    ref.invalidate(playerProvider);
     ref.read(mineListProvider.future);
     ref.read(mineConstructionProvider.future);
   }
@@ -67,7 +66,6 @@ class _MineScreenState extends ConsumerState<MineScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(mineListProvider);
     ref.invalidate(mineConstructionProvider);
-    ref.invalidate(playerProvider);
     await Future.wait([
       ref.read(mineListProvider.future),
       ref.read(mineConstructionProvider.future),
@@ -104,7 +102,6 @@ class _MineScreenState extends ConsumerState<MineScreen>
 
     ref.invalidate(mineConstructionProvider);
     ref.invalidate(mineListProvider);
-    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {

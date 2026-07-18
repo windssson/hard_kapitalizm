@@ -14,7 +14,6 @@ import 'package:hard_kapitalizm/features/mine/models/mine_detail_model.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_list_item_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 // Maden Liste Provider
 final mineListProvider =
@@ -204,7 +203,6 @@ class MineActionNotifier {
         },
       );
       _ref.invalidate(mineConstructionProvider);
-      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -258,7 +256,6 @@ class MineActionNotifier {
       if (syncProviders) {
         _ref.invalidate(mineListProvider);
         _ref.invalidate(mineConstructionProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -286,7 +283,6 @@ class MineActionNotifier {
       if (syncProviders) {
         _ref.invalidate(mineListProvider);
         _ref.invalidate(mineConstructionProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -315,7 +311,6 @@ class MineActionNotifier {
       if (syncProviders) {
         _ref.invalidate(activeMineUpgradeProvider(mineId));
         _ref.invalidate(mineDetailProvider(mineId));
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -333,7 +328,6 @@ class MineActionNotifier {
       await tryCompleteDueBuildingUpgrades(_supabase);
       _ref.invalidate(mineListProvider);
       _ref.invalidate(mineDetailProvider);
-      _ref.invalidate(playerProvider);
       return {'success': true};
     } on PostgrestException catch (e) {
       return {'success': false, 'message': e.message, 'code': e.code};
@@ -368,7 +362,6 @@ class MineActionNotifier {
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(mineDetailProvider(entityId));
         }
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -400,7 +393,6 @@ class MineActionNotifier {
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(mineDetailProvider(entityId));
         }
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -433,7 +425,6 @@ class MineActionNotifier {
       if (syncProviders) {
         _ref.invalidate(activeMineBoostProvider(mineId));
         _ref.invalidate(mineDetailProvider(mineId));
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -465,7 +456,6 @@ class MineActionNotifier {
       if (syncProviders) {
         _ref.invalidate(activeMineBoostProvider(mineId));
         _ref.invalidate(mineDetailProvider(mineId));
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -610,7 +600,6 @@ class MineActionNotifier {
         );
     if (syncProviders) {
       _ref.invalidate(mineDetailProvider);
-      _ref.invalidate(playerProvider);
     }
     return result;
   }

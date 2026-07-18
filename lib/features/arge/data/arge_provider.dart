@@ -4,7 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_product_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 final argeProductsProvider =
     FutureProvider.autoDispose<List<ArgeProductModel>>((ref) async {
@@ -131,7 +130,6 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(playerArgeCenterProvider);
       _ref.invalidate(playerArgeConstructionProvider);
-      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -148,7 +146,6 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(activeArgeResearchesProvider);
       _ref.invalidate(argeProductsProvider);
-      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -163,7 +160,6 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(activeArgeResearchesProvider);
       _ref.invalidate(argeProductsProvider);
-      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -180,7 +176,6 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(activeArgeResearchesProvider);
       _ref.invalidate(argeProductsProvider);
-      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -228,7 +223,6 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(playerArgeCenterProvider);
       _ref.invalidate(playerArgeConstructionProvider);
-      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -251,7 +245,6 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(playerArgeCenterProvider);
       _ref.invalidate(playerArgeConstructionProvider);
-      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -272,7 +265,6 @@ class ArgeActionNotifier {
         },
       );
       _ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
-      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -286,7 +278,6 @@ class ArgeActionNotifier {
     try {
       await tryCompleteDueBuildingUpgrades(_supabase);
       _ref.invalidate(playerArgeCenterProvider);
-      _ref.invalidate(playerProvider);
       return {'success': true};
     } on PostgrestException catch (e) {
       return {'success': false, 'message': e.message, 'code': e.code};
@@ -308,7 +299,6 @@ class ArgeActionNotifier {
         },
       );
       _ref.invalidate(playerArgeCenterProvider);
-      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -330,7 +320,6 @@ class ArgeActionNotifier {
         },
       );
       _ref.invalidate(playerArgeCenterProvider);
-      _ref.invalidate(playerProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -339,3 +328,5 @@ class ArgeActionNotifier {
 }
 
 final argeActionProvider = Provider((ref) => ArgeActionNotifier(ref));
+
+

@@ -25,7 +25,6 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
@@ -72,7 +71,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     _refreshFactoryDetail();
     ref.invalidate(factoryListProvider);
     if (includePlayer) {
-      ref.invalidate(playerProvider);
     }
 
     if (includeWarehouseList ||

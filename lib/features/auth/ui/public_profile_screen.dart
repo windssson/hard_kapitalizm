@@ -1069,7 +1069,6 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
         type: SnackbarType.success,
       );
       widget.ref.invalidate(warehouseListProvider);
-      widget.ref.invalidate(playerProvider);
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;

@@ -42,7 +42,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         if (synced) {
           _handleCompletedGoogleLink();
           ref.invalidate(authIdentityProvider);
-          ref.invalidate(playerProvider);
         }
       } catch (_) {}
     });
@@ -67,7 +66,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
       _handleCompletedGoogleLink();
       ref.invalidate(authIdentityProvider);
-      ref.invalidate(playerProvider);
     });
   }
 
@@ -1194,7 +1192,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           .read(authManagerProvider)
           .unlinkGoogleIdentity();
       ref.invalidate(authIdentityProvider);
-      ref.invalidate(playerProvider);
       if (!mounted) return;
 
       AppSnackbar.show(

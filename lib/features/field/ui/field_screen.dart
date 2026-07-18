@@ -13,7 +13,6 @@ import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 
@@ -66,7 +65,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(fieldListProvider);
     ref.invalidate(fieldConstructionProvider);
-    ref.invalidate(playerProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
@@ -98,7 +96,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
 
     ref.invalidate(fieldConstructionProvider);
     ref.invalidate(fieldListProvider);
-    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {

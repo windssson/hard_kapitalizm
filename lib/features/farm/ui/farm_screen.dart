@@ -13,7 +13,6 @@ import 'package:hard_kapitalizm/core/widgets/construction_countdown_card.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 
@@ -32,7 +31,6 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   void refreshRouteData() {
     ref.invalidate(farmListProvider);
     ref.invalidate(farmConstructionProvider);
-    ref.invalidate(playerProvider);
     ref.read(farmListProvider.future);
     ref.read(farmConstructionProvider.future);
   }
@@ -61,7 +59,6 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
   Future<void> _refreshAll() async {
     ref.invalidate(farmListProvider);
     ref.invalidate(farmConstructionProvider);
-    ref.invalidate(playerProvider);
   }
 
   Future<void> _completeConstruction(String constructionId) async {
@@ -101,7 +98,6 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
     ref.invalidate(farmConstructionProvider);
     ref.invalidate(farmListProvider);
-    ref.invalidate(playerProvider);
 
     if (!mounted) return;
     if (result['success'] == true) {

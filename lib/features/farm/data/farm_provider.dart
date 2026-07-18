@@ -13,7 +13,6 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 
@@ -233,7 +232,6 @@ class FarmActionNotifier {
         },
       );
       _ref.invalidate(farmConstructionProvider);
-      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -290,7 +288,6 @@ class FarmActionNotifier {
       if (syncProviders) {
         _ref.invalidate(farmListProvider);
         _ref.invalidate(farmConstructionProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -318,7 +315,6 @@ class FarmActionNotifier {
       if (syncProviders) {
         _ref.invalidate(farmListProvider);
         _ref.invalidate(farmConstructionProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -347,7 +343,6 @@ class FarmActionNotifier {
       if (syncProviders) {
         _ref.invalidate(activeFarmUpgradeProvider(farmId));
         _ref.invalidate(farmDetailProvider(farmId));
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -365,7 +360,6 @@ class FarmActionNotifier {
       await tryCompleteDueBuildingUpgrades(_supabase);
       _ref.invalidate(farmListProvider);
       _ref.invalidate(farmDetailProvider);
-      _ref.invalidate(playerProvider);
       return {'success': true};
     } on PostgrestException catch (e) {
       return {'success': false, 'message': e.message, 'code': e.code};
@@ -400,7 +394,6 @@ class FarmActionNotifier {
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(farmDetailProvider(entityId));
         }
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -432,7 +425,6 @@ class FarmActionNotifier {
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(farmDetailProvider(entityId));
         }
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -465,7 +457,6 @@ class FarmActionNotifier {
       if (syncProviders) {
         _ref.invalidate(activeFarmBoostProvider(farmId));
         _ref.invalidate(farmDetailProvider(farmId));
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -497,7 +488,6 @@ class FarmActionNotifier {
       if (syncProviders) {
         _ref.invalidate(activeFarmBoostProvider(farmId));
         _ref.invalidate(farmDetailProvider(farmId));
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -526,7 +516,6 @@ class FarmActionNotifier {
       if (syncProviders) {
         _ref.invalidate(farmListProvider);
         _ref.invalidate(farmDetailProvider(farmId));
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -724,7 +713,6 @@ class FarmActionNotifier {
         );
     if (syncProviders) {
       _ref.invalidate(farmDetailProvider);
-      _ref.invalidate(playerProvider);
     }
     await _refreshAttentionNotifications();
     return result;
@@ -748,7 +736,6 @@ class FarmActionNotifier {
         );
     if (syncProviders) {
       _ref.invalidate(farmDetailProvider);
-      _ref.invalidate(playerProvider);
     }
     await _refreshAttentionNotifications();
     return result;

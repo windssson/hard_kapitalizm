@@ -13,7 +13,6 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 final fieldListProvider =
     FutureProvider<List<FieldListItemModel>>((ref) async {
@@ -210,7 +209,6 @@ class FieldActionNotifier {
         },
       );
       _ref.invalidate(fieldConstructionProvider);
-      _ref.invalidate(playerProvider);
       return response as Map<String, dynamic>;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -267,7 +265,6 @@ class FieldActionNotifier {
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
         _ref.invalidate(fieldConstructionProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -295,7 +292,6 @@ class FieldActionNotifier {
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
         _ref.invalidate(fieldConstructionProvider);
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -324,7 +320,6 @@ class FieldActionNotifier {
       if (syncProviders) {
         _ref.invalidate(activeFieldUpgradeProvider(fieldId));
         _ref.invalidate(fieldDetailProvider(fieldId));
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -342,7 +337,6 @@ class FieldActionNotifier {
       await tryCompleteDueBuildingUpgrades(_supabase);
       _ref.invalidate(fieldListProvider);
       _ref.invalidate(fieldDetailProvider);
-      _ref.invalidate(playerProvider);
       return {'success': true};
     } on PostgrestException catch (e) {
       return {'success': false, 'message': e.message, 'code': e.code};
@@ -377,7 +371,6 @@ class FieldActionNotifier {
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(fieldDetailProvider(entityId));
         }
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -409,7 +402,6 @@ class FieldActionNotifier {
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(fieldDetailProvider(entityId));
         }
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -442,7 +434,6 @@ class FieldActionNotifier {
       if (syncProviders) {
         _ref.invalidate(activeFieldBoostProvider(fieldId));
         _ref.invalidate(fieldDetailProvider(fieldId));
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -474,7 +465,6 @@ class FieldActionNotifier {
       if (syncProviders) {
         _ref.invalidate(activeFieldBoostProvider(fieldId));
         _ref.invalidate(fieldDetailProvider(fieldId));
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -503,7 +493,6 @@ class FieldActionNotifier {
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
         _ref.invalidate(fieldDetailProvider(fieldId));
-        _ref.invalidate(playerProvider);
       }
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -774,7 +763,6 @@ class FieldActionNotifier {
         );
     if (syncProviders) {
       _ref.invalidate(fieldDetailProvider);
-      _ref.invalidate(playerProvider);
     }
     return result;
   }
@@ -797,7 +785,6 @@ class FieldActionNotifier {
         );
     if (syncProviders) {
       _ref.invalidate(fieldDetailProvider);
-      _ref.invalidate(playerProvider);
     }
     return result;
   }

@@ -1,16 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_detail_page_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_history_item_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_performance_model.dart';
-import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final storeHistoryDirtyProvider = StateProvider.family<bool, String>(
@@ -219,19 +221,26 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
   @override
   Future<StoreDetailPageModel> build() async {
     final page = await _fetchStoreDetailPage(_storeId);
-    ref.invalidate(taxDebtProvider);
-    ref.invalidate(playerTaxProvider);
-    ref.invalidate(playerProvider);
+    // Mağaza açıldığında satış hesaplanmış olabilir; player cash ve
+    // history/performance dirty flaglerini sync et.
+    _applyPageChanges(page);
     return page;
   }
 
   Future<StoreDetailPageModel> refresh() async {
     final page = await _fetchStoreDetailPage(_storeId);
-    ref.invalidate(taxDebtProvider);
-    ref.invalidate(playerTaxProvider);
-    ref.invalidate(playerProvider);
+    _applyPageChanges(page);
     state = AsyncData(page);
     return page;
+  }
+
+  void _applyPageChanges(StoreDetailPageModel page) {
+    // Player cash/gold/level patch (open_store_detail_page changed.player bloğunu döner)
+    if (page.changed.player != null) {
+      ref.read(playerProvider.notifier).replacePlayer(page.changed.player!);
+    }
+    // TODO: taxDebt patch — open_store_detail_page response'una tax_dirty eklenmesi gerekiyor.
+    // Şu an tax provider invalidate yapılmıyor; tax ekranı açıldığında yeniden fetch eder.
   }
 
   void replacePage(StoreDetailPageModel page) {
@@ -368,6 +377,67 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         store: current.store.copyWith(slots: slots),
       ),
     );
+  }
+  /// patchActiveBoost: Aktif boost bilgisini günceller.
+  void patchActiveBoost(BuildingBoostModel? boost) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(activeBoost: boost));
+  }
+
+  /// patchActiveUpgrade: Aktif upgrade bilgisini günceller.
+  void patchActiveUpgrade(BuildingUpgradeModel? upgrade) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(activeUpgrade: upgrade));
+  }
+
+  /// patchStoreWarehouse: Mağaza deposunu günceller.
+  void patchStoreWarehouse(StoreWarehouseSummaryModel? warehouse) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(storeWarehouse: warehouse));
+  }
+
+  /// patchStoreLevel: Mağaza seviyesini günceller (liste + detay).
+  void patchStoreLevel(int level) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(store: current.store.copyWith(level: level)),
+    );
+  }
+
+  /// addSlot: Yeni bir mağaza slotu ekler.
+  void addSlot(StoreSlotModel slot) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedSlots = [...current.store.slots, slot];
+    state = AsyncData(
+      current.copyWith(store: current.store.copyWith(slots: updatedSlots)),
+    );
+  }
+
+  /// replaceSlot: Slot'u tamamen değiştirir.
+  void replaceSlot(StoreSlotModel slot) {
+    _patchStoreSlot(
+      slotId: slot.id,
+      patcher: (_) => slot,
+    );
+  }
+
+  /// patchSlotQuantity: Slot miktarını günceller.
+  void patchSlotQuantity({required String slotId, required int quantity}) {
+    _patchStoreSlot(
+      slotId: slotId,
+      patcher: (slot) => slot.copyWith(quantity: quantity),
+    );
+  }
+
+  /// applyMutation: Ham RPC response map'ini uygular.
+  /// Player ve common dirty flagleri MutationSyncService üzerinden sync eder.
+  void applyMutation(Map<String, dynamic> response) {
+    ref.read(mutationSyncServiceProvider).applyRaw(response);
   }
 }
 

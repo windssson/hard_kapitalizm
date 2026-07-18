@@ -169,4 +169,20 @@ class FactoryDetailModel {
           )
           .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));
+
+  FactoryDetailModel copyWith({
+    FactoryModel? factory,
+    FactoryTypeDetailModel? factoryType,
+    String? cityName,
+    ProductModel? product,
+    List<FactoryProductionInventoryModel>? inventories,
+  }) {
+    return FactoryDetailModel(
+      factory: factory ?? this.factory,
+      factoryType: factoryType ?? this.factoryType,
+      cityName: cityName ?? this.cityName,
+      product: product ?? this.product,
+      inventories: inventories ?? this.inventories,
+    );
+  }
 }

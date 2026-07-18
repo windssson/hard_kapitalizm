@@ -3,7 +3,6 @@ import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
@@ -477,7 +476,6 @@ class WarehouseActionNotifier {
         _ref.invalidate(activeWarehouseUpgradeProvider(warehouseId));
         _ref.invalidate(warehouseDetailProvider(warehouseId));
         _ref.invalidate(warehouseListProvider);
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -489,7 +487,6 @@ class WarehouseActionNotifier {
     try {
       await _tryCompleteDueWarehouseUpgrades(_supabase);
       _ref.invalidate(warehouseListProvider);
-      _ref.invalidate(playerProvider);
       return {'success': true};
     } on PostgrestException catch (e) {
       return {'success': false, 'message': e.message, 'code': e.code};
@@ -523,7 +520,6 @@ class WarehouseActionNotifier {
           _ref.invalidate(activeWarehouseUpgradeProvider(entityId));
           _ref.invalidate(warehouseDetailProvider(entityId));
         }
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {
@@ -556,7 +552,6 @@ class WarehouseActionNotifier {
           _ref.invalidate(activeWarehouseUpgradeProvider(entityId));
           _ref.invalidate(warehouseDetailProvider(entityId));
         }
-        _ref.invalidate(playerProvider);
       }
       return responseMap;
     } catch (e) {

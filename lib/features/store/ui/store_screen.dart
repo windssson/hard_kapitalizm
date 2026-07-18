@@ -14,7 +14,6 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
@@ -487,7 +486,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     if (success) {
       await ref.read(storesListProvider.notifier).refresh();
       ref.invalidate(playerBrandCompanyProvider);
-      ref.invalidate(playerProvider);
     }
   }
 

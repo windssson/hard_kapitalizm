@@ -91,7 +91,6 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     ref.invalidate(playerArgeConstructionProvider);
     ref.invalidate(activeArgeResearchesProvider);
     ref.invalidate(activeArgeResearchProvider);
-    ref.invalidate(playerProvider);
     if (centerId != null && centerId.isNotEmpty) {
       ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
     }

@@ -113,7 +113,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     if (_lockedSourceCityId != null) {
       ref.invalidate(marketCityListingsProvider(_lockedSourceCityId!));
     }
-    ref.invalidate(playerProvider);
     ref.invalidate(buyerTransferMapProvider);
     ref.invalidate(buyerTransferHistoryProvider);
     if (_activeWarehouseId.isNotEmpty) {

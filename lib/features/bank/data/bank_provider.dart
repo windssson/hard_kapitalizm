@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/bank/models/loan_model.dart';
 import 'package:hard_kapitalizm/features/bank/models/deposit_model.dart';
 
@@ -72,7 +71,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.invalidate(playerProvider);
         _ref.invalidate(playerLoansProvider);
         _ref.invalidate(loanLimitProvider);
       }
@@ -95,7 +93,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.invalidate(playerProvider);
         _ref.invalidate(playerLoansProvider);
         _ref.invalidate(loanLimitProvider);
       }
@@ -118,7 +115,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.invalidate(playerProvider);
         _ref.invalidate(playerDepositsProvider);
       }
       return result;
@@ -140,7 +136,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.invalidate(playerProvider);
         _ref.invalidate(playerDepositsProvider);
       }
       return result;
@@ -162,7 +157,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.invalidate(playerProvider);
         _ref.invalidate(playerDepositsProvider);
       }
       return result;
@@ -178,3 +172,5 @@ class BankActionNotifier {
 final bankActionProvider = Provider<BankActionNotifier>((ref) {
   return BankActionNotifier(ref);
 });
+
+

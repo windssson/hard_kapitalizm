@@ -91,6 +91,59 @@ class PlayerModel {
     );
   }
 
+  PlayerModel copyWith({
+    String? id,
+    String? playerName,
+    String? companyName,
+    String? avatarId,
+    String? googleAvatarUrl,
+    int? level,
+    int? experience,
+    int? currentLevelStartExperience,
+    int? nextLevelTotalExperience,
+    int? currentLevelExperience,
+    int? nextLevelRequiredExperience,
+    int? remainingExperienceToNextLevel,
+    double? expProgressRatio,
+    int? achievementUnlockedCount,
+    int? achievementTotalCount,
+    List<AchievementBadgeModel>? featuredBadges,
+    double? cash,
+    double? gold,
+    double? companyValue,
+    DateTime? createdAt,
+  }) {
+    return PlayerModel(
+      id: id ?? this.id,
+      playerName: playerName ?? this.playerName,
+      companyName: companyName ?? this.companyName,
+      avatarId: avatarId ?? this.avatarId,
+      googleAvatarUrl: googleAvatarUrl ?? this.googleAvatarUrl,
+      level: level ?? this.level,
+      experience: experience ?? this.experience,
+      currentLevelStartExperience:
+          currentLevelStartExperience ?? this.currentLevelStartExperience,
+      nextLevelTotalExperience:
+          nextLevelTotalExperience ?? this.nextLevelTotalExperience,
+      currentLevelExperience:
+          currentLevelExperience ?? this.currentLevelExperience,
+      nextLevelRequiredExperience:
+          nextLevelRequiredExperience ?? this.nextLevelRequiredExperience,
+      remainingExperienceToNextLevel:
+          remainingExperienceToNextLevel ?? this.remainingExperienceToNextLevel,
+      expProgressRatio: expProgressRatio ?? this.expProgressRatio,
+      achievementUnlockedCount:
+          achievementUnlockedCount ?? this.achievementUnlockedCount,
+      achievementTotalCount:
+          achievementTotalCount ?? this.achievementTotalCount,
+      featuredBadges: featuredBadges ?? this.featuredBadges,
+      cash: cash ?? this.cash,
+      gold: gold ?? this.gold,
+      companyValue: companyValue ?? this.companyValue,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

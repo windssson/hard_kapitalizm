@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 class DailyStreakData {
   final int streakCount; // 0 to 7
@@ -147,7 +146,7 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
     ));
 
     // Invalidate player so cash/gold top bar updates:
-    ref.invalidate(playerProvider);
+    // player state managed by PlayerNotifier.applyChanges() � no invalidate needed
 
     return true;
   }
@@ -157,3 +156,4 @@ final dailyStreakProvider =
     AsyncNotifierProvider<DailyStreakNotifier, DailyStreakData>(() {
   return DailyStreakNotifier();
 });
+

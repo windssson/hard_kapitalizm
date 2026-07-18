@@ -19,7 +19,6 @@ import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/price_sparkline.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
@@ -256,7 +255,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     ref.invalidate(buyerTransferMapProvider);
     ref.invalidate(buyerTransferHistoryProvider);
     if (refreshPlayer) {
-      ref.invalidate(playerProvider);
     }
     await ref.read(warehouseDetailProvider(widget.warehouseId).future);
     await ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).future);

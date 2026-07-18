@@ -7,7 +7,6 @@ import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_dashboard_model.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_model.dart';
@@ -42,7 +41,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   Future<void> _refresh() async {
     ref.invalidate(playerMissionDashboardProvider);
     await ref.read(playerMissionDashboardProvider.future);
-    ref.invalidate(playerProvider);
   }
 
   Future<void> _claimMissionReward(PlayerMissionModel mission) async {

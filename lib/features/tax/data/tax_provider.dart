@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 
 class PlayerTaxModel {
   final double taxDebt;
@@ -76,7 +75,6 @@ class TaxActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.invalidate(playerProvider);
         _ref.invalidate(taxDebtProvider);
         _ref.invalidate(playerTaxProvider);
       }
@@ -93,3 +91,5 @@ class TaxActionNotifier {
 final taxActionProvider = Provider<TaxActionNotifier>((ref) {
   return TaxActionNotifier(ref);
 });
+
+

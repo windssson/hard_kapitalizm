@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_dashboard_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -42,7 +41,6 @@ class MissionActionNotifier {
       );
 
       _ref.invalidate(playerMissionDashboardProvider);
-      _ref.invalidate(playerProvider);
 
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
@@ -54,3 +52,5 @@ class MissionActionNotifier {
 final missionActionProvider = Provider<MissionActionNotifier>((ref) {
   return MissionActionNotifier(ref);
 });
+
+
