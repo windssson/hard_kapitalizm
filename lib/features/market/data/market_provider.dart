@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
@@ -104,9 +105,18 @@ final warehouseCapacityStatusProvider =
       );
     });
 class MarketActionNotifier {
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   final TransferVehicleOptionsService _vehicleOptionsService =
       TransferVehicleOptionsService();
+
+  MarketActionNotifier(this._ref);
+
+  Map<String, dynamic> _sync(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
 
   Future<Map<String, dynamic>> startMultiMarketTransfer({
     required String buyerWarehouseId,
@@ -130,7 +140,7 @@ class MarketActionNotifier {
         },
       );
 
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -157,7 +167,7 @@ class MarketActionNotifier {
   }
 }
 
-final marketActionProvider = Provider((ref) => MarketActionNotifier());
+final marketActionProvider = Provider((ref) => MarketActionNotifier(ref));
 
 final playerMarketListingsProvider =
     FutureProvider.family<List<MarketListingModel>, String>((

@@ -6,6 +6,7 @@ import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/production_product_service.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
@@ -183,6 +184,12 @@ class MineActionNotifier {
 
   MineActionNotifier(this._ref);
 
+  Map<String, dynamic> _sync(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
+
   Future<Map<String, dynamic>> createMine({
     required String cityId,
     required String typeId,
@@ -203,7 +210,7 @@ class MineActionNotifier {
         },
       );
       _ref.invalidate(mineConstructionProvider);
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -224,11 +231,12 @@ class MineActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(mineListProvider);
         _ref.invalidate(mineConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -253,11 +261,12 @@ class MineActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(mineListProvider);
         _ref.invalidate(mineConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -280,11 +289,12 @@ class MineActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(mineListProvider);
         _ref.invalidate(mineConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -308,11 +318,12 @@ class MineActionNotifier {
           'p_entity_id': mineId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(activeMineUpgradeProvider(mineId));
         _ref.invalidate(mineDetailProvider(mineId));
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -355,15 +366,15 @@ class MineActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(mineListProvider);
-        final entityId = responseMap['entity_id']?.toString();
+        final entityId = result['entity_id']?.toString();
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(mineDetailProvider(entityId));
         }
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -386,15 +397,15 @@ class MineActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(mineListProvider);
-        final entityId = responseMap['entity_id']?.toString();
+        final entityId = result['entity_id']?.toString();
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(mineDetailProvider(entityId));
         }
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -422,11 +433,12 @@ class MineActionNotifier {
           'p_star_cost': starCost,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(activeMineBoostProvider(mineId));
         _ref.invalidate(mineDetailProvider(mineId));
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -452,12 +464,12 @@ class MineActionNotifier {
           'p_duration_minutes': durationMinutes,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(activeMineBoostProvider(mineId));
         _ref.invalidate(mineDetailProvider(mineId));
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

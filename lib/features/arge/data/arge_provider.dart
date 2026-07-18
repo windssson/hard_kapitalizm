@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
@@ -114,6 +115,12 @@ class ArgeActionNotifier {
 
   ArgeActionNotifier(this._ref);
 
+  Map<String, dynamic> _sync(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
+
   Future<Map<String, dynamic>> startCenterConstruction({
     String name = 'AR-GE Merkezi',
   }) async {
@@ -130,7 +137,7 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(playerArgeCenterProvider);
       _ref.invalidate(playerArgeConstructionProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -146,7 +153,7 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(activeArgeResearchesProvider);
       _ref.invalidate(argeProductsProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -160,7 +167,7 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(activeArgeResearchesProvider);
       _ref.invalidate(argeProductsProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -176,7 +183,7 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(activeArgeResearchesProvider);
       _ref.invalidate(argeProductsProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -201,7 +208,7 @@ class ArgeActionNotifier {
         _ref.invalidate(playerArgeCenterProvider);
         _ref.invalidate(playerArgeConstructionProvider);
       }
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -223,7 +230,7 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(playerArgeCenterProvider);
       _ref.invalidate(playerArgeConstructionProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -245,7 +252,7 @@ class ArgeActionNotifier {
       );
       _ref.invalidate(playerArgeCenterProvider);
       _ref.invalidate(playerArgeConstructionProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -265,7 +272,7 @@ class ArgeActionNotifier {
         },
       );
       _ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -299,7 +306,7 @@ class ArgeActionNotifier {
         },
       );
       _ref.invalidate(playerArgeCenterProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -320,7 +327,7 @@ class ArgeActionNotifier {
         },
       );
       _ref.invalidate(playerArgeCenterProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

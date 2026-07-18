@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PlayerTaxModel {
@@ -77,6 +78,7 @@ class TaxActionNotifier {
       if (result['success'] == true) {
         _ref.invalidate(taxDebtProvider);
         _ref.invalidate(playerTaxProvider);
+        _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;
     } catch (e) {

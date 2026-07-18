@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_type_model.dart';
@@ -224,6 +225,12 @@ class LogisticsActionNotifier {
 
   LogisticsActionNotifier(this._ref);
 
+  Map<String, dynamic> _sync(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
+
   Future<Map<String, dynamic>> createLogisticsCompany({
     required String typeId,
     required String name,
@@ -243,7 +250,7 @@ class LogisticsActionNotifier {
         _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(playerLogisticsConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -254,9 +261,7 @@ class LogisticsActionNotifier {
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -267,7 +272,7 @@ class LogisticsActionNotifier {
         _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(playerLogisticsConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -278,9 +283,7 @@ class LogisticsActionNotifier {
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -291,7 +294,7 @@ class LogisticsActionNotifier {
         _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(playerLogisticsConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -302,9 +305,7 @@ class LogisticsActionNotifier {
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -315,7 +316,7 @@ class LogisticsActionNotifier {
         _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(playerLogisticsConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -327,9 +328,7 @@ class LogisticsActionNotifier {
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -346,7 +345,7 @@ class LogisticsActionNotifier {
         _ref.invalidate(logisticsFinanceSummaryProvider);
         _ref.invalidate(logisticsFinanceEntriesProvider);
       }
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -358,9 +357,7 @@ class LogisticsActionNotifier {
     required double rentalPrice,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     if (isAvailableForRent && rentalPrice <= 0) {
       return {
@@ -380,7 +377,7 @@ class LogisticsActionNotifier {
         },
       );
       _ref.invalidate(logisticsVehicleListProvider);
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -388,9 +385,7 @@ class LogisticsActionNotifier {
 
   Future<Map<String, dynamic>> refuelVehicle(String vehicleId) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -399,7 +394,7 @@ class LogisticsActionNotifier {
       );
       _ref.invalidate(logisticsVehicleListProvider);
       _ref.invalidate(playerLogisticsCompanyProvider);
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -407,9 +402,7 @@ class LogisticsActionNotifier {
 
   Future<Map<String, dynamic>> repairVehicle(String vehicleId) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -419,7 +412,7 @@ class LogisticsActionNotifier {
       _ref.invalidate(logisticsVehicleListProvider);
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -430,6 +423,9 @@ class LogisticsActionNotifier {
     required String warehouseSlotId,
     required int quantity,
   }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
     try {
       final response = await _supabase.rpc(
         'transfer_warehouse_fuel_to_logistics_company',
@@ -444,7 +440,7 @@ class LogisticsActionNotifier {
       _ref.invalidate(logisticsVehicleListProvider);
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -455,9 +451,7 @@ class LogisticsActionNotifier {
     required bool isActive,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
@@ -469,7 +463,7 @@ class LogisticsActionNotifier {
         },
       );
       _ref.invalidate(logisticsVehicleListProvider);
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -481,9 +475,7 @@ class LogisticsActionNotifier {
     required String cityBId,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     if (cityAId == cityBId) {
       return {
@@ -503,7 +495,7 @@ class LogisticsActionNotifier {
         },
       );
       _ref.invalidate(logisticsVehicleListProvider);
-      final result = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
 
       return {
         'success': true,

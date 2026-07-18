@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
@@ -343,6 +344,12 @@ class WarehouseActionNotifier {
   final TransferVehicleOptionsService _vehicleOptionsService =
       TransferVehicleOptionsService();
 
+  Map<String, dynamic> _sync(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
+
   Future<Map<String, dynamic>> addProductToWarehouse({
     required String warehouseId,
     required String productId,
@@ -365,7 +372,7 @@ class WarehouseActionNotifier {
           'p_cost': cost,
         },
       );
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -390,7 +397,8 @@ class WarehouseActionNotifier {
           'p_name': name,
         },
       );
-      return response as Map<String, dynamic>;
+      _ref.invalidate(warehouseListProvider);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -410,7 +418,8 @@ class WarehouseActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      return response as Map<String, dynamic>;
+      _ref.invalidate(warehouseListProvider);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -430,7 +439,8 @@ class WarehouseActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      return response as Map<String, dynamic>;
+      _ref.invalidate(warehouseListProvider);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -448,7 +458,8 @@ class WarehouseActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      return response as Map<String, dynamic>;
+      _ref.invalidate(warehouseListProvider);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -459,31 +470,34 @@ class WarehouseActionNotifier {
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
-        'start_warehouse_upgrade',
+        'start_building_upgrade',
         params: {
           'p_player_id': user.id,
-          'p_warehouse_id': warehouseId,
+          'p_building_kind': 'warehouse',
+          'p_entity_id': warehouseId,
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
-      if (syncProviders && responseMap['success'] == true) {
+      final result = _sync(responseMap);
+      if (syncProviders && result['success'] == true) {
+        _ref.invalidate(warehouseListProvider);
         _ref.invalidate(activeWarehouseUpgradeProvider(warehouseId));
         _ref.invalidate(warehouseDetailProvider(warehouseId));
-        _ref.invalidate(warehouseListProvider);
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> completeDueWarehouseUpgrades() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
     try {
       await _tryCompleteDueWarehouseUpgrades(_supabase);
       _ref.invalidate(warehouseListProvider);
@@ -500,28 +514,26 @@ class WarehouseActionNotifier {
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
-        'finish_warehouse_upgrade_with_gold',
+        'finish_building_upgrade_with_gold',
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
-      if (syncProviders && responseMap['success'] == true) {
-        final entityId = responseMap['entity_id']?.toString();
+      final result = _sync(response);
+      if (syncProviders && result['success'] == true) {
+        final entityId = result['entity_id']?.toString();
         _ref.invalidate(warehouseListProvider);
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(activeWarehouseUpgradeProvider(entityId));
           _ref.invalidate(warehouseDetailProvider(entityId));
         }
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -532,28 +544,26 @@ class WarehouseActionNotifier {
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
       final response = await _supabase.rpc(
-        'reduce_warehouse_upgrade_time_with_ad',
+        'reduce_building_upgrade_time_with_ad',
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
-      if (syncProviders && responseMap['success'] == true) {
-        final entityId = responseMap['entity_id']?.toString();
+      final result = _sync(response);
+      if (syncProviders && result['success'] == true) {
+        final entityId = result['entity_id']?.toString();
         _ref.invalidate(warehouseListProvider);
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(activeWarehouseUpgradeProvider(entityId));
           _ref.invalidate(warehouseDetailProvider(entityId));
         }
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -579,7 +589,7 @@ class WarehouseActionNotifier {
           'p_price': price,
         },
       );
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -601,7 +611,7 @@ class WarehouseActionNotifier {
           'p_is_available_for_sale': isAvailableForSale,
         },
       );
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -609,11 +619,12 @@ class WarehouseActionNotifier {
 
   Future<List<Map<String, dynamic>>> getPlayerActiveWarehousesBasic() async {
     final user = _supabase.auth.currentUser;
-    if (user == null) {
-      throw Exception('Oturum acilmamis.');
-    }
+    if (user == null) throw Exception('Oturum acilmamis.');
 
-    final response = await _supabase.rpc('get_player_active_warehouses_basic');
+    final response = await _supabase.rpc(
+      'get_player_active_warehouses_basic',
+    );
+
     return (response as List<dynamic>)
         .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
@@ -660,7 +671,7 @@ class WarehouseActionNotifier {
           'p_vehicle_id': vehicleId,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -679,7 +690,7 @@ class WarehouseActionNotifier {
         'complete_logistics_transfer',
         params: {'p_transfer_id': transferId},
       );
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -698,7 +709,7 @@ class WarehouseActionNotifier {
         'finish_logistics_transfer_with_gold',
         params: {'p_transfer_id': transferId},
       );
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -717,7 +728,7 @@ class WarehouseActionNotifier {
         'finish_logistics_transfer_with_ad_reward',
         params: {'p_transfer_id': transferId},
       );
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -737,7 +748,7 @@ class WarehouseActionNotifier {
           'p_warehouse_slot_id': warehouseSlotId,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

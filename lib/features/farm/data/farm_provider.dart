@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/data/production_product_service.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
@@ -200,6 +201,12 @@ class FarmActionNotifier {
 
   FarmActionNotifier(this._ref);
 
+  Map<String, dynamic> _sync(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
+
   Future<void> _refreshAttentionNotifications() async {
     try {
       await _supabase.rpc('refresh_player_attention_notifications');
@@ -232,7 +239,7 @@ class FarmActionNotifier {
         },
       );
       _ref.invalidate(farmConstructionProvider);
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -241,8 +248,7 @@ class FarmActionNotifier {
   Future<Map<String, dynamic>> completeConstruction(
     String constructionId, {
     bool syncProviders = true,
-  }
-  ) async {
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -256,11 +262,12 @@ class FarmActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(farmListProvider);
         _ref.invalidate(farmConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -285,11 +292,12 @@ class FarmActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(farmListProvider);
         _ref.invalidate(farmConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -312,11 +320,12 @@ class FarmActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(farmListProvider);
         _ref.invalidate(farmConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -340,11 +349,12 @@ class FarmActionNotifier {
           'p_entity_id': farmId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(activeFarmUpgradeProvider(farmId));
         _ref.invalidate(farmDetailProvider(farmId));
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -387,15 +397,15 @@ class FarmActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(farmListProvider);
-        final entityId = responseMap['entity_id']?.toString();
+        final entityId = result['entity_id']?.toString();
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(farmDetailProvider(entityId));
         }
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -418,15 +428,15 @@ class FarmActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(farmListProvider);
-        final entityId = responseMap['entity_id']?.toString();
+        final entityId = result['entity_id']?.toString();
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(farmDetailProvider(entityId));
         }
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -454,11 +464,12 @@ class FarmActionNotifier {
           'p_star_cost': starCost,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(activeFarmBoostProvider(farmId));
         _ref.invalidate(farmDetailProvider(farmId));
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -484,12 +495,12 @@ class FarmActionNotifier {
           'p_duration_minutes': durationMinutes,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(activeFarmBoostProvider(farmId));
         _ref.invalidate(farmDetailProvider(farmId));
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -513,11 +524,12 @@ class FarmActionNotifier {
           'p_owner_id': farmId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(farmListProvider);
         _ref.invalidate(farmDetailProvider(farmId));
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

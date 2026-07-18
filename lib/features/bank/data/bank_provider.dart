@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/bank/models/loan_model.dart';
 import 'package:hard_kapitalizm/features/bank/models/deposit_model.dart';
 
@@ -73,6 +74,8 @@ class BankActionNotifier {
       if (result['success'] == true) {
         _ref.invalidate(playerLoansProvider);
         _ref.invalidate(loanLimitProvider);
+        // TODO: Backend take_loan RPC should return changed player profile/balance. For now, fallback to invalidating playerProvider.
+        _ref.invalidate(playerProvider);
       }
       return result;
     } catch (e) {
@@ -95,6 +98,8 @@ class BankActionNotifier {
       if (result['success'] == true) {
         _ref.invalidate(playerLoansProvider);
         _ref.invalidate(loanLimitProvider);
+        // TODO: Backend pay_loan_installment RPC should return changed player profile/balance. For now, fallback to invalidating playerProvider.
+        _ref.invalidate(playerProvider);
       }
       return result;
     } catch (e) {
@@ -116,6 +121,8 @@ class BankActionNotifier {
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
         _ref.invalidate(playerDepositsProvider);
+        // TODO: Backend create_deposit RPC should return changed player profile/balance. For now, fallback to invalidating playerProvider.
+        _ref.invalidate(playerProvider);
       }
       return result;
     } catch (e) {
@@ -137,6 +144,8 @@ class BankActionNotifier {
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
         _ref.invalidate(playerDepositsProvider);
+        // TODO: Backend claim_deposit RPC should return changed player profile/balance. For now, fallback to invalidating playerProvider.
+        _ref.invalidate(playerProvider);
       }
       return result;
     } catch (e) {
@@ -158,6 +167,8 @@ class BankActionNotifier {
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
         _ref.invalidate(playerDepositsProvider);
+        // TODO: Backend withdraw_deposit_early RPC should return changed player profile/balance. For now, fallback to invalidating playerProvider.
+        _ref.invalidate(playerProvider);
       }
       return result;
     } catch (e) {

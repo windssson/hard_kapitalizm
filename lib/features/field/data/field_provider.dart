@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
@@ -187,6 +188,12 @@ class FieldActionNotifier {
 
   FieldActionNotifier(this._ref);
 
+  Map<String, dynamic> _sync(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
+
   Future<Map<String, dynamic>> createField({
     required String cityId,
     required String typeId,
@@ -209,7 +216,7 @@ class FieldActionNotifier {
         },
       );
       _ref.invalidate(fieldConstructionProvider);
-      return response as Map<String, dynamic>;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -233,11 +240,12 @@ class FieldActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
         _ref.invalidate(fieldConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -262,11 +270,12 @@ class FieldActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
         _ref.invalidate(fieldConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -289,11 +298,12 @@ class FieldActionNotifier {
           'p_construction_id': constructionId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
         _ref.invalidate(fieldConstructionProvider);
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -317,11 +327,12 @@ class FieldActionNotifier {
           'p_entity_id': fieldId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(activeFieldUpgradeProvider(fieldId));
         _ref.invalidate(fieldDetailProvider(fieldId));
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -364,15 +375,15 @@ class FieldActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
-        final entityId = responseMap['entity_id']?.toString();
+        final entityId = result['entity_id']?.toString();
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(fieldDetailProvider(entityId));
         }
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -395,15 +406,15 @@ class FieldActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
-        final entityId = responseMap['entity_id']?.toString();
+        final entityId = result['entity_id']?.toString();
         if (entityId != null && entityId.isNotEmpty) {
           _ref.invalidate(fieldDetailProvider(entityId));
         }
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -431,11 +442,12 @@ class FieldActionNotifier {
           'p_star_cost': starCost,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(activeFieldBoostProvider(fieldId));
         _ref.invalidate(fieldDetailProvider(fieldId));
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -461,12 +473,12 @@ class FieldActionNotifier {
           'p_duration_minutes': durationMinutes,
         },
       );
-      final responseMap = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(activeFieldBoostProvider(fieldId));
         _ref.invalidate(fieldDetailProvider(fieldId));
       }
-      return responseMap;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -490,11 +502,12 @@ class FieldActionNotifier {
           'p_owner_id': fieldId,
         },
       );
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
         _ref.invalidate(fieldDetailProvider(fieldId));
       }
-      return response as Map<String, dynamic>;
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

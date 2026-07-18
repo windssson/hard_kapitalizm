@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
@@ -108,6 +109,12 @@ class TenderActionNotifier {
 
   TenderActionNotifier(this._ref);
 
+  Map<String, dynamic> _sync(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
+
   Future<Map<String, dynamic>> acceptTender(String tenderId) async {
     try {
       final response = await _supabase.rpc(
@@ -119,7 +126,7 @@ class TenderActionNotifier {
       _ref.invalidate(playerTenderDetailProvider);
       _ref.invalidate(playerNotificationDashboardProvider);
       _ref.invalidate(homeDashboardProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -142,7 +149,7 @@ class TenderActionNotifier {
       _ref.invalidate(playerTenderDetailProvider);
       _ref.invalidate(playerNotificationDashboardProvider);
       _ref.invalidate(homeDashboardProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -168,7 +175,7 @@ class TenderActionNotifier {
       _ref.invalidate(playerTenderDetailProvider(playerTenderId));
       _ref.invalidate(playerNotificationDashboardProvider);
       _ref.invalidate(homeDashboardProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -184,7 +191,7 @@ class TenderActionNotifier {
       _ref.invalidate(playerTenderDetailProvider(playerTenderId));
       _ref.invalidate(playerNotificationDashboardProvider);
       _ref.invalidate(homeDashboardProvider);
-      return Map<String, dynamic>.from(response as Map);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
