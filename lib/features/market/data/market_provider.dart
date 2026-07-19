@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
@@ -140,6 +141,8 @@ class MarketActionNotifier {
         },
       );
 
+      _ref.invalidate(warehouseListProvider);
+      _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

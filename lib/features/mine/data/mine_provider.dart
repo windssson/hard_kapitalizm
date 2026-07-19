@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
@@ -612,6 +613,8 @@ class MineActionNotifier {
         );
     if (syncProviders) {
       _ref.invalidate(mineDetailProvider);
+      _ref.invalidate(warehouseListProvider);
+      _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
     }
     return result;
   }

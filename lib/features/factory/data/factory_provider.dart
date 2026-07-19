@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
@@ -887,6 +888,8 @@ class FactoryActionNotifier {
       // Transfer başladı: inventory değişti → detail refresh gerekir
       // TODO: transfer RPC'si inventory snapshot döndürürse patch'e dönüştür
       _ref.invalidate(factoryDetailProvider);
+      _ref.invalidate(warehouseListProvider);
+      _ref.invalidate(warehouseDetailProvider(sourceWarehouseId));
     }
     await _refreshAttentionNotifications();
     return result;
@@ -910,6 +913,8 @@ class FactoryActionNotifier {
         );
     if (syncProviders) {
       _ref.invalidate(factoryDetailProvider);
+      _ref.invalidate(warehouseListProvider);
+      _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
     }
     await _refreshAttentionNotifications();
     return result;

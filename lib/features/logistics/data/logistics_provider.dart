@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_type_model.dart';
@@ -440,6 +441,7 @@ class LogisticsActionNotifier {
       _ref.invalidate(logisticsVehicleListProvider);
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
+      _ref.invalidate(warehouseListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
