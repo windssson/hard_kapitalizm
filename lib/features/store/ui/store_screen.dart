@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
@@ -490,6 +491,12 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildAdvancedStoreCard(StoreModel store) {
+    final double stockCost = store.summary.totalStockCostValue ?? 0.0;
+    final double stockSale = store.summary.totalStockSaleValue ?? 0.0;
+    final double potentialProfit = stockSale - stockCost;
+    final bool allSlotsEmpty = store.slots.every((s) => s.isEmpty);
+    final bool anySlotOutOfStock = store.slots.any((s) => !s.isEmpty && s.quantity == 0);
+
     return GestureDetector(
       onTap: () => context.go('/store/${store.id}'),
       child: Container(
@@ -618,6 +625,57 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       ),
                     ],
                   ),
+                  SizedBox(height: 8.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            AppIcons.inventory2Outlined,
+                            color: AppColors.textMuted,
+                            size: 11.sp,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Stok: ${AppMoney.compact(stockSale)}',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.textMuted,
+                              fontSize: AppTypography.bodySmall,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          Container(width: 1.w, height: 12.h, color: AppColors.border.withValues(alpha: 0.5)),
+                          SizedBox(width: 8.w),
+                          Icon(
+                            AppIcons.trendingUp,
+                            color: potentialProfit > 0 ? AppColors.green : AppColors.textMuted,
+                            size: 11.sp,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Kâr: ${AppMoney.compact(potentialProfit, signed: true)}',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: potentialProfit > 0 ? AppColors.green : AppColors.textMuted,
+                              fontSize: AppTypography.bodySmall,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (allSlotsEmpty)
+                            _buildSmallBadge('Boş Mağaza', AppColors.orange)
+                          else if (anySlotOutOfStock)
+                            _buildSmallBadge('Stok Tükendi', AppColors.red),
+                        ],
+                      ),
+                    ],
+                  ),
                   if (store.slots.isNotEmpty) ...[
                     SizedBox(height: 12.h),
                     SingleChildScrollView(
@@ -711,6 +769,42 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   AppIcons.pause,
                   color: AppColors.red,
                   size: AppIconSizes.regular,
+                ),
+              ),
+            ),
+          // Quality badge overlay
+          if (!slot.isEmpty && slot.qualityLevel > 0)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.5.h),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBg,
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.5),
+                    width: 0.5,
+                  ),
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      AppIcons.star,
+                      color: AppColors.gold,
+                      size: 8.sp,
+                    ),
+                    SizedBox(width: 1.w),
+                    Text(
+                      slot.qualityLevel.toString(),
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.gold,
+                        fontSize: 8.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
