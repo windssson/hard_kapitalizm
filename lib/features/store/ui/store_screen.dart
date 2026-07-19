@@ -600,12 +600,12 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                               0.0,
                               1.0,
                             ),
-                            minHeight: 10.h,
+                            minHeight: 5.h,
                             backgroundColor: AppColors.textPrimary.withValues(
                               alpha: 0.08,
                             ),
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              store.summary.usedCapacityRatio >= 0.85
+                              store.summary.usedCapacityRatio < 0.25
                                   ? AppColors.red
                                   : AppColors.green,
                             ),
@@ -616,7 +616,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       Text(
                         '%${(store.summary.usedCapacityRatio * 100).round()}',
                         style: AppTextStyles.body.standardCopyWith(
-                          color: store.summary.usedCapacityRatio >= 0.85
+                          color: store.summary.usedCapacityRatio < 0.25
                               ? AppColors.red
                               : AppColors.green,
                           fontSize: AppTypography.bodySmall,

@@ -51,6 +51,7 @@ class TransferHistoryEndpointModel {
   factory TransferHistoryEndpointModel.fromJson(
     Map<String, dynamic> json, {
     String defaultKind = 'warehouse',
+    TransferHistoryCityModel? forcedCity,
   }) {
     final resolvedKind = (json['kind'] ?? defaultKind).toString();
     final fallbackName = switch (resolvedKind) {
@@ -63,7 +64,7 @@ class TransferHistoryEndpointModel {
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? fallbackName).toString(),
       kind: resolvedKind,
-      city: TransferHistoryCityModel.fromJson(
+      city: forcedCity ?? TransferHistoryCityModel.fromJson(
         (json['city'] as Map<String, dynamic>?) ?? const {},
       ),
     );
@@ -141,6 +142,36 @@ class TransferHistoryItemModel {
       store: json['buyer_store'] as Map<String, dynamic>?,
       production: json['buyer_production_inventory'] as Map<String, dynamic>?,
     );
+
+    final sellerCityJson = (json['seller_warehouse']?['city'] ?? 
+                            json['seller_store']?['city'] ?? 
+                            json['seller_production_inventory']?['city']) as Map<String, dynamic>?;
+    final buyerCityJson = (json['buyer_warehouse']?['city'] ?? 
+                           json['buyer_store']?['city'] ?? 
+                           json['buyer_production_inventory']?['city']) as Map<String, dynamic>?;
+
+    TransferHistoryCityModel? sellerCity = sellerCityJson != null && sellerCityJson.isNotEmpty
+        ? TransferHistoryCityModel.fromJson(sellerCityJson)
+        : null;
+
+    TransferHistoryCityModel? buyerCity = buyerCityJson != null && buyerCityJson.isNotEmpty
+        ? TransferHistoryCityModel.fromJson(buyerCityJson)
+        : null;
+
+    if (sellerCity == null || sellerCity.id.isEmpty || sellerCity.name == 'Bilinmeyen Sehir') {
+      if (buyerCity != null && buyerCity.id.isNotEmpty && buyerCity.name != 'Bilinmeyen Sehir') {
+        sellerCity = buyerCity;
+      }
+    }
+    if (buyerCity == null || buyerCity.id.isEmpty || buyerCity.name == 'Bilinmeyen Sehir') {
+      if (sellerCity != null && sellerCity.id.isNotEmpty && sellerCity.name != 'Bilinmeyen Sehir') {
+        buyerCity = sellerCity;
+      }
+    }
+
+    final finalSellerCity = sellerCity ?? const TransferHistoryCityModel(id: '', name: 'Bilinmeyen Sehir');
+    final finalBuyerCity = buyerCity ?? const TransferHistoryCityModel(id: '', name: 'Bilinmeyen Sehir');
+
     return TransferHistoryItemModel(
       id: (json['id'] ?? '').toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
@@ -172,6 +203,7 @@ class TransferHistoryItemModel {
             (json['seller_production_inventory'] as Map<String, dynamic>?) ??
             const {},
         defaultKind: sellerKind,
+        forcedCity: finalSellerCity,
       ),
       buyerEndpoint: TransferHistoryEndpointModel.fromJson(
         (json['buyer_warehouse'] as Map<String, dynamic>?) ??
@@ -179,6 +211,7 @@ class TransferHistoryItemModel {
             (json['buyer_production_inventory'] as Map<String, dynamic>?) ??
             const {},
         defaultKind: buyerKind,
+        forcedCity: finalBuyerCity,
       ),
       sellerKind: _historyKindLabel(sellerKind),
       buyerKind: _historyKindLabel(buyerKind),
