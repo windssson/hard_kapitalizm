@@ -6,6 +6,7 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/animated_count_text.dart';
 import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
@@ -271,7 +272,14 @@ class AppTopBar extends ConsumerWidget {
           context: context,
           icon: AppIcons.paymentsRounded,
           iconColor: AppColors.green,
-          value: _formatMoney(player?.cash ?? 0),
+          valueWidget: AnimatedCountText(
+            value: (player?.cash ?? 0).toDouble(),
+            formatter: (val) => _formatMoney(val.roundToDouble()),
+            style: AppTextStyles.title.standardCopyWith(
+              fontSize: compact ? 10.2.sp : 11.4.sp,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           actionIcon: AppIcons.historyRounded,
           actionColor: AppColors.green,
           onTap: () => context.push('/cash-history'),
@@ -282,7 +290,14 @@ class AppTopBar extends ConsumerWidget {
           context: context,
           icon: AppIcons.starRounded,
           iconColor: AppColors.gold,
-          value: (player?.gold ?? 0).toStringAsFixed(0),
+          valueWidget: AnimatedCountText(
+            value: (player?.gold ?? 0).toDouble(),
+            formatter: (val) => val.toStringAsFixed(0),
+            style: AppTextStyles.title.standardCopyWith(
+              fontSize: compact ? 10.2.sp : 11.4.sp,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           actionIcon: AppIcons.addRounded,
           actionColor: AppColors.goldLight,
           onTap: () => context.push('/premium-store'),
@@ -296,7 +311,7 @@ class AppTopBar extends ConsumerWidget {
     required BuildContext context,
     required IconData icon,
     required Color iconColor,
-    required String value,
+    required Widget valueWidget,
     required IconData actionIcon,
     required Color actionColor,
     required VoidCallback onTap,
@@ -327,15 +342,7 @@ class AppTopBar extends ConsumerWidget {
           ),
           SizedBox(width: compact ? 4.w : 5.w),
           Expanded(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.title.standardCopyWith(
-                fontSize: compact ? 10.2.sp : 11.4.sp,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+            child: valueWidget,
           ),
           SizedBox(width: compact ? 3.w : 4.w),
           InkWell(

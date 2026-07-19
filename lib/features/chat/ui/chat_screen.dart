@@ -14,6 +14,7 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/chat/data/chat_service.dart';
 import 'package:hard_kapitalizm/features/chat/models/chat_message.dart';
 import 'package:hard_kapitalizm/features/chat/providers/chat_provider.dart';
+import 'package:hard_kapitalizm/features/chat/providers/blocked_players_provider.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 
@@ -147,6 +148,68 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       case _ChatMessageAction.reportMessage:
         await _openReportSheet(msg);
         return;
+      case _ChatMessageAction.blockPlayer:
+        await _confirmBlockPlayer(msg.playerId, msg.playerName);
+        return;
+    }
+  }
+
+  Future<void> _confirmBlockPlayer(String playerId, String playerName) async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14.r),
+          side: BorderSide(color: AppColors.red.withValues(alpha: 0.3)),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.block_rounded, color: AppColors.red),
+            SizedBox(width: 8.w),
+            Text(
+              'Oyuncuyu Engelle',
+              style: AppTextStyles.title.standardCopyWith(color: AppColors.red),
+            ),
+          ],
+        ),
+        content: Text(
+          '$playerName isimli oyuncuyu engellemek istediğinize emin misiniz?\n\nBu oyuncunun gönderdiği mesajları artık görmeyeceksiniz.',
+          style: AppTextStyles.body.standardCopyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Vazgeç',
+              style: AppTextStyles.label.standardCopyWith(color: AppColors.textMuted),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Engelle',
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await ref.read(blockedPlayersProvider.notifier).blockPlayer(playerId);
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          title: 'Oyuncu Engellendi',
+          message: '$playerName başarıyla engellendi.',
+          type: SnackbarType.success,
+        );
+      }
     }
   }
 
@@ -195,6 +258,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
     final currentPlayerId = ref.watch(playerProvider).value?.id;
+    final blockedPlayers = ref.watch(blockedPlayersProvider);
+
+    final visibleMessages = chatState.messages
+        .where((m) => !blockedPlayers.contains(m.playerId))
+        .toList();
 
     ref.listen(chatProvider, (prev, next) {
       if (prev != null &&
@@ -226,14 +294,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           const SecondaryTopBar(title: 'Sohbet'),
           if (chatState.error != null) _buildErrorBanner(chatState.error!),
           Expanded(
-            child: chatState.isLoading && chatState.messages.isEmpty
+            child: chatState.isLoading && visibleMessages.isEmpty
                 ? Center(
                     child: AppLoadingIndicator(
                       color: AppColors.gold,
                       strokeWidth: 2,
                     ),
                   )
-                : chatState.messages.isEmpty
+                : visibleMessages.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     controller: _scrollController,
@@ -242,7 +310,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       vertical: 12.h,
                     ),
                     itemCount:
-                        chatState.messages.length +
+                        visibleMessages.length +
                         (chatState.isLoading ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (chatState.isLoading && index == 0) {
@@ -262,7 +330,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       }
 
                       final msgIndex = chatState.isLoading ? index - 1 : index;
-                      final msg = chatState.messages[msgIndex];
+                      final msg = visibleMessages[msgIndex];
                       final isMine = msg.playerId == currentPlayerId;
                       return _buildMessageBubble(msg, isMine);
                     },
@@ -1009,7 +1077,7 @@ class _QualityStars extends StatelessWidget {
   }
 }
 
-enum _ChatMessageAction { openProfile, copyMessage, reportMessage }
+enum _ChatMessageAction { openProfile, copyMessage, reportMessage, blockPlayer }
 
 class _ChatMessageActionsSheet extends StatelessWidget {
   const _ChatMessageActionsSheet({required this.message, required this.isMine});
@@ -1067,7 +1135,7 @@ class _ChatMessageActionsSheet extends StatelessWidget {
               onTap: () =>
                   Navigator.pop(context, _ChatMessageAction.copyMessage),
             ),
-            if (!isMine)
+            if (!isMine) ...[
               _ChatActionTile(
                 icon: AppIcons.flagOutlined,
                 label: 'Mesaji Raporla',
@@ -1075,6 +1143,14 @@ class _ChatMessageActionsSheet extends StatelessWidget {
                 onTap: () =>
                     Navigator.pop(context, _ChatMessageAction.reportMessage),
               ),
+              _ChatActionTile(
+                icon: Icons.block_rounded,
+                label: 'Oyuncuyu Engelle',
+                color: AppColors.red,
+                onTap: () =>
+                    Navigator.pop(context, _ChatMessageAction.blockPlayer),
+              ),
+            ],
           ],
         ),
       ),

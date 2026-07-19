@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 
 class NumericKeyboard extends StatelessWidget {
   final TextEditingController controller;
@@ -214,6 +215,7 @@ class NumericKeyboard extends StatelessWidget {
   }
 
   void _onNumberPressed(String value) {
+    AppHaptic.selection();
     final currentText = controller.text;
 
     if (value == ',') {
@@ -235,6 +237,7 @@ class NumericKeyboard extends StatelessWidget {
   }
 
   void _onBackspace() {
+    AppHaptic.selection();
     final currentText = controller.text;
     if (currentText.isEmpty) return;
 
@@ -244,11 +247,13 @@ class NumericKeyboard extends StatelessWidget {
   }
 
   void _onClear() {
+    AppHaptic.selection();
     controller.clear();
     onChanged?.call(controller.text);
   }
 
   void _applyShortcut(String value) {
+    AppHaptic.selection();
     controller.text = value;
     _moveCursorToEnd();
     onChanged?.call(controller.text);

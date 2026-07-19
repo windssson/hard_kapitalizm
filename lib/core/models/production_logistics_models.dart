@@ -1,9 +1,12 @@
+import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
+
 class ProductionLogisticsWarehouseOption {
   final String id;
   final String name;
   final String cityId;
   final String cityName;
   final bool isSameCity;
+  final List<WarehouseSlotModel> slots;
 
   const ProductionLogisticsWarehouseOption({
     required this.id,
@@ -11,6 +14,7 @@ class ProductionLogisticsWarehouseOption {
     required this.cityId,
     required this.cityName,
     required this.isSameCity,
+    required this.slots,
   });
 
   factory ProductionLogisticsWarehouseOption.fromJson(
@@ -18,12 +22,14 @@ class ProductionLogisticsWarehouseOption {
     required String productionCityId,
   }) {
     final cityId = (json['city_id'] ?? '').toString();
+    final slotsRaw = json['warehouse_slots'] as List<dynamic>? ?? [];
     return ProductionLogisticsWarehouseOption(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? 'Depo').toString(),
       cityId: cityId,
       cityName: (json['city']?['name'] ?? 'Bilinmeyen Sehir').toString(),
       isSameCity: cityId.isNotEmpty && cityId == productionCityId,
+      slots: slotsRaw.map((s) => WarehouseSlotModel.fromJson(s)).toList(),
     );
   }
 }

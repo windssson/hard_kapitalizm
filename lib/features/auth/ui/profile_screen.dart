@@ -339,14 +339,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       children: [
         Text('Profilim', style: AppTextStyles.h1),
         SizedBox(height: 16.h),
-        
+
         // --- SECTION 1: HEADER CARD ---
         Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
             color: AppColors.cardBg,
             borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.4)),
+            border: Border.all(
+              color: AppColors.borderGold.withValues(alpha: 0.4),
+            ),
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -682,10 +684,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Expanded(
                       child: _buildAchievementStatCard(
                         label: 'Kalan',
-                        value: (player.achievementTotalCount -
-                                player.achievementUnlockedCount)
-                            .clamp(0, player.achievementTotalCount)
-                            .toString(),
+                        value:
+                            (player.achievementTotalCount -
+                                    player.achievementUnlockedCount)
+                                .clamp(0, player.achievementTotalCount)
+                                .toString(),
                         color: AppColors.gold,
                         icon: AppIcons.lockOpenRounded,
                       ),
@@ -714,7 +717,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     scrollDirection: Axis.horizontal,
                     itemCount: player.featuredBadges.length,
                     separatorBuilder: (context, index) => SizedBox(width: 10.w),
-                    itemBuilder: (_, index) => _buildBadgeChip(player.featuredBadges[index]),
+                    itemBuilder: (_, index) =>
+                        _buildBadgeChip(player.featuredBadges[index]),
                   ),
                 ),
               ] else ...[
@@ -832,8 +836,165 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             },
           ),
         ),
+        SizedBox(height: 12.h),
+
+        // --- DELETE ACCOUNT BUTTON ---
+        SizedBox(
+          width: double.infinity,
+          height: 40.h,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.red.withValues(alpha: 0.7),
+            ),
+            icon: Icon(
+              AppIcons.deleteOutline,
+              size: 16.sp,
+              color: AppColors.red.withValues(alpha: 0.7),
+            ),
+            label: Text(
+              'Hesabımı Kalıcı Olarak Sil',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.red.withValues(alpha: 0.7),
+                fontSize: AppTypography.caption,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onPressed: _showDeleteAccountConfirmDialog,
+          ),
+        ),
       ],
     );
+  }
+
+  Future<void> _showDeleteAccountConfirmDialog() async {
+    bool? confirm1 = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14.r),
+          side: BorderSide(color: AppColors.red.withValues(alpha: 0.3)),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.red),
+            SizedBox(width: 8.w),
+            Text(
+              'Hesabınızı Silin',
+              style: AppTextStyles.title.standardCopyWith(color: AppColors.red),
+            ),
+          ],
+        ),
+        content: Text(
+          'Hesabınızı silmek istediğinize emin misiniz?\n\nBu işlem şirket ilerlemenizi, madenlerinizi, fabrikalarınızı ve tüm oyun varlıklarınızı kalıcı olarak silecektir. Bu işlem geri alınamaz.',
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Vazgeç',
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Devam Et',
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm1 != true) return;
+
+    if (!mounted) return;
+
+    bool? confirm2 = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14.r),
+          side: BorderSide(color: AppColors.red.withValues(alpha: 0.5)),
+        ),
+        title: Text(
+          'Son Onay',
+          style: AppTextStyles.title.standardCopyWith(color: AppColors.red),
+        ),
+        content: Text(
+          'Tüm kişisel verileriniz (e-posta, isim, avatar) veritabanından kalıcı olarak silinecek ve hesabınız kapatılacaktır. Onaylıyor musunuz?',
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Vazgeç',
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Kalıcı Olarak Sil',
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm2 != true) return;
+
+    try {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.rpc('delete_own_account');
+      final result = Map<String, dynamic>.from(response as Map);
+
+      if (result['success'] == true) {
+        await supabase.auth.signOut();
+        if (mounted) {
+          context.go('/');
+        }
+      } else {
+        if (mounted) {
+          AppSnackbar.show(
+            context,
+            title: 'Hata',
+            message: result['message']?.toString() ?? 'Hesap silinemedi.',
+            type: SnackbarType.error,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: e.toString(),
+          type: SnackbarType.error,
+        );
+      }
+    }
   }
 
   Widget _buildAccountLinkCard(AuthIdentityState? authIdentity) {

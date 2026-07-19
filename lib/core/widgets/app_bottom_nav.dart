@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 
 class AppBottomNav extends StatelessWidget {
   final int selectedIndex;
@@ -45,6 +46,7 @@ class AppBottomNav extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         if (index == selectedIndex) return;
+        AppHaptic.light();
         switch (index) {
           case 0:
             context.go('/home');

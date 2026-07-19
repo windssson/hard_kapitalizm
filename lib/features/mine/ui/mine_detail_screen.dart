@@ -1944,6 +1944,14 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
       final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
 
+      final previews = warehouseOption.slots.map((s) {
+        return WarehouseSelectionProductPreview(
+          icon: s.productIcon ?? '',
+          quantity: s.quantity.toDouble(),
+          quality: s.qualityLevel,
+        );
+      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
+
       options.add(
         WarehouseSelectionOption(
           id: warehouseOption.id,
@@ -1957,6 +1965,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           capacityRatio: capacityRatio,
           capacityLabel: capacityLabel,
           distanceLabel: warehouseOption.isSameCity ? 'Aynı Şehir' : 'Lojistik',
+          productPreviews: previews,
           onTap: () async {
             Navigator.pop(context);
             WarehouseCapacityStatusModel? capacityStatus;

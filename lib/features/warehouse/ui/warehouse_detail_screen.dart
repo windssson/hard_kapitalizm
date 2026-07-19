@@ -1901,6 +1901,18 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
       final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
 
+      final slotsRaw = target['warehouse_slots'] as List<dynamic>? ?? [];
+      final previews = slotsRaw.map((s) {
+        final qty = (s['quantity'] as num?)?.toDouble() ?? 0.0;
+        final qual = (s['quality_level'] as num?)?.toInt() ?? 0;
+        final icon = (s['product'] as Map?)?['urun_iconu']?.toString() ?? '';
+        return WarehouseSelectionProductPreview(
+          icon: icon,
+          quantity: qty,
+          quality: qual,
+        );
+      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
+
       return WarehouseSelectionOption(
         id: target['id'].toString(),
         title: (target['name'] ?? 'Depo').toString(),
@@ -1911,6 +1923,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         capacityRatio: capacityRatio,
         capacityLabel: capacityLabel,
         distanceLabel: sameCity ? 'Aynı Şehir' : 'Şehirler Arası',
+        productPreviews: previews,
         onTap: () {
           Navigator.pop(context);
           _openTargetAwareWarehouseTransferPicker(

@@ -4,6 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
+
+class WarehouseSelectionProductPreview {
+  final String icon;
+  final double quantity;
+  final int quality;
+
+  WarehouseSelectionProductPreview({
+    required this.icon,
+    required this.quantity,
+    required this.quality,
+  });
+}
 
 class WarehouseSelectionOption {
   final String id;
@@ -16,6 +30,7 @@ class WarehouseSelectionOption {
   final String? capacityLabel;
   final String? distanceLabel;
   final String? durationLabel;
+  final List<WarehouseSelectionProductPreview>? productPreviews;
   final VoidCallback onTap;
 
   WarehouseSelectionOption({
@@ -29,6 +44,7 @@ class WarehouseSelectionOption {
     this.capacityLabel,
     this.distanceLabel,
     this.durationLabel,
+    this.productPreviews,
     required this.onTap,
   });
 }
@@ -205,7 +221,10 @@ class WarehouseSelectionSheet extends StatelessWidget {
                           child: Material(
                             color: AppColors.transparent,
                             child: InkWell(
-                              onTap: option.onTap,
+                              onTap: () {
+                                AppHaptic.light();
+                                option.onTap();
+                              },
                               borderRadius: BorderRadius.circular(16.r),
                               child: Container(
                                 padding: EdgeInsets.all(14.w),
@@ -308,12 +327,12 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                                     borderRadius: BorderRadius.circular(999.r),
                                                     child: LinearProgressIndicator(
                                                       value: option.capacityRatio!.clamp(0.0, 1.0),
-                                                      minHeight: 4.h,
+                                                      minHeight: 3.h,
                                                       backgroundColor: AppFx.softOverlay(0.08),
                                                       valueColor: AlwaysStoppedAnimation<Color>(
-                                                        option.capacityRatio! > 0.9
+                                                        option.capacityRatio! > 0.85
                                                             ? AppColors.danger
-                                                            : option.capacityRatio! > 0.75
+                                                            : option.capacityRatio! > 0.65
                                                                 ? AppColors.warning
                                                                 : AppColors.green,
                                                       ),
@@ -325,7 +344,7 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                                   option.capacityLabel ??
                                                       '${(option.capacityRatio! * 100).toStringAsFixed(0)}%',
                                                   style: AppTextStyles.caption.standardCopyWith(
-                                                    color: option.capacityRatio! > 0.9
+                                                    color: option.capacityRatio! > 0.85
                                                         ? AppColors.danger
                                                         : AppColors.textMuted,
                                                     fontSize: 9.sp,
@@ -333,6 +352,64 @@ class WarehouseSelectionSheet extends StatelessWidget {
                                                   ),
                                                 ),
                                               ],
+                                            ),
+                                          ],
+                                          // 2.5 Product Previews (Ürün Önizlemeleri)
+                                          if (option.productPreviews != null && option.productPreviews!.isNotEmpty) ...[
+                                            SizedBox(height: 8.h),
+                                            SizedBox(
+                                              height: 22.h,
+                                              child: ListView.separated(
+                                                scrollDirection: Axis.horizontal,
+                                                shrinkWrap: true,
+                                                itemCount: option.productPreviews!.length,
+                                                separatorBuilder: (context, index) => SizedBox(width: 6.w),
+                                                itemBuilder: (context, idx) {
+                                                  final preview = option.productPreviews![idx];
+                                                  return Container(
+                                                    padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                                                    decoration: BoxDecoration(
+                                                      color: AppFx.softOverlay(0.06),
+                                                      borderRadius: BorderRadius.circular(6.r),
+                                                      border: Border.all(
+                                                        color: AppColors.borderGoldLight.withValues(alpha: 0.15),
+                                                        width: 0.8.w,
+                                                      ),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        CachedAssetImage(
+                                                          fileName: preview.icon.isNotEmpty ? preview.icon : 'default.webp',
+                                                          width: 12.w,
+                                                          height: 12.w,
+                                                          fit: BoxFit.contain,
+                                                        ),
+                                                        SizedBox(width: 4.w),
+                                                        Text(
+                                                          _formatPreviewQuantity(preview.quantity),
+                                                          style: AppTextStyles.caption.standardCopyWith(
+                                                            color: AppColors.white,
+                                                            fontSize: 8.sp,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                        if (preview.quality > 0) ...[
+                                                          SizedBox(width: 2.w),
+                                                          Text(
+                                                            '⭐${preview.quality}',
+                                                            style: AppTextStyles.caption.standardCopyWith(
+                                                              color: AppColors.gold,
+                                                              fontSize: 7.sp,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
                                             ),
                                           ],
                                           // 3. Logistics and Distance details (Lojistik/Mesafe İkonları)
@@ -441,5 +518,15 @@ class WarehouseSelectionSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatPreviewQuantity(double qty) {
+    if (qty >= 1000000) {
+      return '${(qty / 1000000).toStringAsFixed(1)}M';
+    } else if (qty >= 1000) {
+      return '${(qty / 1000).toStringAsFixed(1)}k';
+    } else {
+      return qty.toStringAsFixed(0);
+    }
   }
 }

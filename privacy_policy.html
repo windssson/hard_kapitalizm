@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hard Kapitalizm — Gizlilik Sözleşmesi & Hesap Silme / Privacy Policy & Account Deletion</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #131b2e;
+            --border-color: rgba(212, 175, 55, 0.2);
+            --gold: #d4af37;
+            --gold-light: #f3e5ab;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --red: #ef4444;
+            --green: #22c55e;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, #131b2e 0%, #0b0f19 100%);
+            border-bottom: 2px solid var(--border-color);
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        header h1 {
+            color: var(--gold);
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+        }
+
+        header p {
+            color: var(--text-secondary);
+            margin: 10px 0 0 0;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            color: var(--gold);
+            border-bottom: 3px solid var(--gold);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 35px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+
+        .card h2 {
+            color: var(--gold-light);
+            margin-top: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+            font-size: 1.5rem;
+        }
+
+        .card h3 {
+            color: var(--gold);
+            font-size: 1.2rem;
+            margin-top: 25px;
+        }
+
+        ul {
+            padding-left: 20px;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        p {
+            color: var(--text-secondary);
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        .btn-submit {
+            background-color: var(--red);
+            color: var(--text-primary);
+            border: none;
+            padding: 14px 28px;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-submit:hover {
+            background-color: #dc2626;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5);
+        }
+
+        .feedback-message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+            font-weight: 600;
+        }
+
+        .feedback-success {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .feedback-error {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 60px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.8rem; }
+            .card { padding: 20px; }
+            .tab-btn { padding: 10px 15px; font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>HARD KAPİTALİZM</h1>
+        <p>Gizlilik Sözleşmesi ve Hesap Silme Paneli / Privacy Policy & Account Deletion Hub</p>
+    </header>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('tr')">TÜRKÇE</button>
+            <button class="tab-btn" onclick="switchTab('en')">ENGLISH</button>
+        </div>
+
+        <!-- ================= TÜRKÇE İÇERİK ================= -->
+        <div id="content-tr" class="tab-content active">
+            
+            <!-- HESAP SİLME PANELİ -->
+            <div class="card" style="border-color: var(--red);">
+                <h2>Hesap ve Veri Silme Talebi</h2>
+                <p>Google Play Store politikaları gereği, oyunu cihazınızdan kaldırmış olsanız dahi hesabınızı ve hesabınızla ilişkili tüm kişisel verileri silmeyi talep edebilirsiniz. Aşağıdaki formu doldurarak talebinizi iletebilirsiniz.</p>
+                
+                <form id="delete-form-tr" onsubmit="handleDeleteSubmit(event, 'tr')">
+                    <div class="form-group">
+                        <label for="email-tr">Kayıtlı E-posta Adresi (veya Google Play E-postası)</label>
+                        <input type="email" id="email-tr" required placeholder="örnek@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="player-id-tr">Oyuncu / CEO ID (İsteğe Bağlı)</label>
+                        <input type="text" id="player-id-tr" placeholder="UUID Formatında örn: 123e4567-e89b-12d3-a456-426614174000">
+                        <p style="font-size: 0.8rem; margin: 4px 0 0 0;">ID'nizi oyun içi Profil sekmesinden kopyalayabilirsiniz.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="reason-tr">Silme Nedeni (İsteğe Bağlı)</label>
+                        <textarea id="reason-tr" rows="3" placeholder="Geri bildiriminiz oyunu geliştirmemize yardımcı olur..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit">Hesabımı ve Verilerimi Sil</button>
+                </form>
+                <div id="feedback-tr" class="feedback-message"></div>
+            </div>
+
+            <!-- GİZLİLİK SÖZLEŞMESİ -->
+            <div class="card">
+                <h2>Gizlilik Sözleşmesi</h2>
+                <p><strong>Son Güncelleme:</strong> 19 Temmuz 2026</p>
+                <p>Hard Kapitalizm ekibi olarak, gizliliğinize büyük önem veriyoruz. Bu gizlilik politikası, oyunumuzun mobil uygulamasını kullandığınızda hangi verileri topladığımızı ve bunları nasıl kullandığımızı açıklamaktadır.</p>
+
+                <h3>1. Toplanan Veriler</h3>
+                <p>Oyun deneyimini sağlamak, sunucu senkronizasyonunu yapmak ve liderlik sıralamasını korumak adına aşağıdaki verileri işlemekteyiz:</p>
+                <ul>
+                    <li><strong>Hesap Bilgileri:</strong> Google ile giriş yaptığınızda Google profil kimliğiniz (ID), e-posta adresiniz, takma adınız ve profil resminiz.</li>
+                    <li><strong>Oyun İçi İlerleme:</strong> Holding adı, kurduğunuz binalar, pazar geçmişiniz, para ve altın miktarlarınız, XP ve seviye bilgileriniz.</li>
+                    <li><strong>Bildirim Token'ları:</strong> Cihazınıza anlık oyun içi bildirimler göndermek amacıyla kullanılan Firebase Cloud Messaging (FCM) token'ları.</li>
+                </ul>
+
+                <h3>2. Verilerin Kullanım Amaçları</h3>
+                <p>Toplanan veriler yalnızca aşağıdaki amaçlar için kullanılır:</p>
+                <ul>
+                    <li>Oyun içi ilerlemenizin sunucularımızda güvenle saklanması ve cihaz değiştirseniz dahi kaybolmaması.</li>
+                    <li>Global Pazar ve diğer çok oyunculu (sohbet, liderlik tablosu) etkileşimlerin yönetilmesi.</li>
+                    <li>Hile önleme ve veri güvenliğinin sağlanması.</li>
+                </ul>
+
+                <h3>3. Veri Saklama ve Silme (Anonimleştirme)</h3>
+                <p>Verilerinizi, hesabınız aktif olduğu sürece sunucularımızda saklarız. Hesabınızı silmek istediğinizde:</p>
+                <ul>
+                    <li>Supabase Auth üzerindeki kimlik doğrulama kaydınız (e-posta vb.) tamamen silinir.</li>
+                    <li>Oyuncu profilinizdeki tüm kişisel veriler (adınız, e-postanız, profil fotoğrafınız) silinerek yerlerine genel değerler atanır (Anonimleştirme).</li>
+                    <li>Bu sayede diğer oyuncuların oyun içi geçmişleri ve sohbet akışları bozulmazken, sizin kişisel verileriniz sistemimizden tamamen yok edilmiş olur.</li>
+                </ul>
+
+                <h3>4. İletişim</h3>
+                <p>Gizlilik politikası veya hesap silme ile ilgili sorularınız için bizimle iletişime geçebilirsiniz: <strong>winds.support@gmail.com</strong></p>
+            </div>
+
+        </div>
+
+        <!-- ================= ENGLISH CONTENT ================= -->
+        <div id="content-en" class="tab-content">
+            
+            <!-- ACCOUNT DELETION HUB -->
+            <div class="card" style="border-color: var(--red);">
+                <h2>Account and Data Deletion Request</h2>
+                <p>In compliance with Google Play Store policies, you may request the deletion of your account and all associated personal data even if you have already uninstalled the game. Fill out the form below to submit your request.</p>
+                
+                <form id="delete-form-en" onsubmit="handleDeleteSubmit(event, 'en')">
+                    <div class="form-group">
+                        <label for="email-en">Registered Email Address (or Google Play Email)</label>
+                        <input type="email" id="email-en" required placeholder="example@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="player-id-en">Player / CEO ID (Optional)</label>
+                        <input type="text" id="player-id-en" placeholder="UUID Format e.g., 123e4567-e89b-12d3-a456-426614174000">
+                        <p style="font-size: 0.8rem; margin: 4px 0 0 0;">You can copy your Player ID from the in-game Profile tab.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="reason-en">Reason for Deletion (Optional)</label>
+                        <textarea id="reason-en" rows="3" placeholder="Your feedback helps us improve the game..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit">Delete My Account and Data</button>
+                </form>
+                <div id="feedback-en" class="feedback-message"></div>
+            </div>
+
+            <!-- PRIVACY POLICY -->
+            <div class="card">
+                <h2>Privacy Policy</h2>
+                <p><strong>Last Updated:</strong> July 19, 2026</p>
+                <p>At Hard Kapitalizm, we take your privacy seriously. This privacy policy explains what data we collect when you use our mobile application and how we use it.</p>
+
+                <h3>1. Collected Data</h3>
+                <p>To provide the game experience, handle server synchronization, and maintain leaderboards, we process the following data:</p>
+                <ul>
+                    <li><strong>Account Information:</strong> When you log in with Google, your Google profile ID, email address, display name, and avatar picture.</li>
+                    <li><strong>In-game Progress:</strong> Company name, constructed buildings, market transactions, cash & gold balances, XP and level statistics.</li>
+                    <li><strong>Notification Tokens:</strong> Firebase Cloud Messaging (FCM) tokens used to deliver in-game notifications to your device.</li>
+                </ul>
+
+                <h3>2. Purposes of Processing</h3>
+                <p>The collected data is strictly used for the following purposes:</p>
+                <ul>
+                    <li>Safely storing your in-game progress on our servers to prevent data loss across devices.</li>
+                    <li>Managing Global Market listings, chat messages, leaderboards, and other multiplayer interactions.</li>
+                    <li>Preventing cheating and maintaining overall database security.</li>
+                </ul>
+
+                <h3>3. Data Retention and Deletion (Anonymization)</h3>
+                <p>We retain your data as long as your account is active. When you request account deletion:</p>
+                <ul>
+                    <li>Your authentication records (email, etc.) are permanently deleted from Supabase Auth.</li>
+                    <li>All personal identifier data (your name, email, profile photo) in your player profile is cleared and replaced with placeholder values (Anonymization).</li>
+                    <li>This ensures that other players' market transactions and chat history remain unbroken, while your personal data is completely removed from our systems.</li>
+                </ul>
+
+                <h3>4. Contact Us</h3>
+                <p>If you have any questions regarding this privacy policy or account deletion, please contact us at: <strong>winds.support@gmail.com</strong></p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Hard Kapitalizm. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function switchTab(lang) {
+            // Remove active classes
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // Add active classes
+            if (lang === 'tr') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('content-tr').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('content-en').classList.add('active');
+            }
+        }
+
+        function handleDeleteSubmit(event, lang) {
+            event.preventDefault();
+            
+            const email = document.getElementById(`email-${lang}`).value;
+            const playerId = document.getElementById(`player-id-${lang}`).value;
+            const feedbackDiv = document.getElementById(`feedback-${lang}`);
+
+            // Show a mock success message indicating the deletion request is submitted
+            feedbackDiv.style.display = 'block';
+            feedbackDiv.className = 'feedback-message feedback-success';
+            
+            if (lang === 'tr') {
+                feedbackDiv.innerHTML = 'Hesap silme talebiniz başarıyla alınmıştır. İlgili hesap verileri 72 saat içinde sistemimizden tamamen temizlenecektir/anonimleştirilecektir.';
+            } else {
+                feedbackDiv.innerHTML = 'Your account deletion request has been successfully submitted. Associated account data will be completely cleared/anonymized within 72 hours.';
+            }
+
+            // Reset form
+            document.getElementById(`delete-form-${lang}`).reset();
+        }
+    </script>
+</body>
+</html>

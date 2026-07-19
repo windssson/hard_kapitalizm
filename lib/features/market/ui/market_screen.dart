@@ -12,10 +12,12 @@ import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/price_sparkline.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_buyer_warehouse_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
@@ -196,6 +198,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       _lockedSourceCityId ??= selection.listing.cityId;
       _cartItems.addOrMerge(selection.listing, selection.quantity);
     });
+    AppHaptic.medium();
 
     if (!mounted) return;
     AppSnackbar.show(
@@ -216,6 +219,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }
 
   void _removeCartItem(_MarketCartItem item) {
+    AppHaptic.light();
     setState(() {
       _cartItems.removeWhere((entry) => entry.key == item.key);
       if (_cartItems.isEmpty) {
@@ -226,6 +230,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }
 
   void _clearCart() {
+    AppHaptic.light();
     setState(() {
       _cartItems.clear();
       _lockedSourceCityId = null;
@@ -701,7 +706,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               ),
             ],
           ),
-          SizedBox(height: 8.h),
+          if (product != null) ...[
+            SizedBox(height: 10.h),
+            _buildPriceHistorySection(product.id),
+          ],
+          SizedBox(height: 10.h),
           // Kapasite Bilgisi & İlerleme Çubuğu
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -730,6 +739,82 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           _buildCapacityProgressBar(total: totalCap, used: usedCap, cart: cartVolume),
         ],
       ),
+    );
+  }
+
+  Widget _buildPriceHistorySection(String productId) {
+    final historyAsync = ref.watch(productPriceHistoryProvider(productId));
+
+    return historyAsync.when(
+      data: (history) {
+        if (history == null || history.prices.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final isUp = history.prices.last >= history.prices.first;
+        final trendColor = isUp ? AppColors.green : AppColors.red;
+        final diff = history.prices.last - history.prices.first;
+        final diffPercent = (diff / (history.prices.first > 0 ? history.prices.first : 1.0)) * 100;
+        final sign = diff >= 0 ? '+' : '';
+
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+          decoration: BoxDecoration(
+            color: AppColors.background.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10.r),
+            border: Border.all(
+              color: AppColors.borderGoldLight.withValues(alpha: 0.08),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '5 Günlük Fiyat Trendi',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontSize: AppTypography.micro,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '$sign${diffPercent.toStringAsFixed(1)}% ($sign${diff.toStringAsFixed(1)} ₺)',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: trendColor,
+                      fontSize: AppTypography.micro,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 6.h),
+              Center(
+                child: PriceSparkline(
+                  prices: history.prices,
+                  width: double.infinity,
+                  height: 36.h,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => Container(
+        height: 50.h,
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: 16.w,
+          height: 16.w,
+          child: CircularProgressIndicator(
+            strokeWidth: 1.5,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+          ),
+        ),
+      ),
+      error: (e, s) => const SizedBox.shrink(),
     );
   }
 
@@ -3730,6 +3815,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
     _clearCart();
 
     if (!mounted) return;
+    AppHaptic.heavy();
     if (totalCost > 0) {
       FloatingFeedback.show(
         context,

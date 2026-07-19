@@ -193,9 +193,23 @@ class ProductionReportScreen extends ConsumerWidget {
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        gradient: LinearGradient(
+          colors: [
+            AppColors.cardBg,
+            Color.alphaBlend(color.withValues(alpha: 0.05), AppColors.cardBg),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 1.w),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.04),
+            blurRadius: 8.r,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,11 +277,25 @@ class ProductionReportScreen extends ConsumerWidget {
               margin: EdgeInsets.only(bottom: 8.h),
               padding: EdgeInsets.all(10.w),
               decoration: BoxDecoration(
-                color: AppColors.cardBgLight,
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.cardBgLight,
+                    AppColors.cardBg.withValues(alpha: 0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(14.r),
                 border: Border.all(
-                  color: AppColors.border.withValues(alpha: 0.4),
+                  color: AppColors.borderGoldLight.withValues(alpha: 0.15),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withValues(alpha: 0.2),
+                    blurRadius: 4.r,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
@@ -409,7 +437,7 @@ class ProductionReportScreen extends ConsumerWidget {
                             backgroundColor: AppColors.cardBgLight,
                             valueColor:
                                 AlwaysStoppedAnimation<Color>(
-                                  AppColors.gold,
+                                  profit >= 0 ? AppColors.green : AppColors.red,
                                 ),
                           ),
                         ),

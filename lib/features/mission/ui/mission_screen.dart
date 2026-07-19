@@ -11,6 +11,7 @@ import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_dashboard_model.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_model.dart';
 import 'package:hard_kapitalizm/features/mission/data/daily_streak_provider.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 
 enum _MissionTab {
   main('Ana Görev'),
@@ -1080,18 +1081,39 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
 
                       final width = dayNum == 7 ? (itemWidth * 2 + 8.w) : itemWidth;
                       
-                      return Container(
+                      Widget cardContent = Container(
                         width: width,
                         padding: EdgeInsets.symmetric(vertical: 8.h),
                         decoration: BoxDecoration(
-                          color: isToday
-                              ? AppColors.gold.withValues(alpha: 0.08)
-                              : (isClaimed ? AppColors.cardBgLight.withValues(alpha: 0.3) : AppColors.cardBgLight),
+                          gradient: dayNum == 7
+                              ? LinearGradient(
+                                  colors: isClaimed
+                                      ? [
+                                          AppColors.cardBgLight.withValues(alpha: 0.3),
+                                          AppColors.cardBgLight.withValues(alpha: 0.5),
+                                        ]
+                                      : [
+                                          AppColors.gold.withValues(alpha: 0.15),
+                                          AppColors.cardBgLight,
+                                        ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                )
+                              : null,
+                          color: dayNum == 7
+                              ? null
+                              : (isToday
+                                  ? AppColors.gold.withValues(alpha: 0.08)
+                                  : (isClaimed
+                                      ? AppColors.cardBgLight.withValues(alpha: 0.3)
+                                      : AppColors.cardBgLight)),
                           borderRadius: BorderRadius.circular(12.r),
                           border: Border.all(
                             color: isToday
                                 ? AppColors.gold
-                                : (isClaimed ? AppColors.green.withValues(alpha: 0.5) : AppColors.borderGold.withValues(alpha: 0.15)),
+                                : (isClaimed
+                                    ? AppColors.green.withValues(alpha: 0.5)
+                                    : AppColors.borderGold.withValues(alpha: 0.15)),
                             width: isToday ? 1.5.w : 1.w,
                           ),
                         ),
@@ -1108,9 +1130,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                             ),
                             SizedBox(height: 4.h),
                             Icon(
-                              isClaimed ? Icons.check_circle_rounded : rewardIcon,
+                              isClaimed ? Icons.check_circle_rounded : (dayNum == 7 ? Icons.emoji_events_rounded : rewardIcon),
                               color: isClaimed ? AppColors.green : (isFuture ? AppColors.textMuted : rewardColor),
-                              size: 18.sp,
+                              size: dayNum == 7 ? 22.sp : 18.sp,
                             ),
                             SizedBox(height: 4.h),
                             Text(
@@ -1126,6 +1148,11 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                           ],
                         ),
                       );
+
+                      if (isToday) {
+                        return _PulsingGlowWrapper(child: cardContent);
+                      }
+                      return cardContent;
                     }),
                   );
                 }
@@ -1140,6 +1167,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                       ? () async {
                           final success = await ref.read(dailyStreakProvider.notifier).claimReward();
                           if (success) {
+                            AppHaptic.heavy();
                             if (!mounted) return;
                             
                             final nextDay = streak.streakCount + 1;
@@ -1195,3 +1223,52 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     );
   }
 }
+
+class _PulsingGlowWrapper extends StatefulWidget {
+  final Widget child;
+  const _PulsingGlowWrapper({required this.child});
+
+  @override
+  State<_PulsingGlowWrapper> createState() => _PulsingGlowWrapperState();
+}
+
+class _PulsingGlowWrapperState extends State<_PulsingGlowWrapper> {
+  bool _isLarge = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(
+        begin: _isLarge ? 0.97 : 1.03,
+        end: _isLarge ? 1.03 : 0.97,
+      ),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeInOut,
+      onEnd: () {
+        setState(() {
+          _isLarge = !_isLarge;
+        });
+      },
+      builder: (context, scale, child) {
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.gold.withValues(alpha: 0.15 * (scale - 0.97) / 0.06),
+                  blurRadius: 8.r * (scale - 0.97) / 0.06,
+                  spreadRadius: 1.r * (scale - 0.97) / 0.06,
+                ),
+              ],
+            ),
+            child: child,
+          ),
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+

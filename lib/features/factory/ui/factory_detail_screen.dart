@@ -2390,6 +2390,24 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       final name = (warehouse['name'] ?? 'Depo').toString();
       final cityName = (warehouse['city']?['name'] ?? detail.cityName)
           .toString();
+
+      final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
+      final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
+      final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
+      final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
+
+      final slotsRaw = warehouse['warehouse_slots'] as List<dynamic>? ?? [];
+      final previews = slotsRaw.map((s) {
+        final qty = (s['quantity'] as num?)?.toDouble() ?? 0.0;
+        final qual = (s['quality_level'] as num?)?.toInt() ?? 0;
+        final icon = (s['product'] as Map?)?['urun_iconu']?.toString() ?? '';
+        return WarehouseSelectionProductPreview(
+          icon: icon,
+          quantity: qty,
+          quality: qual,
+        );
+      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
+
       warehouseChoices.add(
         _FactoryInboundWarehouseChoice(
           warehouseId: warehouseId,
@@ -2398,6 +2416,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           cityName: cityName,
           isSameCity: _isSameCity(cityId, detail.factory.cityId),
           slots: eligibleSlots,
+          capacityRatio: capacityRatio,
+          capacityLabel: capacityLabel,
+          productPreviews: previews,
         ),
       );
     }
@@ -2425,6 +2446,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 infoText:
                     '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity adet',
                 isHighlightBadge: warehouse.isSameCity,
+                capacityRatio: warehouse.capacityRatio,
+                capacityLabel: warehouse.capacityLabel,
+                productPreviews: warehouse.productPreviews,
                 onTap: () {
                   Navigator.pop(context);
                   _showFactoryInboundSelectionSheet(
@@ -2506,6 +2530,20 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         warehouse,
         productionCityId: detail.factory.cityId,
       );
+
+      final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
+      final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
+      final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
+      final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
+
+      final previews = warehouseOption.slots.map((s) {
+        return WarehouseSelectionProductPreview(
+          icon: s.productIcon ?? '',
+          quantity: s.quantity.toDouble(),
+          quality: s.qualityLevel,
+        );
+      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
+
       options.add(
         WarehouseSelectionOption(
           id: warehouseOption.id,
@@ -2516,6 +2554,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               : 'Lojistik Transfer',
           infoText: '${eligibleInventories.length} uygun stok secilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
+          capacityRatio: capacityRatio,
+          capacityLabel: capacityLabel,
+          productPreviews: previews,
           onTap: () async {
             Navigator.pop(context);
             WarehouseCapacityStatusModel? capacityStatus;
@@ -4643,6 +4684,9 @@ class _FactoryInboundWarehouseChoice {
   final String cityName;
   final bool isSameCity;
   final List<_FactoryInboundWarehouseSlotOption> slots;
+  final double? capacityRatio;
+  final String? capacityLabel;
+  final List<WarehouseSelectionProductPreview>? productPreviews;
 
   const _FactoryInboundWarehouseChoice({
     required this.warehouseId,
@@ -4651,6 +4695,9 @@ class _FactoryInboundWarehouseChoice {
     required this.cityName,
     required this.isSameCity,
     required this.slots,
+    this.capacityRatio,
+    this.capacityLabel,
+    this.productPreviews,
   });
 }
 

@@ -107,8 +107,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             _currentFile = _totalFiles;
           }
         });
-        // %100 doluluk animasyonunun görünmesi için yarım saniye bekle
-        await Future.delayed(const Duration(milliseconds: 500));
         if (!mounted) return;
         context.go('/home');
       }

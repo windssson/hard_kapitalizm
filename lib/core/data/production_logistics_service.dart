@@ -1,6 +1,7 @@
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 
 class ProductionLogisticsService {
   final SupabaseClient _supabase;
@@ -126,9 +127,13 @@ class ProductionLogisticsService {
         params: params,
       );
 
-      return ProductionLogisticsStartResult.fromJson(
+      final result = ProductionLogisticsStartResult.fromJson(
         Map<String, dynamic>.from(response as Map),
       );
+      if (result.success) {
+        AppHaptic.heavy();
+      }
+      return result;
     } catch (e) {
       return ProductionLogisticsStartResult(
         success: false,
@@ -155,10 +160,13 @@ class ProductionLogisticsService {
           'p_vehicle_id': vehicleId,
         },
       );
-
-      return ProductionLogisticsStartResult.fromJson(
+      final result = ProductionLogisticsStartResult.fromJson(
         Map<String, dynamic>.from(response as Map),
       );
+      if (result.success) {
+        AppHaptic.heavy();
+      }
+      return result;
     } catch (e) {
       return ProductionLogisticsStartResult(
         success: false,

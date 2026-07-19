@@ -2617,6 +2617,19 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           .toString();
       final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
       final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
+
+      final slotsRaw = warehouse['warehouse_slots'] as List<dynamic>? ?? [];
+      final previews = slotsRaw.map((s) {
+        final qty = (s['quantity'] as num?)?.toDouble() ?? 0.0;
+        final qual = (s['quality_level'] as num?)?.toInt() ?? 0;
+        final icon = (s['product'] as Map?)?['urun_iconu']?.toString() ?? '';
+        return WarehouseSelectionProductPreview(
+          icon: icon,
+          quantity: qty,
+          quality: qual,
+        );
+      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
+
       warehouseChoices.add(
         _FarmInboundWarehouseChoice(
           warehouseId: warehouseId,
@@ -2627,6 +2640,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           slots: eligibleSlots,
           capacity: totalCapacity,
           reservedCapacity: reservedCapacity,
+          productPreviews: previews,
         ),
       );
     }
@@ -2662,6 +2676,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   capacityRatio: capacityRatio,
                   capacityLabel: capacityLabel,
                   distanceLabel: warehouse.isSameCity ? 'Aynı Şehir' : 'Lojistik',
+                  productPreviews: warehouse.productPreviews,
                   onTap: () {
                     Navigator.pop(context);
                     _showFarmInboundSelectionSheet(
@@ -2745,6 +2760,14 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
       final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
 
+      final previews = warehouseOption.slots.map((s) {
+        return WarehouseSelectionProductPreview(
+          icon: s.productIcon ?? '',
+          quantity: s.quantity.toDouble(),
+          quality: s.qualityLevel,
+        );
+      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
+
       options.add(
         WarehouseSelectionOption(
           id: warehouseOption.id,
@@ -2758,6 +2781,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           capacityRatio: capacityRatio,
           capacityLabel: capacityLabel,
           distanceLabel: warehouseOption.isSameCity ? 'Aynı Şehir' : 'Lojistik',
+          productPreviews: previews,
           onTap: () async {
             Navigator.pop(context);
             WarehouseCapacityStatusModel? capacityStatus;
@@ -5031,6 +5055,7 @@ class _FarmInboundWarehouseChoice {
   final List<_FarmInboundWarehouseSlotOption> slots;
   final double capacity;
   final double reservedCapacity;
+  final List<WarehouseSelectionProductPreview>? productPreviews;
 
   const _FarmInboundWarehouseChoice({
     required this.warehouseId,
@@ -5041,6 +5066,7 @@ class _FarmInboundWarehouseChoice {
     required this.slots,
     required this.capacity,
     required this.reservedCapacity,
+    this.productPreviews,
   });
 }
 
