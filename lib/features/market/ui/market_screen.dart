@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
@@ -57,6 +58,7 @@ class MarketScreen extends ConsumerStatefulWidget {
 
 class _MarketScreenState extends ConsumerState<MarketScreen> {
   final List<_MarketCartItem> _cartItems = [];
+  final Set<String> _prefetchedProductIcons = <String>{};
   String? _lockedSourceCityId;
   bool _cityCatalogEnabled = false;
   String _productSearchQuery = '';
@@ -540,6 +542,27 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     _cityCatalogEnabled = false;
   }
 
+  void _prefetchMarketIcons(Iterable<ProductModel> products) {
+    final iconsToFetch = products
+        .map((product) => product.urunIconu.trim())
+        .where(
+          (icon) =>
+              icon.isNotEmpty && !_prefetchedProductIcons.contains(icon),
+        )
+        .toList(growable: false);
+
+    if (iconsToFetch.isEmpty) return;
+
+    _prefetchedProductIcons.addAll(iconsToFetch);
+    Future.microtask(() async {
+      try {
+        await ref.read(assetManagerProvider).prefetchAssetList(iconsToFetch);
+      } catch (_) {
+        _prefetchedProductIcons.removeAll(iconsToFetch);
+      }
+    });
+  }
+
   Widget _buildUnifiedSelectionCard({
     required ProductModel? product,
     required List<ProductModel> products,
@@ -751,10 +774,16 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           return const SizedBox.shrink();
         }
 
-        final isUp = history.prices.last >= history.prices.first;
+        final visiblePrices = history.prices.where((price) => price > 0).toList();
+        if (visiblePrices.length < 2) {
+          return const SizedBox.shrink();
+        }
+
+        final isUp = visiblePrices.last >= visiblePrices.first;
         final trendColor = isUp ? AppColors.green : AppColors.red;
-        final diff = history.prices.last - history.prices.first;
-        final diffPercent = (diff / (history.prices.first > 0 ? history.prices.first : 1.0)) * 100;
+        final diff = visiblePrices.last - visiblePrices.first;
+        final diffPercent =
+            (diff / (visiblePrices.first > 0 ? visiblePrices.first : 1.0)) * 100;
         final sign = diff >= 0 ? '+' : '';
 
         return Container(
@@ -791,11 +820,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 ],
               ),
               SizedBox(height: 6.h),
-              Center(
+              SizedBox(
+                width: double.infinity,
                 child: PriceSparkline(
-                  prices: history.prices,
-                  width: double.infinity,
-                  height: 36.h,
+                  prices: visiblePrices,
+                  height: 52.h,
                 ),
               ),
             ],
@@ -1051,6 +1080,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       if (query.isEmpty) return true;
       return product.urunAdi.toLowerCase().contains(query);
     }).toList();
+    _prefetchMarketIcons(filteredProducts.take(8));
+    final gridRowCount = (filteredProducts.length / 2).ceil();
+    final gridHeight = math.min(
+      (gridRowCount * 84.h) + (math.max(0, gridRowCount - 1) * 8.h),
+      320.h,
+    );
     final selectedProduct = sortedProducts
         .where((product) => product.id == _activeProductId)
         .firstOrNull;
@@ -1315,33 +1350,36 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           if (filteredProducts.isEmpty)
             _buildInfoBox('Bu depo için uygun ürün bulunamadı.', AppColors.red)
           else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 8.h,
-                crossAxisSpacing: 8.w,
-                childAspectRatio: 2.0,
+            SizedBox(
+              height: gridHeight,
+              child: GridView.builder(
+                physics: const BouncingScrollPhysics(),
+                cacheExtent: 220,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 8.h,
+                  crossAxisSpacing: 8.w,
+                  childAspectRatio: 2.0,
+                ),
+                itemCount: filteredProducts.length,
+                itemBuilder: (context, index) {
+                  final product = filteredProducts[index];
+                  final isSelected = product.id == _activeProductId;
+                  return _buildSelectableProductCard(
+                    product: product,
+                    isSelected: isSelected,
+                    isSellingInStore: sellingProductIds.contains(product.id),
+                    isProductionInput: activeProductionIngredients.contains(product.id),
+                    needCount: productNeedById[product.id] ?? 0,
+                    prodNeedCount: productionNeedById[product.id] ?? 0,
+                    onTap: () {
+                      setState(() {
+                        _selectedProductId = product.id;
+                      });
+                    },
+                  );
+                },
               ),
-              itemCount: filteredProducts.length,
-              itemBuilder: (context, index) {
-                final product = filteredProducts[index];
-                final isSelected = product.id == _activeProductId;
-                return _buildSelectableProductCard(
-                  product: product,
-                  isSelected: isSelected,
-                  isSellingInStore: sellingProductIds.contains(product.id),
-                  isProductionInput: activeProductionIngredients.contains(product.id),
-                  needCount: productNeedById[product.id] ?? 0,
-                  prodNeedCount: productionNeedById[product.id] ?? 0,
-                  onTap: () {
-                    setState(() {
-                      _selectedProductId = product.id;
-                    });
-                  },
-                );
-              },
             ),
           if (selectedProduct != null) ...[
             SizedBox(height: 14.h),
@@ -1867,6 +1905,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     }
 
     final activeProductionIngredients = productionNeedById.keys.toSet();
+    _prefetchMarketIcons(scopedProducts.take(8));
 
     final productAsync = _activeProductId.isNotEmpty
         ? ref.watch(marketProductProvider(_activeProductId))

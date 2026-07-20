@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,12 +9,14 @@ class PriceSparkline extends StatelessWidget {
   final List<double> prices;
   final double height;
   final double width;
+  final bool showPointLabels;
 
   const PriceSparkline({
     super.key,
     required this.prices,
     this.height = 40.0,
     this.width = 120.0,
+    this.showPointLabels = true,
   });
 
   @override
@@ -42,6 +45,7 @@ class PriceSparkline extends StatelessWidget {
         painter: _SparklinePainter(
           prices: prices,
           strokeColor: strokeColor,
+          showPointLabels: showPointLabels,
         ),
       ),
     );
@@ -51,10 +55,12 @@ class PriceSparkline extends StatelessWidget {
 class _SparklinePainter extends CustomPainter {
   final List<double> prices;
   final Color strokeColor;
+  final bool showPointLabels;
 
   _SparklinePainter({
     required this.prices,
     required this.strokeColor,
+    required this.showPointLabels,
   });
 
   @override
@@ -74,6 +80,8 @@ class _SparklinePainter extends CustomPainter {
     }
 
     final valRange = maxVal - minVal;
+    final topInset = showPointLabels ? 14.h : 2.h;
+    final bottomInset = 3.h;
 
     // Layout configuration
     final labelWidth = 26.w;
@@ -87,9 +95,13 @@ class _SparklinePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0.r;
 
-    canvas.drawLine(Offset(chartLeft, 2.h), Offset(size.width, 2.h), gridPaint);
+    canvas.drawLine(Offset(chartLeft, topInset), Offset(size.width, topInset), gridPaint);
     canvas.drawLine(Offset(chartLeft, size.height / 2), Offset(size.width, size.height / 2), gridPaint);
-    canvas.drawLine(Offset(chartLeft, size.height - 2.h), Offset(size.width, size.height - 2.h), gridPaint);
+    canvas.drawLine(
+      Offset(chartLeft, size.height - bottomInset),
+      Offset(size.width, size.height - bottomInset),
+      gridPaint,
+    );
 
     // Draw Y-axis labels
     final textStyle = TextStyle(
@@ -106,20 +118,22 @@ class _SparklinePainter extends CustomPainter {
       tp.paint(canvas, Offset(0, yOffset - tp.height / 2));
     }
 
-    drawLabel(maxVal, 2.h);
+    drawLabel(maxVal, topInset);
     drawLabel((maxVal + minVal) / 2, size.height / 2);
-    drawLabel(minVal, size.height - 2.h);
+    drawLabel(minVal, size.height - bottomInset);
 
     final path = Path();
     final areaPath = Path();
+    final usableHeight = size.height - topInset - bottomInset;
 
     for (int i = 0; i < prices.length; i++) {
       final x = chartLeft + i * widthStep;
-      final y = size.height - 2.h - ((prices[i] - minVal) / valRange * (size.height - 4.h));
+      final y =
+          size.height - bottomInset - ((prices[i] - minVal) / valRange * usableHeight);
 
       if (i == 0) {
         path.moveTo(x, y);
-        areaPath.moveTo(x, size.height - 2.h);
+        areaPath.moveTo(x, size.height - bottomInset);
         areaPath.lineTo(x, y);
       } else {
         path.lineTo(x, y);
@@ -127,7 +141,7 @@ class _SparklinePainter extends CustomPainter {
       }
 
       if (i == prices.length - 1) {
-        areaPath.lineTo(x, size.height - 2.h);
+        areaPath.lineTo(x, size.height - bottomInset);
         areaPath.close();
       }
     }
@@ -156,13 +170,52 @@ class _SparklinePainter extends CustomPainter {
     
     for (int i = 0; i < prices.length; i++) {
       final x = chartLeft + i * widthStep;
-      final y = size.height - 2.h - ((prices[i] - minVal) / valRange * (size.height - 4.h));
+      final y =
+          size.height - bottomInset - ((prices[i] - minVal) / valRange * usableHeight);
       canvas.drawCircle(Offset(x, y), 2.0.r, dotPaint);
+
+      if (showPointLabels) {
+        final priceText = prices[i].toStringAsFixed(0);
+        final pricePainter = TextPainter(
+          text: TextSpan(
+            text: priceText,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 7.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        final minLabelX = chartLeft;
+        final maxLabelX = math.max(chartLeft, size.width - pricePainter.width);
+        final labelX =
+            (x - (pricePainter.width / 2)).clamp(minLabelX, maxLabelX).toDouble();
+        final labelY = math.max(0.0, y - pricePainter.height - 4.h).toDouble();
+
+        final labelRect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            labelX - 3.w,
+            labelY - 1.h,
+            pricePainter.width + 6.w,
+            pricePainter.height + 2.h,
+          ),
+          Radius.circular(4.r),
+        );
+
+        final labelPaint = Paint()
+          ..color = AppColors.background.withValues(alpha: 0.92)
+          ..style = PaintingStyle.fill;
+        canvas.drawRRect(labelRect, labelPaint);
+        pricePainter.paint(canvas, Offset(labelX, labelY));
+      }
     }
 
     // Draw outer pulsing circle on the last point
     final lastX = chartLeft + chartWidth;
-    final lastY = size.height - 2.h - ((prices.last - minVal) / valRange * (size.height - 4.h));
+    final lastY =
+        size.height - bottomInset - ((prices.last - minVal) / valRange * usableHeight);
 
     final dotOuterPaint = Paint()
       ..color = strokeColor.withValues(alpha: 0.3)
@@ -172,6 +225,8 @@ class _SparklinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SparklinePainter oldDelegate) {
-    return oldDelegate.prices != prices || oldDelegate.strokeColor != strokeColor;
+    return oldDelegate.prices != prices ||
+        oldDelegate.strokeColor != strokeColor ||
+        oldDelegate.showPointLabels != showPointLabels;
   }
 }

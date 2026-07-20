@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -193,17 +195,80 @@ final playerMarketListingsProvider =
     });
 
 final productPriceHistoryProvider =
-    FutureProvider.family<ProductPriceHistoryModel?, String>((ref, productId) async {
-  final supabase = Supabase.instance.client;
-  final response = await supabase.rpc(
-    'get_product_price_history',
-    params: {'p_product_id': productId},
-  );
+    FutureProvider.family<ProductPriceHistoryModel?, String>((
+      ref,
+      productId,
+    ) async {
+      final supabase = Supabase.instance.client;
 
-  if (response == null) return null;
-  return ProductPriceHistoryModel.fromJson(
-    response is Map<String, dynamic>
-        ? response
-        : Map<String, dynamic>.from(response as Map),
-  );
-});
+      Map<String, dynamic>? normalize(dynamic response) {
+        if (response == null) return null;
+        if (response is Map<String, dynamic>) return response;
+        if (response is Map) return Map<String, dynamic>.from(response);
+        if (response is List && response.isNotEmpty) {
+          final first = response.first;
+          if (first is Map<String, dynamic>) return first;
+          if (first is Map) return Map<String, dynamic>.from(first);
+        }
+        return null;
+      }
+
+      Future<Map<String, dynamic>?> fetchRpc() async {
+        final response = await supabase
+            .rpc(
+              'get_product_price_history',
+              params: {'p_product_id': productId},
+            )
+            .timeout(const Duration(seconds: 8));
+        return normalize(response);
+      }
+
+      Future<Map<String, dynamic>?> fetchProductsFallback() async {
+        final response = await supabase
+            .from('products')
+            .select(
+              'id, updated_at, price_day_0, price_day_1, price_day_2, price_day_3, price_day_4, price_day_5, price_day_6',
+            )
+            .eq('id', productId)
+            .maybeSingle()
+            .timeout(const Duration(seconds: 5));
+
+        if (response == null) return null;
+
+        return {
+          'product_id': response['id'],
+          'updated_at': response['updated_at'],
+          'price_day_0': response['price_day_0'],
+          'price_day_1': response['price_day_1'],
+          'price_day_2': response['price_day_2'],
+          'price_day_3': response['price_day_3'],
+          'price_day_4': response['price_day_4'],
+          'price_day_5': response['price_day_5'],
+          'price_day_6': response['price_day_6'],
+        };
+      }
+
+      try {
+        final rpcData = await fetchRpc();
+        if (rpcData != null) {
+          return ProductPriceHistoryModel.fromJson(rpcData);
+        }
+      } on TimeoutException {
+        // Fall back to direct table query when the RPC stalls.
+      } catch (_) {
+        // Continue to fallback query below.
+      }
+
+      try {
+        final fallbackData = await fetchProductsFallback();
+        if (fallbackData != null) {
+          return ProductPriceHistoryModel.fromJson(fallbackData);
+        }
+      } on TimeoutException {
+        return null;
+      } catch (_) {
+        return null;
+      }
+
+      return null;
+    });

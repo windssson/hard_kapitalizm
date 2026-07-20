@@ -166,7 +166,6 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                           ),
                         )
                       : ListView.separated(
-                          shrinkWrap: true,
                           itemCount: filteredOptions.length,
                           separatorBuilder: (context, index) => SizedBox(height: 10.h),
                           itemBuilder: (context, index) {

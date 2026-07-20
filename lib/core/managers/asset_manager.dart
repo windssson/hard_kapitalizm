@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,9 +8,9 @@ final assetManagerProvider = Provider(
   (ref) => AssetManager(Supabase.instance.client),
 );
 
-/// Oyundaki tüm görsellerin statik listesi.
-/// Bu sayede her açılışta Supabase Storage'a "list" isteği atmak yerine
-/// sadece eksik olan dosyaları tespit edip indiriyoruz.
+/// Oyundaki tum gorsellerin statik listesi.
+/// Bu sayede her acilista Supabase Storage'a "list" istegi atmak yerine
+/// sadece eksik olan dosyalari tespit edip indiriyoruz.
 const List<String> _kAllAssets = [
   'ae1.webp', 'ae2.webp', 'ae3.webp', 'ak1.webp', 'ak2.webp', 'ak3.webp', 'akolye.webp', 'altin.webp',
   'aluminyum.webp', 'ananas.webp', 'araba.webp', 'arge.webp', 'aricilik.webp', 'arpa.webp', 'asaat.webp',
@@ -56,13 +57,12 @@ const List<String> _kAllAssets = [
 class AssetManager {
   final SupabaseClient _supabase;
 
-  // Bellek içi önbellekleme
   String? _assetsDirPath;
   final Map<String, File> _fileCache = {};
+  final Map<String, Future<File>> _inFlightDownloads = {};
 
   AssetManager(this._supabase);
 
-  /// game_assets klasör yolunu bir kez çözümler ve önbelleğe alır.
   Future<String> _getAssetsDirPath() async {
     if (_assetsDirPath != null) return _assetsDirPath!;
     final directory = await getApplicationDocumentsDirectory();
@@ -70,43 +70,70 @@ class AssetManager {
     return _assetsDirPath!;
   }
 
-  /// Verilen dosya adını kontrol eder.
-  /// Eğer cihazda varsa lokal yolu, yoksa Supabase'den indirip kaydettikten sonra lokal yolu döndürür.
   Future<File> getAsset(String fileName, {bool forceDownload = false}) async {
     try {
       if (!forceDownload && _fileCache.containsKey(fileName)) {
         return _fileCache[fileName]!;
       }
 
-      final assetsPath = await _getAssetsDirPath();
-      final file = File('$assetsPath/$fileName');
+      if (!forceDownload && _inFlightDownloads.containsKey(fileName)) {
+        return _inFlightDownloads[fileName]!;
+      }
 
-      // Eğer dosya lokalde varsa ve zorla indirme istenmemişse direkt döndür
-      if (!forceDownload && await file.exists()) {
+      Future<File> loadAsset() async {
+        final assetsPath = await _getAssetsDirPath();
+        final file = File('$assetsPath/$fileName');
+
+        if (!forceDownload && await file.exists()) {
+          _fileCache[fileName] = file;
+          return file;
+        }
+
+        final assetsDir = Directory(assetsPath);
+        if (!await assetsDir.exists()) {
+          await assetsDir.create(recursive: true);
+        }
+
+        final bytes = await _supabase.storage.from('assets').download(fileName);
+        await file.writeAsBytes(bytes);
+
         _fileCache[fileName] = file;
         return file;
       }
 
-      // Klasör yoksa oluştur
-      final assetsDir = Directory(assetsPath);
-      if (!await assetsDir.exists()) {
-        await assetsDir.create(recursive: true);
+      final future = loadAsset();
+      if (!forceDownload) {
+        _inFlightDownloads[fileName] = future;
       }
 
-      // Dosya yoksa Supabase 'assets' bucket'ından indir
-      final bytes = await _supabase.storage.from('assets').download(fileName);
-
-      // Dosyayı lokal sisteme yaz
-      await file.writeAsBytes(bytes);
-
-      _fileCache[fileName] = file;
-      return file;
+      try {
+        return await future;
+      } finally {
+        if (!forceDownload) {
+          _inFlightDownloads.remove(fileName);
+        }
+      }
     } catch (e) {
-      throw Exception('Asset indirme hatası ($fileName): $e');
+      throw Exception('Asset indirme hatasi ($fileName): $e');
     }
   }
 
-  /// Assets cache'ini tamamen temizler.
+  Future<void> prefetchAssetList(Iterable<String> fileNames) async {
+    final uniqueNames = fileNames
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+
+    if (uniqueNames.isEmpty) return;
+
+    const batchSize = 8;
+    for (int i = 0; i < uniqueNames.length; i += batchSize) {
+      final batch = uniqueNames.skip(i).take(batchSize);
+      await Future.wait(batch.map(getAsset));
+    }
+  }
+
   Future<void> clearCache() async {
     final assetsPath = await _getAssetsDirPath();
     final assetsDir = Directory(assetsPath);
@@ -115,10 +142,9 @@ class AssetManager {
       await assetsDir.delete(recursive: true);
     }
     _fileCache.clear();
+    _inFlightDownloads.clear();
   }
 
-  /// Tüm statik varlıkları yerelde kontrol eder; eksik varsa indirir.
-  /// Artık her seferinde Supabase listleme çağrısı yapılmadığından anında çalışır.
   Future<void> prefetchAssets(
     void Function(int current, int total, String fileName) onProgress,
   ) async {
@@ -126,7 +152,6 @@ class AssetManager {
       final assetsPath = await _getAssetsDirPath();
       final assetsDir = Directory(assetsPath);
 
-      // Klasör yoksa oluştur
       if (!await assetsDir.exists()) {
         await assetsDir.create(recursive: true);
       }
@@ -135,19 +160,17 @@ class AssetManager {
       for (final fileName in _kAllAssets) {
         final file = File('$assetsPath/$fileName');
         if (await file.exists()) {
-          _fileCache[fileName] = file; // Zaten mevcut olanları bellek cache'ine al
+          _fileCache[fileName] = file;
         } else {
           missingFiles.add(fileName);
         }
       }
 
       if (missingFiles.isEmpty) {
-        // Her şey yerelde var, indirmeye gerek yok — direkt bitir.
         onProgress(1, 1, '');
         return;
       }
 
-      // Eksik dosyaları indir (Paralel 8'li gruplar halinde)
       int total = missingFiles.length;
       int current = 0;
       const int batchSize = 8;
@@ -156,14 +179,14 @@ class AssetManager {
         await Future.wait(
           batch.map((fileName) async {
             final file = await getAsset(fileName, forceDownload: true);
-            _fileCache[fileName] = file; // Bellek cache'ine al
+            _fileCache[fileName] = file;
             current++;
             onProgress(current, total, fileName);
           }),
         );
       }
     } catch (e) {
-      throw Exception('Asset prefetch hatası: $e');
+      throw Exception('Asset prefetch hatasi: $e');
     }
   }
 }

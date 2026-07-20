@@ -1,6 +1,6 @@
 class ProductPriceHistoryModel {
   final String productId;
-  final List<double> prices; // Chronological order: [day_4, day_3, day_2, day_1, day_0]
+  final List<double> prices;
   final DateTime updatedAt;
 
   ProductPriceHistoryModel({
@@ -10,16 +10,33 @@ class ProductPriceHistoryModel {
   });
 
   factory ProductPriceHistoryModel.fromJson(Map<String, dynamic> json) {
+    final indexedPrices = <MapEntry<int, double>>[];
+
+    for (final entry in json.entries) {
+      if (!entry.key.startsWith('price_day_')) continue;
+      final index = int.tryParse(entry.key.replaceFirst('price_day_', ''));
+      if (index == null) continue;
+      final value = double.tryParse(entry.value?.toString() ?? '0') ?? 0.0;
+      indexedPrices.add(MapEntry(index, value));
+    }
+
+    indexedPrices.sort((a, b) => b.key.compareTo(a.key));
+
+    final rawPrices = json['prices'];
+    final prices = rawPrices is List
+        ? rawPrices
+              .map((value) => double.tryParse(value?.toString() ?? '0') ?? 0.0)
+              .toList()
+        : indexedPrices.map((entry) => entry.value).toList();
+    final updatedAtRaw = json['updated_at']?.toString();
+
     return ProductPriceHistoryModel(
-      productId: json['product_id'] as String,
-      prices: [
-        (double.tryParse(json['price_day_4']?.toString() ?? '0') ?? 0.0),
-        (double.tryParse(json['price_day_3']?.toString() ?? '0') ?? 0.0),
-        (double.tryParse(json['price_day_2']?.toString() ?? '0') ?? 0.0),
-        (double.tryParse(json['price_day_1']?.toString() ?? '0') ?? 0.0),
-        (double.tryParse(json['price_day_0']?.toString() ?? '0') ?? 0.0),
-      ],
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      productId: json['product_id']?.toString() ?? '',
+      prices: prices,
+      updatedAt: updatedAtRaw != null
+          ? DateTime.tryParse(updatedAtRaw) ??
+              DateTime.fromMillisecondsSinceEpoch(0)
+          : DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 }

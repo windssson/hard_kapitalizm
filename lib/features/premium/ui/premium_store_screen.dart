@@ -42,7 +42,7 @@ class PremiumStoreScreen extends ConsumerWidget {
       ),
       _GoldPackage(
         id: 'gold_3000',
-        name: 'Holding Hazine Kasası',
+        name: 'Hazine Kasası',
         goldCount: 3000,
         priceText: '29.99 \$',
         icon: AppIcons.lockRounded,
@@ -83,7 +83,10 @@ class PremiumStoreScreen extends ConsumerWidget {
               // Gold benefits note
               Expanded(
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 12.h,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -103,7 +106,8 @@ class PremiumStoreScreen extends ConsumerWidget {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: packages.length,
-                        separatorBuilder: (context, index) => SizedBox(height: 12.h),
+                        separatorBuilder: (context, index) =>
+                            SizedBox(height: 12.h),
                         itemBuilder: (context, index) {
                           return _buildPackageCard(context, packages[index]);
                         },
@@ -180,7 +184,11 @@ class PremiumStoreScreen extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Icon(AppIcons.starRounded, color: AppColors.gold, size: AppIconSizes.compact),
+                Icon(
+                  AppIcons.starRounded,
+                  color: AppColors.gold,
+                  size: AppIconSizes.compact,
+                ),
                 SizedBox(width: 4.w),
                 Text(
                   goldCount.toStringAsFixed(0),
@@ -204,9 +212,7 @@ class PremiumStoreScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBg.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(
-          color: AppColors.borderGold.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,11 +223,13 @@ class PremiumStoreScreen extends ConsumerWidget {
             decoration: BoxDecoration(
               color: AppColors.gold.withValues(alpha: 0.12),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.gold.withValues(alpha: 0.35),
-              ),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
             ),
-            child: Icon(AppIcons.boltRounded, color: AppColors.gold, size: AppIconSizes.mediumLarge),
+            child: Icon(
+              AppIcons.boltRounded,
+              color: AppColors.gold,
+              size: AppIconSizes.mediumLarge,
+            ),
           ),
           SizedBox(width: 12.w),
           Expanded(
@@ -327,7 +335,10 @@ class PremiumStoreScreen extends ConsumerWidget {
                         if (hasBadge) ...[
                           SizedBox(width: 6.w),
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 5.w,
+                              vertical: 1.5.h,
+                            ),
                             decoration: BoxDecoration(
                               color: package.color.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(6.r),
@@ -351,10 +362,14 @@ class PremiumStoreScreen extends ConsumerWidget {
                     SizedBox(height: 3.h),
                     Row(
                       children: [
-                        Icon(AppIcons.starRounded, color: AppColors.gold, size: AppIconSizes.small),
+                        Icon(
+                          AppIcons.starRounded,
+                          color: AppColors.gold,
+                          size: AppIconSizes.small,
+                        ),
                         SizedBox(width: 3.w),
                         Text(
-                          '${package.goldCount.toString()} Altın / Yıldız',
+                          '${package.goldCount.toString()} Yıldız',
                           style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textSecondary,
                             fontSize: AppTypography.bodySmall,
@@ -373,7 +388,10 @@ class PremiumStoreScreen extends ConsumerWidget {
                   foregroundColor: package.color,
                   shadowColor: AppFx.panelWash(0.4),
                   elevation: 4,
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
                     side: BorderSide(
