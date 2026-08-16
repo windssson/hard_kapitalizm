@@ -2058,6 +2058,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                   ),
                                 ),
                               ),
+                              _buildElasticityBadge(slot),
+                              _buildLowStockBadge(slot),
                             ],
                           ),
                           if ((slot.cost != null && slot.cost! > 0) || slot.pendingQuantity > 0) ...[
@@ -2397,6 +2399,78 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     });
   }
 
+  Widget _buildElasticityBadge(StoreSlotModel slot) {
+    final double cost = slot.cost ?? 0;
+    final double price = slot.price ?? 0;
+    if (price <= 0 || cost <= 0) return const SizedBox.shrink();
+
+    final double marginPercent = ((price - cost) / cost) * 100;
+    String label;
+    Color color;
+
+    if (marginPercent <= 20) {
+      label = '⚡ Hızlı';
+      color = AppColors.green;
+    } else if (marginPercent <= 45) {
+      label = '⚖️ Dengeli';
+      color = AppColors.gold;
+    } else {
+      label = '⚠️ Yavaş';
+      color = AppColors.red;
+    }
+
+    return Container(
+      margin: EdgeInsets.only(left: 4.w),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(5.r),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1.w,
+        ),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.caption.standardCopyWith(
+          color: color,
+          fontSize: AppTypography.micro,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLowStockBadge(StoreSlotModel slot) {
+    final bool isLowStock = slot.isActive &&
+        !slot.isEmpty &&
+        slot.capacity > 0 &&
+        (slot.quantity / slot.capacity) <= 0.20;
+
+    if (!isLowStock) return const SizedBox.shrink();
+
+    return Container(
+      margin: EdgeInsets.only(left: 4.w),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+      decoration: BoxDecoration(
+        color: AppColors.red.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(5.r),
+        border: Border.all(
+          color: AppColors.red.withValues(alpha: 0.4),
+          width: 1.w,
+        ),
+      ),
+      child: Text(
+        '⚠️ Düşük Stok',
+        style: AppTextStyles.caption.standardCopyWith(
+          color: AppColors.red,
+          fontSize: AppTypography.micro,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   bool _canBulkUpdateStorePrices(StoreModel store) {
     return store.slots.any(
       (slot) =>
@@ -2491,49 +2565,202 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     WidgetRef ref,
     StoreModel store,
   ) async {
-    final markupPercent = await showDialog<int>(
+    int selectedPercent = 30;
+
+    final markupPercent = await showModalBottomSheet<int>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.background,
-        title: Text(
-          'Toplu Fiyat Guncelle',
-          style: AppTextStyles.h2.standardCopyWith(
-            color: AppColors.textPrimary,
-            fontSize: AppTypography.headline,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Tum aktif raf urunlerinin satis fiyatini secilen maliyet marjina gore guncelle.',
-          style: AppTextStyles.body.standardCopyWith(
-            color: AppColors.textMuted,
-            fontSize: AppTypography.bodyLarge,
-            height: 1.35,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Iptal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(25),
-            child: const Text('Maliyet +%25'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(30),
-            child: const Text('Maliyet +%30'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(50),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gold,
-              foregroundColor: AppColors.textOnAccent,
-            ),
-            child: const Text('Maliyet +%50'),
-          ),
-        ],
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            String elasticityLabel;
+            Color elasticityColor;
+
+            if (selectedPercent <= 20) {
+              elasticityLabel = '⚡ Yüksek Müşteri Trafiği (Hızlı Satış)';
+              elasticityColor = AppColors.green;
+            } else if (selectedPercent <= 45) {
+              elasticityLabel = '⚖️ Dengeli Satış (Optimum Kâr)';
+              elasticityColor = AppColors.gold;
+            } else {
+              elasticityLabel = '⚠️ Yüksek Fiyat (Yavaş Satış Riski)';
+              elasticityColor = AppColors.red;
+            }
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: 20.w,
+                right: 20.w,
+                top: 20.h,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    blurRadius: 20,
+                    spreadRadius: 4,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.textMuted.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  Row(
+                    children: [
+                      Icon(Icons.sell_outlined, color: AppColors.gold, size: 24.sp),
+                      SizedBox(width: 10.w),
+                      Text(
+                        'Toplu Kâr Marjı Fiyatlandırması',
+                        style: AppTextStyles.h2.standardCopyWith(
+                          color: AppColors.white,
+                          fontSize: AppTypography.titleLarge,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Tüm reyonlardaki ürünlerin maliyetine seçilen kâr oranını ekleyerek satış fiyatlarını tek tıkla günceller.',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textMuted,
+                      height: 1.35,
+                    ),
+                  ),
+                  SizedBox(height: 18.h),
+
+                  // Presets
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [15, 30, 50, 75].map((percent) {
+                      final isSelected = selectedPercent == percent;
+                      return ChoiceChip(
+                        label: Text('+%$percent Kâr'),
+                        selected: isSelected,
+                        selectedColor: AppColors.gold,
+                        backgroundColor: AppColors.cardBg,
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? AppColors.textOnAccent
+                              : AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12.sp,
+                        ),
+                        onSelected: (_) {
+                          setSheetState(() {
+                            selectedPercent = percent;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+
+                  SizedBox(height: 16.h),
+
+                  // Slider
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Hedef Kâr Marjı:', style: AppTextStyles.body),
+                      Text(
+                        '+%$selectedPercent',
+                        style: AppTextStyles.h2.standardCopyWith(
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: selectedPercent.toDouble(),
+                    min: 5,
+                    max: 100,
+                    divisions: 19,
+                    activeColor: AppColors.gold,
+                    inactiveColor: AppColors.cardBg,
+                    onChanged: (val) {
+                      setSheetState(() {
+                        selectedPercent = val.toInt();
+                      });
+                    },
+                  ),
+
+                  // Elasticity indicator card
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 10.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: elasticityColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color: elasticityColor.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Text(
+                      elasticityLabel,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: elasticityColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 20.h),
+
+                  // Submit button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48.h,
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          Navigator.of(sheetContext).pop(selectedPercent),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: AppColors.textOnAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Fiyatları Güncelle (+%$selectedPercent)',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
 
     if (markupPercent == null || !context.mounted) return;

@@ -849,6 +849,50 @@ class StoreActionNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> bulkSetStoreSlotPrices({
+    required List<Map<String, dynamic>> updates,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum açılmamış.'};
+    }
+
+    int successCount = 0;
+    String? lastError;
+
+    for (final item in updates) {
+      final String slotId = item['slotId'] as String;
+      final double price = (item['price'] as num).toDouble();
+      try {
+        final response = await _supabase.rpc(
+          'set_store_slot_price',
+          params: {
+            'p_player_id': user.id,
+            'p_store_slot_id': slotId,
+            'p_price': price,
+          },
+        );
+        final Map<String, dynamic> res =
+            Map<String, dynamic>.from(response as Map);
+        if (res['success'] == true) {
+          successCount++;
+        } else if (res['message'] != null) {
+          lastError = res['message'].toString();
+        }
+      } catch (e) {
+        lastError = e.toString();
+      }
+    }
+
+    return {
+      'success': successCount > 0,
+      'updatedCount': successCount,
+      'message': successCount > 0
+          ? '$successCount reyon fiyatı güncellendi.'
+          : (lastError ?? 'Fiyatlar güncellenemedi.'),
+    };
+  }
+
   Future<Map<String, dynamic>> clearStoreSlotProduct(String slotId) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {

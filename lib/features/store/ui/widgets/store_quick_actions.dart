@@ -7,6 +7,7 @@ class StoreQuickActions extends StatelessWidget {
   final VoidCallback onUpgradeTap;
   final VoidCallback onBoostTap;
   final VoidCallback onReportTap;
+  final VoidCallback? onBulkPricingTap;
   final VoidCallback? onOpenSlotTap;
   final VoidCallback onHistoryTap;
 
@@ -16,6 +17,7 @@ class StoreQuickActions extends StatelessWidget {
     required this.onUpgradeTap,
     required this.onBoostTap,
     required this.onReportTap,
+    this.onBulkPricingTap,
     required this.onOpenSlotTap,
     required this.onHistoryTap,
   });
@@ -24,8 +26,9 @@ class StoreQuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final itemWidth = ((constraints.maxWidth - (4 * 6.w)) / 5).clamp(
-          56.w,
+        final count = onBulkPricingTap != null ? 6 : 5;
+        final itemWidth = ((constraints.maxWidth - ((count - 1) * 4.w)) / count).clamp(
+          48.w,
           72.w,
         );
 
@@ -35,7 +38,7 @@ class StoreQuickActions extends StatelessWidget {
             _AnimatedQuickActionButton(
               width: itemWidth,
               icon: AppIcons.upgradeRounded,
-              label: 'Yukselt',
+              label: 'Yükselt',
               color: AppColors.green,
               onTap: onUpgradeTap,
             ),
@@ -53,17 +56,25 @@ class StoreQuickActions extends StatelessWidget {
               color: AppColors.purple,
               onTap: onReportTap,
             ),
+            if (onBulkPricingTap != null)
+              _AnimatedQuickActionButton(
+                width: itemWidth,
+                icon: Icons.sell_outlined,
+                label: 'Toplu Kâr',
+                color: AppColors.info,
+                onTap: onBulkPricingTap,
+              ),
             _AnimatedQuickActionButton(
               width: itemWidth,
               icon: AppIcons.addBox,
-              label: 'Slot Ac',
+              label: 'Slot Aç',
               color: AppColors.gold,
               onTap: canOpenNewSlot ? onOpenSlotTap : null,
             ),
             _AnimatedQuickActionButton(
               width: itemWidth,
               icon: AppIcons.history,
-              label: 'Gecmis',
+              label: 'Geçmiş',
               color: AppColors.textPrimary,
               onTap: onHistoryTap,
             ),
