@@ -28,6 +28,7 @@ import 'package:hard_kapitalizm/features/factory/ui/factory_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_detail_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_detail_screen.dart';
+import 'package:hard_kapitalizm/core/widgets/tutorial_overlay.dart';
 import 'package:hard_kapitalizm/features/market/ui/market_screen.dart';
 import 'package:hard_kapitalizm/features/company/ui/company_screen.dart';
 import 'package:hard_kapitalizm/features/company/ui/brand_design_screen.dart';
@@ -421,7 +422,7 @@ class HardKapitalizmApp extends StatelessWidget {
               child: Stack(
                 children: [
                   Container(color: AppColors.background),
-                  materialChild!,
+                  TutorialOverlay(child: materialChild!),
                 ],
               ),
             );

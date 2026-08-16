@@ -110,7 +110,63 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Maden Yonetimi'),
+            SecondaryTopBar(
+              title: 'Maden Yonetimi',
+              actions: [
+                PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  offset: const Offset(0, 40),
+                  color: AppColors.cardBg,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    side: BorderSide(
+                      color: AppColors.borderGold.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'sell') {
+                      _showSellMineDialog(context);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'sell',
+                      child: Row(
+                        children: [
+                          Icon(
+                            AppIcons.sellOutlined,
+                            color: AppColors.red,
+                            size: AppIconSizes.regular,
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Madeni Sat',
+                            style: AppTextStyles.body.standardCopyWith(
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    padding: EdgeInsets.all(6.w),
+                    decoration: BoxDecoration(
+                      color: AppFx.softOverlay(0.05),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(
+                        color: AppFx.softOverlay(0.06),
+                      ),
+                    ),
+                    child: Icon(
+                      AppIcons.moreVert,
+                      color: AppColors.textPrimary.withValues(alpha: 0.7),
+                      size: AppIconSizes.medium,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             Expanded(
               child: detailAsync.when(
                 loading: () =>
@@ -3078,6 +3134,157 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final minutes = duration.inMinutes % 60;
     if (hours > 0) return '${hours}s ${minutes}dk';
     return '${duration.inMinutes}dk';
+  }
+
+  Future<void> _showSellMineDialog(BuildContext context) async {
+    final detail = ref.read(mineDetailProvider(widget.mineId)).value;
+    if (detail == null) return;
+    final mine = detail.mine;
+
+    final quote = await ref
+        .read(mineActionProvider)
+        .sellMine(mineId: mine.id, confirm: false);
+
+    if (!context.mounted) return;
+
+    if (quote['success'] != true) {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: quote['message'] ?? 'Satis teklifi hazirlanamadi.',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    final constructionRefund =
+        (quote['construction_refund'] as num?)?.toDouble() ?? 0;
+    final stockRefund = (quote['stock_refund'] as num?)?.toDouble() ?? 0;
+    final totalRefund = (quote['total_refund'] as num?)?.toDouble() ?? 0;
+
+    final shouldSell = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.background,
+        title: Text(
+          'Madeni Sat',
+          style: AppTextStyles.h2.standardCopyWith(
+            color: AppColors.red,
+            fontSize: AppTypography.headline,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${mine.name} kalici olarak silinecek. Bu islem geri alinamaz.',
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.bodyLarge,
+                height: 1.35,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: AppColors.red.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                children: [
+                  _buildSalesSummaryRow('Kurulus Iadesi', constructionRefund),
+                  _buildSalesSummaryRow('Stok Iadesi', stockRefund),
+                  Divider(color: AppColors.border, height: 12.h),
+                  _buildSalesSummaryRow('Toplam Odeme', totalRefund, valueColor: AppColors.green),
+                ],
+              ),
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              'Aktif transferler veya devam eden uretim varsa satis engellenir.',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodySmall,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Vazgec'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              'Madeni Sat',
+              style: AppTextStyles.button.standardCopyWith(
+                color: AppColors.textOnAccent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSell != true || !context.mounted) return;
+
+    final result = await ref
+        .read(mineActionProvider)
+        .sellMine(mineId: mine.id, confirm: true);
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      AppSnackbar.show(
+        context,
+        title: 'Basarili',
+        message: 'Maden satildi. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
+        type: SnackbarType.success,
+      );
+      context.go('/mines');
+      return;
+    }
+
+    AppSnackbar.show(
+      context,
+      title: 'Hata',
+      message: result['message'] ?? 'Maden satilamadi.',
+      type: SnackbarType.error,
+    );
+  }
+
+  Widget _buildSalesSummaryRow(String label, double value, {Color? valueColor}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textSecondary,
+              fontSize: AppTypography.body,
+            ),
+          ),
+          Text(
+            '${value.toStringAsFixed(1)} TL',
+            style: AppTextStyles.body.standardCopyWith(
+              color: valueColor ?? AppColors.gold,
+              fontWeight: FontWeight.bold,
+              fontSize: AppTypography.body,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

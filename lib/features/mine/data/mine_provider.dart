@@ -618,6 +618,29 @@ class MineActionNotifier {
     }
     return result;
   }
+
+  Future<Map<String, dynamic>> sellMine({
+    required String mineId,
+    required bool confirm,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'sell_building',
+        params: {
+          'p_building_id': mineId,
+          'p_building_kind': 'mine',
+          'p_confirm': confirm,
+        },
+      );
+      _ref.invalidate(mineListProvider);
+      return _sync(response);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
 
 final mineActionProvider = Provider((ref) => MineActionNotifier(ref));

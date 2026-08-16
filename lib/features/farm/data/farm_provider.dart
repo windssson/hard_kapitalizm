@@ -757,6 +757,29 @@ class FarmActionNotifier {
     await _refreshAttentionNotifications();
     return result;
   }
+
+  Future<Map<String, dynamic>> sellFarm({
+    required String farmId,
+    required bool confirm,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'sell_building',
+        params: {
+          'p_building_id': farmId,
+          'p_building_kind': 'farm',
+          'p_confirm': confirm,
+        },
+      );
+      _ref.invalidate(farmListProvider);
+      return _sync(response);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
 
 final farmActionProvider = Provider((ref) => FarmActionNotifier(ref));

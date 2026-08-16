@@ -753,6 +753,29 @@ class WarehouseActionNotifier {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+  Future<Map<String, dynamic>> sellWarehouse({
+    required String warehouseId,
+    required bool confirm,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'sell_building',
+        params: {
+          'p_building_id': warehouseId,
+          'p_building_kind': 'warehouse',
+          'p_confirm': confirm,
+        },
+      );
+      _ref.invalidate(warehouseListProvider);
+      return _sync(response);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
 
 final warehouseActionProvider = Provider((ref) => WarehouseActionNotifier(ref));

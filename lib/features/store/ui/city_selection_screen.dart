@@ -11,6 +11,7 @@ import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
@@ -128,6 +129,11 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
         setState(() {
           _selectedCity = matched;
         });
+        if (ref.read(tutorialProvider).step == TutorialStep.selectCity) {
+          ref
+              .read(tutorialProvider.notifier)
+              .setStep(TutorialStep.confirmCity);
+        }
       }
     }
   }
@@ -136,25 +142,25 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
   Widget build(BuildContext context) {
     final citiesAsync = ref.watch(citiesProvider);
 
-    // Harita tamamen yüklenip InteractiveViewer ekranda render edildiği an 1 kere merkezlemeyi tetikler
-    if (citiesAsync.hasValue && !_isLoadingMap && !_hasCenteredMap) {
-      _hasCenteredMap = true;
-      final Size viewportSize = MediaQuery.of(context).size;
+    // Harita tamamen yüklenip boyutu sıfırdan büyük olduğu an 1 kere merkezlemeyi tetikler
+    if (citiesAsync.hasValue && !_isLoadingMap && !_hasCenteredMap && _cityList.isNotEmpty) {
+      final double childWidth = SizeController.instance.mapSize.width;
       final double childHeight = SizeController.instance.mapSize.height;
-      final double zoomScale = 1.25;
+      if (childWidth > 0 && childHeight > 0) {
+        _hasCenteredMap = true;
+        final Size viewportSize = MediaQuery.of(context).size;
+        final double zoomScale = 1.25;
 
-      // Batı illerinin (İstanbul, İzmir, Bursa) başlangıçta görünmesi için sabit sola hizalama (-70.w)
-      final double tx = -70.w;
-      // Dikey eksende haritayı ekranın tam ortasına yerleştirme
-      final double ty =
-          (viewportSize.height / 2) - (childHeight / 2 * zoomScale);
+        final double tx = (viewportSize.width - (childWidth * zoomScale)) / 2;
+        final double ty = (viewportSize.height - (childHeight * zoomScale)) / 2;
 
-      // ignore: deprecated_member_use
-      _transformationController.value = Matrix4.identity()
         // ignore: deprecated_member_use
-        ..translate(tx, ty)
-        // ignore: deprecated_member_use
-        ..scale(zoomScale);
+        _transformationController.value = Matrix4.identity()
+          // ignore: deprecated_member_use
+          ..translate(tx, ty)
+          // ignore: deprecated_member_use
+          ..scale(zoomScale);
+      }
     }
 
     return Scaffold(
@@ -203,22 +209,59 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
                     ),
                   ),
 
-                  // 3. Yenileme Butonu
+                  // 3. Şehir Listesi Seçim ve Yenileme Butonları
                   Positioned(
                     top: 80.h,
+                    left: 16.w,
                     right: 16.w,
                     child: SafeArea(
-                      child: FloatingActionButton(
-                        onPressed: () {
-                          ref.read(staticCatalogControllerProvider).refresh();
-                        },
-                        backgroundColor: AppColors.gold.withValues(alpha: 0.85),
-                        mini: true,
-                        tooltip: 'Koordinatları Yenile',
-                        child: Icon(
-                          AppIcons.refresh,
-                          color: AppColors.textOnAccent,
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () => _showCityListSheet(cities),
+                            icon: Icon(
+                              AppIcons.locationOn,
+                              size: 18.sp,
+                              color: AppColors.textOnAccent,
+                            ),
+                            label: Text(
+                              'Listeden Şehir Seç 🏙️',
+                              style: AppTextStyles.button.standardCopyWith(
+                                color: AppColors.textOnAccent,
+                                fontSize: AppTypography.caption,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.gold,
+                              elevation: 6,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 14.w,
+                                vertical: 8.h,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.r),
+                              ),
+                            ),
+                          ),
+                          FloatingActionButton(
+                            onPressed: () {
+                              ref
+                                  .read(staticCatalogControllerProvider)
+                                  .refresh();
+                            },
+                            backgroundColor: AppColors.gold.withValues(
+                              alpha: 0.85,
+                            ),
+                            mini: true,
+                            tooltip: 'Koordinatları Yenile',
+                            child: Icon(
+                              AppIcons.refresh,
+                              color: AppColors.textOnAccent,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -256,7 +299,9 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
       bottom: hasLegend ? 155.h : 24.h,
       left: 16.w,
       right: 16.w,
-      child: SafeArea(
+      child: IgnorePointer(
+        ignoring: true,
+        child: SafeArea(
         top: false,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -308,7 +353,8 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildLegendCard() {
@@ -356,90 +402,93 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
       bottom: 20.h,
       left: 16.w,
       right: 16.w,
-      child: SafeArea(
-        top: false,
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(
-              color: AppColors.gold.withValues(alpha: 0.35),
-              width: 1.2,
+      child: IgnorePointer(
+        ignoring: true,
+        child: SafeArea(
+          top: false,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color: AppColors.gold.withValues(alpha: 0.35),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                ),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.5),
-                blurRadius: 15,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.map_rounded, color: AppColors.gold, size: 18.sp),
-                  SizedBox(width: 8.w),
-                  Text(
-                    'Katsayı Avantaj Renkleri (Parlaklık Oranına Göre)',
-                    style: AppTextStyles.body.standardCopyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.gold,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.map_rounded, color: AppColors.gold, size: 18.sp),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Katsayı Avantaj Renkleri (Parlaklık Oranına Göre)',
+                      style: AppTextStyles.body.standardCopyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.gold,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 10.h),
-              Wrap(
-                spacing: 12.w,
-                runSpacing: 6.h,
-                children: legendItems.map((item) {
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 12.w,
-                        height: 12.w,
-                        decoration: BoxDecoration(
-                          color: item.value.withValues(alpha: 0.70),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: item.value, width: 1.2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: item.value.withValues(alpha: 0.4),
-                              blurRadius: 4,
-                              spreadRadius: 1,
-                            ),
-                          ],
+                  ],
+                ),
+                SizedBox(height: 10.h),
+                Wrap(
+                  spacing: 12.w,
+                  runSpacing: 6.h,
+                  children: legendItems.map((item) {
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 12.w,
+                          height: 12.w,
+                          decoration: BoxDecoration(
+                            color: item.value.withValues(alpha: 0.70),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: item.value, width: 1.2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: item.value.withValues(alpha: 0.4),
+                                blurRadius: 4,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      SizedBox(width: 6.w),
-                      Text(
-                        item.key,
-                        style: AppTextStyles.caption
-                            .standardCopyWith(
-                              color: AppColors.white.withValues(alpha: 0.95),
-                            )
-                            .copyWith(
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                '• Renkler Şehirlerin Üretim Avantajlarını temsil eder.',
-                style: AppTextStyles.caption
-                    .standardCopyWith(color: AppColors.textMuted)
-                    .copyWith(fontSize: 9.5.sp, fontStyle: FontStyle.italic),
-              ),
-            ],
+                        SizedBox(width: 6.w),
+                        Text(
+                          item.key,
+                          style: AppTextStyles.caption
+                              .standardCopyWith(
+                                color: AppColors.white.withValues(alpha: 0.95),
+                              )
+                              .copyWith(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  '• Renkler Şehirlerin Üretim Avantajlarını temsil eder.',
+                  style: AppTextStyles.caption
+                      .standardCopyWith(color: AppColors.textMuted)
+                      .copyWith(fontSize: 9.5.sp, fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -476,8 +525,10 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
       );
     }
 
-    final double childWidth = SizeController.instance.mapSize.width;
-    final double childHeight = SizeController.instance.mapSize.height;
+    final double rawWidth = SizeController.instance.mapSize.width;
+    final double rawHeight = SizeController.instance.mapSize.height;
+    final double childWidth = rawWidth > 0 ? rawWidth : 360.w;
+    final double childHeight = rawHeight > 0 ? rawHeight : 220.h;
 
     return InteractiveViewer(
       transformationController: _transformationController,
@@ -490,6 +541,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
       scaleEnabled: true,
       panEnabled: true,
       child: SizedBox(
+        key: TutorialKeys.citySelectionMapKey,
         width: childWidth,
         height: childHeight,
         child: Padding(
@@ -673,6 +725,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
 
           // Devam Et Butonu
           SizedBox(
+            key: TutorialKeys.citySelectionConfirmKey,
             width: double.infinity,
             height: 50.h,
             child: ElevatedButton(
@@ -870,6 +923,11 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
   void _handleContinue() {
     if (_selectedCity == null) return;
 
+    if (ref.read(tutorialProvider).step == TutorialStep.selectCity ||
+        ref.read(tutorialProvider).step == TutorialStep.confirmCity) {
+      ref.read(tutorialProvider.notifier).setStep(TutorialStep.selectManav);
+    }
+
     final String targetRoute = widget.buildingKind == 'warehouse'
         ? '/warehouses/new/type'
         : widget.buildingKind == 'field'
@@ -883,6 +941,126 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
         : '/store/new/type';
 
     context.push(targetRoute, extra: _selectedCity);
+  }
+
+  void _showCityListSheet(List<CityModel> cities) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (modalContext) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(modalContext).size.height * 0.7,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            border: Border.all(
+              color: AppColors.gold.withValues(alpha: 0.6),
+              width: 1.5,
+            ),
+          ),
+          padding: EdgeInsets.all(20.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: AppColors.textMuted.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Şehir Seçimi',
+                    style: AppTextStyles.h2.standardCopyWith(
+                      color: AppColors.gold,
+                      fontSize: AppTypography.titleLarge,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(modalContext),
+                    icon: Icon(
+                      AppIcons.closeRounded,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: cities.length,
+                  separatorBuilder:
+                      (_, __) =>
+                          Divider(color: AppColors.border.withValues(alpha: 0.3)),
+                  itemBuilder: (itemContext, index) {
+                    final city = cities[index];
+                    final isSelected = _selectedCity?.id == city.id;
+                    return ListTile(
+                      onTap: () {
+                        setState(() {
+                          _selectedCity = city;
+                        });
+                        if (ref.read(tutorialProvider).step ==
+                            TutorialStep.selectCity) {
+                          ref
+                              .read(tutorialProvider.notifier)
+                              .setStep(TutorialStep.confirmCity);
+                        }
+                        Navigator.pop(itemContext);
+                      },
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            isSelected
+                                ? AppColors.gold
+                                : AppColors.cardBgLight,
+                        child: Icon(
+                          AppIcons.locationOn,
+                          color:
+                              isSelected ? AppColors.cardBg : AppColors.gold,
+                        ),
+                      ),
+                      title: Text(
+                        city.name,
+                        style: AppTextStyles.body.standardCopyWith(
+                          color: isSelected ? AppColors.gold : AppColors.white,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Nüfus: ${_formatPopulation(city.population)} • Vergi Oranı: %${city.taxRate.toStringAsFixed(1)}',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      trailing:
+                          isSelected
+                              ? Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.gold,
+                              )
+                              : Icon(
+                                Icons.chevron_right_rounded,
+                                color: AppColors.textMuted,
+                              ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 

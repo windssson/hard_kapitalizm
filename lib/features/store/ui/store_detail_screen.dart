@@ -21,6 +21,7 @@ import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/features/auth/models/experience_gain_model.dart';
@@ -63,6 +64,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshSalesIfWorthChecking(force: true);
+      final tutorial = ref.read(tutorialProvider);
+      if (tutorial.step == TutorialStep.clickEnterStore) {
+        ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickSelectProduct);
+      }
     });
   }
 
@@ -112,6 +117,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   @override
   Widget build(BuildContext context) {
     final storeAsync = ref.watch(storeDetailPageProvider(widget.storeId));
+    final tutorial = ref.watch(tutorialProvider);
+    if (tutorial.step == TutorialStep.clickEnterStore) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(tutorialProvider.notifier).setStep(TutorialStep.finished);
+      });
+    }
 
     return Scaffold(
       backgroundColor: AppColors.transparent,
@@ -929,8 +940,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       formatCountdown: _formatCountdown,
                     ),
                   ],
-                  SizedBox(height: 16.h),
-                  _buildMetricsGrid(store),
+
                   if (storeWarehouse != null) ...[
                     SizedBox(height: 16.h),
                     _buildStoreWarehouseCard(context, store, storeWarehouse),
@@ -1774,79 +1784,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
-  Widget _buildMetricsGrid(StoreModel store) {
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: AppColors.textPrimary.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.textPrimary.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildCompactMetricCol(
-            title: 'Doluluk',
-            value: '%${(store.summary.usedCapacityRatio * 100).toInt()}',
-            icon: AppIcons.pieChart,
-            color: AppColors.goldDark,
-          ),
-          _buildCompactMetricCol(
-            title: 'Stok',
-            value:
-                '${store.summary.totalQuantity}/${store.summary.totalCapacity}',
-            icon: AppIcons.inventory2,
-            color: AppColors.info,
-          ),
-          _buildCompactMetricCol(
-            title: 'Stok Degeri',
-            value: AppMoney.compact(store.summary.totalStockSaleValue ?? 0),
-            icon: AppIcons.trendingUp,
-            color: AppColors.green,
-          ),
-          _buildCompactMetricCol(
-            title: 'Slot',
-            value: '${store.slots.length}/${store.maxSlotCount}',
-            icon: AppIcons.gridView,
-            color: AppColors.gold,
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildCompactMetricCol({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: AppIconSizes.medium),
-        SizedBox(height: 6.h),
-        Text(
-          value,
-          style: AppTextStyles.label.standardCopyWith(
-            color: AppColors.textPrimary,
-            fontSize: AppTypography.body,
-            fontWeight: FontWeight.bold,
-          ),
-          maxLines: 1,
-        ),
-        SizedBox(height: 2.h),
-        Text(
-          title,
-          style: AppTextStyles.caption.standardCopyWith(
-            color: AppColors.textMuted,
-            fontSize: AppTypography.caption,
-          ),
-          maxLines: 1,
-        ),
-      ],
-    );
-  }
 
   Widget _buildSlotList(BuildContext context, WidgetRef ref, StoreModel store) {
     return ListView.separated(
@@ -1914,7 +1852,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             : null,
       ),
       child: Padding(
-        padding: EdgeInsets.all(12.w),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
         child: slot.isEmpty
             ? Row(
                 children: [
@@ -1951,6 +1889,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     ),
                   ),
                   InkWell(
+                    key: ref.watch(tutorialProvider).step == TutorialStep.clickSelectProduct
+                        ? TutorialKeys.storeSlotSelectProductKey
+                        : null,
                     onTap: canEditProduct
                         ? () => _showProductSelectionDialog(
                             context,
@@ -2005,8 +1946,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         showFrame: false,
                       ),
                     ),
-                    SizedBox(width: 12.w),
-                    // Middle: Product Name, Stars, Price Edit, Profit Margin, and Stock Progress Bar
+                    SizedBox(width: 8.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2024,7 +1964,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          SizedBox(height: 4.h),
+                          SizedBox(height: 2.h),
                           Row(
                             children: List.generate(5, (barIndex) {
                               return Icon(
@@ -2032,15 +1972,18 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                 color: barIndex < slot.qualityLevel
                                     ? qColor
                                     : AppColors.textMuted,
-                                size: AppIconSizes.xSmall,
+                                size: 10.sp,
                               );
                             }),
                           ),
-                          SizedBox(height: 6.h),
+                          SizedBox(height: 3.h),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               GestureDetector(
+                                key: ref.watch(tutorialProvider).step == TutorialStep.clickSetPrice
+                                    ? TutorialKeys.storeSlotPriceKey
+                                    : null,
                                 onTap: () => _showPriceEditDialog(
                                   context,
                                   ref,
@@ -2117,7 +2060,60 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                               ),
                             ],
                           ),
-                          SizedBox(height: 8.h),
+                          if ((slot.cost != null && slot.cost! > 0) || slot.pendingQuantity > 0) ...[
+                            SizedBox(height: 3.h),
+                            Row(
+                              children: [
+                                if (slot.cost != null && slot.cost! > 0)
+                                  Text(
+                                    'Maliyet: ₺${slot.cost!.toStringAsFixed(1)}',
+                                    style: AppTextStyles.caption.standardCopyWith(
+                                      color: AppColors.textSecondary,
+                                      fontSize: AppTypography.micro,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                if (slot.pendingQuantity > 0) ...[
+                                  if (slot.cost != null && slot.cost! > 0)
+                                    SizedBox(width: 8.w),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 5.w,
+                                      vertical: 2.h,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.blue.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(5.r),
+                                      border: Border.all(
+                                        color: AppColors.blue.withValues(alpha: 0.25),
+                                        width: 1.w,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          AppIcons.localShippingOutlined,
+                                          color: AppColors.blue,
+                                          size: 8.sp,
+                                        ),
+                                        SizedBox(width: 3.w),
+                                        Text(
+                                          '+${slot.pendingQuantity}',
+                                          style: AppTextStyles.caption.standardCopyWith(
+                                            color: AppColors.blue,
+                                            fontSize: AppTypography.micro,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                          SizedBox(height: 4.h),
                           // Stock progress bar side by side under the price
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2190,45 +2186,25 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                           ),
                           SizedBox(width: 8.w),
                         ],
-                        if (canAddStock) ...[
-                          IconButton(
-                            onPressed: () => _startStoreTransferFlow(
-                              context,
-                              ref,
-                              store,
-                              slot,
-                            ),
-                            icon: Icon(
-                              AppIcons.localShipping,
-                              color: AppColors.green,
-                              size: AppIconSizes.small,
-                            ),
-                            style: IconButton.styleFrom(
-                              backgroundColor: AppColors.green.withValues(
-                                alpha: 0.12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.r),
-                                side: BorderSide(
-                                  color: AppColors.green.withValues(
-                                    alpha: 0.25,
-                                  ),
-                                ),
-                              ),
-                              padding: EdgeInsets.all(4.w),
-                            ),
-                            tooltip: 'Stok Ekle',
-                          ),
-                          SizedBox(width: 4.w),
-                        ],
+
                         PopupMenuButton<String>(
+                          key: ref.watch(tutorialProvider).step == TutorialStep.clickAddStock
+                              ? TutorialKeys.storeSlotOrderStockKey
+                              : null,
                           padding: EdgeInsets.zero,
                           color: AppColors.cardBg,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12.r),
                           ),
                           onSelected: (val) {
-                            if (val == 'send' && canSendStock) {
+                            if (val == 'order' && canAddStock) {
+                              _startStoreTransferFlow(
+                                context,
+                                ref,
+                                store,
+                                slot,
+                              );
+                            } else if (val == 'send' && canSendStock) {
                               _startStoreWarehouseOutboundFlow(
                                 context,
                                 ref,
@@ -2255,6 +2231,27 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             }
                           },
                           itemBuilder: (ctx) => [
+                            PopupMenuItem(
+                              value: 'order',
+                              enabled: canAddStock,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    AppIcons.localShipping,
+                                    color: AppColors.green,
+                                    size: AppIconSizes.regular,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Text(
+                                    'Stok Ekle (Sipariş)',
+                                    style: AppTextStyles.label.standardCopyWith(
+                                      color: AppColors.textPrimary,
+                                      fontSize: AppTypography.body,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                             PopupMenuItem(
                               value: 'send',
                               enabled: canSendStock,
@@ -2860,6 +2857,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               price: parsedPrice,
             );
         ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
+        if (ref.read(tutorialProvider).step == TutorialStep.clickSetPrice) {
+          ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickAddStock);
+        }
         _showSuccess(context, 'Satis fiyati kaydedildi.');
         return;
       }
@@ -3274,6 +3274,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             );
         if (!parentContext.mounted) return;
         ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
+        if (ref.read(tutorialProvider).step == TutorialStep.clickSelectProduct) {
+          ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickSetPrice);
+        }
         _showSuccess(parentContext, '${product['name']} basariyla eklendi!');
       } else {
         if (!parentContext.mounted) return;
@@ -3327,6 +3330,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     StoreModel store,
     StoreSlotModel slot,
   ) {
+    if (ref.read(tutorialProvider).step == TutorialStep.clickAddStock) {
+      ref.read(tutorialProvider.notifier).setStep(TutorialStep.finished);
+    }
     final page = ref.read(storeDetailPageProvider(store.id)).value;
     final storeWarehouse = page?.storeWarehouse;
     final productId = slot.productId;
@@ -3657,9 +3663,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   Widget _buildMiniProgressStacked(double progress) {
     final stockRatio = progress.clamp(0.0, 1.0);
 
-    return AppProgressBar.capacity(
+    return AppProgressBar(
       value: stockRatio,
-      size: AppProgressSize.large,
+      kind: AppProgressKind.stock,
+      minHeight: 4.h,
     );
   }
 

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 
-class StoreDetailHeader extends StatelessWidget {
+class StoreDetailHeader extends ConsumerWidget {
   final StoreModel store;
   final VoidCallback? onToggleActiveTap;
   final VoidCallback? onReportTap;
@@ -21,7 +23,7 @@ class StoreDetailHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
       decoration: AppDecorations.premiumCard(null, 24.r),
@@ -204,26 +206,173 @@ class StoreDetailHeader extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 12.h),
-              Container(
-                width: 10.w,
-                height: 10.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: store.isActive ? AppColors.green : AppColors.red,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (store.isActive ? AppColors.green : AppColors.red)
-                          .withValues(alpha: 0.6),
-                      blurRadius: 8,
-                      spreadRadius: 2,
+              GestureDetector(
+                onTap: () => _showAcceptedProductsDialog(context, ref),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: EdgeInsets.all(6.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.3),
+                      width: 1.w,
                     ),
-                  ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.gold.withValues(alpha: 0.05),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    AppIcons.helpOutline,
+                    color: AppColors.gold,
+                    size: 16.r,
+                  ),
                 ),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  void _showAcceptedProductsDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Consumer(
+          builder: (context, ref, child) {
+            final productsAsync = ref.watch(allProductsProvider);
+
+            return Dialog(
+              backgroundColor: AppColors.transparent,
+              child: Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: AppDecorations.premiumCard(null, 18.r),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'SATILABİLİR ÜRÜNLER',
+                          style: AppTextStyles.titleGoldBold.standardCopyWith(
+                            color: AppColors.gold,
+                            fontSize: AppTypography.title,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12.h),
+                    productsAsync.when(
+                      loading: () => SizedBox(
+                        height: 100.h,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.gold,
+                          ),
+                        ),
+                      ),
+                      error: (err, stack) => Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24.h),
+                        child: Text(
+                          'Ürünler yüklenirken hata oluştu.',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.red,
+                          ),
+                        ),
+                      ),
+                      data: (allProducts) {
+                        final acceptedIds = store.storeType.acceptedProductIds
+                            .map((id) => id.trim().toUpperCase())
+                            .toSet();
+
+                        final acceptedProducts = allProducts
+                            .where((p) => acceptedIds.contains(p.id.trim().toUpperCase()))
+                            .toList();
+
+                        if (acceptedProducts.isEmpty) {
+                          return Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24.h),
+                            child: Text(
+                              'Bu mağazada satılabilir ürün bulunamadı.',
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.body.standardCopyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          );
+                        }
+
+                        return Flexible(
+                          child: GridView.builder(
+                            shrinkWrap: true,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 8.w,
+                              mainAxisSpacing: 8.h,
+                              childAspectRatio: 0.85,
+                            ),
+                            itemCount: acceptedProducts.length,
+                            itemBuilder: (context, index) {
+                              final product = acceptedProducts[index];
+                              return Container(
+                                padding: EdgeInsets.all(6.w),
+                                decoration: BoxDecoration(
+                                  color: AppColors.cardBgLight,
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  border: Border.all(
+                                    color: AppColors.borderGoldLight.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 32.w,
+                                      height: 32.w,
+                                      child: CachedAssetImage(
+                                        fileName: product.urunIconu,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                    SizedBox(height: 6.h),
+                                    Text(
+                                      product.urunAdi,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTextStyles.caption.standardCopyWith(
+                                        color: AppColors.textPrimary,
+                                        fontSize: AppTypography.micro,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

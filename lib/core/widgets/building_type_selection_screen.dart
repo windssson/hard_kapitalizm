@@ -14,6 +14,7 @@ import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 
 // Modül özel listelerinin güncellenmesi için provider importları
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
@@ -188,8 +189,19 @@ class _BuildingTypeSelectionScreenState
         final bool cashLocked = playerCash < (type['cost'] ?? 0);
         final bool isLocked = levelLocked || cashLocked;
 
+        final bool isManav = type['name'].toString().toLowerCase().contains('manav') ||
+                             type['icon'].toString().toLowerCase().contains('manav');
+
         return GestureDetector(
-          onTap: isLocked ? null : () => setState(() => _selectedType = type),
+          key: isManav ? TutorialKeys.buildingTypeManavKey : null,
+          onTap: isLocked
+              ? null
+              : () {
+                  setState(() => _selectedType = type);
+                  if (ref.read(tutorialProvider).step == TutorialStep.selectManav && isManav) {
+                    ref.read(tutorialProvider.notifier).setStep(TutorialStep.confirmManavBuild);
+                  }
+                },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             margin: EdgeInsets.only(bottom: 12.h),
@@ -373,6 +385,7 @@ class _BuildingTypeSelectionScreenState
             width: double.infinity,
             height: 55.h,
             child: ElevatedButton(
+              key: TutorialKeys.buildingTypeConfirmKey,
               onPressed: (_selectedType != null && !_isProcessing)
                   ? _handleEstablish
                   : null,
@@ -485,6 +498,10 @@ class _BuildingTypeSelectionScreenState
           message: '${_getBuildingKindDisplayName()} inşaatı başarıyla başladı!',
           type: SnackbarType.success,
         );
+
+        if (ref.read(tutorialProvider).step == TutorialStep.confirmManavBuild) {
+          ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickQuickFinish);
+        }
 
         final String redirectRoute = kind == 'store' ? '/store' : '/${kind}s';
         context.go(redirectRoute);

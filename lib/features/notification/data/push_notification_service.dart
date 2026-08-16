@@ -8,13 +8,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class PushNotificationService {
   final SupabaseClient _supabase = Supabase.instance.client;
   Timer? _heartbeatTimer;
+  bool _isInitialized = false;
+  bool _isInitializing = false;
+  String? _lastRegisteredToken;
 
   PushNotificationService();
 
-
   Future<void> initialize() async {
+    if (_isInitialized || _isInitializing) return;
     final user = _supabase.auth.currentUser;
     if (user == null) return;
+
+    _isInitializing = true;
 
     try {
       // Initialize Firebase App
@@ -50,14 +55,18 @@ class PushNotificationService {
         debugPrint('Received a foreground push message: ${message.notification?.title}');
       });
 
+      _isInitialized = true;
     } catch (e) {
       debugPrint('Error initializing Firebase/FCM: $e');
+    } finally {
+      _isInitializing = false;
     }
 
     _startHeartbeat();
   }
 
   Future<void> _registerToken(String token) async {
+    if (_lastRegisteredToken == token) return;
     try {
       await _supabase.rpc(
         'register_push_token',
@@ -66,6 +75,7 @@ class PushNotificationService {
           'p_device_id': defaultTargetPlatform.name,
         },
       );
+      _lastRegisteredToken = token;
       debugPrint('Push token registered in Supabase: $token');
     } catch (e) {
       debugPrint('Error registering push token in Supabase: $e');

@@ -15,6 +15,7 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
@@ -62,7 +63,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         onItemSelected: _onNavSelected,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/store/new/city'),
+        key: TutorialKeys.storeScreenFabKey,
+        onPressed: () {
+          if (ref.read(tutorialProvider).step == TutorialStep.clickStoreFab) {
+            ref.read(tutorialProvider.notifier).setStep(TutorialStep.selectCity);
+          }
+          context.go('/store/new/city');
+        },
         backgroundColor: AppColors.gold,
         icon: Icon(AppIcons.addBusiness, color: AppColors.textOnAccent),
         label: Text(
@@ -371,6 +378,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           Padding(
             padding: EdgeInsets.only(bottom: 10.h),
             child: GoldFinishButton(
+              key: TutorialKeys.constructionGoldFinishKey,
               starCost: starCost,
               onPressed: () => _handleQuickFinish(store.id, starCost),
             ),
@@ -455,6 +463,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           message: 'Insaat basariyla tamamlandi!',
           type: SnackbarType.success,
         );
+        if (ref.read(tutorialProvider).step == TutorialStep.clickQuickFinish) {
+          ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickEnterStore);
+        }
         await showExperienceFeedbackFromResult(context, result);
       }
     } else {
@@ -497,8 +508,17 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final bool allSlotsEmpty = store.slots.every((s) => s.isEmpty);
     final bool anySlotOutOfStock = store.slots.any((s) => !s.isEmpty && s.quantity == 0);
 
+    final tutorial = ref.watch(tutorialProvider);
+    final isNewStoreKeyTarget = tutorial.step == TutorialStep.clickEnterStore;
+
     return GestureDetector(
-      onTap: () => context.go('/store/${store.id}'),
+      key: isNewStoreKeyTarget ? TutorialKeys.newStoreItemKey : null,
+      onTap: () {
+        if (ref.read(tutorialProvider).step == TutorialStep.clickEnterStore) {
+          ref.read(tutorialProvider.notifier).completeStep(TutorialStep.clickEnterStore);
+        }
+        context.go('/store/${store.id}');
+      },
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.all(12.w),

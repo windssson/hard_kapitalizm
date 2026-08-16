@@ -350,6 +350,12 @@ class FactoryActionNotifier {
 
   FactoryActionNotifier(this._ref);
 
+  Map<String, dynamic> _sync(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
+
   Future<void> _refreshAttentionNotifications() async {
     try {
       await _supabase.rpc('refresh_player_attention_notifications');
@@ -918,6 +924,29 @@ class FactoryActionNotifier {
     }
     await _refreshAttentionNotifications();
     return result;
+  }
+
+  Future<Map<String, dynamic>> sellFactory({
+    required String factoryId,
+    required bool confirm,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'sell_building',
+        params: {
+          'p_building_id': factoryId,
+          'p_building_kind': 'factory',
+          'p_confirm': confirm,
+        },
+      );
+      _ref.invalidate(factoryListProvider);
+      return _sync(response);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
   }
 }
 

@@ -256,7 +256,7 @@ declare
   v_generation_result jsonb := '{}'::jsonb;
 begin
   v_expire_result := public.ensure_open_tenders();
-  v_generation_result := public.generate_open_tenders(20, 20);
+  v_generation_result := public.generate_open_tenders(50, 50);
 
   return jsonb_build_object(
     'success', true,

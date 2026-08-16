@@ -26,6 +26,7 @@ import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:hard_kapitalizm/features/bank/data/bank_provider.dart';
+import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
 
@@ -1283,6 +1284,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Consumer(
       builder: (context, ref, child) {
         final dashboard = ref.watch(homeDashboardProvider).value;
+        final tutorial = ref.watch(tutorialProvider);
+        if (dashboard != null &&
+            dashboard.modules.stores.count == 0 &&
+            tutorial.step == TutorialStep.none) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(tutorialProvider.notifier).startTutorial(force: true);
+          });
+        }
         final alertedModules = _collectAlertedModules(dashboard);
 
         final taxDebt = ref.watch(taxDebtProvider).value ?? 0.0;
@@ -1342,6 +1351,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             final isWorking = !isLocked && _isModuleWorking(module);
 
             return Material(
+              key: module.title == 'Magazalar'
+                  ? TutorialKeys.homeStoresModuleKey
+                  : null,
               color: AppColors.transparent,
               borderRadius: BorderRadius.circular(16.r),
               clipBehavior: Clip.antiAlias,
@@ -1569,6 +1581,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _handleModuleTap(String moduleTitle) async {
+    if (moduleTitle == 'Magazalar' &&
+        ref.read(tutorialProvider).step == TutorialStep.clickFirstStore) {
+      ref.read(tutorialProvider.notifier).completeStep(TutorialStep.clickFirstStore);
+    }
     switch (moduleTitle) {
       case 'Magazalar':
         context.go('/store');

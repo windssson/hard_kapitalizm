@@ -110,7 +110,63 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Fabrika Yonetimi'),
+            SecondaryTopBar(
+              title: 'Fabrika Yonetimi',
+              actions: [
+                PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  offset: const Offset(0, 40),
+                  color: AppColors.cardBg,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    side: BorderSide(
+                      color: AppColors.borderGold.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'sell') {
+                      _showSellFactoryDialog(context);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'sell',
+                      child: Row(
+                        children: [
+                          Icon(
+                            AppIcons.sellOutlined,
+                            color: AppColors.red,
+                            size: AppIconSizes.regular,
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Fabrikayi Sat',
+                            style: AppTextStyles.body.standardCopyWith(
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    padding: EdgeInsets.all(6.w),
+                    decoration: BoxDecoration(
+                      color: AppFx.softOverlay(0.05),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(
+                        color: AppFx.softOverlay(0.06),
+                      ),
+                    ),
+                    child: Icon(
+                      AppIcons.moreVert,
+                      color: AppColors.textPrimary.withValues(alpha: 0.7),
+                      size: AppIconSizes.medium,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             Expanded(
               child: detailAsync.when(
                 loading: () =>
@@ -4665,6 +4721,157 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
     return 0;
   }
+
+  Future<void> _showSellFactoryDialog(BuildContext context) async {
+    final detail = ref.read(factoryDetailProvider(widget.factoryId)).value;
+    if (detail == null) return;
+    final factory = detail.factory;
+
+    final quote = await ref
+        .read(factoryActionProvider)
+        .sellFactory(factoryId: factory.id, confirm: false);
+
+    if (!context.mounted) return;
+
+    if (quote['success'] != true) {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: quote['message'] ?? 'Satis teklifi hazirlanamadi.',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    final constructionRefund =
+        (quote['construction_refund'] as num?)?.toDouble() ?? 0;
+    final stockRefund = (quote['stock_refund'] as num?)?.toDouble() ?? 0;
+    final totalRefund = (quote['total_refund'] as num?)?.toDouble() ?? 0;
+
+    final shouldSell = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.background,
+        title: Text(
+          'Fabrikayi Sat',
+          style: AppTextStyles.h2.standardCopyWith(
+            color: AppColors.red,
+            fontSize: AppTypography.headline,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${factory.name} kalici olarak silinecek. Bu islem geri alinamaz.',
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.bodyLarge,
+                height: 1.35,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: AppColors.red.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                children: [
+                  _buildSalesSummaryRow('Kurulus Iadesi', constructionRefund),
+                  _buildSalesSummaryRow('Stok Iadesi', stockRefund),
+                  Divider(color: AppColors.border, height: 12.h),
+                  _buildSalesSummaryRow('Toplam Odeme', totalRefund, valueColor: AppColors.green),
+                ],
+              ),
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              'Aktif transferler veya devam eden uretim varsa satis engellenir.',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodySmall,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Vazgec'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              'Fabrikayi Sat',
+              style: AppTextStyles.button.standardCopyWith(
+                color: AppColors.textOnAccent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSell != true || !context.mounted) return;
+
+    final result = await ref
+        .read(factoryActionProvider)
+        .sellFactory(factoryId: factory.id, confirm: true);
+
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      AppSnackbar.show(
+        context,
+        title: 'Basarili',
+        message: 'Fabrika satildi. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
+        type: SnackbarType.success,
+      );
+      context.go('/factories');
+      return;
+    }
+
+    AppSnackbar.show(
+      context,
+      title: 'Hata',
+      message: result['message'] ?? 'Fabrika satilamadi.',
+      type: SnackbarType.error,
+    );
+  }
+
+  Widget _buildSalesSummaryRow(String label, double value, {Color? valueColor}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textSecondary,
+              fontSize: AppTypography.body,
+            ),
+          ),
+          Text(
+            '${value.toStringAsFixed(1)} TL',
+            style: AppTextStyles.body.standardCopyWith(
+              color: valueColor ?? AppColors.gold,
+              fontWeight: FontWeight.bold,
+              fontSize: AppTypography.body,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SelectedFactoryProductionTransferItem {
@@ -4808,7 +5015,7 @@ class _ActiveFactoryBoostCard extends ConsumerWidget {
                     ),
                     SizedBox(height: 2.h),
                     Text(
-                      '${boost.durationHours} saat | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost} yildiz',
+                      '${boost.durationLabel} | Katsayi x${boost.multiplier.toStringAsFixed(1)} | ${boost.starCost > 0 ? '${boost.starCost} yildiz' : 'Reklam odulu'}',
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
                         fontSize: AppTypography.bodySmall,

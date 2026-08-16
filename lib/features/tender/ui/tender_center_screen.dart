@@ -47,7 +47,7 @@ class _TenderCenterScreenState extends ConsumerState<TenderCenterScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Ihale Merkezi'),
+            const SecondaryTopBar(title: 'İhale Merkezi'),
             Expanded(
               child: tenderCenterAsync.when(
                 loading: () => Center(
@@ -60,7 +60,7 @@ class _TenderCenterScreenState extends ConsumerState<TenderCenterScreen> {
                     children: [
                       Padding(
                         padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 0),
-                        child: _TenderSummaryCard(center: center),
+                        child: _TenderSummaryBar(center: center),
                       ),
                       SizedBox(height: 12.h),
                       Padding(
@@ -151,6 +151,64 @@ class _TenderCenterScreenState extends ConsumerState<TenderCenterScreen> {
   }
 }
 
+class _TenderSummaryBar extends StatelessWidget {
+  const _TenderSummaryBar({required this.center});
+
+  final TenderCenterModel center;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+      decoration: AppDecorations.premiumCard(null, 14.r),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildCompactMetric('Açık', '${center.openTenders.length}', AppColors.gold),
+          _buildDivider(),
+          _buildCompactMetric('Aktif', '${center.myActiveTenders.length}', AppColors.blue),
+          _buildDivider(),
+          _buildCompactMetric('Teklifim', '${center.myBidTenders.length}', AppColors.green),
+          _buildDivider(),
+          _buildCompactMetric('Yolda', '${center.deliveryCount}', AppColors.goldLight),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactMetric(String label, String value, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.micro,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          value,
+          style: AppTextStyles.titleBold.standardCopyWith(
+            color: color,
+            fontSize: AppTypography.bodyLarge,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      width: 1.w,
+      height: 20.h,
+      color: AppColors.border.withValues(alpha: 0.3),
+    );
+  }
+}
+
 class _OpenTendersTab extends StatelessWidget {
   const _OpenTendersTab({
     required this.center,
@@ -166,29 +224,24 @@ class _OpenTendersTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: ListView(
+      child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(14.w, 0, 14.w, 28.h),
-        children: [
-          _TenderSectionHeader(
-            title: 'Acik Ihaleler',
-            subtitle: '${center.openTenders.length} firsat',
-          ),
-          SizedBox(height: 8.h),
-          if (center.openTenders.isEmpty)
-            const AppEmptyStateCard(
+        padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 28.h),
+        itemCount: center.openTenders.isEmpty ? 1 : center.openTenders.length,
+        itemBuilder: (context, index) {
+          if (center.openTenders.isEmpty) {
+            return const AppEmptyStateCard(
               icon: AppIcons.gavelRounded,
-              title: 'Su an acik ihale yok',
-              message: 'Yeni ilanlar geldiginde burada goreceksin.',
-            )
-          else
-            ...center.openTenders.map(
-              (item) => Padding(
-                padding: EdgeInsets.only(bottom: 10.h),
-                child: _OpenTenderCard(item: item, now: now),
-              ),
-            ),
-        ],
+              title: 'Şu an açık ihale yok',
+              message: 'Yeni ilanlar geldiğinde burada göreceksin.',
+            );
+          }
+          final item = center.openTenders[index];
+          return Padding(
+            padding: EdgeInsets.only(bottom: 10.h),
+            child: _OpenTenderCard(item: item, now: now),
+          );
+        },
       ),
     );
   }
@@ -205,52 +258,94 @@ class _MyTendersTab extends StatelessWidget {
   final Future<void> Function() onRefresh;
   final DateTime now;
 
+  Widget _buildSectionLabel(String label) {
+    return Padding(
+      padding: EdgeInsets.only(top: 8.h, bottom: 8.h),
+      child: Text(
+        label.toUpperCase(),
+        style: AppTextStyles.overline.standardCopyWith(
+          color: AppColors.gold,
+          fontSize: AppTypography.micro,
+          letterSpacing: 1.2,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(14.w, 0, 14.w, 28.h),
-        children: [
-          _TenderSectionHeader(
-            title: 'Aldigin Ihaleler',
-            subtitle: '${center.myActiveTenders.length} aktif kayit',
-          ),
-          SizedBox(height: 8.h),
-          if (center.myActiveTenders.isEmpty)
+    final hasActive = center.myActiveTenders.isNotEmpty;
+    final hasBids = center.myBidTenders.isNotEmpty;
+
+    if (!hasActive && !hasBids) {
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 28.h),
+          children: [
             const AppEmptyStateCard(
               icon: AppIcons.inventory2Outlined,
-              title: 'Aktif ihale kaydin yok',
-              message: 'Bir ihale kazandiginda teslim ekranlari burada acilir.',
-            )
-          else
-            ...center.myActiveTenders.map(
-              (item) => Padding(
-                padding: EdgeInsets.only(bottom: 10.h),
-                child: _ActiveTenderCard(item: item),
+              title: 'Aktif ihale kaydın yok',
+              message: 'Teklif verdiğinde ya da ihale kazandığında burada görünecek.',
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          if (hasActive) ...[
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 0),
+              sliver: SliverToBoxAdapter(
+                child: _buildSectionLabel('Aldığın İhaleler (${center.myActiveTenders.length})'),
               ),
             ),
-          SizedBox(height: 12.h),
-          _TenderSectionHeader(
-            title: 'Verdigin Teklifler',
-            subtitle: '${center.myBidTenders.length} acik teklif',
-          ),
-          SizedBox(height: 8.h),
-          if (center.myBidTenders.isEmpty)
-            const AppEmptyStateCard(
-              icon: AppIcons.priceChangeOutlined,
-              title: 'Acik teklifin yok',
-              message:
-                  'Teklif usulu bir ihaleye teklif verdiginde burada goreceksin.',
-            )
-          else
-            ...center.myBidTenders.map(
-              (item) => Padding(
-                padding: EdgeInsets.only(bottom: 10.h),
-                child: _TenderBidCard(item: item, now: now),
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: 14.w),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = center.myActiveTenders[index];
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: 10.h),
+                      child: _ActiveTenderCard(item: item),
+                    );
+                  },
+                  childCount: center.myActiveTenders.length,
+                ),
               ),
             ),
+          ],
+          if (hasBids) ...[
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 0),
+              sliver: SliverToBoxAdapter(
+                child: _buildSectionLabel('Verdiğin Teklifler (${center.myBidTenders.length})'),
+              ),
+            ),
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(14.w, 0, 14.w, 28.h),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = center.myBidTenders[index];
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: 10.h),
+                      child: _TenderBidCard(item: item, now: now),
+                    );
+                  },
+                  childCount: center.myBidTenders.length,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -270,190 +365,24 @@ class _HistoryTendersTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: ListView(
+      child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(14.w, 0, 14.w, 28.h),
-        children: [
-          _TenderSectionHeader(
-            title: 'Gecmis Ihaleler',
-            subtitle: '${center.myRecentTenders.length} kayit',
-          ),
-          SizedBox(height: 8.h),
-          if (center.myRecentTenders.isEmpty)
-            const AppEmptyStateCard(
+        padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 28.h),
+        itemCount: center.myRecentTenders.isEmpty ? 1 : center.myRecentTenders.length,
+        itemBuilder: (context, index) {
+          if (center.myRecentTenders.isEmpty) {
+            return const AppEmptyStateCard(
               icon: AppIcons.historyRounded,
-              title: 'Gecmis ihale kaydi yok',
-              message: 'Tamamlanan veya basarisiz ihaleler burada listelenecek.',
-            )
-          else
-            ...center.myRecentTenders.map(
-              (item) => Padding(
-                padding: EdgeInsets.only(bottom: 10.h),
-                child: _TenderHistoryCard(item: item),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TenderSummaryCard extends StatelessWidget {
-  const _TenderSummaryCard({required this.center});
-
-  final TenderCenterModel center;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: AppDecorations.premiumCard(AppColors.gold, 20.r),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48.w,
-                height: 48.w,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.gold.withValues(alpha: 0.22),
-                      AppColors.goldLight.withValues(alpha: 0.10),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.34),
-                  ),
-                ),
-                child: Icon(
-                  AppIcons.accountBalanceRounded,
-                  color: AppColors.gold,
-                  size: AppIconSizes.large,
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Kamu İhale Masası',
-                      style: AppTextStyles.title.standardCopyWith(
-                        color: AppColors.white,
-                        fontSize: AppTypography.titleLarge,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      'Açık ihaleleri takip et, teklif ver ya da hızlı davranıp kap.',
-                      style: AppTextStyles.body.standardCopyWith(
-                        fontSize: AppTypography.bodySmall,
-                        color: AppColors.textPrimary.withValues(alpha: 0.78),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
-                decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(999.r),
-                  border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.24),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      AppIcons.localShippingOutlined,
-                      color: AppColors.goldLight,
-                      size: AppIconSizes.xSmall,
-                    ),
-                    SizedBox(width: 5.w),
-                    Text(
-                      '${center.deliveryCount} yolda',
-                      style: AppTextStyles.caption.standardCopyWith(
-                        color: AppColors.goldLight,
-                        fontSize: AppTypography.caption,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 14.h),
-          Row(
-            children: [
-              Expanded(
-                child: AppMetricTile(
-                  label: 'Açık İhale',
-                  value: '${center.openTenders.length}',
-                  color: AppColors.gold,
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: AppMetricTile(
-                  label: 'Aktif İhale',
-                  value: '${center.myActiveTenders.length}',
-                  color: AppColors.blue,
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: AppMetricTile(
-                  label: 'Teklifim',
-                  value: '${center.myBidTenders.length}',
-                  color: AppColors.green,
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: AppMetricTile(
-                  label: 'Geçmiş',
-                  value: '${center.myRecentTenders.length}',
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TenderSectionHeader extends StatelessWidget {
-  const _TenderSectionHeader({
-    required this.title,
-    required this.subtitle,
-  });
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppSectionHeader(
-      title: title,
-      accentColor: AppColors.gold,
-      trailing: Text(
-        subtitle,
-        style: AppTextStyles.caption.standardCopyWith(
-          fontSize: AppTypography.label,
-          fontWeight: FontWeight.w700,
-        ),
+              title: 'Geçmiş ihale kaydı yok',
+              message: 'Tamamlanan veya başarısız ihaleler burada listelenecek.',
+            );
+          }
+          final item = center.myRecentTenders[index];
+          return Padding(
+            padding: EdgeInsets.only(bottom: 10.h),
+            child: _TenderHistoryCard(item: item),
+          );
+        },
       ),
     );
   }
@@ -470,17 +399,20 @@ class _OpenTenderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isFirstClaim = item.awardType == 'first_claim';
+
     return Material(
       color: AppColors.transparent,
       child: InkWell(
         onTap: () => context.push('/tenders/open/${item.tenderId}'),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(14.r),
         child: Container(
           padding: EdgeInsets.all(12.w),
-          decoration: AppDecorations.premiumCard(AppColors.borderGoldLight, 16.r),
+          decoration: AppDecorations.premiumCard(AppColors.borderGoldLight.withValues(alpha: 0.5), 14.r),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Üst Kısım: İkon, Başlık, Ayrıntılar, Durum Rozeti
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -507,6 +439,8 @@ class _OpenTenderCard extends StatelessWidget {
                       children: [
                         Text(
                           item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.title.standardCopyWith(
                             color: AppColors.white,
                             fontSize: AppTypography.bodyLarge,
@@ -525,70 +459,47 @@ class _OpenTenderCard extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: 6.w),
-                            Row(
-                              children: List.generate(
-                                item.qualityLevel,
-                                (index) => Icon(
-                                  AppIcons.starRounded,
-                                  color: AppColors.gold,
-                                  size: AppIconSizes.xxSmall,
-                                ),
-                              ),
-                            ),
+                            _buildQualityStars(item.qualityLevel),
                           ],
                         ),
                       ],
                     ),
                   ),
                   AppStatusPill(
-                    icon: item.awardType == 'first_claim'
-                        ? AppIcons.flashOnRounded
-                        : AppIcons.gavelRounded,
-                    text: item.awardType == 'first_claim' ? 'Hemen Al' : 'Teklif',
-                    color: item.awardType == 'first_claim'
-                        ? AppColors.goldLight
-                        : AppColors.green,
+                    icon: isFirstClaim ? AppIcons.flashOnRounded : AppIcons.gavelRounded,
+                    text: isFirstClaim ? 'Hemen Al' : 'Teklif',
+                    color: isFirstClaim ? AppColors.goldLight : AppColors.green,
                   ),
                 ],
               ),
               SizedBox(height: 12.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: _TenderMetricItem(
-                      label: 'TALEP MİKTAR',
-                      value: '${item.requiredQuantity} adet',
-                      color: AppColors.white,
+              // Alt Kısım: Özet Metrikler ve Bilgiler
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBgLight.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildRowItem('📦 Miktar', '${item.requiredQuantity} adet'),
+                    _buildRowItem(
+                      isFirstClaim ? '💰 Ödül' : '💰 Tavan',
+                      AppMoney.compact(item.rewardCash),
+                      valueColor: AppColors.green,
                     ),
-                  ),
-                  Expanded(
-                    child: _TenderMetricItem(
-                      label: item.awardType == 'lowest_bid' ? 'TAVAN ÖDÜL' : 'ÖDÜL',
-                      value: AppMoney.compact(item.rewardCash),
-                      color: AppColors.green,
-                    ),
-                  ),
-                  Expanded(
-                    child: item.awardType == 'lowest_bid'
-                        ? _TenderMetricItem(
-                            label: 'EN DÜŞÜK',
-                            value: item.lowestBidAmount != null && item.lowestBidAmount! > 0
-                                ? AppMoney.compact(item.lowestBidAmount!)
-                                : '-',
-                            color: AppColors.goldLight,
-                          )
-                        : _TenderMetricItem(
-                            label: 'TEMİNAT',
-                            value: AppMoney.compact(item.bondAmount),
-                            color: AppColors.red,
-                          ),
-                  ),
-                ],
+                    if (!isFirstClaim && item.lowestBidAmount != null && item.lowestBidAmount! > 0)
+                      _buildRowItem('📉 En Düşük', AppMoney.compact(item.lowestBidAmount!), valueColor: AppColors.goldLight)
+                    else if (isFirstClaim)
+                      _buildRowItem('🛡️ Teminat', AppMoney.compact(item.bondAmount), valueColor: AppColors.red)
+                    else
+                      _buildRowItem('📉 En Düşük', '-'),
+                  ],
+                ),
               ),
               SizedBox(height: 8.h),
-              Divider(color: AppFx.softOverlay(0.10), height: 1),
-              SizedBox(height: 8.h),
+              // Alt En Dış Kısım: Zaman ve Şehir
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -610,40 +521,45 @@ class _OpenTenderCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (item.hasPlayerBid && item.playerBidAmount != null)
-                    Row(
-                      children: [
-                        Icon(
-                          AppIcons.checkCircleOutline,
-                          color: AppColors.blue,
-                          size: AppIconSizes.xSmall,
-                        ),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Teklifin: ${AppMoney.compact(item.playerBidAmount!)}',
-                          style: AppTextStyles.label.standardCopyWith(
-                            color: AppColors.blue,
-                            fontSize: AppTypography.label,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    )
-                  else if (item.awardType == 'lowest_bid')
-                    Text(
-                      '${item.bidCount} rakip teklif',
-                      style: AppTextStyles.label.standardCopyWith(
-                        color: AppColors.textMuted,
-                        fontSize: AppTypography.label,
-                        fontWeight: FontWeight.w800,
-                      ),
+                  Text(
+                    '📍 ${item.cityName} ${!isFirstClaim ? "• 👥 ${item.bidCount} teklif" : ""}',
+                    style: AppTextStyles.label.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontSize: AppTypography.label,
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
                 ],
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildRowItem(String label, String value, {Color? valueColor}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.micro,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: 2.h),
+        Text(
+          value,
+          style: AppTextStyles.label.standardCopyWith(
+            color: valueColor ?? AppColors.white,
+            fontSize: AppTypography.label,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -663,10 +579,10 @@ class _ActiveTenderCard extends StatelessWidget {
       color: AppColors.transparent,
       child: InkWell(
         onTap: () => context.push('/tenders/player/${item.playerTenderId}'),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(14.r),
         child: Container(
           padding: EdgeInsets.all(12.w),
-          decoration: AppDecorations.premiumCard(AppColors.blue, 16.r),
+          decoration: AppDecorations.premiumCard(AppColors.blue.withValues(alpha: 0.5), 14.r),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -696,6 +612,8 @@ class _ActiveTenderCard extends StatelessWidget {
                       children: [
                         Text(
                           item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.title.standardCopyWith(
                             color: AppColors.white,
                             fontSize: AppTypography.bodyLarge,
@@ -714,16 +632,7 @@ class _ActiveTenderCard extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: 6.w),
-                            Row(
-                              children: List.generate(
-                                item.qualityLevel,
-                                (index) => Icon(
-                                  AppIcons.starRounded,
-                                  color: AppColors.gold,
-                                  size: AppIconSizes.xxSmall,
-                                ),
-                              ),
-                            ),
+                            _buildQualityStars(item.qualityLevel),
                           ],
                         ),
                       ],
@@ -741,7 +650,7 @@ class _ActiveTenderCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999.r),
                 child: AppProgressBar(
                   value: progress,
-                  minHeight: 8.h,
+                  minHeight: 6.h,
                   backgroundColor: AppFx.panelWash(0.35),
                   valueColor: AlwaysStoppedAnimation<Color>(
                     AppColors.gold,
@@ -753,15 +662,15 @@ class _ActiveTenderCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${item.deliveredQuantity}/${item.requiredQuantity} adet (%${(progress * 100).round()})',
+                    '📦 ${item.deliveredQuantity}/${item.requiredQuantity} adet (%${(progress * 100).round()})',
                     style: AppTextStyles.label.standardCopyWith(
                       color: AppColors.goldLight,
                       fontSize: AppTypography.label,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   Text(
-                    item.cityName,
+                    '📍 ${item.cityName}',
                     style: AppTextStyles.label.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.label,
@@ -796,10 +705,10 @@ class _TenderBidCard extends StatelessWidget {
       color: AppColors.transparent,
       child: InkWell(
         onTap: () => context.push('/tenders/open/${item.tenderId}'),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(14.r),
         child: Container(
           padding: EdgeInsets.all(12.w),
-          decoration: AppDecorations.premiumCard(AppColors.green, 16.r),
+          decoration: AppDecorations.premiumCard(AppColors.green.withValues(alpha: 0.5), 14.r),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -829,6 +738,8 @@ class _TenderBidCard extends StatelessWidget {
                       children: [
                         Text(
                           item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.title.standardCopyWith(
                             color: AppColors.white,
                             fontSize: AppTypography.bodyLarge,
@@ -847,16 +758,7 @@ class _TenderBidCard extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: 6.w),
-                            Row(
-                              children: List.generate(
-                                item.qualityLevel,
-                                (index) => Icon(
-                                  AppIcons.starRounded,
-                                  color: AppColors.gold,
-                                  size: AppIconSizes.xxSmall,
-                                ),
-                              ),
-                            ),
+                            _buildQualityStars(item.qualityLevel),
                           ],
                         ),
                       ],
@@ -864,42 +766,92 @@ class _TenderBidCard extends StatelessWidget {
                   ),
                   AppStatusPill(
                     icon: isLeading ? AppIcons.checkCircleOutline : AppIcons.gavelRounded,
-                    text: isLeading ? 'EN DÜŞÜK' : 'TEKLİFİN',
+                    text: isLeading ? 'En Düşük' : 'Teklifin',
                     color: isLeading ? AppColors.goldLight : AppColors.blue,
                   ),
                 ],
               ),
               SizedBox(height: 12.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: _TenderMetricItem(
-                      label: 'TEKLİFİN',
-                      value: AppMoney.compact(item.bidAmount),
-                      color: AppColors.green,
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBgLight.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TEKLİFİN',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: AppTypography.micro,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          AppMoney.compact(item.bidAmount),
+                          style: AppTextStyles.label.standardCopyWith(
+                            color: AppColors.green,
+                            fontSize: AppTypography.label,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  Expanded(
-                    child: _TenderMetricItem(
-                      label: 'EN DÜŞÜK',
-                      value: item.lowestBidAmount != null && item.lowestBidAmount! > 0
-                          ? AppMoney.compact(item.lowestBidAmount!)
-                          : '-',
-                      color: AppColors.goldLight,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'EN DÜŞÜK',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: AppTypography.micro,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          item.lowestBidAmount != null && item.lowestBidAmount! > 0
+                              ? AppMoney.compact(item.lowestBidAmount!)
+                              : '-',
+                          style: AppTextStyles.label.standardCopyWith(
+                            color: AppColors.goldLight,
+                            fontSize: AppTypography.label,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  Expanded(
-                    child: _TenderMetricItem(
-                      label: 'TEMİNAT',
-                      value: AppMoney.compact(item.bondPaid),
-                      color: AppColors.red,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TEMİNAT',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: AppTypography.micro,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          AppMoney.compact(item.bondPaid),
+                          style: AppTextStyles.label.standardCopyWith(
+                            color: AppColors.red,
+                            fontSize: AppTypography.label,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              SizedBox(height: 8.h),
-              Divider(color: AppFx.softOverlay(0.10), height: 1),
               SizedBox(height: 8.h),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -923,7 +875,7 @@ class _TenderBidCard extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    '${item.cityName} (${item.bidCount} oyuncu)',
+                    '📍 ${item.cityName} • 👥 ${item.bidCount} teklif',
                     style: AppTextStyles.label.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.label,
@@ -936,45 +888,6 @@ class _TenderBidCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _TenderMetricItem extends StatelessWidget {
-  const _TenderMetricItem({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.overline.standardCopyWith(
-            color: AppColors.textMuted,
-            fontSize: AppTypography.micro,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
-          ),
-        ),
-        SizedBox(height: 4.h),
-        Text(
-          value,
-          style: AppTextStyles.title.standardCopyWith(
-            color: color,
-            fontSize: AppTypography.body,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -998,10 +911,10 @@ class _TenderHistoryCard extends StatelessWidget {
       color: AppColors.transparent,
       child: InkWell(
         onTap: () => context.push('/tenders/player/${item.playerTenderId}'),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(14.r),
         child: Container(
           padding: EdgeInsets.all(12.w),
-          decoration: AppDecorations.premiumCard(accent, 16.r),
+          decoration: AppDecorations.premiumCard(accent.withValues(alpha: 0.5), 14.r),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1031,6 +944,8 @@ class _TenderHistoryCard extends StatelessWidget {
                       children: [
                         Text(
                           item.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.title.standardCopyWith(
                             color: AppColors.white,
                             fontSize: AppTypography.bodyLarge,
@@ -1049,16 +964,7 @@ class _TenderHistoryCard extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: 6.w),
-                            Row(
-                              children: List.generate(
-                                item.qualityLevel,
-                                (index) => Icon(
-                                  AppIcons.starRounded,
-                                  color: AppColors.gold,
-                                  size: AppIconSizes.xxSmall,
-                                ),
-                              ),
-                            ),
+                            _buildQualityStars(item.qualityLevel),
                           ],
                         ),
                       ],
@@ -1076,7 +982,7 @@ class _TenderHistoryCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999.r),
                 child: AppProgressBar(
                   value: progress,
-                  minHeight: 8.h,
+                  minHeight: 6.h,
                   backgroundColor: AppFx.panelWash(0.35),
                   valueColor: AlwaysStoppedAnimation<Color>(accent),
                 ),
@@ -1086,11 +992,11 @@ class _TenderHistoryCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '${item.deliveredQuantity}/${item.requiredQuantity} adet teslim',
+                    '📦 ${item.deliveredQuantity}/${item.requiredQuantity} adet teslim',
                     style: AppTextStyles.label.standardCopyWith(
                       color: accent,
                       fontSize: AppTypography.label,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   Text(
@@ -1147,7 +1053,7 @@ String _formatDateTime(DateTime? value) {
 String _formatTenderCountdown(DateTime? target, DateTime now) {
   if (target == null) return '-';
   final remaining = target.toLocal().difference(now);
-  if (remaining.inSeconds <= 0) return 'Suresi Doldu';
+  if (remaining.inSeconds <= 0) return 'Süresi Doldu';
   final safe = remaining.isNegative ? Duration.zero : remaining;
   final hours = safe.inHours;
   final minutes = safe.inMinutes % 60;
@@ -1165,4 +1071,21 @@ Color _countdownColor(DateTime? target, DateTime now) {
   if (remaining.inMinutes < 10) return AppColors.red;
   if (remaining.inMinutes < 30) return AppColors.warning;
   return AppColors.goldLight;
+}
+
+Widget _buildQualityStars(int qualityLevel) {
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: List.generate(5, (index) {
+      final isFilled = index < qualityLevel;
+      return Padding(
+        padding: EdgeInsets.only(right: 1.w),
+        child: Icon(
+          isFilled ? AppIcons.starRounded : AppIcons.starBorderRounded,
+          color: isFilled ? AppColors.gold : AppColors.textMuted.withValues(alpha: 0.3),
+          size: 11.r,
+        ),
+      );
+    }),
+  );
 }
