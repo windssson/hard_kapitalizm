@@ -768,23 +768,27 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           ),
           SizedBox(height: 8.h),
           Wrap(
-            spacing: 8.w,
+            spacing: 10.w,
             runSpacing: 6.h,
             children: [
               _buildCapacityLegend(
-                'Stok',
+                'Mevcut Stok',
                 formatVolume(usedCapacity),
                 AppColors.blue,
+                icon: AppIcons.inventory2Outlined,
               ),
+              if (reservedCapacity > 0)
+                _buildCapacityLegend(
+                  'Sevkiyatta',
+                  formatVolume(reservedCapacity),
+                  AppColors.gold,
+                  icon: AppIcons.localShippingOutlined,
+                ),
               _buildCapacityLegend(
-                'Yolda',
-                formatVolume(reservedCapacity),
-                AppColors.gold,
-              ),
-              _buildCapacityLegend(
-                'Bos',
+                'Bos Alan',
                 formatVolume(availableCapacity),
                 AppColors.textMuted,
+                icon: Icons.storage_rounded,
               ),
             ],
           ),
@@ -793,25 +797,43 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildCapacityLegend(String label, String value, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 7.w,
-          height: 7.w,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        SizedBox(width: 4.w),
-        Text(
-          '$label: $value',
-          style: AppTextStyles.caption.standardCopyWith(
-            color: AppColors.textSecondary,
-            fontSize: AppTypography.caption,
-            fontWeight: FontWeight.w600,
+  Widget _buildCapacityLegend(
+    String label,
+    String value,
+    Color color, {
+    IconData? icon,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 11.sp, color: color),
+            SizedBox(width: 4.w),
+          ] else ...[
+            Container(
+              width: 6.w,
+              height: 6.w,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            SizedBox(width: 4.w),
+          ],
+          Text(
+            '$label: $value',
+            style: AppTextStyles.caption.standardCopyWith(
+              color: color,
+              fontSize: AppTypography.micro,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -904,92 +926,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           companyProducts,
         );
       },
-    );
-  }
-
-  Widget _buildSlotValueTile({
-    required String label,
-    required String value,
-    required IconData icon,
-    required Color color,
-    VoidCallback? onTap,
-    String? suffix,
-    Color? suffixColor,
-  }) {
-    final content = Container(
-      constraints: BoxConstraints(minHeight: 48.h),
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
-      decoration: BoxDecoration(
-        color: AppFx.softOverlay(0.035),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppFx.softOverlay(0.08)),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: color.withValues(alpha: 0.82),
-            size: AppIconSizes.small,
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.micro,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 2.h),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        value,
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.textPrimary,
-                          fontSize: AppTypography.bodySmall,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (suffix != null) ...[
-                      SizedBox(width: 4.w),
-                      Text(
-                        suffix,
-                        style: AppTextStyles.caption.standardCopyWith(
-                          color: (suffixColor ?? color).withValues(alpha: 0.9),
-                          fontSize: AppTypography.micro,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (onTap == null) return content;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(12.r),
-      onTap: onTap,
-      child: content,
     );
   }
 
@@ -1220,7 +1156,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(13.w),
+      padding: EdgeInsets.all(12.w),
       decoration: AppDecorations.premiumCard(
         slot.isAvailableForSale ? AppColors.green : null,
         18.r,
@@ -1229,24 +1165,22 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 66.w,
-                height: 66.w,
-                clipBehavior: hasBrand ? Clip.antiAlias : Clip.none,
-                padding: EdgeInsets.all(hasBrand ? 2.w : 0),
-                decoration: hasBrand
-                    ? BoxDecoration(
-                        color: AppFx.panelWash(0.24),
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(
-                          color: slot.isAvailableForSale
-                              ? AppColors.green.withValues(alpha: 0.32)
-                              : AppFx.softOverlay(0.10),
-                        ),
-                      )
-                    : null,
+                width: 64.w,
+                height: 64.w,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: AppFx.panelWash(0.24),
+                  borderRadius: BorderRadius.circular(14.r),
+                  border: Border.all(
+                    color: slot.isAvailableForSale
+                        ? AppColors.green.withValues(alpha: 0.35)
+                        : AppColors.gold.withValues(alpha: 0.25),
+                    width: 1.2.w,
+                  ),
+                ),
                 child: BrandedProductImage(
                   fileName: slot.productIcon ?? 'default.webp',
                   brandId: slot.brandId,
@@ -1258,16 +1192,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   companyProducts: companyProducts,
                 ),
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: 10.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      (slot.productName ?? 'Urun') +
-                          (slot.brandId != _defaultBrandId
-                              ? ' (${currentBrandName ?? 'Markali'})'
-                              : ''),
+                      slot.productName ?? 'Urun',
                       style: AppTextStyles.title.standardCopyWith(
                         color: AppColors.textPrimary,
                         fontSize: AppTypography.titleLarge,
@@ -1277,122 +1208,346 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 5.h),
-                    Row(children: [_buildQualityStars(slot.qualityLevel)]),
-                  ],
-                ),
-              ),
-              SizedBox(width: 6.w),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _buildSaleToggleChip(
-                    isActive: slot.isAvailableForSale,
-                    onChanged: (_) => _toggleSaleStatus(context, ref, slot),
-                  ),
-                  SizedBox(width: 4.w),
-                  SizedBox(
-                    height: 30.h,
-                    width: 30.h,
-                    child: PopupMenuButton<String>(
-                      padding: EdgeInsets.zero,
-                      icon: Icon(
-                        AppIcons.moreVert,
-                        color: AppColors.textMuted,
-                        size: AppIconSizes.mediumLarge,
-                      ),
-                      color: AppColors.cardBg,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                        side: BorderSide(
-                          color: AppColors.border.withValues(alpha: 0.2),
+                    SizedBox(height: 4.h),
+                    Row(
+                      children: [
+                        _buildQualityStars(slot.qualityLevel),
+                        SizedBox(width: 6.w),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4.r),
+                          ),
+                          child: Text(
+                            'K${slot.qualityLevel}',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.gold,
+                              fontSize: AppTypography.micro,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
-                      ),
-                      onSelected: (value) {
-                        if (value == 'price') {
-                          _showPriceDialog(context, ref, slot);
-                        } else if (value == 'market') {
-                          _openMarketForSlot(context, warehouse, slot);
-                        } else if (value == 'transfer') {
-                          _startWarehouseOutboundFlow(
-                            context,
-                            ref,
-                            warehouse,
-                            slot,
-                          );
-                        } else if (value == 'delete') {
-                          _deleteWarehouseSlot(context, ref, slot);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        _buildSlotMenuItem(
-                          value: 'price',
-                          icon: AppIcons.sellOutlined,
-                          label: 'Fiyat Duzenle',
-                          color: AppColors.gold,
+                      ],
+                    ),
+                    SizedBox(height: 4.h),
+                    Wrap(
+                      spacing: 4.w,
+                      runSpacing: 4.h,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                          decoration: BoxDecoration(
+                            color: AppColors.blue.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(5.r),
+                            border: Border.all(
+                              color: AppColors.blue.withValues(alpha: 0.25),
+                              width: 1.w,
+                            ),
+                          ),
+                          child: Text(
+                            '${slot.unitVolume > 0 ? slot.unitVolume.toStringAsFixed(1) : "1.0"} m³/ad.',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.blue,
+                              fontSize: AppTypography.micro,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        _buildSlotMenuItem(
-                          value: 'market',
-                          icon: AppIcons.storefrontOutlined,
-                          label: 'Pazardan Al',
-                          color: AppColors.textPrimary,
-                        ),
-                        _buildSlotMenuItem(
-                          value: 'transfer',
-                          icon: AppIcons.localShippingOutlined,
-                          label: 'Baska Depoya Gonder',
-                          color: AppColors.textPrimary,
-                        ),
-                        if (slot.quantity <= 0)
-                          _buildSlotMenuItem(
-                            value: 'delete',
-                            icon: AppIcons.deleteOutline,
-                            label: 'Slotu Sil',
-                            color: AppColors.red,
+                        if (hasBrand)
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.gold.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(5.r),
+                              border: Border.all(
+                                color: AppColors.gold.withValues(alpha: 0.35),
+                                width: 1.w,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.verified_rounded,
+                                  size: 9.sp,
+                                  color: AppColors.gold,
+                                ),
+                                SizedBox(width: 2.w),
+                                Text(
+                                  currentBrandName ?? 'Markali',
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: AppColors.gold,
+                                    fontSize: AppTypography.micro,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                       ],
                     ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8.w),
+              // HERO STOK GÖSTERGESİ
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.blue.withValues(alpha: 0.15),
+                      AppColors.cardBgLight.withValues(alpha: 0.6),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(
+                    color: slot.quantity > 0
+                        ? AppColors.blue.withValues(alpha: 0.45)
+                        : AppColors.red.withValues(alpha: 0.35),
+                    width: 1.2.w,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (slot.quantity > 0 ? AppColors.blue : AppColors.red)
+                          .withValues(alpha: 0.08),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '${slot.quantity}',
+                          style: AppTextStyles.h1.standardCopyWith(
+                            color: slot.quantity > 0
+                                ? AppColors.textPrimary
+                                : AppColors.red,
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        SizedBox(width: 3.w),
+                        Text(
+                          'ADET',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: slot.quantity > 0
+                                ? AppColors.blue
+                                : AppColors.red,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '${(slot.quantity * (slot.unitVolume > 0 ? slot.unitVolume : 1.0)).toStringAsFixed(0)} m³ Hacim',
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 9.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSlotValueTile(
-                  label: 'Stok',
-                  value: slot.quantity.toString(),
-                  icon: AppIcons.inventory2Outlined,
-                  color: AppColors.blue,
+          SizedBox(height: 10.h),
+          // ALT KONTROL VE FİYAT BARI
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+            decoration: BoxDecoration(
+              color: AppFx.softOverlay(0.03),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: AppFx.softOverlay(0.06)),
+            ),
+            child: Row(
+              children: [
+                // Maliyet Bilgisi
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      AppIcons.paymentsOutlined,
+                      size: 13.sp,
+                      color: AppColors.textMuted,
+                    ),
+                    SizedBox(width: 4.w),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Maliyet',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: 8.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          slot.cost > 0 ? '₺${AppMoney.compact(slot.cost)}' : '-',
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: _buildSlotValueTile(
-                  label: 'Maliyet',
-                  value: slot.cost > 0 ? AppMoney.compact(slot.cost) : '-',
-                  icon: AppIcons.paymentsOutlined,
-                  color: AppColors.textMuted,
+                SizedBox(width: 10.w),
+                Container(width: 1, height: 22.h, color: AppColors.border.withValues(alpha: 0.3)),
+                SizedBox(width: 10.w),
+                // Satış Fiyatı (Tıklanabilir)
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _showPriceDialog(context, ref, slot),
+                    borderRadius: BorderRadius.circular(6.r),
+                    child: Row(
+                      children: [
+                        Icon(
+                          AppIcons.sellOutlined,
+                          size: 13.sp,
+                          color: AppColors.gold,
+                        ),
+                        SizedBox(width: 4.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Pazar Satış',
+                                    style: AppTextStyles.caption.standardCopyWith(
+                                      color: AppColors.gold,
+                                      fontSize: 8.sp,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  if (marginPercent != null) ...[
+                                    SizedBox(width: 4.w),
+                                    Text(
+                                      '%${marginPercent.toStringAsFixed(0)}',
+                                      style: AppTextStyles.caption.standardCopyWith(
+                                        color: marginColor,
+                                        fontSize: 8.sp,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Text(
+                                    slot.price > 0 ? '₺${AppMoney.compact(slot.price)}' : 'Fiyat Belirle',
+                                    style: AppTextStyles.body.standardCopyWith(
+                                      color: slot.price > 0 ? AppColors.textPrimary : AppColors.gold,
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(width: 3.w),
+                                  Icon(Icons.edit_outlined, size: 10.sp, color: AppColors.gold),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: _buildSlotValueTile(
-                  label: 'Satis',
-                  value: slot.price > 0 ? AppMoney.compact(slot.price) : '-',
-                  suffix: marginPercent != null
-                      ? '%${marginPercent.toStringAsFixed(0)}'
-                      : null,
-                  suffixColor: marginColor,
-                  icon: AppIcons.sellOutlined,
-                  color: AppColors.gold,
-                  onTap: () => _showPriceDialog(context, ref, slot),
+                SizedBox(width: 6.w),
+                // Satış Toggle
+                _buildSaleToggleChip(
+                  isActive: slot.isAvailableForSale,
+                  onChanged: (_) => _toggleSaleStatus(context, ref, slot),
                 ),
-              ),
-            ],
+                SizedBox(width: 2.w),
+                // Menü Butonu
+                SizedBox(
+                  height: 28.h,
+                  width: 28.h,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      AppIcons.moreVert,
+                      color: AppColors.textMuted,
+                      size: AppIconSizes.medium,
+                    ),
+                    color: AppColors.cardBg,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      side: BorderSide(
+                        color: AppColors.border.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'price') {
+                        _showPriceDialog(context, ref, slot);
+                      } else if (value == 'market') {
+                        _openMarketForSlot(context, warehouse, slot);
+                      } else if (value == 'transfer') {
+                        _startWarehouseOutboundFlow(
+                          context,
+                          ref,
+                          warehouse,
+                          slot,
+                        );
+                      } else if (value == 'delete') {
+                        _deleteWarehouseSlot(context, ref, slot);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      _buildSlotMenuItem(
+                        value: 'price',
+                        icon: AppIcons.sellOutlined,
+                        label: 'Fiyat Duzenle',
+                        color: AppColors.gold,
+                      ),
+                      _buildSlotMenuItem(
+                        value: 'market',
+                        icon: AppIcons.storefrontOutlined,
+                        label: 'Pazardan Al',
+                        color: AppColors.textPrimary,
+                      ),
+                      _buildSlotMenuItem(
+                        value: 'transfer',
+                        icon: AppIcons.localShippingOutlined,
+                        label: 'Baska Depoya Gonder',
+                        color: AppColors.textPrimary,
+                      ),
+                      if (slot.quantity <= 0)
+                        _buildSlotMenuItem(
+                          value: 'delete',
+                          icon: AppIcons.deleteOutline,
+                          label: 'Slotu Sil',
+                          color: AppColors.red,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

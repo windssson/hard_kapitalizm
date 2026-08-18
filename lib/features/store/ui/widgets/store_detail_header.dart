@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
-import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 
 class StoreDetailHeader extends ConsumerWidget {
   final StoreModel store;
@@ -245,11 +245,12 @@ class StoreDetailHeader extends ConsumerWidget {
       builder: (context) {
         return Consumer(
           builder: (context, ref, child) {
-            final productsAsync = ref.watch(allProductsProvider);
+            final catalogsAsync = ref.watch(staticCatalogsProvider);
 
             return Dialog(
               backgroundColor: AppColors.transparent,
               child: Container(
+                constraints: BoxConstraints(maxHeight: 460.h),
                 padding: EdgeInsets.all(16.w),
                 decoration: AppDecorations.premiumCard(null, 18.r),
                 child: Column(
@@ -259,12 +260,18 @@ class StoreDetailHeader extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'SATILABİLİR ÜRÜNLER',
-                          style: AppTextStyles.titleGoldBold.standardCopyWith(
-                            color: AppColors.gold,
-                            fontSize: AppTypography.title,
-                          ),
+                        Row(
+                          children: [
+                            Icon(Icons.inventory_2_outlined, color: AppColors.gold, size: 20.sp),
+                            SizedBox(width: 8.w),
+                            Text(
+                              'SATILABİLİR ÜRÜNLER',
+                              style: AppTextStyles.titleGoldBold.standardCopyWith(
+                                color: AppColors.gold,
+                                fontSize: AppTypography.title,
+                              ),
+                            ),
+                          ],
                         ),
                         IconButton(
                           icon: const Icon(Icons.close, color: Colors.white),
@@ -273,7 +280,7 @@ class StoreDetailHeader extends ConsumerWidget {
                       ],
                     ),
                     SizedBox(height: 12.h),
-                    productsAsync.when(
+                    catalogsAsync.when(
                       loading: () => SizedBox(
                         height: 100.h,
                         child: Center(
@@ -292,8 +299,18 @@ class StoreDetailHeader extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      data: (allProducts) {
-                        final acceptedIds = store.storeType.acceptedProductIds
+                      data: (catalogs) {
+                        final allProducts = catalogs.products;
+                        final matchedStoreType = catalogs.storeTypes.firstWhere(
+                          (t) =>
+                              t.id.toLowerCase() == store.storeType.id.toLowerCase() ||
+                              t.name.toLowerCase() == store.storeType.name.toLowerCase(),
+                          orElse: () => store.storeType,
+                        );
+
+                        final acceptedIds = (store.storeType.acceptedProductIds.isNotEmpty
+                                ? store.storeType.acceptedProductIds
+                                : matchedStoreType.acceptedProductIds)
                             .map((id) => id.trim().toUpperCase())
                             .toSet();
 

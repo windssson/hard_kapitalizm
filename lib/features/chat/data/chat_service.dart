@@ -101,8 +101,12 @@ class ChatService {
           schema: 'public',
           table: _table,
           callback: (payload) {
-            final msg = ChatMessage.fromJson(payload.newRecord);
-            onInsert(msg);
+            try {
+              if (payload.newRecord.isNotEmpty) {
+                final msg = ChatMessage.fromJson(payload.newRecord);
+                onInsert(msg);
+              }
+            } catch (_) {}
           },
         )
         .subscribe();

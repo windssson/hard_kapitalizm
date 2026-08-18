@@ -63,7 +63,11 @@ class ChatNotifier extends Notifier<ChatState> {
     if (state.isLoading || !state.hasMore || state.messages.isEmpty) return;
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final oldest = state.messages.first.createdAt;
+      final oldest = state.messages.firstOrNull?.createdAt;
+      if (oldest == null) {
+        state = state.copyWith(isLoading: false);
+        return;
+      }
       final older = await ChatService.fetchBefore(oldest);
       state = state.copyWith(
         messages: [...older, ...state.messages],

@@ -646,6 +646,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
     );
   }
+
   Widget _buildCompanySummaryCard() {
     return Consumer(
       builder: (context, ref, child) {
@@ -1092,7 +1093,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       _HomeModuleCardData(
         title: 'Nakliye',
-        image: 'lojistik.webp',
+        image: 'nakliyeler.webp',
         accentColor: AppColors.info,
         primaryLabel: 'Arac',
         primaryValue: '${modules?.logistics.vehicleCount ?? 0}',
@@ -1584,7 +1585,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Future<void> _handleModuleTap(String moduleTitle) async {
     if (moduleTitle == 'Magazalar' &&
         ref.read(tutorialProvider).step == TutorialStep.clickFirstStore) {
-      ref.read(tutorialProvider.notifier).completeStep(TutorialStep.clickFirstStore);
+      ref
+          .read(tutorialProvider.notifier)
+          .completeStep(TutorialStep.clickFirstStore);
     }
     switch (moduleTitle) {
       case 'Magazalar':
@@ -2851,7 +2854,8 @@ class _PulsingModuleContainer extends StatefulWidget {
   });
 
   @override
-  State<_PulsingModuleContainer> createState() => _PulsingModuleContainerState();
+  State<_PulsingModuleContainer> createState() =>
+      _PulsingModuleContainerState();
 }
 
 class _PulsingModuleContainerState extends State<_PulsingModuleContainer>
@@ -2866,9 +2870,10 @@ class _PulsingModuleContainerState extends State<_PulsingModuleContainer>
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    _animation = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: 0.3,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     if (widget.hasAlert && !widget.isLocked) {
       _controller.repeat(reverse: true);
@@ -2880,7 +2885,8 @@ class _PulsingModuleContainerState extends State<_PulsingModuleContainer>
     super.didUpdateWidget(oldWidget);
     if (widget.hasAlert && !widget.isLocked && !_controller.isAnimating) {
       _controller.repeat(reverse: true);
-    } else if ((!widget.hasAlert || widget.isLocked) && _controller.isAnimating) {
+    } else if ((!widget.hasAlert || widget.isLocked) &&
+        _controller.isAnimating) {
       _controller.stop();
     }
   }
@@ -2939,12 +2945,16 @@ class _PulsingModuleContainerState extends State<_PulsingModuleContainer>
             gradient: widget.gradient,
             borderRadius: radius,
             border: Border.all(
-              color: AppColors.red.withValues(alpha: 0.25 + (_animation.value * 0.35)),
+              color: AppColors.red.withValues(
+                alpha: 0.25 + (_animation.value * 0.35),
+              ),
               width: 1.4.w,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.red.withValues(alpha: 0.04 + (_animation.value * 0.12)),
+                color: AppColors.red.withValues(
+                  alpha: 0.04 + (_animation.value * 0.12),
+                ),
                 blurRadius: 8.r + (_animation.value * 8.r),
                 spreadRadius: _animation.value * 1.w,
                 offset: Offset(0, 3.h),
@@ -3000,4 +3010,3 @@ class _WorkingIndicatorState extends State<_WorkingIndicator>
     );
   }
 }
-

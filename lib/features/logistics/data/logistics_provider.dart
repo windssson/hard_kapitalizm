@@ -48,7 +48,7 @@ final playerLogisticsCompanyProvider =
       final response = await supabase.rpc('get_player_logistics_company');
       if (response == null) return null;
 
-      return LogisticsCompanyModel.fromJson(response as Map<String, dynamic>);
+      return LogisticsCompanyModel.fromJson(Map<String, dynamic>.from(response as Map));
     });
 
 final playerLogisticsConstructionProvider =
@@ -66,10 +66,10 @@ final playerLogisticsConstructionProvider =
         },
       );
 
-      final rows = response as List<dynamic>;
+      final rows = response as List<dynamic>? ?? const [];
       if (rows.isEmpty) return null;
 
-      return rows.first as Map<String, dynamic>;
+      return Map<String, dynamic>.from(rows.first as Map);
     });
 
 final logisticsVehicleListProvider =

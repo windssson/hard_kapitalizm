@@ -49,21 +49,21 @@ class PlayerModel {
     final rawBadges = (json['featured_badges'] as List?) ?? const [];
 
     return PlayerModel(
-      id: json['id'] as String,
-      playerName: json['player_name'] as String? ?? 'Oyuncu',
-      companyName: json['company_name'] as String? ?? 'Yeni Holding',
-      avatarId: json['avatar_id'] as String? ?? 'ae1.webp',
+      id: (json['id'] ?? '').toString(),
+      playerName: (json['player_name'] ?? 'Oyuncu').toString(),
+      companyName: (json['company_name'] ?? 'Yeni Holding').toString(),
+      avatarId: (json['avatar_id'] ?? 'ae1.webp').toString(),
       googleAvatarUrl: json['google_avatar_url']?.toString(),
-      level: json['level'] as int? ?? 1,
-      experience: json['experience'] as int? ?? 0,
+      level: (json['level'] as num?)?.toInt() ?? 1,
+      experience: (json['experience'] as num?)?.toInt() ?? 0,
       currentLevelStartExperience:
           (json['current_level_start_experience'] as num?)?.toInt() ?? 0,
       nextLevelTotalExperience:
           (json['next_level_total_experience'] as num?)?.toInt() ??
-          (json['experience'] as int? ?? 0),
+          ((json['experience'] as num?)?.toInt() ?? 0),
       currentLevelExperience:
           (json['current_level_experience'] as num?)?.toInt() ??
-          (json['experience'] as int? ?? 0),
+          ((json['experience'] as num?)?.toInt() ?? 0),
       nextLevelRequiredExperience:
           (json['next_level_required_experience'] as num?)?.toInt() ?? 1,
       remainingExperienceToNextLevel:
@@ -86,7 +86,7 @@ class PlayerModel {
       gold: (json['gold'] as num?)?.toDouble() ?? 100.0,
       companyValue: (json['company_value'] as num?)?.toDouble() ?? 0,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
     );
   }

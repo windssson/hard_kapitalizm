@@ -21,7 +21,7 @@ final marketProductProvider =
       );
 
       if (response == null) return null;
-      return ProductModel.fromJson(response as Map<String, dynamic>);
+      return ProductModel.fromJson(Map<String, dynamic>.from(response as Map));
     });
 
 final marketListingsProvider =
@@ -39,7 +39,7 @@ final marketListingsProvider =
       return (response as List<dynamic>)
           .map(
             (json) =>
-                MarketListingModel.fromJson(json as Map<String, dynamic>),
+                MarketListingModel.fromJson(Map<String, dynamic>.from(json as Map)),
           )
           .toList();
     });
@@ -56,7 +56,7 @@ final marketCityListingsProvider =
       return (response as List<dynamic>)
           .map(
             (json) =>
-                MarketListingModel.fromJson(json as Map<String, dynamic>),
+                MarketListingModel.fromJson(Map<String, dynamic>.from(json as Map)),
           )
           .toList();
     });
@@ -85,7 +85,7 @@ final marketBuyerWarehouseProvider =
       );
 
       if (response == null) return null;
-      return MarketBuyerWarehouseModel.fromJson(response as Map<String, dynamic>);
+      return MarketBuyerWarehouseModel.fromJson(Map<String, dynamic>.from(response as Map));
     });
 
 final warehouseCapacityStatusProvider =

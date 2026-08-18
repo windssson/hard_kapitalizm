@@ -58,7 +58,7 @@ final playerArgeCenterProvider =
       final response = await supabase.rpc('get_player_arge_center');
       if (response == null) return null;
 
-      return ArgeCenterModel.fromJson(response as Map<String, dynamic>);
+      return ArgeCenterModel.fromJson(Map<String, dynamic>.from(response as Map));
     });
 
 final playerArgeConstructionProvider =
@@ -75,10 +75,10 @@ final playerArgeConstructionProvider =
         },
       );
 
-      final rows = response as List<dynamic>;
+      final rows = response as List<dynamic>? ?? const [];
       if (rows.isEmpty) return null;
 
-      return rows.first as Map<String, dynamic>;
+      return Map<String, dynamic>.from(rows.first as Map);
     });
 
 final activeArgeCenterUpgradeProvider =

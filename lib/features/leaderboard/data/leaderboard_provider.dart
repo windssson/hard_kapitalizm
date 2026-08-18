@@ -15,16 +15,23 @@ final leaderboardProvider = FutureProvider.family<List<LeaderboardEntryModel>, S
     }
   }
 
-  final response = await supabase.rpc(
-    'get_leaderboard',
-    params: {
-      'p_sort_by_field': sortByField,
-      'p_limit': 100,
-    },
-  );
+  try {
+    final response = await supabase.rpc(
+      'get_leaderboard',
+      params: {
+        'p_sort_by_field': sortByField,
+        'p_limit': 100,
+      },
+    );
 
-  final rows = response as List<dynamic>? ?? const [];
-  return rows.map((row) => LeaderboardEntryModel.fromJson(Map<String, dynamic>.from(row as Map))).toList();
+    final rows = response as List<dynamic>? ?? const [];
+    return rows
+        .whereType<Map>()
+        .map((row) => LeaderboardEntryModel.fromJson(Map<String, dynamic>.from(row)))
+        .toList();
+  } catch (e) {
+    return const [];
+  }
 });
 
 class PlayerRankInfo {
@@ -50,23 +57,27 @@ final currentPlayerRankProvider = FutureProvider.family<PlayerRankInfo?, String>
     );
   }
 
-  // Fetch the player's rank and entry data via a single unified RPC:
-  final response = await supabase.rpc(
-    'get_player_leaderboard_rank_info',
-    params: {
-      'p_player_id': user.id,
-      'p_sort_by_field': sortByField,
-    },
-  );
+  try {
+    // Fetch the player's rank and entry data via unified RPC:
+    final response = await supabase.rpc(
+      'get_player_leaderboard_rank_info',
+      params: {
+        'p_player_id': user.id,
+        'p_sort_by_field': sortByField,
+      },
+    );
 
-  if (response == null) return null;
+    if (response == null) return null;
 
-  final responseMap = Map<String, dynamic>.from(response as Map);
-  final entryMap = responseMap['entry'];
-  if (entryMap == null) return null;
+    final responseMap = Map<String, dynamic>.from(response as Map);
+    final entryMap = responseMap['entry'];
+    if (entryMap == null) return null;
 
-  return PlayerRankInfo(
-    rank: (responseMap['rank'] as num).toInt(),
-    entry: LeaderboardEntryModel.fromJson(Map<String, dynamic>.from(entryMap as Map)),
-  );
+    return PlayerRankInfo(
+      rank: (responseMap['rank'] as num).toInt(),
+      entry: LeaderboardEntryModel.fromJson(Map<String, dynamic>.from(entryMap as Map)),
+    );
+  } catch (_) {
+    return null;
+  }
 });

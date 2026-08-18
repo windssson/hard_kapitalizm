@@ -112,8 +112,8 @@ final _router = GoRouter(
     GoRoute(
       path: '/production-report/:ownerKind/:id',
       builder: (context, state) => ProductionReportScreen(
-        ownerKind: state.pathParameters['ownerKind']!,
-        ownerId: state.pathParameters['id']!,
+        ownerKind: state.pathParameters['ownerKind'] ?? 'factory',
+        ownerId: state.pathParameters['id'] ?? '',
         ownerName: state.uri.queryParameters['name'] ?? 'Uretim Birimi',
       ),
     ),
@@ -132,7 +132,10 @@ final _router = GoRouter(
         GoRoute(
           path: 'new/type',
           builder: (context, state) {
-            final city = state.extra as CityModel;
+            final city = state.extra is CityModel ? (state.extra as CityModel) : null;
+            if (city == null) {
+              return const CitySelectionScreen();
+            }
             return BuildingTypeSelectionScreen(
               selectedCity: city,
               buildingKind: 'store',
@@ -142,22 +145,22 @@ final _router = GoRouter(
         GoRoute(
           path: ':id',
           builder: (context, state) =>
-              StoreDetailScreen(storeId: state.pathParameters['id']!),
+              StoreDetailScreen(storeId: state.pathParameters['id'] ?? ''),
           routes: [
             GoRoute(
               path: 'history',
               builder: (context, state) =>
-                  StoreHistoryScreen(storeId: state.pathParameters['id']!),
+                  StoreHistoryScreen(storeId: state.pathParameters['id'] ?? ''),
             ),
             GoRoute(
               path: 'report',
               builder: (context, state) =>
-                  StorePerformanceScreen(storeId: state.pathParameters['id']!),
+                  StorePerformanceScreen(storeId: state.pathParameters['id'] ?? ''),
             ),
             GoRoute(
               path: 'warehouse',
               builder: (context, state) => StoreWarehouseDetailScreen(
-                storeId: state.pathParameters['id']!,
+                storeId: state.pathParameters['id'] ?? '',
               ),
             ),
           ],
@@ -171,7 +174,7 @@ final _router = GoRouter(
         GoRoute(
           path: 'public/:id',
           builder: (context, state) =>
-              PublicProfileScreen(playerId: state.pathParameters['id']!),
+              PublicProfileScreen(playerId: state.pathParameters['id'] ?? ''),
         ),
       ],
     ),
@@ -191,7 +194,10 @@ final _router = GoRouter(
         GoRoute(
           path: 'new/type',
           builder: (context, state) {
-            final city = state.extra as CityModel;
+            final city = state.extra is CityModel ? (state.extra as CityModel) : null;
+            if (city == null) {
+              return const CitySelectionScreen(buildingKind: 'field');
+            }
             return BuildingTypeSelectionScreen(
               selectedCity: city,
               buildingKind: 'field',
@@ -201,7 +207,7 @@ final _router = GoRouter(
         GoRoute(
           path: ':id',
           builder: (context, state) =>
-              FieldDetailScreen(fieldId: state.pathParameters['id']!),
+              FieldDetailScreen(fieldId: state.pathParameters['id'] ?? ''),
         ),
       ],
     ),
@@ -217,7 +223,10 @@ final _router = GoRouter(
         GoRoute(
           path: 'new/type',
           builder: (context, state) {
-            final city = state.extra as CityModel;
+            final city = state.extra is CityModel ? (state.extra as CityModel) : null;
+            if (city == null) {
+              return const CitySelectionScreen(buildingKind: 'farm');
+            }
             return BuildingTypeSelectionScreen(
               selectedCity: city,
               buildingKind: 'farm',
@@ -227,7 +236,7 @@ final _router = GoRouter(
         GoRoute(
           path: ':id',
           builder: (context, state) =>
-              FarmDetailScreen(farmId: state.pathParameters['id']!),
+              FarmDetailScreen(farmId: state.pathParameters['id'] ?? ''),
         ),
       ],
     ),
@@ -243,7 +252,10 @@ final _router = GoRouter(
         GoRoute(
           path: 'new/type',
           builder: (context, state) {
-            final city = state.extra as CityModel;
+            final city = state.extra is CityModel ? (state.extra as CityModel) : null;
+            if (city == null) {
+              return const CitySelectionScreen(buildingKind: 'factory');
+            }
             return BuildingTypeSelectionScreen(
               selectedCity: city,
               buildingKind: 'factory',
@@ -253,7 +265,7 @@ final _router = GoRouter(
         GoRoute(
           path: ':id',
           builder: (context, state) =>
-              FactoryDetailScreen(factoryId: state.pathParameters['id']!),
+              FactoryDetailScreen(factoryId: state.pathParameters['id'] ?? ''),
         ),
       ],
     ),
@@ -269,7 +281,10 @@ final _router = GoRouter(
         GoRoute(
           path: 'new/type',
           builder: (context, state) {
-            final city = state.extra as CityModel;
+            final city = state.extra is CityModel ? (state.extra as CityModel) : null;
+            if (city == null) {
+              return const CitySelectionScreen(buildingKind: 'mine');
+            }
             return BuildingTypeSelectionScreen(
               selectedCity: city,
               buildingKind: 'mine',
@@ -279,7 +294,7 @@ final _router = GoRouter(
         GoRoute(
           path: ':id',
           builder: (context, state) =>
-              MineDetailScreen(mineId: state.pathParameters['id']!),
+              MineDetailScreen(mineId: state.pathParameters['id'] ?? ''),
         ),
       ],
     ),
@@ -306,7 +321,7 @@ final _router = GoRouter(
     GoRoute(
       path: '/company/products/:productId/design',
       builder: (context, state) => BrandProductDesignScreen(
-        productId: state.pathParameters['productId']!,
+        productId: state.pathParameters['productId'] ?? '',
       ),
     ),
     GoRoute(
@@ -326,7 +341,7 @@ final _router = GoRouter(
     GoRoute(
       path: '/market/:productId',
       builder: (context, state) {
-        final productId = state.pathParameters['productId']!;
+        final productId = state.pathParameters['productId'] ?? '';
         final warehouseId = state.uri.queryParameters['warehouseId'] ?? '';
         final playerId = state.uri.queryParameters['playerId'] ?? '';
         final cityId = state.uri.queryParameters['cityId'] ?? '';
@@ -351,7 +366,10 @@ final _router = GoRouter(
         GoRoute(
           path: 'new/type',
           builder: (context, state) {
-            final city = state.extra as CityModel;
+            final city = state.extra is CityModel ? (state.extra as CityModel) : null;
+            if (city == null) {
+              return const CitySelectionScreen(buildingKind: 'warehouse');
+            }
             return BuildingTypeSelectionScreen(
               selectedCity: city,
               buildingKind: 'warehouse',
@@ -361,14 +379,14 @@ final _router = GoRouter(
         GoRoute(
           path: ':id',
           builder: (context, state) {
-            final id = state.pathParameters['id']!;
+            final id = state.pathParameters['id'] ?? '';
             return WarehouseDetailScreen(warehouseId: id);
           },
           routes: [
             GoRoute(
               path: 'history',
               builder: (context, state) => WarehouseHistoryScreen(
-                warehouseId: state.pathParameters['id']!,
+                warehouseId: state.pathParameters['id'] ?? '',
               ),
             ),
           ],
@@ -385,12 +403,12 @@ final _router = GoRouter(
         GoRoute(
           path: 'open/:id',
           builder: (context, state) =>
-              TenderDetailScreen(tenderId: state.pathParameters['id']!),
+              TenderDetailScreen(tenderId: state.pathParameters['id'] ?? ''),
         ),
         GoRoute(
           path: 'player/:id',
           builder: (context, state) =>
-              TenderDetailScreen(playerTenderId: state.pathParameters['id']!),
+              TenderDetailScreen(playerTenderId: state.pathParameters['id'] ?? ''),
         ),
       ],
     ),

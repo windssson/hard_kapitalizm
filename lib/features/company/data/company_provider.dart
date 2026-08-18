@@ -11,7 +11,7 @@ final playerBrandCompanyProvider =
 
       final response = await supabase.rpc('get_player_brand_company');
       if (response == null) return null;
-      return BrandCompanyModel.fromJson(response as Map<String, dynamic>);
+      return BrandCompanyModel.fromJson(Map<String, dynamic>.from(response as Map));
     });
 
 final playerBrandCompanyProductsProvider =

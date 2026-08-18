@@ -56,13 +56,16 @@ class ChatMessage {
     final linkedSlotId = json['linked_listing_slot_id']?.toString();
 
     return ChatMessage(
-      id: json['id'] as String,
-      playerId: json['player_id'] as String,
-      playerName: json['player_name'] as String,
-      avatarId: json['avatar_id'] as String? ?? 'ae1.webp',
-      playerLevel: json['player_level'] as int? ?? 1,
-      content: json['content'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      id: (json['id'] ?? '').toString(),
+      playerId: (json['player_id'] ?? '').toString(),
+      playerName: (json['player_name'] ?? 'Oyuncu').toString(),
+      avatarId: (json['avatar_id'] ?? 'ae1.webp').toString(),
+      playerLevel: (json['player_level'] as num?)?.toInt() ?? 1,
+      content: (json['content'] ?? '').toString(),
+      createdAt: json['created_at'] != null
+          ? (DateTime.tryParse(json['created_at'].toString())?.toLocal() ??
+              DateTime.now())
+          : DateTime.now(),
       linkedProduct:
           (linkedProductId == null || linkedProductId.isEmpty) &&
               (linkedSlotId == null || linkedSlotId.isEmpty)

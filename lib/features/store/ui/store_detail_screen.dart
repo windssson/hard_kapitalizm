@@ -1971,8 +1971,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             }),
                           ),
                           SizedBox(height: 3.h),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+                          Wrap(
+                            spacing: 4.w,
+                            runSpacing: 4.h,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               GestureDetector(
                                 key: ref.watch(tutorialProvider).step == TutorialStep.clickSetPrice
@@ -1986,8 +1988,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                 ),
                                 child: Container(
                                   padding: EdgeInsets.symmetric(
-                                    horizontal: 8.w,
-                                    vertical: 3.h,
+                                    horizontal: 7.w,
+                                    vertical: 2.5.h,
                                   ),
                                   decoration: BoxDecoration(
                                     color: AppColors.gold.withValues(
@@ -2025,10 +2027,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                   ),
                                 ),
                               ),
-                              SizedBox(width: 6.w),
                               Container(
                                 padding: EdgeInsets.symmetric(
-                                  horizontal: 6.w,
+                                  horizontal: 5.w,
                                   vertical: 2.h,
                                 ),
                                 decoration: BoxDecoration(
@@ -2414,7 +2415,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     }
 
     return Container(
-      margin: EdgeInsets.only(left: 4.w),
       padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
@@ -2444,7 +2444,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (!isLowStock) return const SizedBox.shrink();
 
     return Container(
-      margin: EdgeInsets.only(left: 4.w),
       padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
       decoration: BoxDecoration(
         color: AppColors.red.withValues(alpha: 0.15),

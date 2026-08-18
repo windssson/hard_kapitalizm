@@ -73,9 +73,9 @@ final mineConstructionProvider = FutureProvider<Map<String, dynamic>?>((ref) asy
     },
   );
 
-  final rows = response as List<dynamic>;
+  final rows = response as List<dynamic>? ?? const [];
   if (rows.isEmpty) return null;
-  return rows.first as Map<String, dynamic>;
+  return Map<String, dynamic>.from(rows.first as Map);
 });
 
 final mineDetailProvider = FutureProvider.family<MineDetailModel, String>((

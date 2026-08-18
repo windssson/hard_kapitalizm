@@ -1,10 +1,11 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
+import 'package:hard_kapitalizm/core/managers/session_manager.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
@@ -27,6 +28,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final int _selectedIndex = 4;
+  int _activeTab = 0; // 0: Genel Bakış & Varlıklar, 1: Hesap & Güvenlik
   StreamSubscription<AuthState>? _authSubscription;
   bool _isGoogleLinkInProgress = false;
   bool _didShowGoogleLinkSuccess = false;
@@ -42,10 +44,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             .syncGoogleProfileIfLinked();
         if (synced) {
           _handleCompletedGoogleLink();
-          ref.invalidate(authIdentityProvider);
+          await SessionManager.bootstrapAndRefreshAll(ref);
         }
       } catch (_) {}
     });
+
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
       data,
     ) async {
@@ -57,7 +60,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
 
       try {
-        await ref.read(authManagerProvider).syncLinkedGoogleProfileMetadata();
+        await SessionManager.bootstrapAndRefreshAll(ref);
       } catch (_) {}
 
       if (mounted && _isGoogleSignInInProgress) {
@@ -66,7 +69,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         });
       }
       _handleCompletedGoogleLink();
-      ref.invalidate(authIdentityProvider);
     });
   }
 
@@ -78,7 +80,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
-
     switch (index) {
       case 0:
         context.go('/home');
@@ -98,38 +99,47 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  String _getExecutiveTitle(int level) {
+    if (level <= 3) return 'Genç Girişimci';
+    if (level <= 7) return 'Şirket Yöneticisi';
+    if (level <= 12) return 'Holding Başkanı';
+    if (level <= 20) return 'Sanayi Devi';
+    if (level <= 30) return 'Finans Baronu';
+    return 'Kapitalizm Efsanesi';
+  }
+
   @override
   Widget build(BuildContext context) {
     final playerAsyncValue = ref.watch(playerProvider);
     final authIdentityAsync = ref.watch(authIdentityProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.transparent,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Profil'),
+            const SecondaryTopBar(title: 'Yönetici Profili'),
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-                child: playerAsyncValue.when(
-                  data: (player) {
-                    if (player == null) {
-                      return Center(
-                        child: Text(
-                          'Kullanici bulunamadi',
-                          style: AppTextStyles.body,
-                        ),
-                      );
-                    }
-                    return _buildProfileContent(
-                      player,
-                      authIdentityAsync.asData?.value,
+              child: playerAsyncValue.when(
+                data: (player) {
+                  if (player == null) {
+                    return Center(
+                      child: Text(
+                        'Kullanıcı bulunamadı',
+                        style: AppTextStyles.body,
+                      ),
                     );
-                  },
-                  loading: () =>
-                      Center(child: AppLoadingIndicator(color: AppColors.gold)),
-                  error: (err, stack) => Center(
+                  }
+                  return _buildExecutiveLayout(
+                    player,
+                    authIdentityAsync.asData?.value,
+                  );
+                },
+                loading: () =>
+                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20.w),
                     child: Text('Hata: $err', style: AppTextStyles.body),
                   ),
                 ),
@@ -145,6 +155,1018 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Widget _buildExecutiveLayout(
+    PlayerModel player,
+    AuthIdentityState? authIdentity,
+  ) {
+    final googleAvatarUrl = authIdentity?.avatarUrl ?? player.googleAvatarUrl;
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(playerProvider);
+        ref.invalidate(authIdentityProvider);
+        await ref.read(playerProvider.future);
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
+        children: [
+          // ── 1. PRESTİJLİ CEO HERO KARTI ─────────────────────────────────
+          _buildExecutiveHeroCard(player, googleAvatarUrl),
+          SizedBox(height: 16.h),
+
+          // ── 2. SEGMENTED TAB SWITCHER ───────────────────────────────────
+          _buildSegmentedTabSwitcher(),
+          SizedBox(height: 16.h),
+
+          // ── 3. AKTİF SEKME İÇERİĞİ ──────────────────────────────────────
+          if (_activeTab == 0)
+            ..._buildOverviewTabContent(player)
+          else
+            ..._buildSettingsTabContent(authIdentity),
+        ],
+      ),
+    );
+  }
+
+  // ── PRESTİJLİ CEO HERO KARTI ──────────────────────────────────────────
+  Widget _buildExecutiveHeroCard(PlayerModel player, String? googleAvatarUrl) {
+    final isUrl =
+        player.avatarId.startsWith('http://') ||
+        player.avatarId.startsWith('https://');
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF0F3652),
+            AppColors.cardBg,
+            const Color(0xFF051724),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.45),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // ── AVATAR WITH VIP GOLD BORDER ──
+          GestureDetector(
+            onTap: () =>
+                _showAvatarSelectionSheet(context, player, googleAvatarUrl),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 80.w,
+                  height: 80.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.goldLight,
+                        AppColors.gold,
+                        AppColors.goldDark,
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.gold.withValues(alpha: 0.35),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                  padding: EdgeInsets.all(2.5.w),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.cardBg,
+                    ),
+                    child: ClipOval(
+                      child: isUrl
+                          ? Image.network(
+                              player.avatarId,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => CachedAssetImage(
+                                fileName: 'ae1.webp',
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : CachedAssetImage(
+                              fileName: player.avatarId,
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: -2.h,
+                  right: -2.w,
+                  child: Container(
+                    padding: EdgeInsets.all(5.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBg,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.gold, width: 1.2),
+                    ),
+                    child: Icon(
+                      AppIcons.edit,
+                      color: AppColors.gold,
+                      size: 13.sp,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 14.w),
+
+          // ── HOLDING & EXECUTIVE DETAILS ──
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // HOLDING NAME & EDIT BUTTON
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        player.companyName,
+                        style: AppTextStyles.title.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () =>
+                          _showChangeCompanyNameDialog(context, player),
+                      borderRadius: BorderRadius.circular(6.r),
+                      child: Padding(
+                        padding: EdgeInsets.all(4.w),
+                        child: Icon(
+                          AppIcons.edit,
+                          color: AppColors.gold,
+                          size: 15.sp,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 3.h),
+
+                // CEO TITLE BADGE
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6.r),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.3),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Text(
+                    _getExecutiveTitle(player.level),
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.goldLight,
+                      fontSize: AppTypography.micro,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 6.h),
+
+                // LEVEL & ID ROW
+                Row(
+                  children: [
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.5.h),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.gold.withValues(alpha: 0.25),
+                            AppColors.gold.withValues(alpha: 0.08),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(6.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.4),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        'SEVİYE ${player.level}',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.gold,
+                          fontSize: AppTypography.micro,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    InkWell(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: player.id));
+                        AppSnackbar.show(
+                          context,
+                          message: 'Oyuncu ID panoya kopyalandı.',
+                          type: SnackbarType.success,
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(4.r),
+                      child: Row(
+                        children: [
+                          Text(
+                            'ID: ${player.id.length >= 6 ? player.id.substring(0, 6) : player.id}...',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.textMuted,
+                              fontSize: AppTypography.micro,
+                            ),
+                          ),
+                          SizedBox(width: 3.w),
+                          Icon(
+                            Icons.content_copy_rounded,
+                            color: AppColors.textMuted,
+                            size: 11.sp,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── SEGMENTED TAB SWITCHER ──────────────────────────────────────────
+  Widget _buildSegmentedTabSwitcher() {
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildTabBtn(
+              index: 0,
+              label: 'Varlık & Prestij',
+              icon: AppIcons.accountBalanceRounded,
+            ),
+          ),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: _buildTabBtn(
+              index: 1,
+              label: 'Hesap & Ayarlar',
+              icon: Icons.settings_rounded,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabBtn({
+    required int index,
+    required String label,
+    required IconData icon,
+  }) {
+    final isSelected = _activeTab == index;
+    return InkWell(
+      onTap: () => setState(() => _activeTab = index),
+      borderRadius: BorderRadius.circular(10.r),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: 9.h),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.cardBgLight : AppColors.transparent,
+          borderRadius: BorderRadius.circular(10.r),
+          border: isSelected
+              ? Border.all(color: AppColors.gold.withValues(alpha: 0.5))
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 16.sp,
+              color: isSelected ? AppColors.gold : AppColors.textMuted,
+            ),
+            SizedBox(width: 6.w),
+            Text(
+              label,
+              style: AppTextStyles.caption.standardCopyWith(
+                color: isSelected ? AppColors.textPrimary : AppColors.textMuted,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: AppTypography.caption,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── TAB 1: GENEL BAKIŞ & VARLIK PORTFÖYÜ ─────────────────────────────
+  List<Widget> _buildOverviewTabContent(PlayerModel player) {
+    return [
+      // ── NET WORTH & CASH / GOLD ASSETS ──
+      _buildNetWorthCard(player),
+      SizedBox(height: 14.h),
+
+      // ── LEVEL & CAREER PROGRESSION ──
+      _buildCareerProgressCard(player),
+      SizedBox(height: 14.h),
+
+      // ── ACHIEVEMENTS & SOCIAL PRESTIGE ──
+      _buildAchievementsCard(player),
+    ];
+  }
+
+  Widget _buildNetWorthCard(PlayerModel player) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                AppIcons.trendingUpRounded,
+                color: AppColors.gold,
+                size: 16.sp,
+              ),
+              SizedBox(width: 6.w),
+              Text(
+                'TOPLAM ŞİRKET DEĞERİ',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.micro,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            '₺ ${player.companyValue.toStringAsFixed(0)}',
+            style: AppTextStyles.h1.standardCopyWith(
+              color: AppColors.gold,
+              fontSize: 24.sp,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          SizedBox(height: 14.h),
+          Divider(color: AppColors.border.withValues(alpha: 0.4), height: 1),
+          SizedBox(height: 14.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAssetPill(
+                  title: 'Nakit Kasa',
+                  value: '₺ ${player.cash.toStringAsFixed(0)}',
+                  color: AppColors.green,
+                  icon: AppIcons.accountBalanceWallet,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: _buildAssetPill(
+                  title: 'Altın Rezervi',
+                  value: '⭐ ${player.gold}',
+                  color: AppColors.gold,
+                  icon: AppIcons.starRounded,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssetPill({
+    required String title,
+    required String value,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 14.sp),
+              SizedBox(width: 4.w),
+              Text(
+                title,
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.micro,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            style: AppTextStyles.body.standardCopyWith(
+              color: color,
+              fontSize: AppTypography.bodySmall,
+              fontWeight: FontWeight.w900,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCareerProgressCard(PlayerModel player) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Kariyer & Seviye İlerlemesi',
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.bodySmall,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '${player.currentLevelExperience} / ${player.nextLevelRequiredExperience} XP',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.goldLight,
+                  fontSize: AppTypography.micro,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6.r),
+            child: AppProgressBar(
+              value: player.expProgressRatio.clamp(0.0, 1.0),
+              minHeight: 8.h,
+              backgroundColor: AppColors.cardBgLight,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Sonraki seviye için ${player.remainingExperienceToNextLevel} XP gerekli.',
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.micro,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementsCard(PlayerModel player) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    AppIcons.emojiEventsRounded,
+                    color: AppColors.gold,
+                    size: 18.sp,
+                  ),
+                  SizedBox(width: 6.w),
+                  Text(
+                    'Başarılar & Rozetler',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.bodySmall,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => context.go('/achievements'),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Tümünü Gör ➔',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.gold,
+                    fontSize: AppTypography.micro,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            '${player.achievementUnlockedCount} / ${player.achievementTotalCount} Rozet Tamamlandı',
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.caption,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4.r),
+            child: AppProgressBar(
+              value: player.achievementTotalCount > 0
+                  ? (player.achievementUnlockedCount /
+                          player.achievementTotalCount)
+                      .clamp(0.0, 1.0)
+                  : 0.0,
+              minHeight: 6.h,
+              backgroundColor: AppColors.cardBgLight,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.green),
+            ),
+          ),
+          if (player.featuredBadges.isNotEmpty) ...[
+            SizedBox(height: 14.h),
+            SizedBox(
+              height: 76.h,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: player.featuredBadges.length,
+                separatorBuilder: (_, _) => SizedBox(width: 8.w),
+                itemBuilder: (_, index) =>
+                    _buildBadgeChip(player.featuredBadges[index]),
+              ),
+            ),
+          ],
+          SizedBox(height: 14.h),
+          Divider(color: AppColors.border.withValues(alpha: 0.4), height: 1),
+          SizedBox(height: 10.h),
+
+          // LİDERLİK TABLOSU QUICK LINK
+          InkWell(
+            onTap: () => context.go('/leaderboard'),
+            borderRadius: BorderRadius.circular(10.r),
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 4.h),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(6.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      AppIcons.emojiEventsRounded,
+                      color: AppColors.gold,
+                      size: 16.sp,
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Liderlik Sıralaması',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Diğer holdingler arasındaki yerini gör',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: AppTypography.micro,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    AppIcons.chevronRightRounded,
+                    color: AppColors.gold,
+                    size: 18.sp,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadgeChip(AchievementBadgeModel badge) {
+    return Container(
+      width: 130.w,
+      padding: EdgeInsets.all(8.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight,
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(
+          color: badge.isUnlocked
+              ? AppColors.gold.withValues(alpha: 0.4)
+              : AppColors.border.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            badge.isUnlocked
+                ? AppIcons.workspacePremiumRounded
+                : AppIcons.lockOutline,
+            color: badge.isUnlocked ? AppColors.gold : AppColors.textMuted,
+            size: 20.sp,
+          ),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  badge.title,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.micro,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  badge.isUnlocked ? 'Açıldı' : badge.progressText,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color:
+                        badge.isUnlocked ? AppColors.green : AppColors.textMuted,
+                    fontSize: 9.sp,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── TAB 2: HESAP & GÜVENLİK ──────────────────────────────────────────
+  List<Widget> _buildSettingsTabContent(AuthIdentityState? authIdentity) {
+    final isGoogleLinked = authIdentity?.isGoogleLinked ?? false;
+    final linkedEmail = authIdentity?.effectiveEmail;
+    final isBusy = _isGoogleLinkInProgress && !isGoogleLinked;
+    final isSignInBusy = _isGoogleSignInInProgress && !isGoogleLinked;
+
+    return [
+      // ── GOOGLE AUTH CARD ──
+      Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: isGoogleLinked
+                ? AppColors.green.withValues(alpha: 0.4)
+                : AppColors.gold.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isGoogleLinked
+                      ? AppIcons.verifiedUserRounded
+                      : AppIcons.shieldOutlined,
+                  color: isGoogleLinked ? AppColors.green : AppColors.gold,
+                  size: 18.sp,
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    isGoogleLinked
+                        ? 'Google Hesabı Bağlı'
+                        : 'Hesabı Güvenceye Al',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (isGoogleLinked)
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.green.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6.r),
+                    ),
+                    child: Text(
+                      'Güvende',
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.green,
+                        fontSize: AppTypography.micro,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              isGoogleLinked
+                  ? 'Oyun ilerlemeniz Google bulutunda güvenle saklanmaktadır. Cihaz değiştirseniz bile verileriniz kaybolmaz.'
+                  : 'Hesabınızı Google ile bağlayarak ilerlemenizi yedekleyin ve diğer cihazlardan erişin.',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.caption,
+                height: 1.35,
+              ),
+            ),
+            if (linkedEmail != null && linkedEmail.isNotEmpty) ...[
+              SizedBox(height: 8.h),
+              Text(
+                linkedEmail,
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.goldLight,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+            SizedBox(height: 14.h),
+            if (!isGoogleLinked) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: isBusy || isSignInBusy ? null : _handleGoogleLink,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: AppColors.textOnAccent,
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                  icon: Icon(
+                    isBusy
+                        ? AppIcons.hourglassTopRounded
+                        : AppIcons.gMobiledataRounded,
+                    size: 20.sp,
+                  ),
+                  label: Text(
+                    isBusy ? 'Bağlanıyor...' : 'Google ile Bağla',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textOnAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8.h),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: isBusy || isSignInBusy
+                      ? null
+                      : () => _handleExistingGoogleSignIn(authIdentity),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: BorderSide(
+                      color: AppColors.border.withValues(alpha: 0.6),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                  icon: Icon(
+                    isSignInBusy
+                        ? AppIcons.hourglassTopRounded
+                        : AppIcons.loginRounded,
+                    size: 16.sp,
+                  ),
+                  label: Text(
+                    isSignInBusy
+                        ? 'Giriş Yapılıyor...'
+                        : 'Mevcut Google Hesabına Gir',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ] else ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _handleGoogleUnlink,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.red,
+                    side: BorderSide(
+                      color: AppColors.red.withValues(alpha: 0.4),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                  icon: Icon(
+                    AppIcons.linkOffRounded,
+                    size: 16.sp,
+                    color: AppColors.red,
+                  ),
+                  label: Text(
+                    'Bağlantıyı Kaldır',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      SizedBox(height: 14.h),
+
+      // ── LOGOUT BUTTON ──
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () async {
+            try {
+              await ref.read(pushNotificationServiceProvider).unregisterToken();
+            } catch (_) {}
+            await Supabase.instance.client.auth.signOut();
+            if (mounted) {
+              context.go('/');
+            }
+          },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.textMuted,
+            side: BorderSide(color: AppColors.border.withValues(alpha: 0.6)),
+            padding: EdgeInsets.symmetric(vertical: 12.h),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+          ),
+          icon: Icon(AppIcons.logout, color: AppColors.textMuted, size: 18.sp),
+          label: Text(
+            'Hesaptan Güvenli Çıkış Yap',
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.bodySmall,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+      SizedBox(height: 14.h),
+
+      // ── DANGER ZONE (DELETE ACCOUNT) ──
+      Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          color: AppColors.red.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(color: AppColors.red.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              AppIcons.warningAmberRounded,
+              color: AppColors.red.withValues(alpha: 0.7),
+              size: 18.sp,
+            ),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hesabı Kalıcı Olarak Sil',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.red.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'Tüm şirket varlıkları geri alınamaz şekilde silinir.',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 10.sp,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: _showDeleteAccountConfirmDialog,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.red,
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              ),
+              child: Text(
+                'Sil',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  // ── DIALOGS & ACTION HANDLERS ───────────────────────────────────────
   void _showChangeCompanyNameDialog(BuildContext context, PlayerModel player) {
     final controller = TextEditingController(text: player.companyName);
     showDialog<void>(
@@ -152,13 +1174,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBg,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          side: BorderSide(color: AppColors.cardBorder),
+          borderRadius: BorderRadius.circular(16.r),
+          side: BorderSide(color: AppColors.gold.withValues(alpha: 0.4)),
         ),
         title: Text(
           'Holding Adını Değiştir',
           style: AppTextStyles.title.standardCopyWith(
             color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
           ),
         ),
         content: Column(
@@ -167,17 +1190,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             Text(
               'Yeni holding adını girin:',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textSecondary,
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
               ),
             ),
-            SizedBox(height: 12.h),
+            SizedBox(height: 10.h),
             TextFormField(
               controller: controller,
               style: AppTextStyles.input,
               maxLength: 25,
               decoration: InputDecoration(
-                hintText: 'Holding Adı',
+                hintText: 'Örn: Anadolu Holding',
+                filled: true,
+                fillColor: AppColors.cardBgLight,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide: BorderSide(
+                    color: AppColors.border.withValues(alpha: 0.5),
+                  ),
+                ),
                 counterStyle: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.textMuted,
                 ),
@@ -190,7 +1221,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Vazgeç',
-              style: AppTextStyles.label.standardCopyWith(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
               ),
             ),
@@ -230,6 +1261,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.textOnAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
             ),
             child: const Text('Güncelle'),
           ),
@@ -276,11 +1310,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.all(16.w),
+          padding: EdgeInsets.all(20.w),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Avatar Seç', style: AppTextStyles.h2),
+              Text(
+                'Yönetici Avatarı Seç',
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               SizedBox(height: 16.h),
               GridView.builder(
                 shrinkWrap: true,
@@ -308,10 +1348,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: isSelected
-                              ? AppColors.green
-                              : AppColors.border,
+                              ? AppColors.gold
+                              : AppColors.border.withValues(alpha: 0.4),
                           width: isSelected ? 3.w : 1.w,
                         ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.gold.withValues(alpha: 0.3),
+                                  blurRadius: 10,
+                                ),
+                              ]
+                            : null,
                       ),
                       child: ClipOval(child: optionWidget),
                     ),
@@ -326,548 +1374,201 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileContent(
-    PlayerModel player,
+  Future<void> _handleGoogleLink() async {
+    try {
+      setState(() {
+        _isGoogleLinkInProgress = true;
+        _didShowGoogleLinkSuccess = false;
+      });
+      await ref.read(authManagerProvider).linkGoogleIdentity();
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message:
+            'Google girişi açıldı. Onaydan sonra uygulamaya döndüğünüzde hesap otomatik bağlanacak.',
+        type: SnackbarType.info,
+      );
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleLinkInProgress = false;
+        });
+      }
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: _friendlyGoogleLinkErrorMessage(e),
+        type: SnackbarType.error,
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleLinkInProgress = false;
+        });
+      }
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        message: e.toString(),
+        type: SnackbarType.error,
+      );
+    }
+  }
+
+  String _friendlyGoogleLinkErrorMessage(AuthException error) {
+    final raw = error.message.toLowerCase();
+    final status = (error.statusCode ?? '').toLowerCase();
+
+    if (status.contains('identity_already_exists') ||
+        raw.contains('identity is already linked to another user')) {
+      return 'Bu Google hesabı zaten başka bir oyun hesabına bağlı. Farklı bir Google hesabı kullanın.';
+    }
+    return error.message;
+  }
+
+  void _handleCompletedGoogleLink() {
+    if (!mounted || _didShowGoogleLinkSuccess) return;
+    if (_isGoogleLinkInProgress) {
+      setState(() {
+        _isGoogleLinkInProgress = false;
+        _didShowGoogleLinkSuccess = true;
+      });
+      AppSnackbar.show(
+        context,
+        message: 'Google hesabı başarıyla bağlandı!',
+        type: SnackbarType.success,
+      );
+    }
+  }
+
+  Future<void> _handleExistingGoogleSignIn(
     AuthIdentityState? authIdentity,
-  ) {
-    final googleAvatarUrl = authIdentity?.avatarUrl ?? player.googleAvatarUrl;
-    final isUrl =
-        player.avatarId.startsWith('http://') ||
-        player.avatarId.startsWith('https://');
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Profilim', style: AppTextStyles.h1),
-        SizedBox(height: 16.h),
-
-        // --- SECTION 1: HEADER CARD ---
-        Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(
-              color: AppColors.borderGold.withValues(alpha: 0.4),
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppColors.gold.withValues(alpha: 0.1), AppColors.cardBg],
-            ),
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () =>
-                    _showAvatarSelectionSheet(context, player, googleAvatarUrl),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 80.w,
-                      height: 80.w,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.cardBgLight,
-                        border: Border.all(color: AppColors.gold, width: 2.w),
-                      ),
-                      child: ClipOval(
-                        child: isUrl
-                            ? Image.network(
-                                player.avatarId,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => CachedAssetImage(
-                                  fileName: 'ae1.webp',
-                                  fit: BoxFit.cover,
-                                  placeholder: Icon(
-                                    AppIcons.person,
-                                    color: AppColors.gold,
-                                    size: AppIconSizes.displayLarge,
-                                  ),
-                                  errorWidget: Icon(
-                                    AppIcons.person,
-                                    color: AppColors.gold,
-                                    size: AppIconSizes.displayLarge,
-                                  ),
-                                ),
-                              )
-                            : CachedAssetImage(
-                                fileName: player.avatarId,
-                                fit: BoxFit.cover,
-                                placeholder: Icon(
-                                  AppIcons.person,
-                                  color: AppColors.gold,
-                                  size: AppIconSizes.displayLarge,
-                                ),
-                                errorWidget: Icon(
-                                  AppIcons.person,
-                                  color: AppColors.gold,
-                                  size: AppIconSizes.displayLarge,
-                                ),
-                              ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: EdgeInsets.all(4.w),
-                        decoration: BoxDecoration(
-                          color: AppColors.cardBg,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.gold, width: 1.w),
-                        ),
-                        child: Icon(
-                          AppIcons.edit,
-                          color: AppColors.gold,
-                          size: AppIconSizes.xSmall,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 16.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            player.companyName,
-                            style: AppTextStyles.h1.standardCopyWith(
-                              fontSize: AppTypography.displaySmall,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            AppIcons.edit,
-                            color: AppColors.gold,
-                            size: 20.r,
-                          ),
-                          onPressed: () =>
-                              _showChangeCompanyNameDialog(context, player),
-                          tooltip: 'Holding Adını Değiştir',
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      'CEO: ${player.playerName}',
-                      style: AppTextStyles.body.standardCopyWith(
-                        color: AppColors.goldLight,
-                        fontSize: AppTypography.bodyLarge,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8.w,
-                            vertical: 4.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.navBg,
-                            borderRadius: BorderRadius.circular(8.r),
-                            border: Border.all(
-                              color: AppColors.gold.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Text(
-                            'Seviye ${player.level}',
-                            style: AppTextStyles.titleGold.standardCopyWith(
-                              fontSize: AppTypography.body,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'ID: ${player.id.substring(0, 8)}...',
-                          style: AppTextStyles.body,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: BorderSide(color: AppColors.gold.withValues(alpha: 0.4)),
+        ),
+        title: Text(
+          'Mevcut Google Hesabına Giriş',
+          style: AppTextStyles.title.standardCopyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        SizedBox(height: 24.h),
-
-        // --- SECTION 2: CORPORATE FINANCES (Unified Card) ---
-        Text('Finansal Durum', style: AppTextStyles.h2),
-        SizedBox(height: 12.h),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Sirket Degeri',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.body,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: 6.h),
-              Text(
-                '₺${player.companyValue.toStringAsFixed(0)}',
-                style: AppTextStyles.h1.standardCopyWith(
-                  fontSize: AppTypography.display,
-                  color: AppColors.gold,
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Divider(color: AppColors.border, height: 1),
-              SizedBox(height: 16.h),
-              Row(
-                children: [
-                  _buildStatCard(
-                    AppIcons.attachMoney,
-                    'Nakit',
-                    player.cash.toString(),
-                    AppColors.green,
-                  ),
-                  SizedBox(width: 12.w),
-                  _buildStatCard(
-                    AppIcons.star,
-                    'Altin',
-                    player.gold.toString(),
-                    AppColors.gold,
-                  ),
-                ],
-              ),
-            ],
+        content: Text(
+          'Google hesabınızdaki kayıtlı ilerlemenize geçiş yapılacak. Devam etmek istiyor musunuz?',
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
           ),
         ),
-        SizedBox(height: 24.h),
-
-        // --- SECTION 3: LEVEL PROGRESS ---
-        Text('Seviye Ilerlemesi', style: AppTextStyles.h2),
-        SizedBox(height: 12.h),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 6.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.navBg,
-                      borderRadius: BorderRadius.circular(999.r),
-                      border: Border.all(
-                        color: AppColors.gold.withValues(alpha: 0.45),
-                      ),
-                    ),
-                    child: Text(
-                      'LV ${player.level}',
-                      style: AppTextStyles.titleGold.standardCopyWith(
-                        fontSize: AppTypography.body,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${player.currentLevelExperience} / ${player.nextLevelRequiredExperience} XP',
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.textPrimary,
-                      fontSize: AppTypography.body,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 14.h),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999.r),
-                child: AppProgressBar(
-                  value: player.expProgressRatio.clamp(0.0, 1.0),
-                  minHeight: 10.h,
-                  backgroundColor: AppColors.border.withValues(alpha: 0.35),
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
-                ),
-              ),
-              SizedBox(height: 10.h),
-              Text(
-                'Sonraki seviyeye kalan XP: ${player.remainingExperienceToNextLevel}',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.body,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 24.h),
-
-        // --- SECTION 4: ACHIEVEMENTS & LEADERBOARD (Unified Social Card) ---
-        Text('Basarilar ve Siralama', style: AppTextStyles.h2),
-        SizedBox(height: 12.h),
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 12.h),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${player.achievementUnlockedCount} / ${player.achievementTotalCount} rozet acildi',
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.textPrimary,
-                          fontSize: AppTypography.bodyLarge,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => context.go('/achievements'),
-                      child: Text(
-                        'Tumunu Gor',
-                        style: AppTextStyles.caption.standardCopyWith(
-                          color: AppColors.gold,
-                          fontSize: AppTypography.bodySmall,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildAchievementStatCard(
-                        label: 'Acilan',
-                        value: player.achievementUnlockedCount.toString(),
-                        color: AppColors.green,
-                        icon: AppIcons.workspacePremiumRounded,
-                      ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Expanded(
-                      child: _buildAchievementStatCard(
-                        label: 'Kalan',
-                        value:
-                            (player.achievementTotalCount -
-                                    player.achievementUnlockedCount)
-                                .clamp(0, player.achievementTotalCount)
-                                .toString(),
-                        color: AppColors.gold,
-                        icon: AppIcons.lockOpenRounded,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (player.featuredBadges.isNotEmpty) ...[
-                SizedBox(height: 16.h),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: Text(
-                    'One Cikan Rozetler',
-                    style: AppTextStyles.caption.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.bodySmall,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 10.h),
-                SizedBox(
-                  height: 82.h,
-                  child: ListView.separated(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: player.featuredBadges.length,
-                    separatorBuilder: (context, index) => SizedBox(width: 10.w),
-                    itemBuilder: (_, index) =>
-                        _buildBadgeChip(player.featuredBadges[index]),
-                  ),
-                ),
-              ] else ...[
-                SizedBox(height: 12.h),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: Text(
-                    'Ilk rozetlerini acmak icin gorevlerini ve buyume adimlarini tamamla.',
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.body,
-                    ),
-                  ),
-                ),
-              ],
-              SizedBox(height: 16.h),
-              Divider(color: AppColors.border, height: 1),
-              Material(
-                color: AppColors.transparent,
-                child: InkWell(
-                  onTap: () => context.go('/leaderboard'),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(16.r),
-                    bottomRight: Radius.circular(16.r),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(16.w),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36.w,
-                          height: 36.w,
-                          decoration: BoxDecoration(
-                            color: AppColors.gold.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.gold.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Icon(
-                            AppIcons.emojiEventsRounded,
-                            color: AppColors.gold,
-                            size: AppIconSizes.regular,
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Liderlik Tablosu',
-                                style: AppTextStyles.body.standardCopyWith(
-                                  color: AppColors.textPrimary,
-                                  fontSize: AppTypography.bodyLarge,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 2.h),
-                              Text(
-                                'Diger oyuncular arasindaki yerini gor',
-                                style: AppTextStyles.body.standardCopyWith(
-                                  color: AppColors.textSecondary,
-                                  fontSize: AppTypography.bodySmall,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          AppIcons.chevronRightRounded,
-                          color: AppColors.gold,
-                          size: AppIconSizes.medium,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 24.h),
-
-        // --- SECTION 5: ACCOUNT LINKAGE (Google Auth at the bottom) ---
-        _buildAccountLinkCard(authIdentity),
-        SizedBox(height: 24.h),
-
-        // --- LOGOUT BUTTON ---
-        SizedBox(
-          width: double.infinity,
-          height: 48.h,
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.cardBg,
-              side: BorderSide(color: AppColors.red.withValues(alpha: 0.5)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-            ),
-            icon: Icon(AppIcons.logout, color: AppColors.red),
-            label: Text(
-              'Hesaptan Cikis Yap',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.red,
-                fontSize: AppTypography.title,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            onPressed: () async {
-              try {
-                await ref.read(pushNotificationServiceProvider).unregisterToken();
-              } catch (_) {}
-              await Supabase.instance.client.auth.signOut();
-              if (mounted) {
-                context.go('/');
-              }
-            },
-          ),
-        ),
-        SizedBox(height: 12.h),
-
-        // --- DELETE ACCOUNT BUTTON ---
-        SizedBox(
-          width: double.infinity,
-          height: 40.h,
-          child: TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.red.withValues(alpha: 0.7),
-            ),
-            icon: Icon(
-              AppIcons.deleteOutline,
-              size: 16.sp,
-              color: AppColors.red.withValues(alpha: 0.7),
-            ),
-            label: Text(
-              'Hesabımı Kalıcı Olarak Sil',
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Vazgeç',
               style: AppTextStyles.caption.standardCopyWith(
-                color: AppColors.red.withValues(alpha: 0.7),
-                fontSize: AppTypography.caption,
-                fontWeight: FontWeight.w600,
+                color: AppColors.textMuted,
               ),
             ),
-            onPressed: _showDeleteAccountConfirmDialog,
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.textOnAccent,
+            ),
+            child: const Text('Giriş Yap'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      setState(() {
+        _isGoogleSignInInProgress = true;
+      });
+      await ref.read(authManagerProvider).signInWithGoogle();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isGoogleSignInInProgress = false;
+        });
+        AppSnackbar.show(
+          context,
+          message: 'Google ile giriş başarısız: $e',
+          type: SnackbarType.error,
+        );
+      }
+    }
+  }
+
+  Future<void> _handleGoogleUnlink() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: BorderSide(color: AppColors.red.withValues(alpha: 0.4)),
+        ),
+        title: Text(
+          'Google Bağlantısını Kaldır',
+          style: AppTextStyles.title.standardCopyWith(
+            color: AppColors.red,
+            fontWeight: FontWeight.bold,
           ),
         ),
-      ],
+        content: Text(
+          'Google bağlantısını kaldırırsanız oyun verileriniz yalnızca bu cihazda kalacaktır. Onaylıyor musunuz?',
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Vazgeç',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
+            child: const Text('Bağlantıyı Kaldır'),
+          ),
+        ],
+      ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(authManagerProvider).unlinkGoogleIdentity();
+      await SessionManager.bootstrapAndRefreshAll(ref);
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'Google bağlantısı kaldırıldı.',
+          type: SnackbarType.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          message: 'Bağlantı kaldırılamadı: $e',
+          type: SnackbarType.error,
+        );
+      }
+    }
   }
 
   Future<void> _showDeleteAccountConfirmDialog() async {
@@ -876,12 +1577,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBg,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14.r),
+          borderRadius: BorderRadius.circular(16.r),
           side: BorderSide(color: AppColors.red.withValues(alpha: 0.3)),
         ),
         title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: AppColors.red),
+            Icon(AppIcons.warningAmberRounded, color: AppColors.red),
             SizedBox(width: 8.w),
             Text(
               'Hesabınızı Silin',
@@ -900,7 +1601,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Vazgeç',
-              style: AppTextStyles.label.standardCopyWith(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
               ),
             ),
@@ -908,20 +1609,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
             onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Devam Et',
-              style: AppTextStyles.label.standardCopyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: const Text('Devam Et'),
           ),
         ],
       ),
     );
 
     if (confirm1 != true) return;
-
     if (!mounted) return;
 
     bool? confirm2 = await showDialog<bool>(
@@ -929,7 +1623,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBg,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14.r),
+          borderRadius: BorderRadius.circular(16.r),
           side: BorderSide(color: AppColors.red.withValues(alpha: 0.5)),
         ),
         title: Text(
@@ -947,7 +1641,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Vazgeç',
-              style: AppTextStyles.label.standardCopyWith(
+              style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
               ),
             ),
@@ -955,13 +1649,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
             onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Kalıcı Olarak Sil',
-              style: AppTextStyles.label.standardCopyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: const Text('Kalıcı Olarak Sil'),
           ),
         ],
       ),
@@ -1002,599 +1690,5 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
       }
     }
-  }
-
-  Widget _buildAccountLinkCard(AuthIdentityState? authIdentity) {
-    final isGoogleLinked = authIdentity?.isGoogleLinked ?? false;
-    final linkedEmail = authIdentity?.effectiveEmail;
-    final isBusy = _isGoogleLinkInProgress && !isGoogleLinked;
-    final isSignInBusy = _isGoogleSignInInProgress && !isGoogleLinked;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                isGoogleLinked
-                    ? AppIcons.verifiedUserRounded
-                    : AppIcons.linkRounded,
-                color: isGoogleLinked ? AppColors.green : AppColors.gold,
-                size: AppIconSizes.regular,
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: Text(
-                  isGoogleLinked
-                      ? 'Google Hesabi Bagli'
-                      : 'Hesabi Guvenceye Al',
-                  style: AppTextStyles.h2.standardCopyWith(
-                    fontSize: AppTypography.titleLarge,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            isGoogleLinked
-                ? 'Hesabin Google ile bagli. Oyuncu verilerin korunur, cihaz degistirdiginde ayni hesaba geri donebilirsin.'
-                : 'Gecici cihaz hesabini Google ile baglayarak ilerlemeni guvenceye al. Mevcut oyuncu kaydin aynen korunur.',
-            style: AppTextStyles.body.standardCopyWith(
-              color: AppColors.textMuted,
-              fontSize: AppTypography.body,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          if (linkedEmail != null && linkedEmail.isNotEmpty) ...[
-            SizedBox(height: 10.h),
-            Text(
-              linkedEmail,
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.bodyLarge,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-          SizedBox(height: 12.h),
-          if (!isGoogleLinked) ...[
-            SizedBox(
-              width: double.infinity,
-              height: 42.h,
-              child: OutlinedButton.icon(
-                onPressed: isBusy || isSignInBusy
-                    ? null
-                    : () => _handleExistingGoogleSignIn(authIdentity),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.blue,
-                  side: BorderSide(
-                    color: AppColors.blue.withValues(alpha: 0.35),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                ),
-                icon: Icon(
-                  isSignInBusy
-                      ? AppIcons.hourglassTopRounded
-                      : AppIcons.loginRounded,
-                  size: AppIconSizes.regular,
-                ),
-                label: Text(
-                  isSignInBusy
-                      ? 'Giris Bekleniyor'
-                      : 'Var Olan Google Hesabina Gir',
-                  style: AppTextStyles.body.standardCopyWith(
-                    fontSize: AppTypography.body,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 12.h),
-          ],
-          SizedBox(
-            width: double.infinity,
-            height: 46.h,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isGoogleLinked
-                    ? AppColors.green.withValues(alpha: 0.14)
-                    : isBusy
-                    ? AppColors.gold.withValues(alpha: 0.16)
-                    : AppColors.cardBgLight,
-                side: BorderSide(
-                  color: isGoogleLinked
-                      ? AppColors.green.withValues(alpha: 0.45)
-                      : isBusy
-                      ? AppColors.gold.withValues(alpha: 0.45)
-                      : AppColors.gold.withValues(alpha: 0.35),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-              ),
-              onPressed: isGoogleLinked || isBusy ? null : _handleGoogleLink,
-              icon: Icon(
-                isGoogleLinked
-                    ? AppIcons.checkCircleRounded
-                    : isBusy
-                    ? AppIcons.hourglassTopRounded
-                    : AppIcons.gMobiledataRounded,
-                color: isGoogleLinked
-                    ? AppColors.green
-                    : isBusy
-                    ? AppColors.gold
-                    : AppColors.textPrimary,
-                size: AppIconSizes.mediumLarge,
-              ),
-              label: Text(
-                isGoogleLinked
-                    ? 'Google Baglandi'
-                    : isBusy
-                    ? 'Baglanti Bekleniyor'
-                    : 'Google Hesabina Bagla',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: isGoogleLinked
-                      ? AppColors.green
-                      : isBusy
-                      ? AppColors.gold
-                      : AppColors.textPrimary,
-                  fontSize: AppTypography.bodyLarge,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-          if (isGoogleLinked) ...[
-            SizedBox(height: 10.h),
-            SizedBox(
-              width: double.infinity,
-              height: 42.h,
-              child: OutlinedButton.icon(
-                onPressed: _handleGoogleUnlink,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.red,
-                  side: BorderSide(
-                    color: AppColors.red.withValues(alpha: 0.35),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                ),
-                icon: Icon(AppIcons.linkOffRounded, size: AppIconSizes.regular),
-                label: Text(
-                  'Google Baglantisini Kaldir',
-                  style: AppTextStyles.body.standardCopyWith(
-                    fontSize: AppTypography.body,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-          ],
-          if (isBusy) ...[
-            SizedBox(height: 10.h),
-            Text(
-              'Tarayici veya Google penceresinden onay verip oyuna geri don. Baglanti tamamlaninca durum otomatik guncellenecek.',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.goldLight,
-                fontSize: AppTypography.bodySmall,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Future<void> _handleGoogleLink() async {
-    try {
-      setState(() {
-        _isGoogleLinkInProgress = true;
-        _didShowGoogleLinkSuccess = false;
-      });
-      await ref.read(authManagerProvider).linkGoogleIdentity();
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message:
-            'Google girisi acildi. Onaydan sonra uygulamaya dondugunde hesap otomatik baglanacak.',
-        type: SnackbarType.info,
-      );
-    } on AuthException catch (e) {
-      if (mounted) {
-        setState(() {
-          _isGoogleLinkInProgress = false;
-        });
-      }
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message: _friendlyGoogleLinkErrorMessage(e),
-        type: SnackbarType.error,
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isGoogleLinkInProgress = false;
-        });
-      }
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message: e.toString(),
-        type: SnackbarType.error,
-      );
-    }
-  }
-
-  String _friendlyGoogleLinkErrorMessage(AuthException error) {
-    final raw = error.message.toLowerCase();
-    final status = (error.statusCode ?? '').toLowerCase();
-
-    if (status.contains('identity_already_exists') ||
-        raw.contains('identity is already linked to another user')) {
-      return 'Bu Google hesabi zaten baska bir oyun hesabina bagli. Farkli bir Google hesabi kullanin veya once eski baglantiyi kaldirin.';
-    }
-
-    if (raw.contains('popup closed') || raw.contains('cancelled')) {
-      return 'Google baglama islemi iptal edildi.';
-    }
-
-    return error.message;
-  }
-
-  Future<void> _handleExistingGoogleSignIn(
-    AuthIdentityState? authIdentity,
-  ) async {
-    final shouldContinue = await _confirmExistingAccountSignIn();
-    if (!shouldContinue) return;
-
-    try {
-      setState(() {
-        _isGoogleSignInInProgress = true;
-      });
-      await ref.read(authManagerProvider).signInWithGoogle();
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message:
-            'Google girisi acildi. Dondugunuzde kayitli hesabiniza gecis yapilacak.',
-        type: SnackbarType.info,
-      );
-    } on AuthException catch (e) {
-      if (mounted) {
-        setState(() {
-          _isGoogleSignInInProgress = false;
-        });
-      }
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message: _friendlyGoogleSignInErrorMessage(e),
-        type: SnackbarType.error,
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isGoogleSignInInProgress = false;
-        });
-      }
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message: e.toString(),
-        type: SnackbarType.error,
-      );
-    }
-  }
-
-  Future<bool> _confirmExistingAccountSignIn() async {
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.cardBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18.r),
-        ),
-        title: Text(
-          'Kayitli Hesaba Gec',
-          style: AppTextStyles.h2.standardCopyWith(
-            fontSize: AppTypography.headline,
-          ),
-        ),
-        content: Text(
-          'Bu islem mevcut cihaz oturumundan cikarak Google hesabina bagli kayitli oyun hesabina gecis yapar.',
-          style: AppTextStyles.body,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(
-              'Vazgec',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gold,
-              foregroundColor: AppColors.textOnAccent,
-            ),
-            child: const Text('Devam Et'),
-          ),
-        ],
-      ),
-    );
-
-    return result ?? false;
-  }
-
-  String _friendlyGoogleSignInErrorMessage(AuthException error) {
-    final raw = error.message.toLowerCase();
-
-    if (raw.contains('popup closed') || raw.contains('cancelled')) {
-      return 'Google ile giris islemi iptal edildi.';
-    }
-
-    return error.message;
-  }
-
-  Future<void> _handleGoogleUnlink() async {
-    try {
-      final removed = await ref
-          .read(authManagerProvider)
-          .unlinkGoogleIdentity();
-      ref.invalidate(authIdentityProvider);
-      if (!mounted) return;
-
-      AppSnackbar.show(
-        context,
-        message: removed
-            ? 'Google baglantisi kaldirildi.'
-            : 'Kaldirilacak bir Google baglantisi bulunamadi.',
-        type: removed ? SnackbarType.success : SnackbarType.info,
-      );
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      AppSnackbar.show(context, message: e.message, type: SnackbarType.error);
-    } catch (e) {
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message: e.toString(),
-        type: SnackbarType.error,
-      );
-    }
-  }
-
-  void _handleCompletedGoogleLink() {
-    if (!mounted) return;
-
-    final user = Supabase.instance.client.auth.currentUser;
-    final identities = user?.identities ?? const <UserIdentity>[];
-    final hasGoogleIdentity = identities.any(
-      (identity) => identity.provider == 'google',
-    );
-
-    if (!hasGoogleIdentity) return;
-    final shouldShowSuccess = _isGoogleLinkInProgress;
-
-    if (_isGoogleLinkInProgress) {
-      setState(() {
-        _isGoogleLinkInProgress = false;
-      });
-    }
-
-    if (!shouldShowSuccess) return;
-    if (_didShowGoogleLinkSuccess) return;
-    _didShowGoogleLinkSuccess = true;
-
-    AppSnackbar.show(
-      context,
-      message: 'Google hesabi basariyla baglandi.',
-      type: SnackbarType.success,
-    );
-  }
-
-  Widget _buildStatCard(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: AppIconSizes.compact),
-                SizedBox(width: 6.w),
-                Text(label, style: AppTextStyles.body),
-              ],
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              value,
-              style: AppTextStyles.h2.standardCopyWith(
-                color: color,
-                fontSize: AppTypography.headline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBadgeChip(AchievementBadgeModel badge) {
-    final color = _badgeColor(badge.badgeColor);
-
-    return Container(
-      width: 164.w,
-      padding: EdgeInsets.all(10.w),
-      decoration: BoxDecoration(
-        color: AppColors.navBg,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34.w,
-            height: 34.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withValues(alpha: 0.12),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
-            ),
-            child: Icon(
-              _badgeIcon(badge.badgeKey),
-              color: color,
-              size: AppIconSizes.regular,
-            ),
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  badge.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.textPrimary,
-                    fontSize: AppTypography.bodySmall,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  badge.categoryLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: color,
-                    fontSize: AppTypography.caption,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAchievementStatCard({
-    required String label,
-    required String value,
-    required Color color,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(10.w),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: color.withValues(alpha: 0.24)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 30.w,
-            height: 30.w,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: AppIconSizes.compact),
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.textPrimary,
-                    fontSize: AppTypography.bodyLarge,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.label,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData _badgeIcon(String key) {
-    switch (key) {
-      case 'store':
-        return AppIcons.storefrontRounded;
-      case 'warehouse':
-        return AppIcons.warehouseRounded;
-      case 'factory':
-        return AppIcons.precisionManufacturingRounded;
-      case 'field':
-      case 'farm':
-        return AppIcons.agricultureRounded;
-      case 'mine':
-        return AppIcons.landscapeRounded;
-      case 'builder':
-        return AppIcons.handymanRounded;
-      case 'trade':
-        return AppIcons.pointOfSaleRounded;
-      case 'truck':
-        return AppIcons.localShippingRounded;
-      case 'science':
-        return AppIcons.scienceRounded;
-      case 'upgrade':
-        return AppIcons.trendingUpRounded;
-      case 'crown':
-        return AppIcons.workspacePremiumRounded;
-      default:
-        return AppIcons.militaryTechRounded;
-    }
-  }
-
-  Color _badgeColor(String key) {
-    return AppColorPresets.badge(key);
   }
 }

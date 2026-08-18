@@ -232,13 +232,17 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                   warehouse.capacity)
               .clamp(0.0, 1.0)
         : 0.0;
+    final isCritical = ratio >= 0.85;
 
     return GestureDetector(
       onTap: () => context.go('/warehouses/${warehouse.id}'),
       child: Container(
         margin: EdgeInsets.only(bottom: 16.h),
         padding: EdgeInsets.all(12.w),
-        decoration: AppDecorations.premiumCard(null, 16.r),
+        decoration: AppDecorations.premiumCard(
+          isCritical ? AppColors.red : null,
+          16.r,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -251,7 +255,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        AppColors.gold.withValues(alpha: 0.08),
+                        isCritical
+                            ? AppColors.red.withValues(alpha: 0.12)
+                            : AppColors.gold.withValues(alpha: 0.08),
                         AppFx.panelWash(0.32),
                       ],
                       begin: Alignment.topLeft,
@@ -259,7 +265,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     ),
                     borderRadius: BorderRadius.circular(12.r),
                     border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.2),
+                      color: isCritical
+                          ? AppColors.red.withValues(alpha: 0.4)
+                          : AppColors.gold.withValues(alpha: 0.2),
                     ),
                   ),
                   child: CachedAssetImage(
@@ -275,7 +283,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     children: [
                       Icon(
                         AppIcons.locationOn,
-                        color: AppColors.gold,
+                        color: isCritical ? AppColors.red : AppColors.gold,
                         size: AppIconSizes.xSmall,
                       ),
                       SizedBox(width: 3.w),
@@ -283,7 +291,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                         child: Text(
                           warehouse.cityName ?? 'Bilinmiyor',
                           style: AppTextStyles.body.standardCopyWith(
-                            color: AppColors.gold,
+                            color: isCritical ? AppColors.red : AppColors.gold,
                             fontSize: AppTypography.body,
                             fontWeight: FontWeight.w700,
                           ),
@@ -316,15 +324,20 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      SizedBox(width: 8.w),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+                      SizedBox(width: 6.w),
+                      Wrap(
+                        spacing: 4.w,
+                        runSpacing: 4.h,
                         children: [
+                          if (isCritical)
+                            _buildSmallBadge(
+                              '⚠️ %${(ratio * 100).toInt()} Dolu',
+                              AppColors.red,
+                            ),
                           _buildSmallBadge(
                             'Lv. ${warehouse.level}',
                             AppColors.gold,
                           ),
-                          SizedBox(width: 6.w),
                           _buildSmallBadge(
                             warehouse.isActive ? 'Aktif' : 'Pasif',
                             warehouse.isActive

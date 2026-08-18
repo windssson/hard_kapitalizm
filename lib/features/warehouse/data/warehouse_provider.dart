@@ -65,7 +65,7 @@ Future<WarehouseModel> _fetchWarehouseDetail(String warehouseId) async {
     throw Exception('Depo bulunamadi.');
   }
 
-  return WarehouseModel.fromJson(response as Map<String, dynamic>);
+  return WarehouseModel.fromJson(Map<String, dynamic>.from(response as Map));
 }
 
 class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
