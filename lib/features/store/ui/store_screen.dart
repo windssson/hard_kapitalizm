@@ -394,6 +394,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Future<void> _handleQuickFinish(String constructionId, int starCost) async {
+    final bool isTutorial =
+        ref.read(tutorialProvider).step == TutorialStep.clickQuickFinish;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -403,7 +406,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           side: BorderSide(color: AppColors.borderGold),
         ),
         title: Text(
-          'Insaati Bitir',
+          isTutorial ? 'İnşaatı Hemen Tamamla' : 'İnşaatı Bitir',
           style: AppTextStyles.title.standardCopyWith(
             color: AppColors.goldLight,
             fontSize: AppTypography.titleLarge,
@@ -411,24 +414,28 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           ),
         ),
         content: Text(
-          '$starCost ⭐ yildiz kullanarak insaati aninda tamamlamak istiyor musunuz?',
+          isTutorial
+              ? 'Öğretici kapsamında manav inşaatını anında tamamlayalım!'
+              : '$starCost ⭐ yıldız kullanarak inşaatı anında tamamlamak istiyor musunuz?',
           style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textSecondary,
             fontSize: AppTypography.bodyLarge,
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Iptal',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodyLarge,
+          if (!isTutorial)
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                'İptal',
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.bodyLarge,
+                ),
               ),
             ),
-          ),
           ElevatedButton(
+            key: TutorialKeys.quickFinishDialogConfirmKey,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.textOnAccent,

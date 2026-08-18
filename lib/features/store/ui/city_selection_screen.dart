@@ -274,8 +274,11 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
                       ),
                     )
                   else ...[
-                    _buildInfoCard(),
-                    _buildLegendCard(),
+                    if (ref.watch(tutorialProvider).step ==
+                        TutorialStep.none) ...[
+                      _buildInfoCard(),
+                      _buildLegendCard(),
+                    ],
                   ],
                 ],
               ),
@@ -999,7 +1002,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
                 child: ListView.separated(
                   itemCount: cities.length,
                   separatorBuilder:
-                      (_, __) =>
+                      (_, _) =>
                           Divider(color: AppColors.border.withValues(alpha: 0.3)),
                   itemBuilder: (itemContext, index) {
                     final city = cities[index];

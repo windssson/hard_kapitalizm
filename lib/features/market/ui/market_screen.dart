@@ -1354,7 +1354,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               height: gridHeight,
               child: GridView.builder(
                 physics: const BouncingScrollPhysics(),
-                cacheExtent: 220,
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   mainAxisSpacing: 8.h,

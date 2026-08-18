@@ -83,7 +83,7 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
       case TutorialStep.clickStoreFab:
         return TutorialKeys.storeScreenFabKey;
       case TutorialStep.selectCity:
-        return TutorialKeys.citySelectionMapKey;
+        return null;
       case TutorialStep.confirmCity:
         return TutorialKeys.citySelectionConfirmKey;
       case TutorialStep.selectManav:
@@ -91,12 +91,21 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
       case TutorialStep.confirmManavBuild:
         return TutorialKeys.buildingTypeConfirmKey;
       case TutorialStep.clickQuickFinish:
+        if (TutorialKeys.quickFinishDialogConfirmKey.currentContext != null) {
+          return TutorialKeys.quickFinishDialogConfirmKey;
+        }
         return TutorialKeys.constructionGoldFinishKey;
       case TutorialStep.clickEnterStore:
         return TutorialKeys.newStoreItemKey;
       case TutorialStep.clickSelectProduct:
+        if (TutorialKeys.productSelectionFirstItemKey.currentContext != null) {
+          return TutorialKeys.productSelectionFirstItemKey;
+        }
         return TutorialKeys.storeSlotSelectProductKey;
       case TutorialStep.clickSetPrice:
+        if (TutorialKeys.priceDialogConfirmKey.currentContext != null) {
+          return TutorialKeys.priceDialogConfirmKey;
+        }
         return TutorialKeys.storeSlotPriceKey;
       case TutorialStep.clickAddStock:
         return TutorialKeys.storeSlotOrderStockKey;
@@ -114,7 +123,7 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
       case TutorialStep.clickStoreFab:
         return 'Henüz hiç mağazamız yok. Yeni bir mağaza kurmak için sağ alttaki "+" (Mağaza Kur) butonuna tıkla.';
       case TutorialStep.selectCity:
-        return 'Mağazayı kurmak istediğin şehri haritadan veya listeden özgürce seç.';
+        return 'Mağazayı kurmak istediğin şehri haritadan veya yukarıdaki listeden özgürce seç.';
       case TutorialStep.confirmCity:
         return 'Harika seçim! Şimdi "Devam Et" butonuna tıklayarak mağaza türünü seçmeye geçelim.';
       case TutorialStep.selectManav:
@@ -126,13 +135,19 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
       case TutorialStep.clickEnterStore:
         return 'Süper! Manavımız kuruldu. Yönetim sayfasına girmek için mağazanın üzerine tıkla.';
       case TutorialStep.clickSelectProduct:
+        if (TutorialKeys.productSelectionFirstItemKey.currentContext != null) {
+          return 'Harika! Şimdi listeden satmak istediğin ilk taze meyveyi (örn. Elma) seç.';
+        }
         return 'Manavımızın rafları şu an boş! İlk olarak "Ürün Seç" butonuna tıklayarak rafa taze bir meyve/sebze koyalım.';
       case TutorialStep.clickSetPrice:
+        if (TutorialKeys.priceDialogConfirmKey.currentContext != null) {
+          return 'Hedef satış fiyatını belirledikten sonra "Kaydet" butonuna tıkla.';
+        }
         return 'Tebrikler! Ürünü rafa dizdin. Şimdi ürünün birim satış fiyatını belirlemek için fiyat kutusuna tıkla ve satış fiyatını ayarla.';
       case TutorialStep.clickAddStock:
         return 'Raflarımız hazır! Şimdi Pazar\'dan veya depodan ilk taze stok siparişimizi vermek için "Stok Ekle" butonuna tıkla.';
       case TutorialStep.finished:
-        return 'Tebrikler patron! Mağazanı kurdun, ürününü yerleştirdin, fiyatını koydun ve tedarik zincirini başlattın. Artık gerçek bir kapitalistsin!';
+        return 'Tebrikler patron! Mağazanı kurdun, ürününü yerleştirdin, fiyatını belirledin ve tedarik zincirini başlattın. İşte sana şirket başlangıç sermayesi!';
       default:
         return '';
     }
@@ -156,55 +171,53 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
         step == TutorialStep.welcome || step == TutorialStep.finished;
     final screenSize = MediaQuery.of(context).size;
 
-    return Stack(
-      children: [
-        widget.child,
-        if (!isFullscreenMessage)
-          IgnorePointer(
-            ignoring: true,
-            child: ColorFiltered(
-              colorFilter: ColorFilter.mode(
-                Colors.black.withValues(alpha: 0.82),
-                BlendMode.srcOut,
-              ),
-              child: Stack(
-                children: [
-                  Container(color: Colors.transparent),
-                  if (hasTarget)
-                    Positioned.fromRect(
-                      rect: _targetRect!.inflate(6.0),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12.r),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        _updateTargetRect();
+        return false;
+      },
+      child: Stack(
+        children: [
+          widget.child,
+          if (!isFullscreenMessage && step != TutorialStep.selectCity)
+            IgnorePointer(
+              ignoring: true,
+              child: ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withValues(alpha: 0.82),
+                  BlendMode.srcOut,
+                ),
+                child: Stack(
+                  children: [
+                    Container(color: Colors.transparent),
+                    if (hasTarget)
+                      Positioned.fromRect(
+                        rect: _targetRect!.inflate(6.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
+            )
+          else if (isFullscreenMessage)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                ref.read(tutorialProvider.notifier).completeStep(step);
+              },
+              child: Container(color: Colors.black.withValues(alpha: 0.85)),
             ),
-          )
-        else
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              ref.read(tutorialProvider.notifier).completeStep(step);
-            },
-            child: Container(color: Colors.black.withValues(alpha: 0.85)),
-          ),
-        if (!isFullscreenMessage) ...[
-          if (hasTarget)
-            ..._buildTargetBarriers(_targetRect!, screenSize)
-          else if (step != TutorialStep.selectCity)
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {},
-              ),
-            ),
+          if (!isFullscreenMessage && step != TutorialStep.selectCity) ...[
+            if (hasTarget) ..._buildTargetBarriers(_targetRect!, screenSize),
+          ],
+          _buildAssistantCard(step),
         ],
-        _buildAssistantCard(step),
-      ],
+      ),
     );
   }
 
@@ -451,6 +464,28 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
                 ),
               ),
               // Tam Ekran Mesajları İçin Özel Buton
+              if (step == TutorialStep.finished) ...[
+                SizedBox(height: 14.h),
+                Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildRewardChip('💰 +25.000 ₺', AppColors.green),
+                      _buildRewardChip('⭐ +10 Yıldız', AppColors.gold),
+                      _buildRewardChip('🏆 +100 XP', AppColors.blue),
+                    ],
+                  ),
+                ),
+              ],
               if (isFullscreenMessage) ...[
                 SizedBox(height: 16.h),
                 SizedBox(
@@ -473,7 +508,7 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
                       children: [
                         Text(
                           step == TutorialStep.finished
-                              ? 'Ticarete Başla 🚀'
+                              ? 'Ödülleri Al & Başla 🚀'
                               : 'Devam Et ➔',
                           style: AppTextStyles.button.standardCopyWith(
                             color: AppColors.textOnAccent,
@@ -518,6 +553,26 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
           ? MediaQuery.of(context).size.height - targetRect.top + 20.h
           : null,
       child: SafeArea(top: isTop, bottom: !isTop, child: cardContent),
+    );
+  }
+
+  Widget _buildRewardChip(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: color.withValues(alpha: 0.4), width: 1),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11.sp,
+          fontWeight: FontWeight.bold,
+          decoration: TextDecoration.none,
+        ),
+      ),
     );
   }
 }

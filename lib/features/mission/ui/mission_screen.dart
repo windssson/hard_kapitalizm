@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
@@ -17,7 +18,7 @@ enum _MissionTab {
   main('Ana Görev'),
   daily('Günlük'),
   weekly('Haftalık'),
-  achievements('Başarılar');
+  achievements('Yan Görevler');
 
   const _MissionTab(this.label);
   final String label;
@@ -427,6 +428,8 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             .toList();
 
         return [
+          _buildPermanentAchievementsBanner(),
+          SizedBox(height: 12.h),
           if (active.isEmpty && claimed.isEmpty)
             _buildEmptyState()
           else if (active.isEmpty)
@@ -443,6 +446,132 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           ),
         ];
     }
+  }
+
+  String? _getTargetRoute(PlayerMissionModel mission) {
+    final key = mission.eventKey.toLowerCase();
+    final title = mission.title.toLowerCase();
+
+    if (key.contains('store') || title.contains('mağaza') || title.contains('manav')) {
+      return '/store';
+    }
+    if (key.contains('market') || title.contains('pazar') || title.contains('satın al') || title.contains('al/sat')) {
+      return '/market';
+    }
+    if (key.contains('transfer') || key.contains('logistics') || title.contains('transfer') || title.contains('lojistik')) {
+      return '/transfer-map';
+    }
+    if (key.contains('warehouse') || title.contains('depo')) {
+      return '/warehouses';
+    }
+    if (key.contains('factory') || title.contains('fabrika')) {
+      return '/factories';
+    }
+    if (key.contains('farm') || title.contains('çiftlik')) {
+      return '/farms';
+    }
+    if (key.contains('field') || title.contains('tarla') || title.contains('hasat')) {
+      return '/fields';
+    }
+    if (key.contains('mine') || title.contains('maden')) {
+      return '/mines';
+    }
+    if (key.contains('tender') || title.contains('ihale')) {
+      return '/tenders';
+    }
+    if (key.contains('tax') || title.contains('vergi')) {
+      return '/tax';
+    }
+    if (key.contains('brand') || key.contains('company') || title.contains('şirket') || title.contains('marka')) {
+      return '/company';
+    }
+    if (key.contains('arge') || key.contains('research') || title.contains('ar-ge') || title.contains('araştırma')) {
+      return '/arge';
+    }
+    if (key.contains('bank') || key.contains('loan') || title.contains('banka') || title.contains('kredi')) {
+      return '/bank';
+    }
+    return null;
+  }
+
+  Widget _buildPermanentAchievementsBanner() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.gold.withValues(alpha: 0.18),
+            AppColors.cardBg,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8.w),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              AppIcons.emojiEventsRounded,
+              color: AppColors.gold,
+              size: 20.sp,
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Kalıcı Başarılar & Rozetler',
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.goldLight,
+                    fontSize: AppTypography.bodySmall,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  'Kazanılan kalıcı unvanları ve rozetleri incele',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.micro,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => context.push('/achievements'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.textOnAccent,
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            child: Text(
+              'İncele ➔',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textOnAccent,
+                fontSize: AppTypography.micro,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildMissionCard(
@@ -648,6 +777,42 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                     color: AppColors.textMuted,
                     fontSize: AppTypography.label,
                     fontWeight: FontWeight.bold,
+                  ),
+                )
+              else if (_getTargetRoute(mission) != null)
+                InkWell(
+                  onTap: () => context.push(_getTargetRoute(mission)!),
+                  borderRadius: BorderRadius.circular(6.r),
+                  child: Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6.r),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.35),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Görevi Yap',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.gold,
+                            fontSize: AppTypography.micro,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: 3.w),
+                        Icon(
+                          AppIcons.arrowForwardRounded,
+                          color: AppColors.gold,
+                          size: 11.sp,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
             ],

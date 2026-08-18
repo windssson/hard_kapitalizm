@@ -27,10 +27,14 @@ class TutorialKeys {
   static final GlobalKey buildingTypeManavKey = GlobalKey(debugLabel: 'building_type_manav');
   static final GlobalKey buildingTypeConfirmKey = GlobalKey(debugLabel: 'building_type_confirm');
   static final GlobalKey constructionGoldFinishKey = GlobalKey(debugLabel: 'construction_gold_finish');
+  static final GlobalKey quickFinishDialogConfirmKey = GlobalKey(debugLabel: 'quick_finish_dialog_confirm');
   static final GlobalKey newStoreItemKey = GlobalKey(debugLabel: 'new_store_item');
   static final GlobalKey storeSlotSelectProductKey = GlobalKey(debugLabel: 'store_slot_select_product');
+  static final GlobalKey productSelectionFirstItemKey = GlobalKey(debugLabel: 'product_selection_first_item');
   static final GlobalKey storeSlotPriceKey = GlobalKey(debugLabel: 'store_slot_price');
+  static final GlobalKey priceDialogConfirmKey = GlobalKey(debugLabel: 'price_dialog_confirm');
   static final GlobalKey storeSlotOrderStockKey = GlobalKey(debugLabel: 'store_slot_order_stock');
+  static final GlobalKey stockRefillConfirmKey = GlobalKey(debugLabel: 'stock_refill_confirm');
 }
 
 class TutorialState {
@@ -54,7 +58,10 @@ class TutorialState {
 }
 
 class TutorialNotifier extends Notifier<TutorialState> {
-  static const String _prefKey = 'has_seen_tutorial';
+  static const String _prefSeenKey = 'has_seen_tutorial';
+  static const String _prefStepKey = 'current_tutorial_step';
+
+  // TODO: İleriki seviyelerde yeni birimler açıldıkça (örn. Seviye 4 Tarla, Seviye 7 Çiftlik, Seviye 10 Fabrika, Seviye 15 Maden) seviye bazlı öğretici adımları tetiklenecek.
 
   @override
   TutorialState build() {
@@ -65,28 +72,56 @@ class TutorialNotifier extends Notifier<TutorialState> {
   Future<void> _loadFromPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final hasSeen = prefs.getBool(_prefKey) ?? false;
-      if (hasSeen != state.hasSeenTutorial) {
-        state = state.copyWith(hasSeenTutorial: hasSeen);
+      final hasSeen = prefs.getBool(_prefSeenKey) ?? false;
+      final savedStepName = prefs.getString(_prefStepKey);
+
+      TutorialStep restoredStep = TutorialStep.none;
+      if (!hasSeen && savedStepName != null && savedStepName.isNotEmpty) {
+        try {
+          restoredStep = TutorialStep.values.firstWhere(
+            (s) => s.name == savedStepName,
+            orElse: () => TutorialStep.welcome,
+          );
+        } catch (_) {
+          restoredStep = TutorialStep.welcome;
+        }
       }
+
+      state = TutorialState(
+        step: restoredStep,
+        hasSeenTutorial: hasSeen,
+      );
     } catch (_) {}
   }
 
-  Future<void> _saveToPrefs(bool value) async {
+  Future<void> _saveStepToPrefs(TutorialStep step) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_prefKey, value);
+      await prefs.setString(_prefStepKey, step.name);
+    } catch (_) {}
+  }
+
+  Future<void> _saveSeenToPrefs(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefSeenKey, value);
     } catch (_) {}
   }
 
   void startTutorial({bool force = false}) {
     if (state.hasSeenTutorial && !force) return;
-    state = TutorialState(step: TutorialStep.welcome, hasSeenTutorial: false);
+    final initialStep = state.step != TutorialStep.none && !force
+        ? state.step
+        : TutorialStep.welcome;
+    state = TutorialState(step: initialStep, hasSeenTutorial: false);
+    _saveStepToPrefs(initialStep);
+    _saveSeenToPrefs(false);
   }
 
   void restartTutorial() {
     state = TutorialState(step: TutorialStep.welcome, hasSeenTutorial: false);
-    _saveToPrefs(false);
+    _saveStepToPrefs(TutorialStep.welcome);
+    _saveSeenToPrefs(false);
   }
 
   void setStep(TutorialStep step) {
@@ -94,6 +129,7 @@ class TutorialNotifier extends Notifier<TutorialState> {
       finishTutorial();
     } else {
       state = state.copyWith(step: step);
+      _saveStepToPrefs(step);
     }
   }
 
@@ -106,6 +142,7 @@ class TutorialNotifier extends Notifier<TutorialState> {
           finishTutorial();
         } else {
           state = state.copyWith(step: nextStep);
+          _saveStepToPrefs(nextStep);
         }
       } else {
         finishTutorial();
@@ -115,7 +152,8 @@ class TutorialNotifier extends Notifier<TutorialState> {
 
   void finishTutorial() {
     state = state.copyWith(step: TutorialStep.none, hasSeenTutorial: true);
-    _saveToPrefs(true);
+    _saveStepToPrefs(TutorialStep.none);
+    _saveSeenToPrefs(true);
   }
 }
 

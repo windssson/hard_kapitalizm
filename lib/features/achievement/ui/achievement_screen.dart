@@ -278,9 +278,30 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
       margin: EdgeInsets.only(bottom: 10.h),
       padding: EdgeInsets.all(compact ? 12.w : 14.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBg,
+        gradient: badge.isUnlocked
+            ? LinearGradient(
+                colors: [
+                  color.withValues(alpha: 0.12),
+                  AppColors.cardBg,
+                ],
+              )
+            : null,
+        color: badge.isUnlocked ? null : AppColors.cardBg,
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: color.withValues(alpha: 0.28)),
+        border: Border.all(
+          color: badge.isUnlocked
+              ? color.withValues(alpha: 0.65)
+              : color.withValues(alpha: 0.28),
+          width: badge.isUnlocked ? 1.5 : 1,
+        ),
+        boxShadow: [
+          if (badge.isUnlocked)
+            BoxShadow(
+              color: color.withValues(alpha: 0.15),
+              blurRadius: 10,
+              spreadRadius: 1,
+            ),
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

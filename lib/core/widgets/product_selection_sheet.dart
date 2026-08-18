@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 
 class ProductSelectionOption {
   final String id;
@@ -188,6 +189,9 @@ class _ProductSelectionSheetState extends State<ProductSelectionSheet> {
                               child: Material(
                                 color: AppColors.transparent,
                                 child: InkWell(
+                                  key: index == 0
+                                      ? TutorialKeys.productSelectionFirstItemKey
+                                      : null,
                                   onTap: option.isDisabled ? null : option.onTap,
                                   borderRadius: BorderRadius.circular(16.r),
                                   child: Opacity(

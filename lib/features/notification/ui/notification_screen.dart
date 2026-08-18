@@ -17,6 +17,8 @@ class NotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
+  int _currentTabIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +40,20 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         context,
         title: 'Basarili',
         message: 'Tum bildirimler okundu olarak isaretlendi.',
+        type: SnackbarType.success,
+      );
+    }
+  }
+
+  Future<void> _markRead(PlayerNotificationModel notification) async {
+    if (!notification.isUnread) return;
+    final result = await ref.read(notificationActionProvider).markRead(notification.id);
+    if (!mounted) return;
+    if (result['success'] == true) {
+      AppSnackbar.show(
+        context,
+        title: 'Guncellendi',
+        message: 'Uyari okundu olarak isaretlendi.',
         type: SnackbarType.success,
       );
     }
@@ -65,7 +81,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Bildirimler'),
+            const SecondaryTopBar(title: 'Bildirim Merkezi'),
             Expanded(
               child: dashboardAsync.when(
                 loading: () => Center(
@@ -91,33 +107,67 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                         .toList(),
                   );
 
+                  final activeAlerts = _sortNotifications(
+                    dashboard.notifications
+                        .where((item) => item.isActiveWarning || item.isActiveReminder)
+                        .toList(),
+                  );
+
                   return RefreshIndicator(
                     onRefresh: _refresh,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 24.h),
                       children: [
-                        if (unreadNotifications.isNotEmpty)
-                          Padding(
-                            padding: EdgeInsets.only(bottom: 10.h),
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton.icon(
-                                onPressed: _markAllRead,
-                                icon: const Icon(AppIcons.doneAllRounded),
-                                label: const Text('Tumunu Okundu Yap'),
+                        // --- SEGMENTED TAB SWITCHER ---
+                        _buildTabSwitcher(
+                          eventsCount: unreadNotifications.length,
+                          alertsCount: activeAlerts.length,
+                        ),
+                        SizedBox(height: 14.h),
+
+                        if (_currentTabIndex == 0) ...[
+                          // --- EVENTS TAB ---
+                          if (unreadNotifications.isNotEmpty)
+                            Padding(
+                              padding: EdgeInsets.only(bottom: 10.h),
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  onPressed: _markAllRead,
+                                  icon: const Icon(AppIcons.doneAllRounded),
+                                  label: const Text('Tumunu Okundu Yap'),
+                                ),
                               ),
                             ),
-                          ),
-                        if (unreadNotifications.isEmpty)
-                          _buildEmptyState()
-                        else
-                          ...unreadNotifications.map(
-                            (notification) => Padding(
-                              padding: EdgeInsets.only(bottom: 10.h),
-                              child: _buildNotificationCard(notification),
+                          if (unreadNotifications.isEmpty)
+                            _buildEmptyState(
+                              title: 'Goruntulenecek yeni bildirim yok.',
+                              icon: AppIcons.notificationsOffRounded,
+                            )
+                          else
+                            ...unreadNotifications.map(
+                              (notification) => Padding(
+                                padding: EdgeInsets.only(bottom: 10.h),
+                                child: _buildNotificationCard(notification),
+                              ),
                             ),
-                          ),
+                        ] else ...[
+                          // --- ALERTS TAB ---
+                          if (activeAlerts.isEmpty)
+                            _buildEmptyState(
+                              title: 'Harika! Isletmelerinizde aktif bir sorun bulunmuyor.',
+                              icon: AppIcons.checkCircleRounded,
+                              iconColor: AppColors.green,
+                            )
+                          else
+                            ...activeAlerts.map(
+                              (alert) => Padding(
+                                padding: EdgeInsets.only(bottom: 10.h),
+                                child: _buildAlertCard(alert),
+                              ),
+                            ),
+                        ],
                       ],
                     ),
                   );
@@ -125,6 +175,205 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabSwitcher({required int eventsCount, required int alertsCount}) {
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildTabButton(
+              index: 0,
+              label: 'Olaylar',
+              badgeCount: eventsCount,
+              badgeColor: AppColors.gold,
+              icon: AppIcons.notificationsNoneRounded,
+            ),
+          ),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: _buildTabButton(
+              index: 1,
+              label: 'Isletme Uyarilari',
+              badgeCount: alertsCount,
+              badgeColor: AppColors.warning,
+              icon: AppIcons.warningAmberRounded,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required int index,
+    required String label,
+    required int badgeCount,
+    required Color badgeColor,
+    required IconData icon,
+  }) {
+    final isSelected = _currentTabIndex == index;
+    return InkWell(
+      onTap: () => setState(() => _currentTabIndex = index),
+      borderRadius: BorderRadius.circular(9.r),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.cardBgLight : AppColors.transparent,
+          borderRadius: BorderRadius.circular(9.r),
+          border: isSelected
+              ? Border.all(color: AppColors.gold.withValues(alpha: 0.4))
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 15.sp,
+              color: isSelected ? AppColors.textPrimary : AppColors.textMuted,
+            ),
+            SizedBox(width: 6.w),
+            Text(
+              label,
+              style: AppTextStyles.caption.standardCopyWith(
+                color: isSelected ? AppColors.textPrimary : AppColors.textMuted,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: AppTypography.caption,
+              ),
+            ),
+            if (badgeCount > 0) ...[
+              SizedBox(width: 6.w),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(color: badgeColor.withValues(alpha: 0.5), width: 0.8),
+                ),
+                child: Text(
+                  badgeCount > 99 ? '99+' : badgeCount.toString(),
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: badgeColor,
+                    fontSize: AppTypography.micro,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlertCard(PlayerNotificationModel notification) {
+    final accent = _severityColor(notification);
+    final route = _targetRoute(notification);
+
+    return Material(
+      color: AppColors.transparent,
+      child: InkWell(
+        onTap: () => _openNotification(notification),
+        borderRadius: BorderRadius.circular(14.r),
+        child: Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: AppDecorations.premiumCard(accent, 14.r),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40.w,
+                height: 40.h,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _notificationIcon(notification),
+                  color: accent,
+                  size: AppIconSizes.medium,
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 6.w,
+                      runSpacing: 6.h,
+                      children: [
+                        _buildBadge(_kindLabel(notification), accent),
+                        if (_entityLabel(notification) != null)
+                          _buildBadge(
+                            _entityLabel(notification)!,
+                            AppColors.blue,
+                          ),
+                        if (notification.isUnread)
+                          _buildBadge('Yeni', AppColors.gold),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      notification.title,
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: AppTypography.bodyLarge,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      notification.message,
+                      style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      _relativeTime(notification.createdAt),
+                      style: AppTextStyles.body.standardCopyWith(
+                        fontSize: AppTypography.label,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    Row(
+                      children: [
+                        if (notification.isUnread)
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _markRead(notification),
+                              icon: const Icon(AppIcons.doneRounded),
+                              label: const Text('Okundu Yap'),
+                            ),
+                          ),
+                        if (notification.isUnread && route != null)
+                          SizedBox(width: 8.w),
+                        if (route != null)
+                          Expanded(
+                            child: FilledButton.tonalIcon(
+                              onPressed: () => _openNotification(notification),
+                              icon: const Icon(AppIcons.openInNewRounded),
+                              label: const Text('Module Git'),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -235,19 +484,24 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     );
   }
 
-  Widget _buildEmptyState() => Container(
+  Widget _buildEmptyState({
+    String title = 'Goruntulenecek yeni bildirim yok.',
+    IconData icon = AppIcons.notificationsOffRounded,
+    Color? iconColor,
+  }) =>
+      Container(
         padding: EdgeInsets.all(24.w),
         decoration: AppDecorations.premiumCard(AppColors.border, 16.r),
         child: Column(
           children: [
             Icon(
-              AppIcons.notificationsOffRounded,
-              color: AppColors.textMuted,
+              icon,
+              color: iconColor ?? AppColors.textMuted,
               size: AppIconSizes.xLarge,
             ),
             SizedBox(height: 8.h),
             Text(
-              'Goruntulenecek okunmamis bildirim yok.',
+              title,
               textAlign: TextAlign.center,
               style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.body),
             ),

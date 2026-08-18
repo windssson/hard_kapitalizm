@@ -15,6 +15,7 @@ import 'package:hard_kapitalizm/features/achievement/models/achievement_badge_mo
 import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
+import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -829,6 +830,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
             onPressed: () async {
+              try {
+                await ref.read(pushNotificationServiceProvider).unregisterToken();
+              } catch (_) {}
               await Supabase.instance.client.auth.signOut();
               if (mounted) {
                 context.go('/');
@@ -971,6 +975,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final result = Map<String, dynamic>.from(response as Map);
 
       if (result['success'] == true) {
+        try {
+          await ref.read(pushNotificationServiceProvider).unregisterToken();
+        } catch (_) {}
         await supabase.auth.signOut();
         if (mounted) {
           context.go('/');

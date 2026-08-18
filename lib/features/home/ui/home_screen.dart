@@ -1287,9 +1287,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         final tutorial = ref.watch(tutorialProvider);
         if (dashboard != null &&
             dashboard.modules.stores.count == 0 &&
+            !tutorial.hasSeenTutorial &&
             tutorial.step == TutorialStep.none) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(tutorialProvider.notifier).startTutorial(force: true);
+            ref.read(tutorialProvider.notifier).startTutorial();
           });
         }
         final alertedModules = _collectAlertedModules(dashboard);

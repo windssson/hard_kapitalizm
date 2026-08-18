@@ -3,16 +3,20 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
+import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PushNotificationService {
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   Timer? _heartbeatTimer;
+  RealtimeChannel? _realtimeChannel;
   bool _isInitialized = false;
   bool _isInitializing = false;
   String? _lastRegisteredToken;
 
-  PushNotificationService();
+  PushNotificationService(this._ref);
 
   Future<void> initialize() async {
     if (_isInitialized || _isInitializing) return;
@@ -53,6 +57,8 @@ class PushNotificationService {
       // Handle Foreground Messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         debugPrint('Received a foreground push message: ${message.notification?.title}');
+        _ref.invalidate(playerNotificationDashboardProvider);
+        _ref.invalidate(homeDashboardProvider);
       });
 
       _isInitialized = true;
@@ -63,6 +69,7 @@ class PushNotificationService {
     }
 
     _startHeartbeat();
+    _subscribeRealtime();
   }
 
   Future<void> _registerToken(String token) async {
@@ -80,6 +87,48 @@ class PushNotificationService {
     } catch (e) {
       debugPrint('Error registering push token in Supabase: $e');
     }
+  }
+
+  Future<void> unregisterToken() async {
+    final token = _lastRegisteredToken;
+    try {
+      await _supabase.rpc(
+        'unregister_push_token',
+        params: token != null ? {'p_token': token} : {},
+      );
+      _lastRegisteredToken = null;
+      debugPrint('Push token unregistered from Supabase');
+    } catch (e) {
+      debugPrint('Error unregistering push token: $e');
+    } finally {
+      stopTracking();
+      _isInitialized = false;
+    }
+  }
+
+  void _subscribeRealtime() {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = _supabase
+        .channel('public:player_notifications:${user.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'player_notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'player_id',
+            value: user.id,
+          ),
+          callback: (payload) {
+            debugPrint('Realtime notification update received: ${payload.eventType}');
+            _ref.invalidate(playerNotificationDashboardProvider);
+            _ref.invalidate(homeDashboardProvider);
+          },
+        )
+        .subscribe();
   }
 
   void _startHeartbeat() {
@@ -107,11 +156,13 @@ class PushNotificationService {
   void stopTracking() {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
   }
 }
 
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
-  final service = PushNotificationService();
+  final service = PushNotificationService(ref);
   ref.onDispose(() {
     service.stopTracking();
   });

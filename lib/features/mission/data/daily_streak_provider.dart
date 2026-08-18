@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -145,8 +146,8 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
       canClaimToday: false,
     ));
 
-    // Invalidate player so cash/gold top bar updates:
-    // player state managed by PlayerNotifier.applyChanges() � no invalidate needed
+    // Invalidate homeDashboardProvider so cash/gold top bar updates:
+    ref.invalidate(homeDashboardProvider);
 
     return true;
   }

@@ -117,12 +117,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   @override
   Widget build(BuildContext context) {
     final storeAsync = ref.watch(storeDetailPageProvider(widget.storeId));
-    final tutorial = ref.watch(tutorialProvider);
-    if (tutorial.step == TutorialStep.clickEnterStore) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(tutorialProvider.notifier).setStep(TutorialStep.finished);
-      });
-    }
 
     return Scaffold(
       backgroundColor: AppColors.transparent,
@@ -3288,6 +3282,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         SizedBox(width: 10.w),
                         Expanded(
                           child: ElevatedButton(
+                            key: TutorialKeys.priceDialogConfirmKey,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.gold,
                             ),
