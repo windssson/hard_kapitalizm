@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
@@ -37,69 +36,43 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (_isStarting) return;
     _isStarting = true;
     try {
-      // 1. Internet connection lookup check
-      try {
-        final result = await InternetAddress.lookup('lpiixtfxldhoyyppavyn.supabase.co')
-            .timeout(const Duration(seconds: 5));
-        if (result.isEmpty || result.first.address.isEmpty) {
-          throw const SocketException('No internet');
-        }
-      } catch (_) {
-        throw const SocketException('İnternet bağlantısı bulunamadı. Lütfen bağlantınızı kontrol edip tekrar deneyin.');
-      }
-
       final authManager = ref.read(authManagerProvider);
       await authManager.signInAnonymouslyIfNeeded();
-      try {
-        await authManager.syncGoogleProfileIfLinked();
-      } catch (_) {
-        // Google bagli olsa da profil senkronu basarisizsa girisi bloklama.
-      }
 
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        try {
-          await Supabase.instance.client.rpc('bootstrap_game_session');
-        } catch (_) {
-          // Bootstrap basarisiz olsa bile asset yukleme ve giris akisina devam ediyoruz.
-        }
-      }
-
-      await ref.read(staticCatalogsProvider.future);
-
-      if (user != null) {
-        try {
-          await ref.read(pushNotificationServiceProvider).initialize();
-        } catch (_) {
-          // Firebase/heartbeat registration failed, proceed anyway
-        }
-        try {
-          await ref.read(notificationActionProvider).refreshAttention();
-        } catch (_) {
-          // Bildirim attention refresh basarisiz olsa da giris akisina devam.
-        }
-        try {
-          await ref.read(playerActiveProductsProvider.future);
-        } catch (_) {
-          // Aktif urunleri on yukleme basarisiz olsa da giris akisina devam.
-        }
-      }
+      // Arka plan servislerini tetikle (Splash'i bloklamasın)
+      authManager.syncGoogleProfileIfLinked().ignore();
 
       final assetManager = ref.read(assetManagerProvider);
 
-      await assetManager.prefetchAssets((current, total, fileName) {
-        if (mounted) {
-          setState(() {
-            _currentFile = current;
-            _totalFiles = total;
-          });
-        }
-      });
+      // Kritik işlemleri aynı anda PARALEL olarak yürüt
+      await Future.wait([
+        // 1. Oturum başlatma ve üretim/lojistik durumunu hesapla
+        Supabase.instance.client.rpc('bootstrap_game_session').then((_) {}).catchError((_) {}),
 
-      // İndirme bittikten sonra barın %100 olduğunu göstermek için state'i güncelle
+        // 2. Statik Şehir, Ürün ve Bina tipleri paketini tekil RPC ile çek
+        ref.read(staticCatalogsProvider.future),
+
+        // 3. Sadece ana ekran ve temel arayüz için kritik ~20 görseli önbelleğe al
+        assetManager.prefetchCriticalAssets(
+          onProgress: (current, total, fileName) {
+            if (mounted) {
+              setState(() {
+                _currentFile = current;
+                _totalFiles = total;
+              });
+            }
+          },
+        ),
+      ]);
+
+      // Kalan ürün ikonlarını ve arka plan servislerini ana ekrana geçerken sessizce çalıştır
+      assetManager.prefetchRemainingAssetsInBackground();
+      ref.read(pushNotificationServiceProvider).initialize().ignore();
+      ref.read(notificationActionProvider).refreshAttention().ignore();
+      ref.read(playerActiveProductsProvider.future).ignore();
+
       if (mounted) {
         setState(() {
-          // Eğer totalFiles 0 geldiyse bile (RLS vs yüzünden) barı dolu göster
           if (_totalFiles == 0) {
             _totalFiles = 1;
             _currentFile = 1;

@@ -17,7 +17,6 @@ import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
-import 'package:hard_kapitalizm/core/widgets/price_sparkline.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
@@ -874,9 +873,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     final items = [...slots];
     items.sort((a, b) {
       if (a.isEmpty != b.isEmpty) return a.isEmpty ? 1 : -1;
-      if (a.isAvailableForSale != b.isAvailableForSale) {
-        return a.isAvailableForSale ? -1 : 1;
-      }
       return b.quantity.compareTo(a.quantity);
     });
     return items;
@@ -929,49 +925,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildSaleToggleChip({
-    required bool isActive,
-    required ValueChanged<bool> onChanged,
-  }) {
-    final color = isActive ? AppColors.green : AppColors.textMuted;
-
-    return Container(
-      height: 30.h,
-      padding: EdgeInsets.only(left: 8.w, right: 2.w),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            isActive ? 'Satisa Acik' : 'Satisa Kapali',
-            style: AppTextStyles.caption.standardCopyWith(
-              color: color,
-              fontSize: AppTypography.caption,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          SizedBox(width: 4.w),
-          SizedBox(
-            height: 24.h,
-            child: FittedBox(
-              fit: BoxFit.contain,
-              child: Switch(
-                value: isActive,
-                activeThumbColor: AppColors.green,
-                inactiveThumbColor: AppColors.textMuted,
-                inactiveTrackColor: AppFx.panelWash(0.26),
-                onChanged: onChanged,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildMetaChip({required String label, required Color color}) {
     return Container(
@@ -1145,22 +1098,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       );
     }
 
-    final marginPercent = (slot.price > 0 && slot.cost > 0)
-        ? ((slot.price - slot.cost) / slot.cost) * 100
-        : null;
-    final marginColor = marginPercent == null
-        ? AppColors.textMuted
-        : marginPercent >= 0
-        ? AppColors.green
-        : AppColors.red;
-
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(12.w),
-      decoration: AppDecorations.premiumCard(
-        slot.isAvailableForSale ? AppColors.green : null,
-        18.r,
-      ),
+      decoration: AppDecorations.premiumCard(null, 18.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1175,9 +1116,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   color: AppFx.panelWash(0.24),
                   borderRadius: BorderRadius.circular(14.r),
                   border: Border.all(
-                    color: slot.isAvailableForSale
-                        ? AppColors.green.withValues(alpha: 0.35)
-                        : AppColors.gold.withValues(alpha: 0.25),
+                    color: AppColors.gold.withValues(alpha: 0.25),
                     width: 1.2.w,
                   ),
                 ),
@@ -1367,9 +1306,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             ],
           ),
           SizedBox(height: 10.h),
-          // ALT KONTROL VE FİYAT BARI
+          // ALT KONTROL VE ENVANTER BARI
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
             decoration: BoxDecoration(
               color: AppFx.softOverlay(0.03),
               borderRadius: BorderRadius.circular(10.r),
@@ -1377,7 +1316,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             ),
             child: Row(
               children: [
-                // Maliyet Bilgisi
+                // Birim Maliyet
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1392,7 +1331,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Maliyet',
+                          'Birim Maliyet',
                           style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
                             fontSize: 8.sp,
@@ -1411,79 +1350,88 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     ),
                   ],
                 ),
-                SizedBox(width: 10.w),
+                SizedBox(width: 12.w),
                 Container(width: 1, height: 22.h, color: AppColors.border.withValues(alpha: 0.3)),
-                SizedBox(width: 10.w),
-                // Satış Fiyatı (Tıklanabilir)
+                SizedBox(width: 12.w),
+                // Toplam Stok Değeri
                 Expanded(
-                  child: InkWell(
-                    onTap: () => _showPriceDialog(context, ref, slot),
-                    borderRadius: BorderRadius.circular(6.r),
-                    child: Row(
-                      children: [
-                        Icon(
-                          AppIcons.sellOutlined,
-                          size: 13.sp,
-                          color: AppColors.gold,
-                        ),
-                        SizedBox(width: 4.w),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'Pazar Satış',
-                                    style: AppTextStyles.caption.standardCopyWith(
-                                      color: AppColors.gold,
-                                      fontSize: 8.sp,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  if (marginPercent != null) ...[
-                                    SizedBox(width: 4.w),
-                                    Text(
-                                      '%${marginPercent.toStringAsFixed(0)}',
-                                      style: AppTextStyles.caption.standardCopyWith(
-                                        color: marginColor,
-                                        fontSize: 8.sp,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Text(
-                                    slot.price > 0 ? '₺${AppMoney.compact(slot.price)}' : 'Fiyat Belirle',
-                                    style: AppTextStyles.body.standardCopyWith(
-                                      color: slot.price > 0 ? AppColors.textPrimary : AppColors.gold,
-                                      fontSize: 11.sp,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(width: 3.w),
-                                  Icon(Icons.edit_outlined, size: 10.sp, color: AppColors.gold),
-                                ],
-                              ),
-                            ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        AppIcons.inventory2,
+                        size: 13.sp,
+                        color: AppColors.gold,
+                      ),
+                      SizedBox(width: 4.w),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Toplam Deger',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.gold,
+                              fontSize: 8.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                          Text(
+                            slot.quantity > 0 && slot.cost > 0
+                                ? '₺${AppMoney.compact(slot.quantity * slot.cost)}'
+                                : '-',
+                            style: AppTextStyles.body.standardCopyWith(
+                              color: AppColors.textPrimary,
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 SizedBox(width: 6.w),
-                // Satış Toggle
-                _buildSaleToggleChip(
-                  isActive: slot.isAvailableForSale,
-                  onChanged: (_) => _toggleSaleStatus(context, ref, slot),
-                ),
-                SizedBox(width: 2.w),
-                // Menü Butonu
+                // Hızlı Sevk Et Butonu
+                if (slot.quantity > 0)
+                  InkWell(
+                    onTap: () => _startWarehouseOutboundFlow(
+                      context,
+                      ref,
+                      warehouse,
+                      slot,
+                    ),
+                    borderRadius: BorderRadius.circular(8.r),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            AppIcons.localShippingOutlined,
+                            size: 13.sp,
+                            color: AppColors.gold,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Sevk Et',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.gold,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                SizedBox(width: 4.w),
+                // Menü Butonu (Pazardan Al, vb. / Slotu Sil)
                 SizedBox(
                   height: 28.h,
                   width: 28.h,
@@ -1502,9 +1450,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       ),
                     ),
                     onSelected: (value) {
-                      if (value == 'price') {
-                        _showPriceDialog(context, ref, slot);
-                      } else if (value == 'market') {
+                      if (value == 'market') {
                         _openMarketForSlot(context, warehouse, slot);
                       } else if (value == 'transfer') {
                         _startWarehouseOutboundFlow(
@@ -1518,12 +1464,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       }
                     },
                     itemBuilder: (context) => [
-                      _buildSlotMenuItem(
-                        value: 'price',
-                        icon: AppIcons.sellOutlined,
-                        label: 'Fiyat Duzenle',
-                        color: AppColors.gold,
-                      ),
                       _buildSlotMenuItem(
                         value: 'market',
                         icon: AppIcons.storefrontOutlined,
@@ -1554,391 +1494,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Future<void> _showPriceDialog(
-    BuildContext context,
-    WidgetRef ref,
-    WarehouseSlotModel slot,
-  ) async {
-    final currentBrandName = ref
-        .read(playerBrandCompanyProvider)
-        .value
-        ?.brandName;
-    final hasBrand = slot.brandId != _defaultBrandId;
-    String priceShortcut(double value) {
-      if (value <= 0) return '';
-      return value.toStringAsFixed(1);
-    }
-
-    double parsePrice(String value) {
-      return double.tryParse(value.trim().replaceAll(',', '.')) ?? 0;
-    }
-
-    final controller = TextEditingController(
-      text: slot.price > 0 ? slot.price.toStringAsFixed(1) : '',
-    );
-    final shortcuts = <NumericKeyboardShortcut>[
-      if (slot.price > 0)
-        NumericKeyboardShortcut(
-          label: 'Mevcut',
-          value: priceShortcut(slot.price),
-        ),
-      if (slot.cost > 0)
-        NumericKeyboardShortcut(
-          label: 'Maliyet',
-          value: priceShortcut(slot.cost),
-        ),
-    ];
-
-    final result = await showDialog<double>(
-      context: context,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: AppColors.cardBg,
-        insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(dialogContext).size.height * 0.9,
-            maxWidth: 400.w,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 8.h),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 46.w,
-                        height: 46.w,
-                        clipBehavior: hasBrand ? Clip.antiAlias : Clip.none,
-                        padding: EdgeInsets.all(hasBrand ? 2.w : 0),
-                        decoration: hasBrand
-                            ? BoxDecoration(
-                                color: AppFx.panelWash(0.28),
-                                borderRadius: BorderRadius.circular(12.r),
-                                border: Border.all(
-                                  color: AppColors.gold.withValues(alpha: 0.25),
-                                ),
-                              )
-                            : null,
-                        child: BrandedProductImage(
-                          fileName: slot.productIcon ?? 'default.webp',
-                          brandId: slot.brandId,
-                          brandName: _brandNameForSlot(slot, currentBrandName),
-                          productId: slot.productId,
-                          fit: BoxFit.cover,
-                          showFrame: false,
-                        ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Satis Fiyati',
-                                    style: AppTextStyles.h1.standardCopyWith(
-                                      color: AppColors.textPrimary,
-                                      fontSize: AppTypography.headline,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4.h),
-                                  Text(
-                                    (slot.productName ?? 'Urun') +
-                                        (slot.brandId != _defaultBrandId
-                                            ? ' (${currentBrandName ?? 'Markali'})'
-                                            : ''),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.body.standardCopyWith(
-                                      color: AppColors.textMuted,
-                                      fontSize: AppTypography.body,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: 8.w),
-                            Consumer(
-                              builder: (context, ref, _) {
-                                final historyAsync = ref.watch(
-                                  productPriceHistoryProvider(
-                                    slot.productId ?? '',
-                                  ),
-                                );
-                                return historyAsync.maybeWhen(
-                                  data: (history) {
-                                    if (history == null ||
-                                        history.prices.isEmpty) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    final priceList = history.prices
-                                        .map((p) => '₺${p.toStringAsFixed(1)}')
-                                        .join(' ➔ ');
-                                    return Tooltip(
-                                      message:
-                                          '5 Günlük Fiyat Seyri:\n$priceList',
-                                      child: PriceSparkline(
-                                        prices: history.prices,
-                                        width: 120.w,
-                                        height: 36.h,
-                                      ),
-                                    );
-                                  },
-                                  orElse: () => const SizedBox.shrink(),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Divider(color: AppFx.softOverlay(0.1), height: 1),
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  child: ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: controller,
-                    builder: (context, value, _) {
-                      final price = parsePrice(value.text);
-                      final profit = slot.cost > 0 ? price - slot.cost : 0.0;
-                      final profitPercent = slot.cost > 0
-                          ? (profit / slot.cost) * 100
-                          : 0.0;
-                      final profitColor = slot.cost <= 0
-                          ? AppColors.textMuted
-                          : profit >= 0
-                          ? AppColors.green
-                          : AppColors.red;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 12.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppFx.panelWash(0.3),
-                              borderRadius: BorderRadius.circular(12.r),
-                              border: Border.all(
-                                color: AppColors.gold.withValues(alpha: 0.25),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Birim satis fiyati',
-                                  style: AppTextStyles.body.standardCopyWith(
-                                    color: AppColors.gold,
-                                    fontSize: AppTypography.bodySmall,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                SizedBox(height: 6.h),
-                                Text(
-                                  value.text.isEmpty ? '0.0' : value.text,
-                                  style: AppTextStyles.largeTitle
-                                      .standardCopyWith(
-                                        color: AppColors.textPrimary,
-                                        fontSize: AppTypography.display,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 10.h),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildPriceInfoTile(
-                                  'Maliyet',
-                                  slot.cost > 0
-                                      ? slot.cost.toStringAsFixed(1)
-                                      : '-',
-                                  AppColors.textMuted,
-                                ),
-                              ),
-                              SizedBox(width: 8.w),
-                              Expanded(
-                                child: _buildPriceInfoTile(
-                                  'Kar',
-                                  slot.cost > 0
-                                      ? '${profit.toStringAsFixed(1)} (${profitPercent.toStringAsFixed(0)}%)'
-                                      : '-',
-                                  profitColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w),
-                  child: NumericKeyboard(
-                    controller: controller,
-                    allowDecimal: true,
-                    shortcuts: shortcuts,
-                    buttonHeight: 44.h,
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 12.h),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 10.h),
-                          ),
-                          child: Text(
-                            'Iptal',
-                            style: AppTextStyles.body.standardCopyWith(
-                              color: AppColors.textMuted,
-                              fontSize: AppTypography.body,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            final parsed = parsePrice(controller.text);
-                            if (parsed <= 0) {
-                              Navigator.pop(dialogContext);
-                              AppSnackbar.show(
-                                context,
-                                title: 'Gecersiz Fiyat',
-                                message: 'Satis fiyati 0 buyuk olmali.',
-                                type: SnackbarType.error,
-                              );
-                              return;
-                            }
-                            Navigator.pop(dialogContext, parsed);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.gold,
-                            foregroundColor: AppColors.textOnAccent,
-                            padding: EdgeInsets.symmetric(vertical: 10.h),
-                          ),
-                          child: Text(
-                            'Kaydet',
-                            style: AppTextStyles.button.standardCopyWith(
-                              fontSize: AppTypography.body,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    controller.dispose();
-
-    if (result == null || !context.mounted) return;
-
-    final actionResult = await ref
-        .read(warehouseActionProvider)
-        .updateWarehouseSlotPrice(warehouseSlotId: slot.id, price: result);
-
-    if (!context.mounted) return;
-
-    if (actionResult['success'] == true) {
-      final nextPrice = (actionResult['price'] as num?)?.toDouble() ?? result;
-      ref
-          .read(warehouseDetailProvider(widget.warehouseId).notifier)
-          .patchSlotPrice(slotId: slot.id, price: nextPrice);
-      ref
-          .read(warehouseListProvider.notifier)
-          .patchSlotPrice(
-            warehouseId: widget.warehouseId,
-            slotId: slot.id,
-            price: nextPrice,
-          );
-      final productName =
-          (slot.productName ?? 'Urun') +
-          (slot.brandId != _defaultBrandId
-              ? ' (${currentBrandName ?? 'Markali'})'
-              : '');
-      AppSnackbar.show(
-        context,
-        title: 'Fiyat Guncellendi',
-        message: '$productName icin satis fiyati kaydedildi.',
-        type: SnackbarType.success,
-      );
-    } else {
-      AppSnackbar.show(
-        context,
-        title: 'Islem Basarisiz',
-        message: actionResult['message']?.toString() ?? 'Fiyat kaydedilemedi.',
-        type: SnackbarType.error,
-      );
-    }
-  }
-
-  Widget _buildPriceInfoTile(String label, String value, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.caption.standardCopyWith(
-              color: AppColors.textMuted,
-              fontSize: AppTypography.caption,
-            ),
-          ),
-          SizedBox(height: 3.h),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.body.standardCopyWith(
-              color: color,
-              fontSize: AppTypography.body,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _deleteWarehouseSlot(
     BuildContext context,
@@ -3348,71 +2903,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       message: result['message']?.toString() ?? 'Transfer baslatilamadi.',
       type: SnackbarType.error,
     );
-  }
-
-  Future<void> _toggleSaleStatus(
-    BuildContext context,
-    WidgetRef ref,
-    WarehouseSlotModel slot,
-  ) async {
-    if (!slot.isAvailableForSale && slot.price <= 0) {
-      AppSnackbar.show(
-        context,
-        title: 'Fiyat Gerekli',
-        message: 'Once bu slot icin satis fiyati belirleyin.',
-        type: SnackbarType.warning,
-      );
-      return;
-    }
-
-    final result = await ref
-        .read(warehouseActionProvider)
-        .setWarehouseSlotSaleStatus(
-          warehouseSlotId: slot.id,
-          isAvailableForSale: !slot.isAvailableForSale,
-        );
-
-    if (!context.mounted) return;
-
-    if (result['success'] == true) {
-      ref
-          .read(warehouseDetailProvider(widget.warehouseId).notifier)
-          .patchSlotSaleStatus(
-            slotId: slot.id,
-            isAvailableForSale: !slot.isAvailableForSale,
-          );
-      ref
-          .read(warehouseListProvider.notifier)
-          .patchSlotSaleStatus(
-            warehouseId: widget.warehouseId,
-            slotId: slot.id,
-            isAvailableForSale: !slot.isAvailableForSale,
-          );
-      final currentBrandName = ref
-          .read(playerBrandCompanyProvider)
-          .value
-          ?.brandName;
-      final productName =
-          (slot.productName ?? 'Urun') +
-          (slot.brandId != _defaultBrandId
-              ? ' (${currentBrandName ?? 'Markali'})'
-              : '');
-      AppSnackbar.show(
-        context,
-        title: slot.isAvailableForSale ? 'Satis Kapatildi' : 'Satisa Acildi',
-        message: slot.isAvailableForSale
-            ? '$productName marketten kaldirildi.'
-            : '$productName markette listeleniyor.',
-        type: SnackbarType.success,
-      );
-    } else {
-      AppSnackbar.show(
-        context,
-        title: 'Islem Basarisiz',
-        message: result['message']?.toString() ?? 'Slot guncellenemedi.',
-        type: SnackbarType.error,
-      );
-    }
   }
 
   Widget _buildQualityStars(int quality) {

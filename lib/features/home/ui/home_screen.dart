@@ -718,10 +718,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildSummaryStatLine(
-                            AppIcons.trendingUpRounded,
-                            'Bugunku Kar:',
+                            dailyProfit < 0
+                                ? AppIcons.trendingDownRounded
+                                : AppIcons.trendingUpRounded,
+                            dailyProfit < 0 ? 'Bugunku Zarar:' : 'Bugunku Kar:',
                             AppMoney.compact(dailyProfit),
-                            AppColors.green,
+                            dailyProfit < 0
+                                ? AppColors.red
+                                : dailyProfit > 0
+                                    ? AppColors.green
+                                    : AppColors.textPrimary,
+                            iconColor: dailyProfit < 0
+                                ? AppColors.red
+                                : dailyProfit > 0
+                                    ? AppColors.green
+                                    : AppColors.gold,
                           ),
                           SizedBox(height: 6.h),
                           _buildSummaryStatLine(
@@ -736,6 +747,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             'Tahmini Saatlik Gelir:',
                             _formatEstimatedHourlyIncome(hourlyIncome?.total),
                             AppColors.green,
+                            iconColor: AppColors.green,
                           ),
                         ],
                       ),
@@ -769,8 +781,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     IconData icon,
     String label,
     String value,
-    Color valueColor,
-  ) {
+    Color valueColor, {
+    Color? iconColor,
+  }) {
+    final effectiveIconColor = iconColor ?? AppColors.gold;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -778,11 +793,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           width: 24.w,
           height: 24.w,
           decoration: BoxDecoration(
-            color: AppColors.gold.withValues(alpha: 0.1),
+            color: effectiveIconColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10.r),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.22)),
+            border: Border.all(color: effectiveIconColor.withValues(alpha: 0.28)),
           ),
-          child: Icon(icon, color: AppColors.gold, size: AppIconSizes.xSmall),
+          child: Icon(icon, color: effectiveIconColor, size: AppIconSizes.xSmall),
         ),
         SizedBox(width: 5.w),
         Expanded(

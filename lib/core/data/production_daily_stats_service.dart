@@ -44,13 +44,18 @@ class ProductionDailyStatsService {
       throw Exception('Oturum acilmamis.');
     }
 
+    String? formatDate(DateTime? date) {
+      if (date == null) return null;
+      return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    }
+
     final response = await _supabase.rpc(
       'get_player_daily_production_stats',
       params: {
         'p_owner_kind': ownerKind,
         'p_owner_id': ownerId,
-        'p_date_from': dateFrom?.toUtc().toIso8601String().split('T').first,
-        'p_date_to': dateTo?.toUtc().toIso8601String().split('T').first,
+        'p_date_from': formatDate(dateFrom),
+        'p_date_to': formatDate(dateTo),
       },
     );
 

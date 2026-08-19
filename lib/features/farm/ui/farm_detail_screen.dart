@@ -4511,153 +4511,61 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(height: 16.h),
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: sortedInventories.length,
-                      separatorBuilder: (context, index) =>
-                          SizedBox(height: 10.h),
-                      itemBuilder: (_, index) {
-                        final item = sortedInventories[index];
-                        final selectedQuantity =
-                            selectedQuantities[item.id] ?? 0;
-                        final isSelected = selectedQuantity > 0;
-                        return Container(
-                          padding: EdgeInsets.all(10.w),
-                          decoration: BoxDecoration(
-                            color: AppFx.softOverlay(0.04),
-                            borderRadius: BorderRadius.circular(14.r),
-                            border: Border.all(
-                              color:
-                                  (isSelected
-                                          ? AppColors.green
-                                          : AppColors.borderGoldLight)
-                                      .withValues(
-                                        alpha: isSelected ? 0.35 : 0.15,
-                                      ),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 42.w,
-                                height: 42.w,
-                                padding: EdgeInsets.all(2.w),
-                                decoration: BoxDecoration(
-                                  color: AppFx.panelWash(0.2),
-                                  borderRadius: BorderRadius.circular(10.r),
-                                  border: Border.all(
-                                    color:
-                                        (isSelected
-                                                ? AppColors.green
-                                                : AppFx.softOverlay(0.10))
-                                            .withValues(alpha: 0.2),
-                                  ),
-                                ),
-                                child: BrandedProductImage(
-                                  fileName:
-                                      item.product?.urunIconu ?? 'default.webp',
-                                  brandId: item.brandId,
-                                  brandName:
-                                      !item.isInput &&
-                                          item.brandId !=
-                                              SelectableProductionProductModel
-                                                  .defaultBrandId
-                                      ? _currentBrandName
-                                      : null,
-                                  productId: item.productId,
-                                  fit: BoxFit.contain,
-                                  showFrame: false,
-                                ),
+                    child: Builder(
+                      builder: (context) {
+                        final outputList = sortedInventories
+                            .where((i) => !i.isInput)
+                            .toList();
+                        final inputList = sortedInventories
+                            .where((i) => i.isInput)
+                            .toList();
+
+                        return ListView(
+                          children: [
+                            if (outputList.isNotEmpty) ...[
+                              _buildOutboundCategoryHeader(
+                                title: 'Üretilen Ürünler (Çiftlik Ürünleri)',
+                                subtitle:
+                                    'Çiftlikte üretilen ürünleri depoya aktar',
+                                icon: AppIcons.inventory2Rounded,
+                                color: AppColors.green,
+                                count: outputList.length,
                               ),
-                              SizedBox(width: 10.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      (item.product?.urunAdi ??
-                                              item.productId) +
-                                          (!item.isInput &&
-                                                  item.brandId !=
-                                                      SelectableProductionProductModel
-                                                          .defaultBrandId
-                                              ? ' (${_currentBrandName ?? 'Markali'})'
-                                              : ''),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppTextStyles.body
-                                          .standardCopyWith(
-                                            color: AppColors.textPrimary,
-                                            fontSize: AppTypography.bodyLarge,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                    SizedBox(height: 3.h),
-                                    Row(
-                                      children: [
-                                        for (int i = 0; i < 5; i++)
-                                          Icon(
-                                            i < item.qualityLevel
-                                                ? AppIcons.starRounded
-                                                : AppIcons.starBorderRounded,
-                                            color: i < item.qualityLevel
-                                                ? AppColors.gold
-                                                : AppFx.softOverlay(0.12),
-                                            size: AppIconSizes.xSmall,
-                                          ),
-                                        SizedBox(width: 4.w),
-                                        Expanded(
-                                          child: Text(
-                                            '| Stok ${item.quantity}',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: AppTextStyles.caption
-                                                .standardCopyWith(
-                                                  color: AppColors.textMuted,
-                                                  fontSize: AppTypography.label,
-                                                ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                              SizedBox(height: 8.h),
+                              for (final item in outputList) ...[
+                                _buildOutboundInventoryTile(
+                                  item: item,
+                                  sheetContext: sheetContext,
+                                  modalSetState: modalSetState,
+                                  selectedQuantities: selectedQuantities,
+                                  openQuantityEditor: openQuantityEditor,
                                 ),
-                              ),
-                              SizedBox(width: 8.w),
-                              OutlinedButton(
-                                onPressed: () {
-                                  if (!isSelected) {
-                                    modalSetState(() {
-                                      selectedQuantities[item.id] =
-                                          item.quantity;
-                                    });
-                                    return;
-                                  }
-                                  openQuantityEditor(
-                                    sheetContext,
-                                    modalSetState,
-                                    item,
-                                  );
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: isSelected
-                                      ? AppColors.green
-                                      : AppColors.goldLight,
-                                ),
-                                child: Text(
-                                  isSelected
-                                      ? 'Adet: $selectedQuantity'
-                                      : 'Ekle',
-                                  style: AppTextStyles.button.standardCopyWith(
-                                    color: isSelected
-                                        ? AppColors.green
-                                        : AppColors.goldLight,
-                                    fontSize: AppTypography.bodySmall,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                                SizedBox(height: 8.h),
+                              ],
+                              SizedBox(height: 8.h),
                             ],
-                          ),
+                            if (inputList.isNotEmpty) ...[
+                              _buildOutboundCategoryHeader(
+                                title: 'Hammaddeler (Yem & Girdiler)',
+                                subtitle:
+                                    'Çiftlikteki yem ve hammaddeleri depoya geri gönder',
+                                icon: AppIcons.layersOutlined,
+                                color: AppColors.blue,
+                                count: inputList.length,
+                              ),
+                              SizedBox(height: 8.h),
+                              for (final item in inputList) ...[
+                                _buildOutboundInventoryTile(
+                                  item: item,
+                                  sheetContext: sheetContext,
+                                  modalSetState: modalSetState,
+                                  selectedQuantities: selectedQuantities,
+                                  openQuantityEditor: openQuantityEditor,
+                                ),
+                                SizedBox(height: 8.h),
+                              ],
+                            ],
+                          ],
                         );
                       },
                     ),
@@ -4942,6 +4850,218 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     final minutes = duration.inMinutes % 60;
     if (hours > 0) return '${hours}s ${minutes}dk';
     return '${duration.inMinutes}dk';
+  }
+
+  Widget _buildOutboundCategoryHeader({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required int count,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(top: 4.h, bottom: 2.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(6.w),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Icon(icon, color: color, size: AppIconSizes.small),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: AppTypography.bodySmall,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.micro,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(6.r),
+            ),
+            child: Text(
+              '$count Çeşit',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: AppTypography.micro,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOutboundInventoryTile({
+    required FarmProductionInventoryModel item,
+    required BuildContext sheetContext,
+    required StateSetter modalSetState,
+    required Map<String, int> selectedQuantities,
+    required Future<void> Function(
+      BuildContext sheetContext,
+      StateSetter modalSetState,
+      FarmProductionInventoryModel item,
+    ) openQuantityEditor,
+  }) {
+    final selectedQuantity = selectedQuantities[item.id] ?? 0;
+    final isSelected = selectedQuantity > 0;
+    final isOutput = !item.isInput;
+    final accentColor = isOutput ? AppColors.green : AppColors.blue;
+
+    return Container(
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(
+        color: AppFx.softOverlay(0.04),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(
+          color: (isSelected ? accentColor : AppColors.borderGoldLight)
+              .withValues(alpha: isSelected ? 0.40 : 0.15),
+          width: isSelected ? 1.2.w : 1.w,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42.w,
+            height: 42.w,
+            padding: EdgeInsets.all(2.w),
+            decoration: BoxDecoration(
+              color: AppFx.panelWash(0.2),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(
+                color: (isSelected ? accentColor : AppFx.softOverlay(0.10))
+                    .withValues(alpha: 0.2),
+              ),
+            ),
+            child: BrandedProductImage(
+              fileName: item.product?.urunIconu ?? 'default.webp',
+              brandId: item.brandId,
+              brandName: isOutput &&
+                      item.brandId !=
+                          SelectableProductionProductModel.defaultBrandId
+                  ? _currentBrandName
+                  : null,
+              productId: item.productId,
+              fit: BoxFit.contain,
+              showFrame: false,
+            ),
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  (item.product?.urunAdi ?? item.productId) +
+                      (isOutput &&
+                              item.brandId !=
+                                  SelectableProductionProductModel
+                                      .defaultBrandId
+                          ? ' (${_currentBrandName ?? 'Markali'})'
+                          : ''),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodyLarge,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 3.h),
+                Row(
+                  children: [
+                    for (int i = 0; i < 5; i++)
+                      Icon(
+                        i < item.qualityLevel
+                            ? AppIcons.starRounded
+                            : AppIcons.starBorderRounded,
+                        color: i < item.qualityLevel
+                            ? AppColors.gold
+                            : AppFx.softOverlay(0.12),
+                        size: AppIconSizes.xSmall,
+                      ),
+                    SizedBox(width: 6.w),
+                    Expanded(
+                      child: Text(
+                        '| Stok: ${item.quantity} ad.',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.label,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8.w),
+          OutlinedButton(
+            onPressed: () {
+              if (!isSelected) {
+                modalSetState(() {
+                  selectedQuantities[item.id] = item.quantity;
+                });
+                return;
+              }
+              openQuantityEditor(
+                sheetContext,
+                modalSetState,
+                item,
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: isSelected ? accentColor : AppColors.goldLight,
+              side: BorderSide(
+                color: isSelected
+                    ? accentColor.withValues(alpha: 0.6)
+                    : AppColors.goldLight.withValues(alpha: 0.4),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+            ),
+            child: Text(
+              isSelected ? 'Adet: $selectedQuantity' : 'Ekle',
+              style: AppTextStyles.button.standardCopyWith(
+                color: isSelected ? accentColor : AppColors.goldLight,
+                fontSize: AppTypography.bodySmall,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   int _calculateUsedCapacity(List<FarmProductionInventoryModel> inventories) {

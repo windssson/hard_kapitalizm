@@ -23,8 +23,8 @@ class ProductionReportScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final today = DateTime.now().toUtc();
-    final dateTo = DateTime.utc(today.year, today.month, today.day);
+    final today = DateTime.now();
+    final dateTo = DateTime(today.year, today.month, today.day);
     final dateFrom = dateTo.subtract(const Duration(days: 6));
     final query = ProductionDailyStatsQuery(
       ownerKind: ownerKind,

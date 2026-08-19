@@ -113,7 +113,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
     return Scaffold(
       backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
-        selectedIndex: 3,
+        selectedIndex: -1,
         onItemSelected: (_) {},
       ),
       body: SafeArea(

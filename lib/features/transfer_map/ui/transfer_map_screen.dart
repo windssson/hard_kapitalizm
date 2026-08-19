@@ -60,11 +60,13 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   Future<void> _loadCityList() async {
     try {
       final list = await Parser.instance.svgToCityList(Maps.TURKEY);
+      if (!mounted) return;
       setState(() {
         _cityList = list;
         _isLoadingMap = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoadingMap = false;
       });

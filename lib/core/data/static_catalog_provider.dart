@@ -35,45 +35,76 @@ class StaticCatalogBundle {
 final staticCatalogsProvider = FutureProvider<StaticCatalogBundle>((ref) async {
   final supabase = Supabase.instance.client;
 
-  final responses = await Future.wait([
-    supabase.rpc('get_active_cities'),
-    supabase.rpc('get_all_products_catalog'),
-    supabase.rpc('get_store_types_catalog'),
-    supabase.rpc('get_warehouse_types_catalog'),
-    supabase.rpc('get_factory_types_catalog'),
-    supabase.rpc('get_farm_types_catalog'),
-    supabase.rpc('get_field_types_catalog'),
-    supabase.rpc('get_mine_types_catalog'),
-    supabase.rpc('get_logistics_company_types_catalog'),
-    supabase.rpc('get_logistics_vehicle_types_catalog'),
-  ]);
-
   List<Map<String, dynamic>> toMapList(dynamic raw) {
-    return (raw as List<dynamic>)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+    if (raw == null) return [];
+    if (raw is List) {
+      return raw.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+    }
+    return [];
   }
 
-  final cityRows = toMapList(responses[0]);
-  final productRows = toMapList(responses[1]);
-  final storeTypeRows = toMapList(responses[2]);
+  try {
+    final response = await supabase.rpc('get_static_catalogs_bundle');
+    final bundleMap = response is Map<String, dynamic>
+        ? response
+        : Map<String, dynamic>.from(response as Map);
 
-  return StaticCatalogBundle(
-    cities: cityRows.map(CityModel.fromJson).toList(),
-    products: productRows.map(ProductModel.fromJson).toList(),
-    storeTypes: storeTypeRows.map(StoreTypeModel.fromJson).toList(),
-    warehouseTypes: toMapList(responses[3]),
-    factoryTypes: toMapList(responses[4]),
-    farmTypes: toMapList(responses[5]),
-    fieldTypes: toMapList(responses[6]),
-    mineTypes: toMapList(responses[7]),
-    logisticsCompanyTypes: toMapList(
-      responses[8],
-    ).map(LogisticsCompanyTypeModel.fromJson).toList(),
-    logisticsVehicleTypes: toMapList(
-      responses[9],
-    ).map(LogisticsVehicleTypeModel.fromJson).toList(),
-  );
+    final cityRows = toMapList(bundleMap['cities']);
+    final productRows = toMapList(bundleMap['products']);
+    final storeTypeRows = toMapList(bundleMap['store_types']);
+
+    return StaticCatalogBundle(
+      cities: cityRows.map(CityModel.fromJson).toList(),
+      products: productRows.map(ProductModel.fromJson).toList(),
+      storeTypes: storeTypeRows.map(StoreTypeModel.fromJson).toList(),
+      warehouseTypes: toMapList(bundleMap['warehouse_types']),
+      factoryTypes: toMapList(bundleMap['factory_types']),
+      farmTypes: toMapList(bundleMap['farm_types']),
+      fieldTypes: toMapList(bundleMap['field_types']),
+      mineTypes: toMapList(bundleMap['mine_types']),
+      logisticsCompanyTypes: toMapList(bundleMap['logistics_company_types'])
+          .map(LogisticsCompanyTypeModel.fromJson)
+          .toList(),
+      logisticsVehicleTypes: toMapList(bundleMap['logistics_vehicle_types'])
+          .map(LogisticsVehicleTypeModel.fromJson)
+          .toList(),
+    );
+  } catch (_) {
+    // Fallback to parallel multi-rpc if bundle fails
+    final responses = await Future.wait([
+      supabase.rpc('get_active_cities'),
+      supabase.rpc('get_all_products_catalog'),
+      supabase.rpc('get_store_types_catalog'),
+      supabase.rpc('get_warehouse_types_catalog'),
+      supabase.rpc('get_factory_types_catalog'),
+      supabase.rpc('get_farm_types_catalog'),
+      supabase.rpc('get_field_types_catalog'),
+      supabase.rpc('get_mine_types_catalog'),
+      supabase.rpc('get_logistics_company_types_catalog'),
+      supabase.rpc('get_logistics_vehicle_types_catalog'),
+    ]);
+
+    final cityRows = toMapList(responses[0]);
+    final productRows = toMapList(responses[1]);
+    final storeTypeRows = toMapList(responses[2]);
+
+    return StaticCatalogBundle(
+      cities: cityRows.map(CityModel.fromJson).toList(),
+      products: productRows.map(ProductModel.fromJson).toList(),
+      storeTypes: storeTypeRows.map(StoreTypeModel.fromJson).toList(),
+      warehouseTypes: toMapList(responses[3]),
+      factoryTypes: toMapList(responses[4]),
+      farmTypes: toMapList(responses[5]),
+      fieldTypes: toMapList(responses[6]),
+      mineTypes: toMapList(responses[7]),
+      logisticsCompanyTypes: toMapList(responses[8])
+          .map(LogisticsCompanyTypeModel.fromJson)
+          .toList(),
+      logisticsVehicleTypes: toMapList(responses[9])
+          .map(LogisticsVehicleTypeModel.fromJson)
+          .toList(),
+    );
+  }
 });
 
 class StaticCatalogController {

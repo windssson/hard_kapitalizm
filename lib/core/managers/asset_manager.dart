@@ -145,6 +145,89 @@ class AssetManager {
     _inFlightDownloads.clear();
   }
 
+  /// Ana ekran ve temel arayüz için anında gerekli kritik görseller
+  static const List<String> criticalAssets = [
+    'ae1.webp', 'ae2.webp', 'ae3.webp', 'ak1.webp', 'ak2.webp', 'ak3.webp',
+    'magazalar.webp', 'depolar.webp', 'fabrikalar.webp', 'tarlalar.webp',
+    'ciftlikler.webp', 'madenler.webp', 'nakliyeler.webp', 'arge.webp',
+    'ihale.webp', 'banka.webp', 'vergi.webp', 'marka.webp', 'market.webp',
+    'geneldepo.webp', 'altin.webp',
+  ];
+
+  /// Açılışta sadece anasayfa için elzem olan ~20 temel görseli hızlıca önbelleğe alır
+  Future<void> prefetchCriticalAssets({
+    void Function(int current, int total, String fileName)? onProgress,
+  }) async {
+    try {
+      final assetsPath = await _getAssetsDirPath();
+      final assetsDir = Directory(assetsPath);
+      if (!await assetsDir.exists()) {
+        await assetsDir.create(recursive: true);
+      }
+
+      final missing = <String>[];
+      for (final fileName in criticalAssets) {
+        final file = File('$assetsPath/$fileName');
+        if (await file.exists()) {
+          _fileCache[fileName] = file;
+        } else {
+          missing.add(fileName);
+        }
+      }
+
+      if (missing.isEmpty) {
+        onProgress?.call(criticalAssets.length, criticalAssets.length, '');
+        return;
+      }
+
+      int total = missing.length;
+      int current = 0;
+      await Future.wait(
+        missing.map((fileName) async {
+          final file = await getAsset(fileName, forceDownload: true);
+          _fileCache[fileName] = file;
+          current++;
+          onProgress?.call(current, total, fileName);
+        }),
+      );
+    } catch (_) {
+      // Kritik asset indirme hatası ana akışı engellemesin
+    }
+  }
+
+  /// Kalan tüm ürün ve katalog görsellerini oyuncu ana ekrandayken sessizce arka planda indirir
+  void prefetchRemainingAssetsInBackground() {
+    Future.microtask(() async {
+      try {
+        final assetsPath = await _getAssetsDirPath();
+        final remaining = _kAllAssets.where((f) => !criticalAssets.contains(f)).toList();
+        
+        final missing = <String>[];
+        for (final fileName in remaining) {
+          final file = File('$assetsPath/$fileName');
+          if (await file.exists()) {
+            _fileCache[fileName] = file;
+          } else {
+            missing.add(fileName);
+          }
+        }
+
+        const batchSize = 10;
+        for (int i = 0; i < missing.length; i += batchSize) {
+          final batch = missing.skip(i).take(batchSize).toList();
+          await Future.wait(
+            batch.map((fileName) async {
+              final file = await getAsset(fileName, forceDownload: true);
+              _fileCache[fileName] = file;
+            }),
+          );
+          // UI ve cihazı yormamak için batch aralarında kısa nefes
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+      } catch (_) {}
+    });
+  }
+
   Future<void> prefetchAssets(
     void Function(int current, int total, String fileName) onProgress,
   ) async {

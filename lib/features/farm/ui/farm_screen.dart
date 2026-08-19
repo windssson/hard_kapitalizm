@@ -281,145 +281,88 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg,
-        borderRadius: BorderRadius.circular(16.r),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.cardBg,
-            AppColors.cardBgLight.withValues(alpha: 0.6),
+      padding: EdgeInsets.all(12.w),
+      decoration: AppDecorations.premiumCard(null, 12.r),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: [
+            _buildStatItem(
+              AppIcons.agriculture,
+              AppColors.gold,
+              'Tarla',
+              farms.length.toString(),
+            ),
+            SizedBox(width: 14.w),
+            Container(width: 1, height: 30.h, color: AppColors.border),
+            SizedBox(width: 14.w),
+            _buildStatItem(
+              AppIcons.checkCircle,
+              AppColors.green,
+              'Aktif',
+              activeCount.toString(),
+            ),
+            SizedBox(width: 14.w),
+            Container(width: 1, height: 30.h, color: AppColors.border),
+            SizedBox(width: 14.w),
+            _buildStatItem(
+              AppIcons.layers,
+              AppColors.blue,
+              'Slot',
+              totalSlots.toString(),
+            ),
+            SizedBox(width: 14.w),
+            Container(width: 1, height: 30.h, color: AppColors.border),
+            SizedBox(width: 14.w),
+            _buildStatItem(
+              AppIcons.inventory2,
+              AppColors.gold,
+              'Urun',
+              _formatCompact(totalOutputStock),
+            ),
           ],
         ),
-        border: Border.all(
-          color: AppColors.borderGoldLight.withValues(alpha: 0.2),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppFx.panelWash(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatItem(
-                  AppIcons.agriculture,
-                  AppColors.gold,
-                  'Toplam Tarla',
-                  farms.length.toString(),
-                  AppColors.textPrimary,
-                ),
-              ),
-              Container(
-                width: 1.w,
-                height: 36.h,
-                color: AppColors.border.withValues(alpha: 0.5),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(left: 12.w),
-                  child: _buildStatItem(
-                    AppIcons.checkCircle,
-                    AppColors.green,
-                    'Aktif Tarla',
-                    activeCount.toString(),
-                    AppColors.green,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.h),
-            child: Divider(
-              color: AppColors.border.withValues(alpha: 0.3),
-              height: 1,
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatItem(
-                  AppIcons.layers,
-                  AppColors.blue,
-                  'Toplam Slot',
-                  totalSlots.toString(),
-                  AppColors.textPrimary,
-                ),
-              ),
-              Container(
-                width: 1.w,
-                height: 36.h,
-                color: AppColors.border.withValues(alpha: 0.5),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(left: 12.w),
-                  child: _buildStatItem(
-                    AppIcons.inventory2,
-                    AppColors.gold,
-                    'Toplam Urun',
-                    _formatCompact(totalOutputStock),
-                    AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
 
   Widget _buildStatItem(
     IconData icon,
-    Color iconColor,
+    Color color,
     String label,
     String value,
-    Color valueColor,
   ) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: EdgeInsets.all(8.w),
+          padding: EdgeInsets.all(6.w),
           decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.12),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: iconColor, size: AppIconSizes.compact),
+          child: Icon(icon, color: color, size: AppIconSizes.compact),
         ),
-        SizedBox(width: 10.w),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: AppTextStyles.caption.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.label,
-                ),
+        SizedBox(width: 8.w),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.caption,
               ),
-              SizedBox(height: 2.h),
-              Text(
-                value,
-                style: AppTextStyles.body.standardCopyWith(
-                  color: valueColor,
-                  fontSize: AppTypography.title,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            Text(
+              value,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.title,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
