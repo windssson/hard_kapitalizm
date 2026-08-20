@@ -644,14 +644,13 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
                         ] else if (!_isPlayerTender) ...[
                           detail.tender.awardType == 'first_claim'
                               ? _FirstClaimActionCard(
-                                  tender: detail.tender,
+                                  detail: detail,
                                   isSubmitting: _isSubmitting,
                                   onAccept: () => _acceptTender(detail),
                                 )
                               : _BidActionCard(
                                   controller: _bidAmountController,
-                                  tender: detail.tender,
-                                  playerBid: detail.playerBid,
+                                  detail: detail,
                                   isSubmitting: _isSubmitting,
                                   onSubmit: () => _submitBid(detail),
                                 ),
@@ -722,7 +721,7 @@ class _TenderHeroCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      '${tender.cityName} - ${tender.productName}',
+                      '${tender.cityName} • ${tender.productName}',
                       style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
                     ),
                     SizedBox(height: 10.h),
@@ -732,8 +731,8 @@ class _TenderHeroCard extends StatelessWidget {
                       children: [
                         _HeroPill(
                           text: tender.awardType == 'first_claim'
-                              ? 'Ilk Alan Kazanir'
-                              : 'En Dusuk Teklif',
+                              ? 'İlk Alan Kazanır'
+                              : 'En Düşük Teklif',
                           color: tender.awardType == 'first_claim'
                               ? AppColors.goldLight
                               : AppColors.green,
@@ -747,7 +746,7 @@ class _TenderHeroCard extends StatelessWidget {
                           color: AppColors.green,
                         ),
                         _HeroPill(
-                          text: '${tender.deliveryDurationMinutes} dk sure',
+                          text: '${tender.deliveryDurationMinutes} dk süre',
                           color: AppColors.blue,
                         ),
                       ],
@@ -772,7 +771,7 @@ class _TenderHeroCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _DetailMetric(
-                  label: isOpenTenderView ? 'Tavan Odul' : 'Odul',
+                  label: isOpenTenderView ? 'Tavan Ödül' : 'Ödül',
                   value: AppMoney.full(tender.rewardCash),
                   color: AppColors.green,
                 ),
@@ -802,20 +801,27 @@ class _TenderHeroCard extends StatelessWidget {
 class _BidActionCard extends StatelessWidget {
   const _BidActionCard({
     required this.controller,
-    required this.tender,
-    required this.playerBid,
+    required this.detail,
     required this.isSubmitting,
     required this.onSubmit,
   });
 
   final TextEditingController controller;
-  final TenderDetailTenderModel tender;
-  final PlayerTenderBidSummaryModel? playerBid;
+  final TenderDetailModel detail;
   final bool isSubmitting;
   final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
+    final tender = detail.tender;
+    final playerBid = detail.playerBid;
+    final totalStock = detail.warehouseOptions.fold<int>(
+      0,
+      (sum, item) => sum + item.availableQuantity,
+    );
+    final hasEnough = totalStock >= tender.requiredQuantity;
+    final diff = (tender.requiredQuantity - totalStock).abs();
+
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: AppDecorations.premiumCard(AppColors.green, 16.r),
@@ -832,8 +838,56 @@ class _BidActionCard extends StatelessWidget {
           ),
           SizedBox(height: 4.h),
           Text(
-            'En dusuk gecerli teklif kazanir. Teminat ilk teklifinde hemen kesilir, kaybedersen iade edilir.',
+            'En düşük geçerli teklif kazanır. Teminat ilk teklifinizde kasanızdan ayrılır, kazanamazsanız eksiksiz iade edilir.',
             style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
+          ),
+          SizedBox(height: 10.h),
+          // Depo Mevcut Stok Durumu Özeti
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: (hasEnough ? AppColors.green : AppColors.warning).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(
+                color: (hasEnough ? AppColors.green : AppColors.warning).withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  hasEnough ? AppIcons.checkCircleRounded : AppIcons.warningAmberRounded,
+                  size: AppIconSizes.compact,
+                  color: hasEnough ? AppColors.green : AppColors.warning,
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Depolarınızdaki Toplam Stok: $totalStock adet',
+                        style: AppTextStyles.label.standardCopyWith(
+                          color: AppColors.white,
+                          fontSize: AppTypography.bodySmall,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        hasEnough
+                            ? 'İhale teslimatı için yeterli stoğunuz var.'
+                            : 'İhale için $diff adet daha temin etmeniz gerekiyor.',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: hasEnough ? AppColors.green : AppColors.warning,
+                          fontSize: AppTypography.micro,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           SizedBox(height: 10.h),
           if (playerBid != null) ...[
@@ -842,14 +896,14 @@ class _BidActionCard extends StatelessWidget {
                 Expanded(
                   child: _DetailMetric(
                     label: 'Teklifin',
-                    value: AppMoney.full(playerBid!.bidAmount),
+                    value: AppMoney.full(playerBid.bidAmount),
                     color: AppColors.gold,
                   ),
                 ),
                 Expanded(
                   child: _DetailMetric(
-                    label: 'Baglanan Teminat',
-                    value: AppMoney.full(playerBid!.bondPaid),
+                    label: 'Bağlanan Teminat',
+                    value: AppMoney.full(playerBid.bondPaid),
                     color: AppColors.red,
                   ),
                 ),
@@ -862,10 +916,10 @@ class _BidActionCard extends StatelessWidget {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: AppTextStyles.input,
             decoration: InputDecoration(
-              labelText: 'Teklif Tutari',
+              labelText: 'Teklif Tutarı',
               hintText: tender.rewardCash.round().toString(),
               helperText:
-                  'Tavan odul: ${AppMoney.full(tender.rewardCash)}',
+                  'Tavan ödül: ${AppMoney.full(tender.rewardCash)}',
             ),
           ),
           SizedBox(height: 12.h),
@@ -880,7 +934,7 @@ class _BidActionCard extends StatelessWidget {
                       child: AppLoadingIndicator(strokeWidth: 2),
                     )
                   : Icon(AppIcons.gavelRounded),
-              label: Text(playerBid == null ? 'Teklif Ver' : 'Teklifi Guncelle'),
+              label: Text(playerBid == null ? 'Teklif Ver' : 'Teklifi Güncelle'),
             ),
           ),
         ],
@@ -891,17 +945,25 @@ class _BidActionCard extends StatelessWidget {
 
 class _FirstClaimActionCard extends StatelessWidget {
   const _FirstClaimActionCard({
-    required this.tender,
+    required this.detail,
     required this.isSubmitting,
     required this.onAccept,
   });
 
-  final TenderDetailTenderModel tender;
+  final TenderDetailModel detail;
   final bool isSubmitting;
   final VoidCallback onAccept;
 
   @override
   Widget build(BuildContext context) {
+    final tender = detail.tender;
+    final totalStock = detail.warehouseOptions.fold<int>(
+      0,
+      (sum, item) => sum + item.availableQuantity,
+    );
+    final hasEnough = totalStock >= tender.requiredQuantity;
+    final diff = (tender.requiredQuantity - totalStock).abs();
+
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: AppDecorations.premiumCard(AppColors.gold, 16.r),
@@ -909,7 +971,7 @@ class _FirstClaimActionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Anlik Alim Ihalesi',
+            'Anlık Alım İhalesi',
             style: AppTextStyles.title.standardCopyWith(
               color: AppColors.textPrimary,
               fontSize: AppTypography.bodyLarge,
@@ -918,15 +980,63 @@ class _FirstClaimActionCard extends StatelessWidget {
           ),
           SizedBox(height: 4.h),
           Text(
-            'Bu ihalede ilk kabul eden kazanir. Teminat kabul aninda kesilir ve ihale hemen sana atanir.',
+            'Bu ihalede ilk kabul eden kazanır. Teminat kabul anında kesilir ve ihale derhal şirketinize atanır.',
             style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
+          ),
+          SizedBox(height: 10.h),
+          // Depo Mevcut Stok Durumu Özeti
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: (hasEnough ? AppColors.green : AppColors.warning).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(
+                color: (hasEnough ? AppColors.green : AppColors.warning).withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  hasEnough ? AppIcons.checkCircleRounded : AppIcons.warningAmberRounded,
+                  size: AppIconSizes.compact,
+                  color: hasEnough ? AppColors.green : AppColors.warning,
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Depolarınızdaki Toplam Stok: $totalStock adet',
+                        style: AppTextStyles.label.standardCopyWith(
+                          color: AppColors.white,
+                          fontSize: AppTypography.bodySmall,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        hasEnough
+                            ? 'İhale teslimatı için yeterli stoğunuz var.'
+                            : 'İhale için $diff adet daha temin etmeniz gerekiyor.',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: hasEnough ? AppColors.green : AppColors.warning,
+                          fontSize: AppTypography.micro,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           SizedBox(height: 10.h),
           Row(
             children: [
               Expanded(
                 child: _DetailMetric(
-                  label: 'Odul',
+                  label: 'Ödül',
                   value: AppMoney.full(tender.rewardCash),
                   color: AppColors.green,
                 ),
@@ -952,7 +1062,7 @@ class _FirstClaimActionCard extends StatelessWidget {
                       child: AppLoadingIndicator(strokeWidth: 2),
                     )
                   : Icon(AppIcons.flashOnRounded),
-              label: const Text('Ihaleyi Hemen Al'),
+              label: const Text('İhaleyi Hemen Al'),
             ),
           ),
         ],
@@ -983,7 +1093,7 @@ class _WarehouseSelectionCard extends StatelessWidget {
             Icon(AppIcons.inventory2Outlined, color: AppColors.red, size: AppIconSizes.xLarge),
             SizedBox(height: 10.h),
             Text(
-              'Uygun stok bulunamadi',
+              'Uygun Stok Bulunamadı',
               style: AppTextStyles.title.standardCopyWith(
                 color: AppColors.textPrimary,
                 fontSize: AppTypography.bodyLarge,
@@ -992,7 +1102,7 @@ class _WarehouseSelectionCard extends StatelessWidget {
             ),
             SizedBox(height: 4.h),
             Text(
-              'Bu ihalenin urununu tasiyan bir depo bulunmuyor.',
+              'Bu ihalenin ürününü barındıran herhangi bir deponuz bulunmuyor.',
               textAlign: TextAlign.center,
               style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
             ),
@@ -1008,7 +1118,7 @@ class _WarehouseSelectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Kaynak Depo Sec',
+            'Kaynak Depo Seç',
             style: AppTextStyles.title.standardCopyWith(
               color: AppColors.textPrimary,
               fontSize: AppTypography.bodyLarge,
@@ -1056,7 +1166,7 @@ class _WarehouseSelectionCard extends StatelessWidget {
                               ),
                               SizedBox(height: 3.h),
                               Text(
-                                '${warehouse.cityName} - ${warehouse.availableQuantity} adet hazir',
+                                '${warehouse.cityName} • ${warehouse.availableQuantity} adet hazır',
                                 style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                               ),
                               SizedBox(height: 6.h),
@@ -1066,7 +1176,7 @@ class _WarehouseSelectionCard extends StatelessWidget {
                                 children: [
                                   _HeroPill(
                                     text: warehouse.sameCity
-                                        ? 'Ayni sehir'
+                                        ? 'Aynı Şehir'
                                         : '${warehouse.distanceKm.toStringAsFixed(0)} km',
                                     color: warehouse.sameCity
                                         ? AppColors.green
@@ -1082,15 +1192,15 @@ class _WarehouseSelectionCard extends StatelessWidget {
                                     ),
                                   if (!warehouse.sameCity)
                                     _HeroPill(
-                                      text: 'Sure araca bagli',
+                                      text: 'Süre araca bağlı',
                                       color: AppColors.goldLight,
                                     ),
                                   _HeroPill(
                                     text: warehouse.sameCity
                                         ? (canDeliver == false
-                                              ? 'Gec kalir'
-                                              : 'Yetisir')
-                                        : 'Arac secimi belirler',
+                                              ? 'Geç Kalır'
+                                              : 'Yetişir')
+                                        : 'Araç seçimi belirler',
                                     color: warehouse.sameCity
                                         ? (canDeliver == false
                                               ? AppColors.red
@@ -1238,7 +1348,6 @@ class _VehicleSelectionCard extends StatelessWidget {
           style: AppTextStyles.label.standardCopyWith(
             color: AppColors.red,
             fontSize: AppTypography.bodySmall,
-            fontWeight: FontWeight.w700,
           ),
         ),
         data: (result) {
@@ -1247,7 +1356,7 @@ class _VehicleSelectionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Arac Secimi',
+                  'Araç Seçimi',
                   style: AppTextStyles.title.standardCopyWith(
                     color: AppColors.white,
                     fontSize: AppTypography.bodyLarge,
@@ -1256,7 +1365,7 @@ class _VehicleSelectionCard extends StatelessWidget {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  result.unavailableReason ?? 'Bu rota icin uygun arac bulunamadi.',
+                  result.unavailableReason ?? 'Bu rota için uygun araç bulunamadı.',
                   style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.red,
                     fontSize: AppTypography.bodySmall,
@@ -1271,7 +1380,7 @@ class _VehicleSelectionCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Arac Secimi',
+                'Araç Seçimi',
                 style: AppTextStyles.title.standardCopyWith(
                   color: AppColors.textPrimary,
                   fontSize: AppTypography.bodyLarge,
@@ -1280,7 +1389,7 @@ class _VehicleSelectionCard extends StatelessWidget {
               ),
               SizedBox(height: 4.h),
               Text(
-                'Sehirler arasi teslimatta ETA ve maliyet secilen araca gore hesaplanir.',
+                'Şehirler arası teslimatta varış süresi ve lojistik maliyeti seçilen araca göre hesaplanır.',
                 style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
               ),
               SizedBox(height: 10.h),
@@ -1311,7 +1420,7 @@ class _VehicleSelectionCard extends StatelessWidget {
               if (selectedVehicleId != null) ...[
                 SizedBox(height: 4.h),
                 Text(
-                  'Nakliye bedeli teslimat baslayinca kasadan dusulur.',
+                  'Nakliye bedeli teslimat yola çıktığında kasanızdan kesilir.',
                   style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                 ),
               ],
@@ -1387,7 +1496,7 @@ class _ActiveDeliveriesCard extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${delivery.sourceWarehouseName} - ${delivery.quantity} adet',
+                          '${delivery.sourceWarehouseName} • ${delivery.quantity} adet',
                           style: AppTextStyles.label.standardCopyWith(
                             color: AppColors.white,
                             fontSize: AppTypography.bodySmall,
@@ -1396,14 +1505,14 @@ class _ActiveDeliveriesCard extends ConsumerWidget {
                         ),
                         SizedBox(height: 3.h),
                         Text(
-                          '${delivery.sourceCityName} - Varis ${_formatDateTime(delivery.finishAt)}',
+                          '${delivery.sourceCityName} ➔ Varış: ${_formatDateTime(delivery.finishAt)}',
                           style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                         ),
                         SizedBox(height: 3.h),
                         Text(
                           isDone
                               ? 'Teslim ediliyor...'
-                              : 'Kalan Sure: ${_formatLiveCountdown(remaining)}',
+                              : 'Kalan Süre: ${_formatLiveCountdown(remaining)}',
                           style: AppTextStyles.label.standardCopyWith(
                             color: AppColors.goldLight,
                             fontSize: AppTypography.label,
@@ -1426,7 +1535,7 @@ class _ActiveDeliveriesCard extends ConsumerWidget {
                     ),
                   ),
                   _HeroPill(
-                    text: delivery.sameCity ? 'Kisa Hat' : 'Uzun Hat',
+                    text: delivery.sameCity ? 'Kısa Hat' : 'Uzun Hat',
                     color: delivery.sameCity
                         ? AppColors.green
                         : AppColors.goldLight,
@@ -1461,19 +1570,19 @@ class _DetailMetric extends StatelessWidget {
         children: [
           Text(
             label,
-                style: AppTextStyles.caption.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.caption,
-                  fontWeight: FontWeight.w600,
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.caption,
+              fontWeight: FontWeight.w600,
             ),
           ),
           SizedBox(height: 3.h),
           Text(
             value,
-                style: AppTextStyles.label.standardCopyWith(
-                  color: color,
-                  fontSize: AppTypography.bodySmall,
-                  fontWeight: FontWeight.w800,
+            style: AppTextStyles.label.standardCopyWith(
+              color: color,
+              fontSize: AppTypography.bodySmall,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -1570,15 +1679,15 @@ class _ClosedTenderStateCard extends StatelessWidget {
     final isCancelled = playerTender.status == 'cancelled';
     final accent = isCompleted ? AppColors.green : AppColors.red;
     final title = isCompleted
-        ? 'Ihale Tamamlandi'
+        ? 'İhale Tamamlandı'
         : isCancelled
-        ? 'Ihale Iptal Edildi'
-        : 'Ihale Sonuclandi';
+        ? 'İhale İptal Edildi'
+        : 'İhale Sonuçlandı';
     final message = isCompleted
-        ? 'Bu ihale basariyla kapandi. Artik teslimat ekleyemezsin.'
+        ? 'Bu ihale başarıyla kapandı. Şirketiniz taahhüdü başarıyla tamamladı.'
         : isCancelled
-        ? 'Bu ihaleyi sen iptal ettin. Teminat ve yoldaki sevkiyatlar kaybedildi.'
-        : 'Bu ihale aktif degil. Sure asimi veya kapanis nedeniyle teslimat kabul edilmiyor.';
+        ? 'Bu ihaleyi siz iptal ettiniz. Teminat ve yoldaki sevkiyatlar kaybedildi.'
+        : 'Bu ihale aktif değil. Süre aşımı veya kapanış nedeniyle teslimat kabul edilmiyor.';
 
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -1658,7 +1767,7 @@ class _MissingPlayerTenderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ihale Kaydi Bulunamadi',
+                  'İhale Kaydı Bulunamadı',
                   style: AppTextStyles.title.standardCopyWith(
                     color: AppColors.white,
                     fontSize: AppTypography.bodyLarge,
@@ -1667,7 +1776,7 @@ class _MissingPlayerTenderCard extends StatelessWidget {
                 ),
                 SizedBox(height: 3.h),
                 Text(
-                  'Bu ihalenin oyuncu kaydi su anda yuklenemedi. Listeyi yenileyip tekrar deneyebilirsin.',
+                  'Bu ihalenin oyuncu kaydı şu anda yüklenemedi. Listeyi yenileyip tekrar deneyebilirsiniz.',
                   style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
                 ),
               ],
@@ -1721,7 +1830,7 @@ class _DeliveryProfitCalculator extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Sevkiyat Maliyet & Kar Analizi (Tahmini)',
+            'Sevkiyat Maliyet & Kâr Analizi (Tahmini)',
             style: AppTextStyles.title.standardCopyWith(
               color: AppColors.gold,
               fontSize: AppTypography.body,
@@ -1789,7 +1898,7 @@ class _DeliveryProfitCalculator extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Tahmini Net Kar / Zarar:',
+                'Tahmini Net Kâr / Zarar:',
                 style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
               ),
               Text(

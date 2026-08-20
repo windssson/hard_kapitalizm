@@ -159,52 +159,91 @@ class _TenderSummaryBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-      decoration: AppDecorations.premiumCard(null, 14.r),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildCompactMetric('Açık', '${center.openTenders.length}', AppColors.gold),
-          _buildDivider(),
-          _buildCompactMetric('Aktif', '${center.myActiveTenders.length}', AppColors.blue),
-          _buildDivider(),
-          _buildCompactMetric('Teklifim', '${center.myBidTenders.length}', AppColors.green),
-          _buildDivider(),
-          _buildCompactMetric('Yolda', '${center.deliveryCount}', AppColors.goldLight),
-        ],
+      width: double.infinity,
+      padding: EdgeInsets.all(12.w),
+      decoration: AppDecorations.premiumCard(null, 12.r),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children: [
+            _buildStatItem(
+              AppIcons.gavelRounded,
+              AppColors.gold,
+              'Açık İhale',
+              center.openTenders.length.toString(),
+            ),
+            SizedBox(width: 14.w),
+            Container(width: 1, height: 30.h, color: AppColors.border),
+            SizedBox(width: 14.w),
+            _buildStatItem(
+              AppIcons.checkCircle,
+              AppColors.green,
+              'Aktif / Kazanılan',
+              center.myActiveTenders.length.toString(),
+            ),
+            SizedBox(width: 14.w),
+            Container(width: 1, height: 30.h, color: AppColors.border),
+            SizedBox(width: 14.w),
+            _buildStatItem(
+              AppIcons.handshakeRounded,
+              AppColors.blue,
+              'Teklifim',
+              center.myBidTenders.length.toString(),
+            ),
+            SizedBox(width: 14.w),
+            Container(width: 1, height: 30.h, color: AppColors.border),
+            SizedBox(width: 14.w),
+            _buildStatItem(
+              AppIcons.localShippingRounded,
+              AppColors.goldLight,
+              'Yolda',
+              center.deliveryCount.toString(),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCompactMetric(String label, String value, Color color) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+  Widget _buildStatItem(
+    IconData icon,
+    Color color,
+    String label,
+    String value,
+  ) {
+    return Row(
       children: [
-        Text(
-          label,
-          style: AppTextStyles.caption.standardCopyWith(
-            color: AppColors.textMuted,
-            fontSize: AppTypography.micro,
-            fontWeight: FontWeight.bold,
+        Container(
+          padding: EdgeInsets.all(6.w),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
           ),
+          child: Icon(icon, color: color, size: AppIconSizes.compact),
         ),
-        SizedBox(height: 2.h),
-        Text(
-          value,
-          style: AppTextStyles.titleBold.standardCopyWith(
-            color: color,
-            fontSize: AppTypography.bodyLarge,
-          ),
+        SizedBox(width: 8.w),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.caption,
+              ),
+            ),
+            Text(
+              value,
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: AppTypography.title,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ],
-    );
-  }
-
-  Widget _buildDivider() {
-    return Container(
-      width: 1.w,
-      height: 20.h,
-      color: AppColors.border.withValues(alpha: 0.3),
     );
   }
 }
@@ -483,18 +522,41 @@ class _OpenTenderCard extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildRowItem('📦 Miktar', '${item.requiredQuantity} adet'),
                     _buildRowItem(
-                      isFirstClaim ? '💰 Ödül' : '💰 Tavan',
+                      'Miktar',
+                      '${item.requiredQuantity} adet',
+                      icon: AppIcons.inventory2,
+                      iconColor: AppColors.goldLight,
+                    ),
+                    _buildRowItem(
+                      isFirstClaim ? 'Ödül' : 'Tavan',
                       AppMoney.compact(item.rewardCash),
+                      icon: AppIcons.paymentsRounded,
+                      iconColor: AppColors.green,
                       valueColor: AppColors.green,
                     ),
                     if (!isFirstClaim && item.lowestBidAmount != null && item.lowestBidAmount! > 0)
-                      _buildRowItem('📉 En Düşük', AppMoney.compact(item.lowestBidAmount!), valueColor: AppColors.goldLight)
+                      _buildRowItem(
+                        'En Düşük',
+                        AppMoney.compact(item.lowestBidAmount!),
+                        icon: AppIcons.trendingDownRounded,
+                        iconColor: AppColors.goldLight,
+                        valueColor: AppColors.goldLight,
+                      )
                     else if (isFirstClaim)
-                      _buildRowItem('🛡️ Teminat', AppMoney.compact(item.bondAmount), valueColor: AppColors.red)
+                      _buildRowItem(
+                        'Teminat',
+                        AppMoney.compact(item.bondAmount),
+                        icon: AppIcons.securityRounded,
+                        iconColor: AppColors.red,
+                        valueColor: AppColors.red,
+                      )
                     else
-                      _buildRowItem('📉 En Düşük', '-'),
+                      _buildRowItem(
+                        'En Düşük',
+                        '-',
+                        icon: AppIcons.trendingDownRounded,
+                      ),
                   ],
                 ),
               ),
@@ -521,13 +583,41 @@ class _OpenTenderCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Text(
-                    '📍 ${item.cityName} ${!isFirstClaim ? "• 👥 ${item.bidCount} teklif" : ""}',
-                    style: AppTextStyles.label.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.label,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        AppIcons.locationOn,
+                        size: 12.sp,
+                        color: AppColors.gold,
+                      ),
+                      SizedBox(width: 3.w),
+                      Text(
+                        item.cityName,
+                        style: AppTextStyles.label.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (!isFirstClaim) ...[
+                        SizedBox(width: 8.w),
+                        Icon(
+                          AppIcons.groupRounded,
+                          size: 12.sp,
+                          color: AppColors.textMuted,
+                        ),
+                        SizedBox(width: 3.w),
+                        Text(
+                          '${item.bidCount} Teklif',
+                          style: AppTextStyles.label.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: AppTypography.label,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -538,17 +628,32 @@ class _OpenTenderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRowItem(String label, String value, {Color? valueColor}) {
+  Widget _buildRowItem(
+    String label,
+    String value, {
+    IconData? icon,
+    Color? iconColor,
+    Color? valueColor,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: AppTextStyles.caption.standardCopyWith(
-            color: AppColors.textMuted,
-            fontSize: AppTypography.micro,
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 10.sp, color: iconColor ?? AppColors.textMuted),
+              SizedBox(width: 3.w),
+            ],
+            Text(
+              label,
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.micro,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
         SizedBox(height: 2.h),
         Text(
@@ -661,21 +766,43 @@ class _ActiveTenderCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '📦 ${item.deliveredQuantity}/${item.requiredQuantity} adet (%${(progress * 100).round()})',
-                    style: AppTextStyles.label.standardCopyWith(
-                      color: AppColors.goldLight,
-                      fontSize: AppTypography.label,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        AppIcons.inventory2,
+                        size: 12.sp,
+                        color: AppColors.goldLight,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        '${item.deliveredQuantity}/${item.requiredQuantity} adet (%${(progress * 100).round()})',
+                        style: AppTextStyles.label.standardCopyWith(
+                          color: AppColors.goldLight,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '📍 ${item.cityName}',
-                    style: AppTextStyles.label.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.label,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        AppIcons.locationOn,
+                        size: 12.sp,
+                        color: AppColors.gold,
+                      ),
+                      SizedBox(width: 3.w),
+                      Text(
+                        item.cityName,
+                        style: AppTextStyles.label.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -784,13 +911,20 @@ class _TenderBidCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'TEKLİFİN',
-                          style: AppTextStyles.caption.standardCopyWith(
-                            color: AppColors.textMuted,
-                            fontSize: AppTypography.micro,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(AppIcons.paymentsRounded, size: 10.sp, color: AppColors.green),
+                            SizedBox(width: 3.w),
+                            Text(
+                              'TEKLİFİN',
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: AppColors.textMuted,
+                                fontSize: AppTypography.micro,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         SizedBox(height: 2.h),
                         Text(
@@ -806,13 +940,20 @@ class _TenderBidCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'EN DÜŞÜK',
-                          style: AppTextStyles.caption.standardCopyWith(
-                            color: AppColors.textMuted,
-                            fontSize: AppTypography.micro,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(AppIcons.trendingDownRounded, size: 10.sp, color: AppColors.goldLight),
+                            SizedBox(width: 3.w),
+                            Text(
+                              'EN DÜŞÜK',
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: AppColors.textMuted,
+                                fontSize: AppTypography.micro,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         SizedBox(height: 2.h),
                         Text(
@@ -830,13 +971,20 @@ class _TenderBidCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'TEMİNAT',
-                          style: AppTextStyles.caption.standardCopyWith(
-                            color: AppColors.textMuted,
-                            fontSize: AppTypography.micro,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(AppIcons.securityRounded, size: 10.sp, color: AppColors.red),
+                            SizedBox(width: 3.w),
+                            Text(
+                              'TEMİNAT',
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: AppColors.textMuted,
+                                fontSize: AppTypography.micro,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         SizedBox(height: 2.h),
                         Text(
@@ -874,13 +1022,39 @@ class _TenderBidCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Text(
-                    '📍 ${item.cityName} • 👥 ${item.bidCount} teklif',
-                    style: AppTextStyles.label.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.label,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        AppIcons.locationOn,
+                        size: 12.sp,
+                        color: AppColors.gold,
+                      ),
+                      SizedBox(width: 3.w),
+                      Text(
+                        item.cityName,
+                        style: AppTextStyles.label.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      Icon(
+                        AppIcons.groupRounded,
+                        size: 12.sp,
+                        color: AppColors.textMuted,
+                      ),
+                      SizedBox(width: 3.w),
+                      Text(
+                        '${item.bidCount} Teklif',
+                        style: AppTextStyles.label.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -991,13 +1165,24 @@ class _TenderHistoryCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '📦 ${item.deliveredQuantity}/${item.requiredQuantity} adet teslim',
-                    style: AppTextStyles.label.standardCopyWith(
-                      color: accent,
-                      fontSize: AppTypography.label,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        AppIcons.inventory2,
+                        size: 12.sp,
+                        color: accent,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        '${item.deliveredQuantity}/${item.requiredQuantity} adet teslim',
+                        style: AppTextStyles.label.standardCopyWith(
+                          color: accent,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     _formatDateTime(date),

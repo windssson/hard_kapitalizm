@@ -100,6 +100,8 @@ abstract final class AppIcons {
   static const IconData gavelRounded = Icons.gavel_rounded;
   static const IconData grass = Icons.grass;
   static const IconData gridView = Icons.grid_view;
+  static const IconData groupRounded = Icons.group_rounded;
+  static const IconData handshakeRounded = Icons.handshake_rounded;
   static const IconData handymanOutlined = Icons.handyman_outlined;
   static const IconData handymanRounded = Icons.handyman_rounded;
   static const IconData hardwareRounded = Icons.hardware_rounded;
@@ -248,6 +250,7 @@ abstract final class AppIcons {
   static const IconData trendingDownRounded = Icons.trending_down_rounded;
   static const IconData trendingUp = Icons.trending_up;
   static const IconData trendingUpRounded = Icons.trending_up_rounded;
+  static const IconData warningRounded = Icons.warning_rounded;
   static const IconData tuneRounded = Icons.tune_rounded;
   static const IconData upgradeRounded = Icons.upgrade_rounded;
   static const IconData verifiedUserOutlined = Icons.verified_user_outlined;
