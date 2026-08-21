@@ -32,6 +32,7 @@ import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
 import 'package:hard_kapitalizm/features/store/ui/widgets/store_detail_header.dart';
 import 'package:hard_kapitalizm/features/store/ui/widgets/store_quick_actions.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 
 class StoreDetailScreen extends ConsumerStatefulWidget {
@@ -65,8 +66,21 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshSalesIfWorthChecking(force: true);
       final tutorial = ref.read(tutorialProvider);
+      final storeData =
+          ref.read(storeDetailPageProvider(widget.storeId)).value?.store;
+
       if (tutorial.step == TutorialStep.clickEnterStore) {
-        ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickSelectProduct);
+        if (storeData != null && storeData.slots.isNotEmpty) {
+          ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickGoToMarket);
+        } else {
+          ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickCreateShelf);
+        }
+      } else if (tutorial.step == TutorialStep.returnToStore) {
+        _refreshStorePageAndSync(widget.storeId).then((_) {
+          if (mounted) {
+            ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickSelectProduct);
+          }
+        });
       }
     });
   }
@@ -118,6 +132,26 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   Widget build(BuildContext context) {
     final storeAsync = ref.watch(storeDetailPageProvider(widget.storeId));
 
+    ref.listen(storeDetailPageProvider(widget.storeId), (prev, next) {
+      final page = next.value;
+      if (page != null) {
+        _syncTutorialStepIfUnfinished(page);
+      }
+    });
+
+    // Pazardan dönüşte store verisini yenileyerek stale data sorununu önle
+    ref.listen(tutorialProvider, (prev, next) {
+      if (next.step == TutorialStep.returnToStore) {
+        _refreshStorePageAndSync(widget.storeId).then((_) {
+          if (mounted) {
+            ref
+                .read(tutorialProvider.notifier)
+                .setStep(TutorialStep.clickSelectProduct);
+          }
+        });
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
@@ -136,6 +170,87 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         ),
       ),
     );
+  }
+
+  void _syncTutorialStepIfUnfinished(StoreDetailPageModel page) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final tutorial = ref.read(tutorialProvider);
+      final currentStep = tutorial.step;
+      final store = page.store;
+      final storeWarehouse = page.storeWarehouse;
+
+      final firstSlot = store.slots.isNotEmpty ? store.slots.first : null;
+      final hasProduct = (firstSlot?.productId ?? '').isNotEmpty;
+      final hasPrice = (firstSlot?.price ?? 0) > 0;
+      final hasStock = (firstSlot?.quantity ?? 0) > 0;
+      final isStoreComplete =
+          store.slots.isNotEmpty && hasProduct && hasPrice && hasStock;
+
+      if (isStoreComplete || tutorial.hasSeenTutorial) {
+        return;
+      }
+
+      if (currentStep == TutorialStep.none ||
+          currentStep == TutorialStep.clickEnterStore ||
+          currentStep == TutorialStep.returnToStore ||
+          currentStep == TutorialStep.clickCreateShelf ||
+          currentStep == TutorialStep.clickGoToMarket ||
+          currentStep == TutorialStep.clickSelectProduct ||
+          currentStep == TutorialStep.clickSetPrice ||
+          currentStep == TutorialStep.clickAddStock) {
+        if (store.slots.isEmpty) {
+          if (currentStep != TutorialStep.clickCreateShelf) {
+            ref
+                .read(tutorialProvider.notifier)
+                .setStep(TutorialStep.clickCreateShelf);
+          }
+        } else {
+          final warehouseHasStock = storeWarehouse != null &&
+              storeWarehouse.slots.any((s) => s.quantity > 0);
+
+          if (!hasProduct) {
+            if (!warehouseHasStock) {
+              if (currentStep != TutorialStep.clickGoToMarket &&
+                  currentStep != TutorialStep.selectMarketWarehouse &&
+                  currentStep != TutorialStep.selectMarketProduct &&
+                  currentStep != TutorialStep.clickMarketBuyListing &&
+                  currentStep != TutorialStep.confirmMarketCartBuy &&
+                  currentStep != TutorialStep.confirmMarketCheckout) {
+                ref
+                    .read(tutorialProvider.notifier)
+                    .setStep(TutorialStep.clickGoToMarket);
+              }
+            } else {
+              if (currentStep != TutorialStep.clickSelectProduct) {
+                ref
+                    .read(tutorialProvider.notifier)
+                    .setStep(TutorialStep.clickSelectProduct);
+              }
+            }
+          } else if (!hasPrice) {
+            if (currentStep != TutorialStep.clickSetPrice) {
+              ref
+                  .read(tutorialProvider.notifier)
+                  .setStep(TutorialStep.clickSetPrice);
+            }
+          } else if (!hasStock) {
+            if (currentStep != TutorialStep.clickAddStock) {
+              ref
+                  .read(tutorialProvider.notifier)
+                  .setStep(TutorialStep.clickAddStock);
+            }
+          } else {
+            if (currentStep != TutorialStep.finished &&
+                currentStep != TutorialStep.none) {
+              ref
+                  .read(tutorialProvider.notifier)
+                  .setStep(TutorialStep.finished);
+            }
+          }
+        }
+      }
+    });
   }
 
   void _scheduleSalesSummaryDialog(StoreDetailPageModel page) {
@@ -903,6 +1018,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   ),
                   SizedBox(height: 16.h),
                   StoreQuickActions(
+                    openSlotKey: (ref.watch(tutorialProvider).step ==
+                            TutorialStep.clickCreateShelf)
+                        ? TutorialKeys.storeQuickActionOpenSlotKey
+                        : null,
                     canOpenNewSlot: store.currentSlotCount < store.maxSlotCount,
                     onUpgradeTap: () => _showStoreUpgradeSheet(
                       context,
@@ -1080,18 +1199,22 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
     if (context.mounted) {
       if (result['success'] == true) {
+        final tutorial = ref.read(tutorialProvider);
+        if (tutorial.step == TutorialStep.clickCreateShelf) {
+          ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickGoToMarket);
+        }
         await _refreshStorePageAndSync(store.id, performanceDirty: true);
         if (!context.mounted) return;
-        _showSuccess(context, 'Yeni slot basariyla acildi!');
+        _showSuccess(context, 'Yeni raf başarıyla oluşturuldu!');
       } else {
         if (!context.mounted) return;
         _showError(
           context,
           _buildGuidedError(
-            'Yeni raf acilamadi.',
+            'Yeni raf oluşturulamadı.',
             detail: result['message']?.toString(),
             suggestion:
-                'Bakiyeni, magaza seviyeni ve bos raf limitini kontrol edip tekrar dene.',
+                'Bakiyeni, mağaza seviyeni ve boş raf limitini kontrol edip tekrar dene.',
           ),
         );
       }
@@ -1781,6 +1904,68 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
 
   Widget _buildSlotList(BuildContext context, WidgetRef ref, StoreModel store) {
+    if (store.slots.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: AppColors.gold.withValues(alpha: 0.35),
+            width: 1.2.w,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              AppIcons.addBox,
+              color: AppColors.gold,
+              size: 38.sp,
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'Henüz Raf Oluşturulmadı',
+              style: AppTextStyles.h2.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Mağazanızda ürün sergilemek ve satış yapabilmek için hemen ilk rafınızı oluşturun.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textSecondary,
+                fontSize: 13.sp,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            ElevatedButton.icon(
+              key: (ref.watch(tutorialProvider).step ==
+                      TutorialStep.clickCreateShelf)
+                  ? TutorialKeys.storeEmptyShelfButtonKey
+                  : null,
+              onPressed: store.currentSlotCount < store.maxSlotCount
+                  ? () => _handleOpenSlot(context, ref, store)
+                  : null,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('RAF OLUŞTUR'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                foregroundColor: AppColors.background,
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -1872,7 +2057,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Boş Slot',
+                          'Boş Raf',
                           style: AppTextStyles.h2.standardCopyWith(
                             color: AppColors.textSecondary,
                             fontSize: AppTypography.titleLarge,
@@ -1882,44 +2067,74 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       ],
                     ),
                   ),
-                  InkWell(
-                    key: ref.watch(tutorialProvider).step == TutorialStep.clickSelectProduct
-                        ? TutorialKeys.storeSlotSelectProductKey
-                        : null,
-                    onTap: canEditProduct
-                        ? () => _showProductSelectionDialog(
-                            context,
-                            ref,
-                            store,
-                            slot,
-                          )
-                        : () => _showStoreSlotLockedMessage(
-                            context,
-                            'Yolda ürün varken slot ürünü değiştirilemez.',
-                          ),
-                    borderRadius: BorderRadius.circular(8.r),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 8.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8.r),
-                        border: Border.all(
-                          color: AppColors.gold.withValues(alpha: 0.3),
+                  if (ref.watch(tutorialProvider).step ==
+                          TutorialStep.clickGoToMarket &&
+                      index == 1) ...[
+                    ElevatedButton.icon(
+                      key: TutorialKeys.storeGoToMarketButtonKey,
+                      onPressed: () {
+                        ref
+                            .read(tutorialProvider.notifier)
+                            .setStep(TutorialStep.selectMarketWarehouse);
+                        ref.invalidate(warehouseListProvider);
+                        context.push('/market');
+                      },
+                      icon: Icon(AppIcons.storefront, size: 16.sp),
+                      label: const Text('PAZARA GİT'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: AppColors.background,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 8.h,
                         ),
-                      ),
-                      child: Text(
-                        'Ürün Seç',
-                        style: AppTextStyles.button.standardCopyWith(
-                          color: AppColors.gold,
-                          fontSize: AppTypography.body,
-                          fontWeight: FontWeight.bold,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.r),
                         ),
                       ),
                     ),
-                  ),
+                  ] else ...[
+                    InkWell(
+                      key: (ref.watch(tutorialProvider).step ==
+                                  TutorialStep.clickSelectProduct &&
+                              index == 1)
+                          ? TutorialKeys.storeSlotSelectProductKey
+                          : null,
+                      onTap: canEditProduct
+                          ? () => _showProductSelectionDialog(
+                              context,
+                              ref,
+                              store,
+                              slot,
+                            )
+                          : () => _showStoreSlotLockedMessage(
+                              context,
+                              'Yolda ürün varken raf ürünü değiştirilemez.',
+                            ),
+                      borderRadius: BorderRadius.circular(8.r),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12.w,
+                          vertical: 8.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8.r),
+                          border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          'Ürün Seç',
+                          style: AppTextStyles.button.standardCopyWith(
+                            color: AppColors.gold,
+                            fontSize: AppTypography.body,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               )
             : Opacity(
@@ -1977,7 +2192,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               GestureDetector(
-                                key: ref.watch(tutorialProvider).step == TutorialStep.clickSetPrice
+                                key: (ref.watch(tutorialProvider).step ==
+                                            TutorialStep.clickSetPrice &&
+                                        index == 1)
                                     ? TutorialKeys.storeSlotPriceKey
                                     : null,
                                 onTap: () => _showPriceEditDialog(
@@ -2185,7 +2402,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         ],
 
                         PopupMenuButton<String>(
-                          key: ref.watch(tutorialProvider).step == TutorialStep.clickAddStock
+                          key: (ref.watch(tutorialProvider).step ==
+                                      TutorialStep.clickAddStock &&
+                                  index == 1)
                               ? TutorialKeys.storeSlotOrderStockKey
                               : null,
                           padding: EdgeInsets.zero,
@@ -3120,6 +3339,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
           return SafeArea(
             child: Container(
+              key: (ref.watch(tutorialProvider).step == TutorialStep.clickSetPrice)
+                  ? TutorialKeys.priceDialogConfirmKey
+                  : null,
               constraints: BoxConstraints(maxHeight: screenHeight * 0.88),
               padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 14.h),
               decoration: BoxDecoration(
@@ -3281,7 +3503,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         SizedBox(width: 10.w),
                         Expanded(
                           child: ElevatedButton(
-                            key: TutorialKeys.priceDialogConfirmKey,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.gold,
                             ),
@@ -3658,6 +3879,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           return Material(
             color: AppColors.transparent,
             child: Container(
+              key: ref.watch(tutorialProvider).step ==
+                      TutorialStep.clickAddStock
+                  ? TutorialKeys.stockRefillConfirmKey
+                  : null,
               padding: EdgeInsets.fromLTRB(
                 16.w,
                 16.h,
@@ -3779,6 +4004,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                               'Gecersiz miktar. 1 ile mevcut stok arasinda bir deger gir.',
                             );
                             return;
+                          }
+                          if (ref.read(tutorialProvider).step ==
+                              TutorialStep.clickAddStock) {
+                            ref
+                                .read(tutorialProvider.notifier)
+                                .setStep(TutorialStep.finished);
                           }
                           Navigator.pop(dialogContext);
                           _startStoreWarehouseTransfer(

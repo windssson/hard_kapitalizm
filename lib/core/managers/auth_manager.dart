@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:hard_kapitalizm/core/constants/supabase_constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -163,11 +165,99 @@ class AuthManager {
     );
   }
 
-  Future<void> signInWithGoogle() async {
-    await _supabase.auth.signInWithOAuth(
-      OAuthProvider.google,
+  /// Native Google Sign-In (Tarayıcı açmadan doğrudan Google Play Servisleri / Native arayüzü ile)
+  Future<AuthResponse?> signInWithGoogle() async {
+    final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
+
+    await GoogleSignIn.instance.initialize(
+      serverClientId: webClientId,
+    );
+
+    try {
+      // Kullanıcıya yerel Google hesap seçim penceresini göster
+      final googleUser = await GoogleSignIn.instance.authenticate();
+
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        throw Exception(
+          'Google ID Token alınamadı. Lütfen Google Play Servislerinizi ve internet bağlantınızı kontrol edin.',
+        );
+      }
+
+      final response = await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+      );
+
+      if (response.user != null) {
+        await _ensurePlayerRecordExists(response.user!.id);
+
+        // Google profil bilgilerini oyuncu kaydına aktar
+        try {
+          await _syncGoogleIdentityIntoPlayerRecord({
+            'full_name': googleUser.displayName,
+            'email': googleUser.email,
+            'avatar_url': googleUser.photoUrl,
+          });
+        } catch (_) {}
+      }
+
+      return response;
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('canceled') ||
+          msg.contains('cancelled') ||
+          msg.contains('code: 16') ||
+          msg.contains('sign_in_canceled')) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  /// E-posta ve şifre ile giriş yapar
+  Future<AuthResponse> signInWithEmail(String email, String password) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final response = await _supabase.auth.signInWithPassword(
+      email: cleanEmail,
+      password: password,
+    );
+    if (response.user != null) {
+      await _ensurePlayerRecordExists(response.user!.id);
+    }
+    return response;
+  }
+
+  /// E-posta ve şifre ile yeni hesap oluşturur
+  Future<AuthResponse> signUpWithEmail(String email, String password) async {
+    final cleanEmail = email.trim().toLowerCase();
+    final response = await _supabase.auth.signUp(
+      email: cleanEmail,
+      password: password,
+    );
+    if (response.user != null) {
+      await _ensurePlayerRecordExists(response.user!.id);
+    }
+    return response;
+  }
+
+  /// Şifre sıfırlama e-postası gönderir
+  Future<void> sendPasswordResetEmail(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    await _supabase.auth.resetPasswordForEmail(
+      cleanEmail,
       redirectTo: kIsWeb ? null : SupabaseConstants.authCallbackUrl,
     );
+  }
+
+  /// Oturumu kapatır
+  Future<void> signOut() async {
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+    await _supabase.auth.signOut();
   }
 
   Future<void> syncLinkedGoogleProfileMetadata() async {

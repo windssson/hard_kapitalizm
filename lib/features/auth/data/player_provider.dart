@@ -88,7 +88,45 @@ class PlayerNotifier extends AsyncNotifier<PlayerModel?> {
     state = AsyncData(current.copyWith(companyName: companyName));
   }
 
+  void patchHeadquartersCity({
+    required String cityId,
+    required String cityName,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        headquartersCityId: cityId,
+        headquartersCityName: cityName,
+      ),
+    );
+  }
+
   // ─── Aksiyonlar ───────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> setHeadquartersCity(String cityId, {String? cityName}) async {
+    final supabase = Supabase.instance.client;
+    try {
+      final response = await supabase.rpc(
+        'set_player_headquarters_city',
+        params: {'p_city_id': cityId},
+      );
+      if (response != null && response is Map) {
+        final map = Map<String, dynamic>.from(response);
+        if (map['success'] == true) {
+          final resolvedName = map['headquarters_city_name']?.toString() ?? cityName ?? '';
+          patchHeadquartersCity(
+            cityId: cityId,
+            cityName: resolvedName,
+          );
+        }
+        return map;
+      }
+      return {'success': false, 'message': 'Bilinmeyen yanıt.'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 
   Future<void> setPlayerAvatar(String avatarId) async {
     final supabase = Supabase.instance.client;
@@ -132,7 +170,6 @@ class PlayerNotifier extends AsyncNotifier<PlayerModel?> {
         return;
       }
     }
-    // Fallback: patch company name directly
     patchCompanyName(newName);
   }
 

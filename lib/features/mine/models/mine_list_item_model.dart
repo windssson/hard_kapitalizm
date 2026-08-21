@@ -27,4 +27,13 @@ class MineListItemModel {
       selectedProduct != null &&
       selectedProduct!.id.isNotEmpty &&
       selectedProduct!.urunAdi.isNotEmpty;
+
+  String? get warningReason {
+    if (!mine.isActive) return 'Devre Dışı';
+    if (!hasSelectedProduct) return 'Cevher Seçilmedi!';
+    if (outputStockRatio >= 1.0) return 'Depo Dolu!';
+    return null;
+  }
+
+  bool get hasWarning => warningReason != null;
 }

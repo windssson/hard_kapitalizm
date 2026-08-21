@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
@@ -11,9 +10,7 @@ import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/app_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
-import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/home/models/home_dashboard_model.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
@@ -26,9 +23,11 @@ import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:hard_kapitalizm/features/bank/data/bank_provider.dart';
+import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
+import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 
 class _HomeModuleCardData {
   final String title;
@@ -56,171 +55,6 @@ class _HomeModuleCardData {
   });
 }
 
-class _GoogleLinkSuccessDialog extends StatelessWidget {
-  const _GoogleLinkSuccessDialog({
-    required this.authIdentity,
-    required this.player,
-    required this.celebration,
-  });
-
-  final AuthIdentityState authIdentity;
-  final PlayerModel? player;
-  final GoogleLinkCelebrationData celebration;
-
-  @override
-  Widget build(BuildContext context) {
-    final avatarUrl = authIdentity.avatarUrl ?? celebration.avatarUrl;
-    final displayName =
-        authIdentity.displayName ??
-        celebration.displayName ??
-        player?.playerName ??
-        'Oyuncu';
-    final email =
-        authIdentity.googleEmail ?? authIdentity.authEmail ?? celebration.email;
-    final inGameName =
-        player?.playerName ?? celebration.playerName ?? displayName;
-
-    return Dialog(
-      backgroundColor: AppColors.transparent,
-      insetPadding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
-      child: Container(
-        padding: EdgeInsets.all(18.w),
-        decoration: AppDecorations.panelGlass(24.r),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 42.w,
-                  height: 42.w,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.green.withValues(alpha: 0.16),
-                    border: Border.all(
-                      color: AppColors.green.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Icon(
-                    AppIcons.verifiedUserRounded,
-                    color: AppColors.green,
-                    size: AppIconSizes.mediumLarge,
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Text(
-                    'Hesabin Guvenceye Alindi',
-                    style: AppTextStyles.h1.standardCopyWith(
-                      fontSize: AppTypography.displaySmall,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 10.h),
-            Text(
-              'Google baglantin tamamlandi. Artik ilerlemen bu hesapla daha guvende.',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.body,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: 64.w,
-                  height: 64.w,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.35),
-                      width: 2.w,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: avatarUrl != null && avatarUrl.trim().isNotEmpty
-                        ? Image.network(
-                            avatarUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => CachedAssetImage(
-                              fileName: player?.avatarId ?? 'ae1.webp',
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : CachedAssetImage(
-                            fileName: player?.avatarId ?? 'ae1.webp',
-                            fit: BoxFit.cover,
-                          ),
-                  ),
-                ),
-                SizedBox(width: 14.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildGoogleInfoRow('Google Adi', displayName),
-                      if (email != null && email.trim().isNotEmpty)
-                        _buildGoogleInfoRow('Google E-posta', email),
-                      _buildGoogleInfoRow('Oyuncu Adi', inGameName),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 18.h),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gold,
-                  foregroundColor: AppColors.textOnAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                ),
-                child: const Text('Harika'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGoogleInfoRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 6.h),
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodySmall,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            TextSpan(
-              text: value,
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.bodySmall,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -231,12 +65,220 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with RouteRefreshMixin<HomeScreen> {
   final int _selectedIndex = 0;
-  bool _didCheckGoogleCelebration = false;
+  bool _isPromptingCity = false;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(_maybeShowGoogleLinkCelebration);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndPromptHeadquartersCity();
+    });
+  }
+
+  Future<void> _checkAndPromptHeadquartersCity() async {
+    if (_isPromptingCity || !mounted) return;
+    final player = ref.read(playerProvider).value;
+    if (player == null) return;
+
+    if (player.headquartersCityId == null ||
+        player.headquartersCityId!.isEmpty) {
+      _isPromptingCity = true;
+      try {
+        final cities = await ref.read(citiesProvider.future);
+        if (!mounted || cities.isEmpty) return;
+
+        await _showCitySelectionModal(cities);
+      } finally {
+        _isPromptingCity = false;
+      }
+    }
+  }
+
+  Future<void> _showCitySelectionModal(List<CityModel> cities) async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBg,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.3)),
+      ),
+      builder: (ctx) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final filteredCities = cities.where((c) {
+              final q = searchQuery.trim().toLowerCase();
+              if (q.isEmpty) return true;
+              return c.name.toLowerCase().contains(q);
+            }).toList();
+
+            return PopScope(
+              canPop: false,
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.75,
+                padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.textMuted.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                    SizedBox(height: 14.h),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(8.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.location_city_rounded,
+                            color: AppColors.gold,
+                            size: 22.sp,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Holding Merkez Şehrinizi Seçin',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Ticaret imparatorluğunuzun ana merkez üssü (81 İl)',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 14.h),
+                    TextField(
+                      onChanged: (val) {
+                        setModalState(() {
+                          searchQuery = val;
+                        });
+                      },
+                      style: TextStyle(color: AppColors.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Şehir ara (81 İl)...',
+                        hintStyle: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13.sp,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: AppColors.gold,
+                          size: 20.sp,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.cardBgLight,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 14.w,
+                          vertical: 12.h,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(
+                            color: AppColors.border.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(
+                            color: AppColors.gold,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: filteredCities.length,
+                        separatorBuilder: (_, _) => Divider(
+                          color: AppColors.border.withValues(alpha: 0.3),
+                          height: 1,
+                        ),
+                        itemBuilder: (context, index) {
+                          final city = filteredCities[index];
+
+                          return ListTile(
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 2.h,
+                            ),
+                            leading: CircleAvatar(
+                              backgroundColor: AppColors.cardBgLight,
+                              radius: 18.r,
+                              child: Icon(
+                                Icons.apartment_rounded,
+                                color: AppColors.gold,
+                                size: 18.sp,
+                              ),
+                            ),
+                            title: Text(
+                              city.name,
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14.sp,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Nüfus: ${AppMoney.full(city.population, withSymbol: false)}',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11.sp,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: AppColors.gold,
+                              size: 16.sp,
+                            ),
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              await ref
+                                  .read(playerProvider.notifier)
+                                  .setHeadquartersCity(
+                                    city.id,
+                                    cityName: city.name,
+                                  );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -246,38 +288,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     ref.invalidate(taxDebtProvider);
   }
 
-  Future<void> _maybeShowGoogleLinkCelebration() async {
-    if (_didCheckGoogleCelebration) return;
-    _didCheckGoogleCelebration = true;
-
-    final celebration = await ref
-        .read(authManagerProvider)
-        .consumeGoogleLinkCelebration();
-    if (celebration == null || !mounted) return;
-
-    final authIdentity = await ref.read(authIdentityProvider.future);
-    final player = await ref.read(playerProvider.future);
-    if (!mounted) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (_) => _GoogleLinkSuccessDialog(
-          authIdentity: authIdentity,
-          player: player,
-          celebration: celebration,
-        ),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final authIdentity = ref.watch(authIdentityProvider).value;
-    final shouldShowAccountSafetyBanner =
-        (authIdentity?.isGoogleLinked ?? false) == false;
+    ref.listen(playerProvider, (_, next) {
+      if (next.value != null &&
+          (next.value!.headquartersCityId == null ||
+              next.value!.headquartersCityId!.isEmpty)) {
+        _checkAndPromptHeadquartersCity();
+      }
+    });
 
     final taxStatus = ref.watch(playerTaxProvider).value;
     final isTaxBlocked = taxStatus?.isBlocked ?? false;
@@ -288,8 +307,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         child: Column(
           children: [
             const AppTopBar(),
-            if (shouldShowAccountSafetyBanner)
-              _buildAccountSafetyBanner(context),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
@@ -582,71 +599,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Widget _buildAccountSafetyBanner(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(6.w, 0, 6.w, 0.h),
-      child: Material(
-        color: AppColors.transparent,
-        child: InkWell(
-          onTap: () => context.push('/profile'),
-          borderRadius: BorderRadius.circular(12.r),
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              color: AppColors.red.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: AppColors.red.withValues(alpha: 0.45)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  AppIcons.securityRounded,
-                  color: AppColors.red,
-                  size: AppIconSizes.small,
-                ),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: Text(
-                    'Hesabinizi guvenceye almak icin Google hesabina baglanin.',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.textPrimary,
-                      fontSize: AppTypography.bodySmall,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 10.w,
-                    vertical: 5.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.red.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(999.r),
-                    border: Border.all(
-                      color: AppColors.red.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Text(
-                    'Bagla',
-                    style: AppTextStyles.label.standardCopyWith(
-                      color: AppColors.red,
-                      fontSize: AppTypography.label,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildCompanySummaryCard() {
     return Consumer(
       builder: (context, ref, child) {
@@ -726,13 +678,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             dailyProfit < 0
                                 ? AppColors.red
                                 : dailyProfit > 0
-                                    ? AppColors.green
-                                    : AppColors.textPrimary,
+                                ? AppColors.green
+                                : AppColors.textPrimary,
                             iconColor: dailyProfit < 0
                                 ? AppColors.red
                                 : dailyProfit > 0
-                                    ? AppColors.green
-                                    : AppColors.gold,
+                                ? AppColors.green
+                                : AppColors.gold,
                           ),
                           SizedBox(height: 6.h),
                           _buildSummaryStatLine(
@@ -795,9 +747,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           decoration: BoxDecoration(
             color: effectiveIconColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10.r),
-            border: Border.all(color: effectiveIconColor.withValues(alpha: 0.28)),
+            border: Border.all(
+              color: effectiveIconColor.withValues(alpha: 0.28),
+            ),
           ),
-          child: Icon(icon, color: effectiveIconColor, size: AppIconSizes.xSmall),
+          child: Icon(
+            icon,
+            color: effectiveIconColor,
+            size: AppIconSizes.xSmall,
+          ),
         ),
         SizedBox(width: 5.w),
         Expanded(
@@ -1085,7 +1043,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('warehouses') ||
             (modules?.warehouses.warningCount ?? 0) > 0,
-        requiredLevel: 2,
+        requiredLevel: 1,
       ),
       _HomeModuleCardData(
         title: 'Tarlalar',
@@ -1303,10 +1261,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         final tutorial = ref.watch(tutorialProvider);
         if (dashboard != null &&
             dashboard.modules.stores.count == 0 &&
-            !tutorial.hasSeenTutorial &&
-            tutorial.step == TutorialStep.none) {
+            tutorial.isLoaded &&
+            tutorial.step == TutorialStep.none &&
+            !tutorial.hasSeenTutorial) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(tutorialProvider.notifier).startTutorial();
+            ref.read(tutorialProvider.notifier).startTutorial(force: true);
           });
         }
         final alertedModules = _collectAlertedModules(dashboard);
@@ -1476,14 +1435,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   color: AppColors.gold,
                                   fontSize: AppTypography.micro,
                                   fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                'açılır',
-                                style: AppTextStyles.caption.standardCopyWith(
-                                  color: AppColors.textMuted,
-                                  fontSize: AppTypography.micro,
-                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ] else ...[
@@ -2653,6 +2604,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   String? _targetRoute(PlayerNotificationModel notification) {
+    if (notification.category == 'market_sale') {
+      return '/market';
+    }
+
     if (notification.category == 'transfer_completed') {
       return '/transfer-map';
     }
@@ -2687,6 +2642,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         return entityId?.isNotEmpty == true ? '/fields/$entityId' : '/fields';
       case 'mine':
         return entityId?.isNotEmpty == true ? '/mines/$entityId' : '/mines';
+      case 'market':
+        return '/market';
       default:
         return null;
     }
@@ -2694,6 +2651,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   IconData _notificationIcon(PlayerNotificationModel item) {
     switch (item.category) {
+      case 'market_sale':
+        return AppIcons.paymentsRounded;
       case 'construction_completed':
         return AppIcons.constructionRounded;
       case 'upgrade_completed':
@@ -2732,6 +2691,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (item.kind == 'warning') return 'Uyari';
 
     switch (item.category) {
+      case 'market_sale':
+        return 'Satış';
       case 'construction_completed':
         return 'Insaat';
       case 'upgrade_completed':

@@ -58,6 +58,8 @@ import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/navigation/app_route_observer.dart';
 import 'package:hard_kapitalizm/core/widgets/timed_task_runtime.dart';
 
+import 'package:hard_kapitalizm/features/auth/ui/auth_screen.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -86,6 +88,7 @@ final _router = GoRouter(
   observers: [appRouteObserver],
   routes: [
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+    GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     GoRoute(
       path: '/missions',

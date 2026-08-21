@@ -6,6 +6,8 @@ class PlayerModel {
   final String companyName;
   final String avatarId;
   final String? googleAvatarUrl;
+  final String? headquartersCityId;
+  final String? headquartersCityName;
   final int level;
   final int experience;
   final int currentLevelStartExperience;
@@ -28,6 +30,8 @@ class PlayerModel {
     required this.companyName,
     required this.avatarId,
     required this.googleAvatarUrl,
+    this.headquartersCityId,
+    this.headquartersCityName,
     required this.level,
     required this.experience,
     required this.currentLevelStartExperience,
@@ -54,6 +58,8 @@ class PlayerModel {
       companyName: (json['company_name'] ?? 'Yeni Holding').toString(),
       avatarId: (json['avatar_id'] ?? 'ae1.webp').toString(),
       googleAvatarUrl: json['google_avatar_url']?.toString(),
+      headquartersCityId: json['headquarters_city_id']?.toString(),
+      headquartersCityName: json['headquarters_city_name']?.toString(),
       level: (json['level'] as num?)?.toInt() ?? 1,
       experience: (json['experience'] as num?)?.toInt() ?? 0,
       currentLevelStartExperience:
@@ -97,6 +103,8 @@ class PlayerModel {
     String? companyName,
     String? avatarId,
     String? googleAvatarUrl,
+    String? headquartersCityId,
+    String? headquartersCityName,
     int? level,
     int? experience,
     int? currentLevelStartExperience,
@@ -119,6 +127,8 @@ class PlayerModel {
       companyName: companyName ?? this.companyName,
       avatarId: avatarId ?? this.avatarId,
       googleAvatarUrl: googleAvatarUrl ?? this.googleAvatarUrl,
+      headquartersCityId: headquartersCityId ?? this.headquartersCityId,
+      headquartersCityName: headquartersCityName ?? this.headquartersCityName,
       level: level ?? this.level,
       experience: experience ?? this.experience,
       currentLevelStartExperience:
@@ -151,6 +161,8 @@ class PlayerModel {
       'company_name': companyName,
       'avatar_id': avatarId,
       'google_avatar_url': googleAvatarUrl,
+      'headquarters_city_id': headquartersCityId,
+      'headquarters_city_name': headquartersCityName,
       'level': level,
       'experience': experience,
       'current_level_start_experience': currentLevelStartExperience,

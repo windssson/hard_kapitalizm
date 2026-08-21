@@ -501,6 +501,8 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
 
   Widget _buildAdvancedFieldCard(FieldListItemModel item) {
     final field = item.field;
+    final hasWarning = item.hasWarning;
+
     return Container(
       margin: EdgeInsets.only(bottom: 14.h),
       decoration: BoxDecoration(
@@ -515,10 +517,12 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
           ],
         ),
         border: Border.all(
-          color: field.isActive
-              ? AppColors.borderGold.withValues(alpha: 0.5)
-              : AppColors.border.withValues(alpha: 0.3),
-          width: 1,
+          color: hasWarning
+              ? AppColors.warning.withValues(alpha: 0.8)
+              : field.isActive
+                  ? AppColors.borderGold.withValues(alpha: 0.5)
+                  : AppColors.border.withValues(alpha: 0.3),
+          width: hasWarning ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -526,7 +530,13 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
-          if (field.isActive)
+          if (hasWarning)
+            BoxShadow(
+              color: AppColors.warning.withValues(alpha: 0.18),
+              blurRadius: 10,
+              spreadRadius: 1,
+            )
+          else if (field.isActive)
             BoxShadow(
               color: AppColors.gold.withValues(alpha: 0.03),
               blurRadius: 8,
@@ -568,7 +578,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                 splashColor: AppColors.gold.withValues(alpha: 0.1),
                 highlightColor: AppColors.gold.withValues(alpha: 0.05),
                 child: Padding(
-                  padding: EdgeInsets.all(14.w),
+                  padding: EdgeInsets.all(16.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -635,6 +645,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
 
   Widget _buildFieldHeader(FieldListItemModel item) {
     final field = item.field;
+    final hasWarning = item.hasWarning;
+    final warningReason = item.warningReason;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -653,6 +666,14 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            SizedBox(width: 6.w),
+            if (hasWarning && warningReason != null) ...[
+              _buildSmallBadge(
+                '⚠️ $warningReason',
+                AppColors.warning,
+              ),
+              SizedBox(width: 6.w),
+            ],
             _buildSmallBadge(
               field.isActive ? 'Aktif' : 'Pasif',
               field.isActive ? AppColors.green : AppColors.red,
@@ -680,7 +701,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            _buildSmallBadge('Seviye ${field.level}', AppColors.warning),
+            _buildSmallBadge('Seviye ${field.level}', AppColors.blue),
           ],
         ),
         SizedBox(height: 6.h),
@@ -740,7 +761,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
               Text(
                 '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.totalOutputCapacity)} adet',
                 style: AppTextStyles.caption.standardCopyWith(
-                  color: ratio >= 0.9 ? AppColors.red : AppColors.textPrimary,
+                  color: ratio >= 0.6
+                      ? AppColors.green
+                      : (ratio <= 0.25 ? AppColors.red : AppColors.textPrimary),
                   fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
@@ -748,7 +771,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             ],
           ),
           SizedBox(height: 6.h),
-          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
+          AppProgressBar.stock(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );
@@ -797,7 +820,9 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
               Text(
                 '${_formatCompact(item.inputStockQuantity)} adet / ${_formatCompact(item.totalInputCapacity)} adet',
                 style: AppTextStyles.caption.standardCopyWith(
-                  color: AppColors.textPrimary,
+                  color: ratio >= 0.6
+                      ? AppColors.green
+                      : (ratio <= 0.25 ? AppColors.red : AppColors.textPrimary),
                   fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
@@ -805,7 +830,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             ],
           ),
           SizedBox(height: 6.h),
-          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
+          AppProgressBar.stock(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );

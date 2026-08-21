@@ -24,6 +24,7 @@ import 'package:hard_kapitalizm/features/market/models/market_buyer_warehouse_mo
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
+import 'package:hard_kapitalizm/features/market/models/seller_market_sale_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
@@ -39,6 +40,7 @@ import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
+import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 
 const _defaultBrandId = '00000000-0000-0000-0000-000000000000';
 
@@ -78,8 +80,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   String _selectedSortOption = 'fiyat';
 
   int _marketViewTab = 0; // 0: Pazar (Alis), 1: Ilanlarim (Satis)
+  int _myListingsSubTab = 0; // 0: Aktif İlanlar, 1: Satış Geçmişi
   String _myListingsSearchQuery = '';
   String _myListingsWarehouseId = 'all';
+  String _salesHistorySearchQuery = '';
   String _targetWarehouseSearchQuery = '';
   String _targetWarehouseFilterKind = 'all';
 
@@ -89,6 +93,12 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     _selectedProductId = widget.productId;
     _selectedWarehouseId = widget.warehouseId;
     _selectedCityId = widget.cityId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.invalidate(warehouseListProvider);
+        ref.invalidate(storesListProvider);
+      }
+    });
   }
 
   String get _activeProductId => _selectedProductId;
@@ -110,9 +120,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       _lockedSourceCityId != null && _cityCatalogEnabled;
 
   Future<void> _refreshPage() async {
+    ref.invalidate(warehouseListProvider);
+    ref.invalidate(storesListProvider);
     if (_marketViewTab == 1) {
-      ref.invalidate(warehouseListProvider);
       ref.invalidate(playerBrandCompanyProvider);
+      ref.invalidate(sellerMarketSalesHistoryProvider);
       return;
     }
 
@@ -1392,6 +1404,15 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         }).toList();
       }
 
+      if (ref.watch(tutorialProvider).step == TutorialStep.selectMarketWarehouse) {
+        displayWarehouses = [...displayWarehouses]..sort((a, b) {
+          final aStore = a.warehouseKind == 'store' ? 1 : 0;
+          final bStore = b.warehouseKind == 'store' ? 1 : 0;
+          if (aStore != bStore) return bStore.compareTo(aStore);
+          return a.name.compareTo(b.name);
+        });
+      }
+
       return Container(
         width: double.infinity,
         padding: EdgeInsets.all(16.w),
@@ -1499,8 +1520,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             ),
             SizedBox(height: 14.h),
             if (displayWarehouses.isNotEmpty)
-              ...displayWarehouses.map(
-                (warehouse) {
+              ...displayWarehouses.asMap().entries.map(
+                (entry) {
+                  final index = entry.key;
+                  final warehouse = entry.value;
                   final cityFactories = factories.where((f) => f.factory.cityId == warehouse.cityId).toList();
                   final cityFarms = farms.where((f) => f.farm.cityId == warehouse.cityId).toList();
                   final cityFields = fields.where((f) => f.field.cityId == warehouse.cityId).toList();
@@ -1509,6 +1532,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   return Padding(
                     padding: EdgeInsets.only(bottom: 10.h),
                     child: _buildSelectableWarehouseCard(
+                      key: (ref.watch(tutorialProvider).step == TutorialStep.selectMarketWarehouse && index == 0)
+                          ? TutorialKeys.marketWarehouseFirstItemKey
+                          : null,
                       warehouse: warehouse,
                       isSelected: warehouse.id == _activeWarehouseId,
                       cityFactories: cityFactories,
@@ -1516,6 +1542,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       cityFields: cityFields,
                       cityStores: cityStores,
                       onTap: () {
+                        if (ref.read(tutorialProvider).step == TutorialStep.selectMarketWarehouse) {
+                          ref.read(tutorialProvider.notifier).setStep(TutorialStep.selectMarketProduct);
+                        }
                         setState(() {
                           _selectedWarehouseId = warehouse.id;
                           _selectedCityId = warehouse.cityId;
@@ -1750,6 +1779,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             _buildInfoBox('Bu depo için uygun ürün bulunamadı.', AppColors.red)
           else
             SizedBox(
+              key: (ref.watch(tutorialProvider).step == TutorialStep.selectMarketProduct)
+                  ? TutorialKeys.marketProductFirstItemKey
+                  : null,
               height: gridHeight,
               child: GridView.builder(
                 physics: const BouncingScrollPhysics(),
@@ -1771,6 +1803,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     needCount: productNeedById[product.id] ?? 0,
                     prodNeedCount: productionNeedById[product.id] ?? 0,
                     onTap: () {
+                      if (ref.read(tutorialProvider).step == TutorialStep.selectMarketProduct) {
+                        ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickMarketBuyListing);
+                      }
                       setState(() {
                         _selectedProductId = product.id;
                       });
@@ -1789,6 +1824,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }
 
   Widget _buildSelectableProductCard({
+    Key? key,
     required ProductModel product,
     required bool isSelected,
     required bool isSellingInStore,
@@ -1798,6 +1834,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     required VoidCallback onTap,
   }) {
     return GestureDetector(
+      key: key,
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
@@ -2014,6 +2051,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }
 
   Widget _buildSelectableWarehouseCard({
+    Key? key,
     required WarehouseModel warehouse,
     required bool isSelected,
     required List<FactoryListItemModel> cityFactories,
@@ -2039,6 +2077,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         cityStores.isNotEmpty;
 
     return GestureDetector(
+      key: key,
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
@@ -2363,6 +2402,53 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         child: Column(
           children: [
             const SecondaryTopBar(title: 'Global Pazar'),
+            if (ref.watch(tutorialProvider).step == TutorialStep.returnToStore)
+              Container(
+                width: double.infinity,
+                margin: EdgeInsets.fromLTRB(14.w, 4.h, 14.w, 8.h),
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                decoration: AppDecorations.glowingAction(AppColors.gold, 14.r),
+                child: Row(
+                  children: [
+                    Icon(AppIcons.checkCircle, color: AppColors.textOnAccent, size: 22.sp),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Text(
+                        'Ürünler Manav Depona aktarıldı! Şimdi Manavına dönüp ürünü rafa diz.',
+                        style: AppTextStyles.body.standardCopyWith(
+                          color: AppColors.textOnAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: AppTypography.bodySmall,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    ElevatedButton(
+                      key: TutorialKeys.marketReturnToStoreKey,
+                      onPressed: () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        } else {
+                          context.go('/store');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.background,
+                        foregroundColor: AppColors.gold,
+                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                      ),
+                      child: Text(
+                        'MANAVA DÖN',
+                        style: AppTextStyles.button.standardCopyWith(
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.bold,
+                          fontSize: AppTypography.label,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             _buildMarketTabBar(),
             Expanded(
               child: _marketViewTab == 0
@@ -2839,8 +2925,23 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           SizedBox(
                             height: 28.h,
                             child: ElevatedButton(
+                              key: (ref.watch(tutorialProvider).step ==
+                                          TutorialStep.clickMarketBuyListing &&
+                                      isCheapest)
+                                  ? TutorialKeys.marketListingFirstAddKey
+                                  : null,
                               onPressed: canAddToCart
-                                  ? () => _openAddToCartSheet(listing, product)
+                                  ? () {
+                                      if (ref.read(tutorialProvider).step ==
+                                          TutorialStep.clickMarketBuyListing) {
+                                        ref
+                                            .read(tutorialProvider.notifier)
+                                            .setStep(
+                                              TutorialStep.confirmMarketCartBuy,
+                                            );
+                                      }
+                                      _openAddToCartSheet(listing, product);
+                                    }
                                   : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.gold,
@@ -3147,6 +3248,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return Padding(
       padding: EdgeInsets.only(bottom: 8.h),
       child: GestureDetector(
+        key: ref.watch(tutorialProvider).step ==
+                TutorialStep.confirmMarketCheckout
+            ? TutorialKeys.marketCartLauncherKey
+            : null,
         onTap: _showCartSheet,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -3344,6 +3449,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               width: double.infinity,
               height: 42.h,
               child: ElevatedButton(
+                key: ref.watch(tutorialProvider).step ==
+                        TutorialStep.confirmMarketCheckout
+                    ? TutorialKeys.marketCheckoutConfirmKey
+                    : null,
                 onPressed: capacityOk
                     ? () {
                         Navigator.of(sheetContext).pop();
@@ -3642,13 +3751,20 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     await _refreshAfterPurchase(isInstant: isInstant);
     _clearCart();
 
+    final tutorial = ref.read(tutorialProvider);
+    if (tutorial.step == TutorialStep.confirmMarketCheckout ||
+        tutorial.step == TutorialStep.confirmMarketCartBuy ||
+        tutorial.step == TutorialStep.clickMarketBuyListing) {
+      ref.read(tutorialProvider.notifier).setStep(TutorialStep.returnToStore);
+    }
+
     if (!mounted) return;
     AppSnackbar.show(
       context,
-      title: 'Basarili',
+      title: 'Başarılı',
       message: isInstant
-          ? 'Market alimi aninda tamamlandi.'
-          : 'Coklu market transferi baslatildi. Arac yola cikti.',
+          ? 'Market alımı anında tamamlandı ve deponuza teslim edildi!'
+          : 'Pazar transferi başlatıldı. Araç yola çıktı.',
       type: SnackbarType.success,
     );
   }
@@ -3806,6 +3922,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       (sum, e) => sum + (e.slot.quantity * e.slot.price),
     );
 
+    final salesHistoryAsync = ref.watch(sellerMarketSalesHistoryProvider);
+    final totalSalesCount = salesHistoryAsync.value?.totalSalesCount ?? 0;
+
     return RefreshIndicator(
       onRefresh: _refreshPage,
       color: AppColors.gold,
@@ -3817,50 +3936,646 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             padding: EdgeInsets.fromLTRB(14.w, 10.h, 14.w, 80.h),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _buildMyListingsKpiHeader(
-                  activeCount: totalActiveListings,
-                  totalStock: totalActiveStock,
-                  potentialRevenue: totalActiveRevenue,
-                  totalSlots: activeEntries.length,
+                _buildMyListingsSubTabBar(totalActiveListings, totalSalesCount),
+                SizedBox(height: 8.h),
+                if (_myListingsSubTab == 0) ...[
+                  _buildMyListingsKpiHeader(
+                    activeCount: totalActiveListings,
+                    totalStock: totalActiveStock,
+                    potentialRevenue: totalActiveRevenue,
+                    totalSlots: activeEntries.length,
+                  ),
+                  SizedBox(height: 12.h),
+                  _buildMyListingsFilterControls(warehouses, activeEntries),
+                  SizedBox(height: 12.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'AKTİF İLANLARIM (${filtered.length})',
+                        style: AppTextStyles.titleGold.standardCopyWith(
+                          letterSpacing: 1.1,
+                          fontSize: AppTypography.caption,
+                        ),
+                      ),
+                      if (activeEntries.isNotEmpty)
+                        GestureDetector(
+                          onTap: () => _showBulkListingActionsSheet(activeEntries),
+                          child: Row(
+                            children: [
+                              Icon(AppIcons.tuneRounded, color: AppColors.gold, size: AppIconSizes.small),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'Toplu İşlem',
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.gold,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 10.h),
+                  if (filtered.isEmpty)
+                    _buildMyListingsEmptyState(activeEntries.isEmpty)
+                  else
+                    ...filtered.map((entry) => _buildMyListingCard(entry)),
+                ] else ...[
+                  _buildMySalesHistoryContent(salesHistoryAsync),
+                ],
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyListingsSubTabBar(int activeCount, int salesCount) {
+    return Container(
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: AppFx.shadow(0.3),
+            blurRadius: 6.r,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildSubTabButton(
+              index: 0,
+              icon: AppIcons.inventory2Outlined,
+              label: 'Aktif İlanlarım ($activeCount)',
+            ),
+          ),
+          SizedBox(width: 4.w),
+          Expanded(
+            child: _buildSubTabButton(
+              index: 1,
+              icon: AppIcons.paymentsOutlined,
+              label: 'Satış Geçmişi ($salesCount)',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubTabButton({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
+    final isSelected = _myListingsSubTab == index;
+    return GestureDetector(
+      onTap: () {
+        if (_myListingsSubTab != index) {
+          AppHaptic.selection();
+          setState(() {
+            _myListingsSubTab = index;
+          });
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.gold : AppColors.transparent,
+          borderRadius: BorderRadius.circular(10.r),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.25),
+                    blurRadius: 6.r,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: AppIconSizes.small,
+              color: isSelected ? AppColors.textOnAccent : AppColors.textMuted,
+            ),
+            SizedBox(width: 6.w),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.body.standardCopyWith(
+                  color: isSelected ? AppColors.textOnAccent : AppColors.textMuted,
+                  fontSize: AppTypography.caption,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                 ),
-                SizedBox(height: 12.h),
-                _buildMyListingsFilterControls(warehouses, activeEntries),
-                SizedBox(height: 12.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'AKTİF İLANLARIM (${filtered.length})',
-                      style: AppTextStyles.titleGold.standardCopyWith(
-                        letterSpacing: 1.1,
-                        fontSize: AppTypography.caption,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMySalesHistoryContent(
+    AsyncValue<SellerMarketSalesHistoryResponse> salesHistoryAsync,
+  ) {
+    return salesHistoryAsync.when(
+      loading: () => Container(
+        padding: EdgeInsets.symmetric(vertical: 40.h),
+        alignment: Alignment.center,
+        child: const AppLoadingIndicator(),
+      ),
+      error: (err, stack) => Container(
+        padding: EdgeInsets.all(20.w),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: AppColors.red.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(AppIcons.errorOutline, color: AppColors.red, size: AppIconSizes.large),
+            SizedBox(height: 8.h),
+            Text(
+              'Satış geçmişi yüklenirken hata oluştu',
+              style: AppTextStyles.body.standardCopyWith(color: AppColors.textPrimary),
+            ),
+            SizedBox(height: 8.h),
+            TextButton.icon(
+              onPressed: () => ref.invalidate(sellerMarketSalesHistoryProvider),
+              icon: Icon(AppIcons.refresh, size: AppIconSizes.small, color: AppColors.gold),
+              label: Text('Yeniden Dene', style: TextStyle(color: AppColors.gold)),
+            ),
+          ],
+        ),
+      ),
+      data: (data) {
+        final allSales = data.sales;
+        var filteredSales = allSales;
+
+        if (_salesHistorySearchQuery.trim().isNotEmpty) {
+          final q = _salesHistorySearchQuery.trim().toLowerCase();
+          filteredSales = filteredSales.where((s) {
+            final buyerPlayer = s.buyerPlayerName.toLowerCase();
+            final buyerCompany = s.buyerCompanyName.toLowerCase();
+            final buyerCity = s.buyerCityName.toLowerCase();
+            final warehouseName = s.sellerWarehouseName.toLowerCase();
+            final hasMatchingItem = s.items.any(
+              (item) => item.productName.toLowerCase().contains(q),
+            );
+            return buyerPlayer.contains(q) ||
+                buyerCompany.contains(q) ||
+                buyerCity.contains(q) ||
+                warehouseName.contains(q) ||
+                hasMatchingItem;
+          }).toList();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildMySalesKpiHeader(data),
+            SizedBox(height: 12.h),
+            _buildMySalesFilterControls(),
+            SizedBox(height: 12.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'OYUNCU SATIŞLARI (${filteredSales.length})',
+                  style: AppTextStyles.titleGold.standardCopyWith(
+                    letterSpacing: 1.1,
+                    fontSize: AppTypography.caption,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 10.h),
+            if (filteredSales.isEmpty)
+              _buildMySalesEmptyState(allSales.isEmpty)
+            else
+              ...filteredSales.map((sale) => _buildSellerSaleCard(sale)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMySalesKpiHeader(SellerMarketSalesHistoryResponse data) {
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.04),
+            blurRadius: 10.r,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildMyListingsKpiItem(
+              title: 'Toplam Satış',
+              value: '${data.totalSalesCount} işlem',
+              icon: AppIcons.sellOutlined,
+              color: AppColors.gold,
+            ),
+          ),
+          Container(width: 1.w, height: 36.h, color: AppFx.softOverlay(0.1)),
+          Expanded(
+            child: _buildMyListingsKpiItem(
+              title: 'Satılan Ürün',
+              value: '${_formatStockNumber(data.totalSoldQuantity)} ad.',
+              icon: AppIcons.inventory2Outlined,
+              color: AppColors.blue,
+            ),
+          ),
+          Container(width: 1.w, height: 36.h, color: AppFx.softOverlay(0.1)),
+          Expanded(
+            child: _buildMyListingsKpiItem(
+              title: 'Toplam Hasılat',
+              value: '₺${_formatCurrency(data.totalRevenue)}',
+              icon: AppIcons.paymentsOutlined,
+              color: AppColors.green,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMySalesFilterControls() {
+    return TextField(
+      onChanged: (value) {
+        setState(() {
+          _salesHistorySearchQuery = value;
+        });
+      },
+      style: AppTextStyles.body.standardCopyWith(color: AppColors.textPrimary),
+      decoration: InputDecoration(
+        hintText: 'Alıcı, şirket, şehir veya ürün ara...',
+        hintStyle: AppTextStyles.body.standardCopyWith(
+          color: AppColors.textMuted,
+          fontSize: AppTypography.bodySmall,
+        ),
+        prefixIcon: Icon(
+          AppIcons.search,
+          color: AppColors.gold.withValues(alpha: 0.6),
+          size: AppIconSizes.regular,
+        ),
+        contentPadding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 12.w),
+        filled: true,
+        fillColor: AppColors.cardBgLight.withValues(alpha: 0.4),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(
+            color: AppColors.borderGold.withValues(alpha: 0.25),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: AppColors.gold, width: 1.2),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSellerSaleCard(SellerMarketSaleModel sale) {
+    final formattedDate = sale.completedAt != null
+        ? _formatDateTime(sale.completedAt!)
+        : (sale.startedAt != null ? _formatDateTime(sale.startedAt!) : '-');
+
+    final isCompleted = sale.status == 'completed';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: isCompleted
+              ? AppColors.green.withValues(alpha: 0.3)
+              : AppColors.gold.withValues(alpha: 0.3),
+          width: 1.2.w,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isCompleted ? AppColors.green : AppColors.gold).withValues(alpha: 0.05),
+            blurRadius: 10.r,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16.r),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: Buyer Info + Price
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              decoration: BoxDecoration(
+                color: AppColors.cardBgLight.withValues(alpha: 0.4),
+                border: Border(
+                  bottom: BorderSide(color: AppFx.softOverlay(0.08)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Buyer Avatar
+                  Container(
+                    width: 36.w,
+                    height: 36.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.5),
+                        width: 1.2.w,
                       ),
                     ),
-                    if (activeEntries.isNotEmpty)
-                      GestureDetector(
-                        onTap: () => _showBulkListingActionsSheet(activeEntries),
-                        child: Row(
+                    child: ClipOval(
+                      child: Padding(
+                        padding: EdgeInsets.all(3.w),
+                        child: CachedAssetImage(
+                          fileName: sale.buyerAvatarId.isNotEmpty
+                              ? sale.buyerAvatarId
+                              : 'ae1.webp',
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Icon(AppIcons.tuneRounded, color: AppColors.gold, size: AppIconSizes.small),
-                            SizedBox(width: 4.w),
-                            Text(
-                              'Toplu İşlem',
-                              style: AppTextStyles.caption.standardCopyWith(
-                                color: AppColors.gold,
-                                fontWeight: FontWeight.bold,
+                            Flexible(
+                              child: Text(
+                                sale.buyerCompanyName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.body.standardCopyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: AppTypography.bodySmall,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 6.w),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6.r),
+                              ),
+                              child: Text(
+                                sale.buyerCityName,
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.gold,
+                                  fontSize: AppTypography.micro,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],
                         ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          'Yönetici: ${sale.buyerPlayerName}',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: AppTypography.micro,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Total Earned
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '+₺${_formatCurrency(sale.totalPrice)}',
+                        style: AppTextStyles.body.standardCopyWith(
+                          color: AppColors.green,
+                          fontWeight: FontWeight.w900,
+                          fontSize: AppTypography.title,
+                        ),
                       ),
-                  ],
-                ),
-                SizedBox(height: 10.h),
-                if (filtered.isEmpty)
-                  _buildMyListingsEmptyState(activeEntries.isEmpty)
-                else
-                  ...filtered.map((entry) => _buildMyListingCard(entry)),
-              ]),
+                      SizedBox(height: 2.h),
+                      Text(
+                        formattedDate,
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.micro,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Route & Warehouse info
+            Padding(
+              padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 4.h),
+              child: Row(
+                children: [
+                  Icon(AppIcons.warehouseOutlined, size: AppIconSizes.xSmall, color: AppColors.textMuted),
+                  SizedBox(width: 4.w),
+                  Expanded(
+                    child: Text(
+                      'Satış Deposu: ${sale.sellerWarehouseName} (${sale.sellerCityName})',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textMuted,
+                        fontSize: AppTypography.micro,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                    decoration: BoxDecoration(
+                      color: isCompleted
+                          ? AppColors.green.withValues(alpha: 0.12)
+                          : AppColors.blue.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6.r),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isCompleted ? AppIcons.checkCircleOutline : AppIcons.localShippingOutlined,
+                          size: 10.sp,
+                          color: isCompleted ? AppColors.green : AppColors.blue,
+                        ),
+                        SizedBox(width: 3.w),
+                        Text(
+                          isCompleted ? 'Teslim Edildi' : 'Yolda',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: isCompleted ? AppColors.green : AppColors.blue,
+                            fontSize: AppTypography.micro,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Items List
+            Padding(
+              padding: EdgeInsets.all(10.w),
+              child: Column(
+                children: sale.items.map((item) {
+                  return Container(
+                    margin: EdgeInsets.only(bottom: 6.h),
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(color: AppFx.softOverlay(0.06)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36.w,
+                          height: 36.w,
+                          padding: EdgeInsets.all(2.w),
+                          decoration: BoxDecoration(
+                            color: AppFx.panelWash(0.2),
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: BrandedProductImage(
+                            fileName: item.productIcon,
+                            brandId: item.brandId,
+                            productId: item.productId,
+                            fit: BoxFit.contain,
+                            showFrame: false,
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.productName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.body.standardCopyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: AppTypography.bodySmall,
+                                ),
+                              ),
+                              SizedBox(height: 2.h),
+                              Row(
+                                children: [
+                                  for (int i = 0; i < 5; i++)
+                                    Icon(
+                                      i < item.qualityLevel
+                                          ? AppIcons.starRounded
+                                          : AppIcons.starBorderRounded,
+                                      color: i < item.qualityLevel
+                                          ? AppColors.gold
+                                          : AppFx.softOverlay(0.12),
+                                      size: 10.sp,
+                                    ),
+                                  SizedBox(width: 6.w),
+                                  Text(
+                                    '${_formatStockNumber(item.quantity)} ad. × ₺${_formatCurrency(item.unitPrice)}',
+                                    style: AppTextStyles.caption.standardCopyWith(
+                                      color: AppColors.textMuted,
+                                      fontSize: AppTypography.micro,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '₺${_formatCurrency(item.totalPrice)}',
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: AppTypography.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMySalesEmptyState(bool isAbsoluteEmpty) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 36.h, horizontal: 20.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              AppIcons.storefrontOutlined,
+              size: AppIconSizes.large,
+              color: AppColors.gold,
+            ),
+          ),
+          SizedBox(height: 14.h),
+          Text(
+            isAbsoluteEmpty ? 'Henüz Satışın Yok' : 'Eşleşen Satış Bulunamadı',
+            style: AppTextStyles.titleGold.standardCopyWith(
+              fontSize: AppTypography.titleLarge,
+            ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            isAbsoluteEmpty
+                ? 'Depolarındaki malları pazar fiyatına uygun olarak satışa koyduğunda diğer oyuncular satın alacak ve hasılatın anında hesabına geçecektir.'
+                : 'Arama kriterlerine uygun satış kaydı bulunamadı.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.bodySmall,
+              height: 1.4,
             ),
           ),
         ],
@@ -5349,6 +6064,16 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     if (amount >= 1000) return '${(amount / 1000).toStringAsFixed(1)}K';
     return amount.toStringAsFixed(1);
   }
+
+  String _formatDateTime(DateTime value) {
+    final local = value.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final year = local.year.toString();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$day.$month.$year $hour:$minute';
+  }
 }
 
 class _PurchaseSheet extends ConsumerStatefulWidget {
@@ -5421,7 +6146,9 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
   @override
   void initState() {
     super.initState();
-    _quantityController = TextEditingController(text: '');
+    final isTutorial = ref.read(tutorialProvider).step == TutorialStep.confirmMarketCartBuy;
+    _quantity = isTutorial ? 50 : 0;
+    _quantityController = TextEditingController(text: isTutorial ? '50' : '');
   }
 
   @override
@@ -5521,6 +6248,10 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
     return Material(
       color: AppColors.transparent,
       child: Container(
+        key: (ref.watch(tutorialProvider).step ==
+                TutorialStep.confirmMarketCartBuy)
+            ? TutorialKeys.marketAddToCartConfirmKey
+            : null,
         padding: EdgeInsets.fromLTRB(
           16.w,
           16.h,
@@ -5642,6 +6373,12 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
                 onPressed: _quantity <= 0
                     ? null
                     : () {
+                        if (ref.read(tutorialProvider).step ==
+                            TutorialStep.confirmMarketCartBuy) {
+                          ref
+                              .read(tutorialProvider.notifier)
+                              .setStep(TutorialStep.confirmMarketCheckout);
+                        }
                         Navigator.of(context).pop(
                           _MarketCartSelection(
                             listing: widget.listing,

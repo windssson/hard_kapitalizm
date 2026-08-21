@@ -500,6 +500,8 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
 
   Widget _buildAdvancedFactoryCard(FactoryListItemModel item) {
     final factory = item.factory;
+    final hasWarning = item.hasWarning;
+
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
       decoration: BoxDecoration(
@@ -514,10 +516,12 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           ],
         ),
         border: Border.all(
-          color: factory.isActive
-              ? AppColors.borderGold.withValues(alpha: 0.5)
-              : AppColors.border.withValues(alpha: 0.3),
-          width: 1,
+          color: hasWarning
+              ? AppColors.warning.withValues(alpha: 0.8)
+              : factory.isActive
+                  ? AppColors.borderGold.withValues(alpha: 0.5)
+                  : AppColors.border.withValues(alpha: 0.3),
+          width: hasWarning ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -525,7 +529,13 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
-          if (factory.isActive)
+          if (hasWarning)
+            BoxShadow(
+              color: AppColors.warning.withValues(alpha: 0.18),
+              blurRadius: 10,
+              spreadRadius: 1,
+            )
+          else if (factory.isActive)
             BoxShadow(
               color: AppColors.gold.withValues(alpha: 0.03),
               blurRadius: 8,
@@ -603,9 +613,9 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
 
   Widget _buildFactoryImage(FactoryListItemModel item) {
     return Container(
-      width: 64.w,
-      height: 64.w,
-      padding: EdgeInsets.all(8.w),
+      width: 76.w,
+      height: 76.w,
+      padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
         color: AppFx.panelWash(0.3),
         borderRadius: BorderRadius.circular(16.r),
@@ -635,6 +645,9 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
 
   Widget _buildFactoryHeader(FactoryListItemModel item) {
     final factory = item.factory;
+    final hasWarning = item.hasWarning;
+    final warningReason = item.warningReason;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -653,6 +666,14 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            SizedBox(width: 6.w),
+            if (hasWarning && warningReason != null) ...[
+              _buildSmallBadge(
+                '⚠️ $warningReason',
+                AppColors.warning,
+              ),
+              SizedBox(width: 6.w),
+            ],
             _buildSmallBadge(
               factory.isActive ? 'Aktif' : 'Pasif',
               factory.isActive ? AppColors.green : AppColors.red,
@@ -680,7 +701,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            _buildSmallBadge('Lv ${factory.level}', AppColors.gold),
+            _buildSmallBadge('Lv ${factory.level}', AppColors.blue),
           ],
         ),
         SizedBox(height: 4.h),
@@ -740,7 +761,9 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
               Text(
                 '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.factory.outputCapacity)} adet',
                 style: AppTextStyles.caption.standardCopyWith(
-                  color: ratio >= 0.9 ? AppColors.red : AppColors.textPrimary,
+                  color: ratio >= 0.6
+                      ? AppColors.green
+                      : (ratio <= 0.25 ? AppColors.red : AppColors.textPrimary),
                   fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
@@ -748,7 +771,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
             ],
           ),
           SizedBox(height: 6.h),
-          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
+          AppProgressBar.stock(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );
@@ -797,7 +820,9 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
               Text(
                 '${_formatCompact(item.inputStockQuantity)} adet / ${_formatCompact(item.factory.inputCapacity)} adet',
                 style: AppTextStyles.caption.standardCopyWith(
-                  color: AppColors.textPrimary,
+                  color: ratio >= 0.6
+                      ? AppColors.green
+                      : (ratio <= 0.25 ? AppColors.red : AppColors.textPrimary),
                   fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
@@ -805,7 +830,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
             ],
           ),
           SizedBox(height: 6.h),
-          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
+          AppProgressBar.stock(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );

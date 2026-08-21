@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -19,6 +23,7 @@ class AchievementScreen extends ConsumerStatefulWidget {
 class _AchievementScreenState extends ConsumerState<AchievementScreen> {
   final int _selectedIndex = 4;
   String _selectedCategory = 'all';
+  final Set<String> _claimingAchievementIds = <String>{};
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
@@ -42,6 +47,70 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
     }
   }
 
+  Future<void> _claimAchievementReward(AchievementBadgeModel badge) async {
+    if (_claimingAchievementIds.contains(badge.id)) return;
+
+    setState(() => _claimingAchievementIds.add(badge.id));
+    AppHaptic.heavy();
+
+    try {
+      final result = await ref
+          .read(achievementActionProvider)
+          .claimAchievementReward(badge.id);
+
+      if (!mounted) return;
+
+      if (result['success'] != true) {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: (result['message'] ?? 'Başarım ödülü alınamadı.').toString(),
+          type: SnackbarType.error,
+        );
+        return;
+      }
+
+      showExperienceFeedbackFromResult(context, result);
+
+      final rewardMap = result['reward'] is Map<String, dynamic>
+          ? result['reward'] as Map<String, dynamic>
+          : result['reward'] is Map
+              ? Map<String, dynamic>.from(result['reward'] as Map)
+              : const <String, dynamic>{};
+
+      final cash = (rewardMap['cash'] as num?)?.toDouble() ?? 0;
+      final gold = (rewardMap['gold'] as num?)?.toInt() ?? 0;
+      final xp = (rewardMap['xp'] as num?)?.toInt() ?? 0;
+      final rewardParts = <String>[];
+
+      if (cash > 0) rewardParts.add('+${AppMoney.full(cash)}');
+      if (gold > 0) rewardParts.add('+$gold Altın');
+      if (xp > 0) rewardParts.add('+$xp XP');
+
+      AppSnackbar.show(
+        context,
+        title: '🏆 Başarım Ödülü Alındı!',
+        message: rewardParts.isEmpty
+            ? 'Tebrikler! Başarım ödülünüz hesabınıza aktarıldı.'
+            : rewardParts.join(' | '),
+        type: SnackbarType.success,
+      );
+    } catch (e) {
+      if (mounted) {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: 'Ödül alınırken bir hata oluştu: $e',
+          type: SnackbarType.error,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _claimingAchievementIds.remove(badge.id));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboardAsync = ref.watch(playerAchievementDashboardProvider);
@@ -51,7 +120,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Basarilar ve Rozetler'),
+            const SecondaryTopBar(title: 'Başarılar ve Rozetler'),
             Expanded(
               child: RefreshIndicator(
                 color: AppColors.gold,
@@ -86,6 +155,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                         children: [
                           _buildSummaryCard(
                             unlockedCount: dashboard.unlockedCount,
+                            claimableCount: dashboard.claimableCount,
                             totalCount: dashboard.totalCount,
                           ),
                           SizedBox(height: 20.h),
@@ -95,8 +165,10 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                           ),
                           SizedBox(height: 16.h),
                           _buildSectionTitle(
-                            'Odaktaki Basarilar',
-                            'Yakinda acilabilecek rozetler',
+                            'Odaktaki Başarılar',
+                            dashboard.claimableCount > 0
+                                ? '${dashboard.claimableCount} adet ödül toplanmaya hazır!'
+                                : 'Yakında açılabilecek rozetler',
                           ),
                           SizedBox(height: 10.h),
                           if (activeItems.isEmpty)
@@ -143,6 +215,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
 
   Widget _buildSummaryCard({
     required int unlockedCount,
+    required int claimableCount,
     required int totalCount,
   }) {
     final ratio = totalCount == 0 ? 0.0 : unlockedCount / totalCount;
@@ -153,15 +226,47 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardBg,
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.28)),
+        border: Border.all(
+          color: claimableCount > 0 ? AppColors.gold : AppColors.gold.withValues(alpha: 0.28),
+          width: claimableCount > 0 ? 1.5 : 1,
+        ),
+        boxShadow: [
+          if (claimableCount > 0)
+            BoxShadow(
+              color: AppColors.gold.withValues(alpha: 0.15),
+              blurRadius: 12,
+              spreadRadius: 2,
+            ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Rozet Ilerlemesi', style: AppTextStyles.h2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Rozet İlerlemesi', style: AppTextStyles.h2),
+              if (claimableCount > 0)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(999.r),
+                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    '$claimableCount Ödül Hazır!',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           SizedBox(height: 8.h),
           Text(
-            '$unlockedCount / $totalCount rozet acildi',
+            '$unlockedCount / $totalCount rozet açıldı',
             style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textPrimary,
               fontSize: AppTypography.bodyLarge,
@@ -197,7 +302,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
           final category = categories[index];
           final isSelected = category == selectedCategory;
           final label =
-              category == 'all' ? 'Tum Kategoriler' : _categoryLabel(category);
+              category == 'all' ? 'Tüm Kategoriler' : _categoryLabel(category);
 
           return GestureDetector(
             onTap: () => setState(() => _selectedCategory = category),
@@ -272,6 +377,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
   }) {
     final color = _badgeColor(badge.badgeColor);
     final icon = _badgeIcon(badge.badgeKey);
+    final isClaiming = _claimingAchievementIds.contains(badge.id);
 
     return Container(
       width: double.infinity,
@@ -289,13 +395,21 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
         color: badge.isUnlocked ? null : AppColors.cardBg,
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(
-          color: badge.isUnlocked
-              ? color.withValues(alpha: 0.65)
-              : color.withValues(alpha: 0.28),
-          width: badge.isUnlocked ? 1.5 : 1,
+          color: badge.isClaimable
+              ? AppColors.gold
+              : badge.isUnlocked
+                  ? color.withValues(alpha: 0.65)
+                  : color.withValues(alpha: 0.28),
+          width: badge.isClaimable || badge.isUnlocked ? 1.5 : 1,
         ),
         boxShadow: [
-          if (badge.isUnlocked)
+          if (badge.isClaimable)
+            BoxShadow(
+              color: AppColors.gold.withValues(alpha: 0.25),
+              blurRadius: 12,
+              spreadRadius: 1,
+            )
+          else if (badge.isUnlocked)
             BoxShadow(
               color: color.withValues(alpha: 0.15),
               blurRadius: 10,
@@ -328,8 +442,16 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                   children: [
                     _buildBadgeMetaChip(badge.categoryLabel, color),
                     _buildBadgeMetaChip(
-                      badge.isUnlocked ? 'Acildi' : badge.progressText,
-                      badge.isUnlocked ? AppColors.green : color,
+                      badge.isClaimable
+                          ? 'Ödül Hazır!'
+                          : badge.isClaimed
+                              ? 'Ödül Alındı'
+                              : badge.progressText,
+                      badge.isClaimable
+                          ? AppColors.gold
+                          : badge.isClaimed
+                              ? AppColors.green
+                              : color,
                     ),
                   ],
                 ),
@@ -372,6 +494,42 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                if (badge.isClaimable) ...[
+                  SizedBox(height: 10.h),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: isClaiming ? null : () => _claimAchievementReward(badge),
+                      icon: isClaiming
+                          ? SizedBox(
+                              width: 14.w,
+                              height: 14.w,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.background,
+                              ),
+                            )
+                          : Icon(AppIcons.cardGiftcardRounded, size: 16.sp),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: AppColors.background,
+                        elevation: 3,
+                        padding: EdgeInsets.symmetric(vertical: 8.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                      ),
+                      label: Text(
+                        isClaiming ? 'Alınıyor...' : 'Ödülü Al!',
+                        style: AppTextStyles.button.standardCopyWith(
+                          color: AppColors.background,
+                          fontWeight: FontWeight.w800,
+                          fontSize: AppTypography.bodySmall,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

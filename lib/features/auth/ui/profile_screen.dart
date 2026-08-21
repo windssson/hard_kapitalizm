@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/core/managers/session_manager.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
@@ -12,11 +11,14 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/models/city_model.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/features/achievement/models/achievement_badge_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
+import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -30,24 +32,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final int _selectedIndex = 4;
   int _activeTab = 0; // 0: Genel Bakış & Varlıklar, 1: Hesap & Güvenlik
   StreamSubscription<AuthState>? _authSubscription;
-  bool _isGoogleLinkInProgress = false;
-  bool _didShowGoogleLinkSuccess = false;
-  bool _isGoogleSignInInProgress = false;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() async {
-      try {
-        final synced = await ref
-            .read(authManagerProvider)
-            .syncGoogleProfileIfLinked();
-        if (synced) {
-          _handleCompletedGoogleLink();
-          await SessionManager.bootstrapAndRefreshAll(ref);
-        }
-      } catch (_) {}
-    });
 
     _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
       data,
@@ -62,13 +50,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       try {
         await SessionManager.bootstrapAndRefreshAll(ref);
       } catch (_) {}
-
-      if (mounted && _isGoogleSignInInProgress) {
-        setState(() {
-          _isGoogleSignInInProgress = false;
-        });
-      }
-      _handleCompletedGoogleLink();
     });
   }
 
@@ -183,7 +164,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (_activeTab == 0)
             ..._buildOverviewTabContent(player)
           else
-            ..._buildSettingsTabContent(authIdentity),
+            ..._buildSettingsTabContent(authIdentity, player),
         ],
       ),
     );
@@ -892,14 +873,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   // ── TAB 2: HESAP & GÜVENLİK ──────────────────────────────────────────
-  List<Widget> _buildSettingsTabContent(AuthIdentityState? authIdentity) {
-    final isGoogleLinked = authIdentity?.isGoogleLinked ?? false;
-    final linkedEmail = authIdentity?.effectiveEmail;
-    final isBusy = _isGoogleLinkInProgress && !isGoogleLinked;
-    final isSignInBusy = _isGoogleSignInInProgress && !isGoogleLinked;
+  List<Widget> _buildSettingsTabContent(
+    AuthIdentityState? authIdentity,
+    PlayerModel player,
+  ) {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    final email = currentUser?.email ??
+        authIdentity?.effectiveEmail ??
+        'E-posta tanımlı değil';
+    final createdAtFormatted =
+        '${player.createdAt.day.toString().padLeft(2, '0')}.${player.createdAt.month.toString().padLeft(2, '0')}.${player.createdAt.year}';
 
     return [
-      // ── GOOGLE AUTH CARD ──
+      // ── 1. HESAP BİLGİLERİ KARTI ──
       Container(
         width: double.infinity,
         padding: EdgeInsets.all(16.w),
@@ -907,9 +893,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: isGoogleLinked
-                ? AppColors.green.withValues(alpha: 0.4)
-                : AppColors.gold.withValues(alpha: 0.3),
+            color: AppColors.borderGold.withValues(alpha: 0.35),
           ),
         ),
         child: Column(
@@ -918,173 +902,212 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Row(
               children: [
                 Icon(
-                  isGoogleLinked
-                      ? AppIcons.verifiedUserRounded
-                      : AppIcons.shieldOutlined,
-                  color: isGoogleLinked ? AppColors.green : AppColors.gold,
-                  size: 18.sp,
+                  AppIcons.verifiedUserRounded,
+                  color: AppColors.gold,
+                  size: 20.sp,
                 ),
                 SizedBox(width: 8.w),
                 Expanded(
                   child: Text(
-                    isGoogleLinked
-                        ? 'Google Hesabı Bağlı'
-                        : 'Hesabı Güvenceye Al',
+                    'Hesap Bilgileri',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                if (isGoogleLinked)
-                  Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6.r),
-                    ),
-                    child: Text(
-                      'Güvende',
-                      style: AppTextStyles.caption.standardCopyWith(
-                        color: AppColors.green,
-                        fontSize: AppTypography.micro,
-                        fontWeight: FontWeight.bold,
-                      ),
+                Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.green.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Text(
+                    'Aktif Hesap',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.green,
+                      fontSize: AppTypography.micro,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                ),
+              ],
+            ),
+            SizedBox(height: 14.h),
+            _buildAccountInfoRow(
+              icon: Icons.email_rounded,
+              label: 'Kayıtlı E-posta',
+              value: email,
+            ),
+            SizedBox(height: 10.h),
+            _buildAccountInfoRow(
+              icon: Icons.apartment_rounded,
+              label: 'Holding Şirketi',
+              value: player.companyName,
+            ),
+            SizedBox(height: 10.h),
+            _buildAccountInfoRow(
+              icon: Icons.location_city_rounded,
+              label: 'Merkez Şehir',
+              value: player.headquartersCityName ?? 'İstanbul',
+              onTap: () => _showChangeCitySheet(context, player),
+            ),
+            SizedBox(height: 10.h),
+            _buildAccountInfoRow(
+              icon: Icons.calendar_today_rounded,
+              label: 'Kayıt Tarihi',
+              value: createdAtFormatted,
+            ),
+            SizedBox(height: 10.h),
+            _buildAccountInfoRow(
+              icon: Icons.tag_rounded,
+              label: 'Oyuncu ID',
+              value: player.id.length > 12 ? '${player.id.substring(0, 12)}...' : player.id,
+            ),
+          ],
+        ),
+      ),
+      SizedBox(height: 14.h),
+
+      // ── 2. GÜVENLİK & ŞİFRE KARTI ──
+      Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: AppColors.border.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.lock_reset_rounded,
+                  color: AppColors.gold,
+                  size: 20.sp,
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    'Güvenlik & Şifre',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ],
             ),
             SizedBox(height: 8.h),
             Text(
-              isGoogleLinked
-                  ? 'Oyun ilerlemeniz Google bulutunda güvenle saklanmaktadır. Cihaz değiştirseniz bile verileriniz kaybolmaz.'
-                  : 'Hesabınızı Google ile bağlayarak ilerlemenizi yedekleyin ve diğer cihazlardan erişin.',
+              'Şifrenizi güncellemek veya sıfırlamak isterseniz kayıtlı e-posta adresinize güvenli sıfırlama bağlantısı gönderebilirsiniz.',
               style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.caption,
                 height: 1.35,
               ),
             ),
-            if (linkedEmail != null && linkedEmail.isNotEmpty) ...[
-              SizedBox(height: 8.h),
-              Text(
-                linkedEmail,
-                style: AppTextStyles.caption.standardCopyWith(
-                  color: AppColors.goldLight,
-                  fontWeight: FontWeight.bold,
+            SizedBox(height: 12.h),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _handleSendPasswordResetEmail(email),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.gold,
+                  side: BorderSide(
+                    color: AppColors.gold.withValues(alpha: 0.5),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 10.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
                 ),
-              ),
-            ],
-            SizedBox(height: 14.h),
-            if (!isGoogleLinked) ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: isBusy || isSignInBusy ? null : _handleGoogleLink,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold,
-                    foregroundColor: AppColors.textOnAccent,
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                  ),
-                  icon: Icon(
-                    isBusy
-                        ? AppIcons.hourglassTopRounded
-                        : AppIcons.gMobiledataRounded,
-                    size: 20.sp,
-                  ),
-                  label: Text(
-                    isBusy ? 'Bağlanıyor...' : 'Google ile Bağla',
-                    style: AppTextStyles.caption.standardCopyWith(
-                      color: AppColors.textOnAccent,
-                      fontWeight: FontWeight.bold,
-                    ),
+                icon: Icon(Icons.mark_email_read_rounded, size: 18.sp),
+                label: Text(
+                  'Şifre Sıfırlama E-postası Gönder',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              SizedBox(height: 8.h),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: isBusy || isSignInBusy
-                      ? null
-                      : () => _handleExistingGoogleSignIn(authIdentity),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: BorderSide(
-                      color: AppColors.border.withValues(alpha: 0.6),
-                    ),
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                  ),
-                  icon: Icon(
-                    isSignInBusy
-                        ? AppIcons.hourglassTopRounded
-                        : AppIcons.loginRounded,
-                    size: 16.sp,
-                  ),
-                  label: Text(
-                    isSignInBusy
-                        ? 'Giriş Yapılıyor...'
-                        : 'Mevcut Google Hesabına Gir',
-                    style: AppTextStyles.caption.standardCopyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ] else ...[
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _handleGoogleUnlink,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.red,
-                    side: BorderSide(
-                      color: AppColors.red.withValues(alpha: 0.4),
-                    ),
-                    padding: EdgeInsets.symmetric(vertical: 8.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                  ),
-                  icon: Icon(
-                    AppIcons.linkOffRounded,
-                    size: 16.sp,
-                    color: AppColors.red,
-                  ),
-                  label: Text(
-                    'Bağlantıyı Kaldır',
-                    style: AppTextStyles.caption.standardCopyWith(
-                      color: AppColors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ],
         ),
       ),
       SizedBox(height: 14.h),
 
-      // ── LOGOUT BUTTON ──
+      // ── 3. LOGOUT BUTTON ──
       SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
           onPressed: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                backgroundColor: AppColors.cardBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16.r),
+                  side: BorderSide(
+                    color: AppColors.borderGold.withValues(alpha: 0.4),
+                  ),
+                ),
+                title: Row(
+                  children: [
+                    Icon(AppIcons.logout, color: AppColors.gold, size: 22.sp),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Hesaptan Çıkış',
+                      style: AppTextStyles.title.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: AppTypography.bodyLarge,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Text(
+                  'Mevcut oturumunuz kapatılacaktır. Şirket ilerlemeniz bulut sunucularında güvendedir, dilediğiniz zaman tekrar giriş yapabilirsiniz.',
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(
+                      'Vazgeç',
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.gold,
+                      foregroundColor: AppColors.textOnAccent,
+                    ),
+                    child: const Text('Çıkış Yap'),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirmed != true) return;
+
             try {
               await ref.read(pushNotificationServiceProvider).unregisterToken();
             } catch (_) {}
+            SessionManager.invalidateAllGameProviders(ref);
             await Supabase.instance.client.auth.signOut();
             if (mounted) {
-              context.go('/');
+              context.go('/auth');
             }
           },
           style: OutlinedButton.styleFrom(
@@ -1108,7 +1131,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       SizedBox(height: 14.h),
 
-      // ── DANGER ZONE (DELETE ACCOUNT) ──
+      // ── 4. DANGER ZONE (DELETE ACCOUNT) ──
       Container(
         width: double.infinity,
         padding: EdgeInsets.all(14.w),
@@ -1164,6 +1187,309 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
     ];
+  }
+
+  Widget _buildAccountInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    VoidCallback? onTap,
+  }) {
+    final rowContent = Row(
+      children: [
+        Icon(icon, color: AppColors.gold.withValues(alpha: 0.8), size: 16.sp),
+        SizedBox(width: 8.w),
+        Text(
+          '$label: ',
+          style: AppTextStyles.caption.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.caption,
+          ),
+        ),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodySmall,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (onTap != null) ...[
+                SizedBox(width: 4.w),
+                Icon(
+                  Icons.edit_location_alt_rounded,
+                  color: AppColors.gold,
+                  size: 14.sp,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (onTap == null) return rowContent;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 2.h, horizontal: 2.w),
+        child: rowContent,
+      ),
+    );
+  }
+
+  void _showChangeCitySheet(BuildContext context, PlayerModel player) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBg,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.3)),
+      ),
+      builder: (ctx) {
+        String searchQuery = '';
+        return Consumer(
+          builder: (context, ref, _) {
+            final citiesAsync = ref.watch(citiesProvider);
+            final cities = citiesAsync.value ?? const <CityModel>[];
+
+            final filteredCities = cities.where((c) {
+              final q = searchQuery.trim().toLowerCase();
+              if (q.isEmpty) return true;
+              return c.name.toLowerCase().contains(q);
+            }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.textMuted.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                  SizedBox(height: 14.h),
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(8.w),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10.r),
+                          border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.location_city_rounded,
+                          color: AppColors.gold,
+                          size: 22.sp,
+                        ),
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Holding Merkez Şehrini Değiştir',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Holdinginizin ana yönetim merkezini seçin (81 İl)',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 12.sp,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 14.h),
+                  TextField(
+                    onChanged: (val) {
+                      (ctx as Element).markNeedsBuild();
+                      searchQuery = val;
+                    },
+                    style: TextStyle(color: AppColors.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Şehir ara...',
+                      hintStyle: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 13.sp,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        color: AppColors.gold,
+                        size: 20.sp,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.cardBgLight,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 14.w,
+                        vertical: 12.h,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: BorderSide(
+                          color: AppColors.border.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: BorderSide(
+                          color: AppColors.gold,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 10.h),
+                  Expanded(
+                    child: citiesAsync.isLoading
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.gold,
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: filteredCities.length,
+                            separatorBuilder: (_, _) => Divider(
+                              color: AppColors.border.withValues(alpha: 0.3),
+                              height: 1,
+                            ),
+                            itemBuilder: (context, index) {
+                              final city = filteredCities[index];
+                              final isSelected =
+                                  player.headquartersCityId == city.id ||
+                                  (player.headquartersCityId == null &&
+                                      city.name.toLowerCase() == 'i̇stanbul');
+
+                              return ListTile(
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 8.w,
+                                  vertical: 2.h,
+                                ),
+                                leading: CircleAvatar(
+                                  backgroundColor: isSelected
+                                      ? AppColors.gold
+                                      : AppColors.cardBgLight,
+                                  radius: 18.r,
+                                  child: Icon(
+                                    Icons.apartment_rounded,
+                                    color: isSelected
+                                        ? AppColors.background
+                                        : AppColors.gold,
+                                    size: 18.sp,
+                                  ),
+                                ),
+                                title: Text(
+                                  city.name,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? AppColors.gold
+                                        : AppColors.textPrimary,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                    fontSize: 14.sp,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Nüfus: ${AppMoney.full(city.population, withSymbol: false)}',
+                                  style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11.sp,
+                                  ),
+                                ),
+                                trailing: isSelected
+                                    ? Icon(
+                                        Icons.check_circle_rounded,
+                                        color: AppColors.gold,
+                                        size: 20.sp,
+                                      )
+                                    : null,
+                                onTap: () async {
+                                  Navigator.pop(ctx);
+                                  await ref
+                                      .read(playerProvider.notifier)
+                                      .setHeadquartersCity(
+                                        city.id,
+                                        cityName: city.name,
+                                      );
+                                  if (context.mounted) {
+                                    AppSnackbar.show(
+                                      context,
+                                      title: 'Merkez Şehir Güncellendi',
+                                      message:
+                                          'Holdinginizin ana merkezi artık ${city.name}.',
+                                      type: SnackbarType.success,
+                                    );
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _handleSendPasswordResetEmail(String email) async {
+    if (email.isEmpty || !email.contains('@')) {
+      AppSnackbar.show(
+        context,
+        message: 'Geçerli bir e-posta adresi bulunamadı.',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    try {
+      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'E-posta Gönderildi',
+        message: 'Şifre sıfırlama bağlantısı $email adresinize iletildi.',
+        type: SnackbarType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: 'Sıfırlama e-postası gönderilemedi: $e',
+        type: SnackbarType.error,
+      );
+    }
   }
 
   // ── DIALOGS & ACTION HANDLERS ───────────────────────────────────────
@@ -1373,204 +1699,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       },
     );
   }
-
-  Future<void> _handleGoogleLink() async {
-    try {
-      setState(() {
-        _isGoogleLinkInProgress = true;
-        _didShowGoogleLinkSuccess = false;
-      });
-      await ref.read(authManagerProvider).linkGoogleIdentity();
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message:
-            'Google girişi açıldı. Onaydan sonra uygulamaya döndüğünüzde hesap otomatik bağlanacak.',
-        type: SnackbarType.info,
-      );
-    } on AuthException catch (e) {
-      if (mounted) {
-        setState(() {
-          _isGoogleLinkInProgress = false;
-        });
-      }
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message: _friendlyGoogleLinkErrorMessage(e),
-        type: SnackbarType.error,
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isGoogleLinkInProgress = false;
-        });
-      }
-      if (!mounted) return;
-      AppSnackbar.show(
-        context,
-        message: e.toString(),
-        type: SnackbarType.error,
-      );
-    }
-  }
-
-  String _friendlyGoogleLinkErrorMessage(AuthException error) {
-    final raw = error.message.toLowerCase();
-    final status = (error.statusCode ?? '').toLowerCase();
-
-    if (status.contains('identity_already_exists') ||
-        raw.contains('identity is already linked to another user')) {
-      return 'Bu Google hesabı zaten başka bir oyun hesabına bağlı. Farklı bir Google hesabı kullanın.';
-    }
-    return error.message;
-  }
-
-  void _handleCompletedGoogleLink() {
-    if (!mounted || _didShowGoogleLinkSuccess) return;
-    if (_isGoogleLinkInProgress) {
-      setState(() {
-        _isGoogleLinkInProgress = false;
-        _didShowGoogleLinkSuccess = true;
-      });
-      AppSnackbar.show(
-        context,
-        message: 'Google hesabı başarıyla bağlandı!',
-        type: SnackbarType.success,
-      );
-    }
-  }
-
-  Future<void> _handleExistingGoogleSignIn(
-    AuthIdentityState? authIdentity,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-          side: BorderSide(color: AppColors.gold.withValues(alpha: 0.4)),
-        ),
-        title: Text(
-          'Mevcut Google Hesabına Giriş',
-          style: AppTextStyles.title.standardCopyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Google hesabınızdaki kayıtlı ilerlemenize geçiş yapılacak. Devam etmek istiyor musunuz?',
-          style: AppTextStyles.body.standardCopyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Vazgeç',
-              style: AppTextStyles.caption.standardCopyWith(
-                color: AppColors.textMuted,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gold,
-              foregroundColor: AppColors.textOnAccent,
-            ),
-            child: const Text('Giriş Yap'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    try {
-      setState(() {
-        _isGoogleSignInInProgress = true;
-      });
-      await ref.read(authManagerProvider).signInWithGoogle();
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isGoogleSignInInProgress = false;
-        });
-        AppSnackbar.show(
-          context,
-          message: 'Google ile giriş başarısız: $e',
-          type: SnackbarType.error,
-        );
-      }
-    }
-  }
-
-  Future<void> _handleGoogleUnlink() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-          side: BorderSide(color: AppColors.red.withValues(alpha: 0.4)),
-        ),
-        title: Text(
-          'Google Bağlantısını Kaldır',
-          style: AppTextStyles.title.standardCopyWith(
-            color: AppColors.red,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Google bağlantısını kaldırırsanız oyun verileriniz yalnızca bu cihazda kalacaktır. Onaylıyor musunuz?',
-          style: AppTextStyles.body.standardCopyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Vazgeç',
-              style: AppTextStyles.caption.standardCopyWith(
-                color: AppColors.textMuted,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
-            child: const Text('Bağlantıyı Kaldır'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    try {
-      await ref.read(authManagerProvider).unlinkGoogleIdentity();
-      await SessionManager.bootstrapAndRefreshAll(ref);
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'Google bağlantısı kaldırıldı.',
-          type: SnackbarType.success,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        AppSnackbar.show(
-          context,
-          message: 'Bağlantı kaldırılamadı: $e',
-          type: SnackbarType.error,
-        );
-      }
-    }
-  }
-
   Future<void> _showDeleteAccountConfirmDialog() async {
     bool? confirm1 = await showDialog<bool>(
       context: context,

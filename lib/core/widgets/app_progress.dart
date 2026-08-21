@@ -180,6 +180,32 @@ class AppProgressBar extends StatelessWidget {
        color = null,
        valueColor = null;
 
+  const AppProgressBar.stock({
+    super.key,
+    required this.value,
+    this.size = AppProgressSize.regular,
+    this.minHeight,
+    this.backgroundColor,
+    this.borderRadius,
+    this.semanticsLabel,
+    this.semanticsValue,
+  }) : kind = AppProgressKind.stock,
+       color = null,
+       valueColor = null;
+
+  const AppProgressBar.positive({
+    super.key,
+    required this.value,
+    this.size = AppProgressSize.regular,
+    this.minHeight,
+    this.backgroundColor,
+    this.borderRadius,
+    this.semanticsLabel,
+    this.semanticsValue,
+  }) : kind = AppProgressKind.positive,
+       color = null,
+       valueColor = null;
+
   @override
   Widget build(BuildContext context) {
     final safeValue = value?.clamp(0.0, 1.0);

@@ -554,7 +554,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             ],
           ),
           SizedBox(height: 7.h),
-          AppProgressBar.capacity(
+          AppProgressBar.stock(
             value: ratio,
             size: AppProgressSize.compact,
             minHeight: 3.h,
@@ -2720,18 +2720,26 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 final double capacityRatio = warehouse.capacity > 0
                     ? (warehouse.reservedCapacity / warehouse.capacity)
                     : 0.0;
+                final double freeCapacity = (warehouse.capacity - warehouse.reservedCapacity).clamp(0.0, warehouse.capacity);
                 final capacityLabel = '${warehouse.reservedCapacity.toStringAsFixed(0)}/${warehouse.capacity.toStringAsFixed(0)} m³';
+                final freeCapacityLabel = '🟢 ${freeCapacity.toStringAsFixed(0)} m³ Boş Alan';
+                final isStore = warehouse.warehouseName.toLowerCase().contains('mağaza') ||
+                    warehouse.warehouseName.toLowerCase().contains('magaza') ||
+                    warehouse.warehouseName.toLowerCase().contains('bakkal') ||
+                    warehouse.warehouseName.toLowerCase().contains('market');
                 return WarehouseSelectionOption(
                   id: warehouse.warehouseId,
                   title: warehouse.warehouseName,
                   subtitle: warehouse.cityName,
-                  badgeText: warehouse.isSameCity ? 'Ayni Sehir' : 'Farkli Sehir',
+                  cityName: warehouse.cityName,
+                  isStoreWarehouse: isStore,
+                  badgeText: warehouse.isSameCity ? 'Aynı Şehir' : 'Lojistik',
                   infoText:
-                      '${warehouse.slots.length} uygun stok | Bos kapasite: $remainingInputCapacity adet',
+                      '✓ ${warehouse.slots.length} uygun hammadde/yem mevcut',
                   isHighlightBadge: warehouse.isSameCity,
                   capacityRatio: capacityRatio,
                   capacityLabel: capacityLabel,
-                  distanceLabel: warehouse.isSameCity ? 'Aynı Şehir' : 'Lojistik',
+                  freeCapacityLabel: freeCapacityLabel,
                   productPreviews: warehouse.productPreviews,
                   onTap: () {
                     Navigator.pop(context);
@@ -2814,7 +2822,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
       final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
       final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
+      final double freeCapacity = (totalCapacity - reservedCapacity).clamp(0.0, totalCapacity);
       final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
+      final freeCapacityLabel = '🟢 ${freeCapacity.toStringAsFixed(0)} m³ Boş Alan';
 
       final previews = warehouseOption.slots.map((s) {
         return WarehouseSelectionProductPreview(
@@ -2829,14 +2839,16 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           id: warehouseOption.id,
           title: warehouseOption.name,
           subtitle: warehouseOption.cityName,
+          cityName: warehouseOption.cityName,
+          isStoreWarehouse: warehouseOption.isStoreWarehouse,
           badgeText: warehouseOption.isSameCity
-              ? 'Anlik Transfer'
-              : 'Lojistik Transfer',
-          infoText: '${eligibleInventories.length} uygun stok secilebilir',
+              ? 'Aynı Şehir'
+              : 'Lojistik',
+          infoText: '✓ ${eligibleInventories.length} çiftlik ürünü gönderilebilir',
           isHighlightBadge: warehouseOption.isSameCity,
           capacityRatio: capacityRatio,
           capacityLabel: capacityLabel,
-          distanceLabel: warehouseOption.isSameCity ? 'Aynı Şehir' : 'Lojistik',
+          freeCapacityLabel: freeCapacityLabel,
           productPreviews: previews,
           onTap: () async {
             Navigator.pop(context);

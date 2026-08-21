@@ -6,6 +6,7 @@ class PlayerAchievementDashboardModel {
   final List<AchievementBadgeModel> activeAchievements;
   final List<AchievementBadgeModel> unlockedAchievements;
   final int unlockedCount;
+  final int claimableCount;
   final int totalCount;
 
   const PlayerAchievementDashboardModel({
@@ -14,6 +15,7 @@ class PlayerAchievementDashboardModel {
     required this.activeAchievements,
     required this.unlockedAchievements,
     required this.unlockedCount,
+    required this.claimableCount,
     required this.totalCount,
   });
 
@@ -58,6 +60,7 @@ class PlayerAchievementDashboardModel {
           )
           .toList(),
       unlockedCount: (summary['unlocked_count'] as num?)?.toInt() ?? 0,
+      claimableCount: (summary['claimable_count'] as num?)?.toInt() ?? 0,
       totalCount: (summary['total_count'] as num?)?.toInt() ?? 0,
     );
   }

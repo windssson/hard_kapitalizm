@@ -10,6 +10,7 @@ class StoreQuickActions extends StatelessWidget {
   final VoidCallback? onBulkPricingTap;
   final VoidCallback? onOpenSlotTap;
   final VoidCallback onHistoryTap;
+  final Key? openSlotKey;
 
   const StoreQuickActions({
     super.key,
@@ -20,6 +21,7 @@ class StoreQuickActions extends StatelessWidget {
     this.onBulkPricingTap,
     required this.onOpenSlotTap,
     required this.onHistoryTap,
+    this.openSlotKey,
   });
 
   @override
@@ -65,9 +67,10 @@ class StoreQuickActions extends StatelessWidget {
                 onTap: onBulkPricingTap,
               ),
             _AnimatedQuickActionButton(
+              key: openSlotKey,
               width: itemWidth,
               icon: AppIcons.addBox,
-              label: 'Slot Aç',
+              label: 'Raf Oluştur',
               color: AppColors.gold,
               onTap: canOpenNewSlot ? onOpenSlotTap : null,
             ),
@@ -93,6 +96,7 @@ class _AnimatedQuickActionButton extends StatefulWidget {
   final VoidCallback? onTap;
 
   const _AnimatedQuickActionButton({
+    super.key,
     required this.width,
     required this.icon,
     required this.label,

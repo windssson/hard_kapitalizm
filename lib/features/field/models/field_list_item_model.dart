@@ -67,4 +67,15 @@ class FieldListItemModel {
     if (totalInputCapacity <= 0) return 0.0;
     return (inputStockQuantity / totalInputCapacity).clamp(0.0, 1.0);
   }
+
+  bool get hasActiveProduction => slots.any((s) => s.hasProduct);
+
+  String? get warningReason {
+    if (!field.isActive) return 'Devre Dışı';
+    if (!hasActiveProduction) return 'Ekim Yok!';
+    if (outputStockRatio >= 1.0) return 'Depo Dolu!';
+    return null;
+  }
+
+  bool get hasWarning => warningReason != null;
 }

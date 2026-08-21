@@ -40,6 +40,16 @@ class FactoryListItemModel {
   bool get isOutputFull =>
       factory.outputCapacity > 0 && outputStockQuantity >= factory.outputCapacity;
 
+  String? get warningReason {
+    if (!factory.isActive) return 'Devre Dışı';
+    if (!hasSelectedProduct) return 'Ürün Seçilmedi!';
+    if (isOutputFull) return 'Depo Dolu!';
+    if (!hasInputStock) return 'Hammadde Yok!';
+    return null;
+  }
+
+  bool get hasWarning => warningReason != null;
+
   FactoryListItemModel copyWith({
     FactoryModel? factory,
     String? cityName,

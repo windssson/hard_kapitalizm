@@ -402,6 +402,8 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
   Widget _buildAdvancedFarmCard(FarmListItemModel item) {
     final farm = item.farm;
+    final hasWarning = item.hasWarning;
+
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
       decoration: BoxDecoration(
@@ -416,10 +418,12 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
           ],
         ),
         border: Border.all(
-          color: farm.isActive
-              ? AppColors.borderGold.withValues(alpha: 0.5)
-              : AppColors.border.withValues(alpha: 0.3),
-          width: 1,
+          color: hasWarning
+              ? AppColors.warning.withValues(alpha: 0.8)
+              : farm.isActive
+                  ? AppColors.borderGold.withValues(alpha: 0.5)
+                  : AppColors.border.withValues(alpha: 0.3),
+          width: hasWarning ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -427,7 +431,13 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
-          if (farm.isActive)
+          if (hasWarning)
+            BoxShadow(
+              color: AppColors.warning.withValues(alpha: 0.18),
+              blurRadius: 10,
+              spreadRadius: 1,
+            )
+          else if (farm.isActive)
             BoxShadow(
               color: AppColors.gold.withValues(alpha: 0.03),
               blurRadius: 8,
@@ -513,6 +523,9 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
 
   Widget _buildFarmHeader(FarmListItemModel item) {
     final farm = item.farm;
+    final hasWarning = item.hasWarning;
+    final warningReason = item.warningReason;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -530,8 +543,15 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            SizedBox(width: 8.w),
-            _buildSmallBadge('Lv. ${farm.level}', AppColors.warning),
+            SizedBox(width: 6.w),
+            if (hasWarning && warningReason != null) ...[
+              _buildSmallBadge(
+                '⚠️ $warningReason',
+                AppColors.warning,
+              ),
+              SizedBox(width: 6.w),
+            ],
+            _buildSmallBadge('Lv. ${farm.level}', AppColors.blue),
             SizedBox(width: 6.w),
             _buildSmallBadge(
               farm.isActive ? 'Aktif' : 'Pasif',
@@ -619,7 +639,9 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
               Text(
                 '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.totalOutputCapacity)}',
                 style: AppTextStyles.caption.standardCopyWith(
-                  color: ratio >= 0.9 ? AppColors.red : AppColors.textPrimary,
+                  color: ratio >= 0.6
+                      ? AppColors.green
+                      : (ratio <= 0.25 ? AppColors.red : AppColors.textPrimary),
                   fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
@@ -627,7 +649,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
             ],
           ),
           SizedBox(height: 6.h),
-          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
+          AppProgressBar.stock(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );
@@ -676,7 +698,9 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
               Text(
                 '${_formatCompact(item.inputStockQuantity)} adet / ${_formatCompact(item.totalInputCapacity)}',
                 style: AppTextStyles.caption.standardCopyWith(
-                  color: AppColors.textPrimary,
+                  color: ratio >= 0.6
+                      ? AppColors.green
+                      : (ratio <= 0.25 ? AppColors.red : AppColors.textPrimary),
                   fontSize: AppTypography.label,
                   fontWeight: FontWeight.bold,
                 ),
@@ -684,7 +708,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
             ],
           ),
           SizedBox(height: 6.h),
-          AppProgressBar.capacity(value: ratio, size: AppProgressSize.compact),
+          AppProgressBar.stock(value: ratio, size: AppProgressSize.compact),
         ],
       ),
     );

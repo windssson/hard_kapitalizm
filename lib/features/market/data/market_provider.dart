@@ -11,6 +11,7 @@ import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/market/models/product_price_history_model.dart';
+import 'package:hard_kapitalizm/features/market/models/seller_market_sale_model.dart';
 
 final marketProductProvider =
     FutureProvider.family<ProductModel?, String>((ref, productId) async {
@@ -272,3 +273,27 @@ final productPriceHistoryProvider =
 
       return null;
     });
+
+final sellerMarketSalesHistoryProvider =
+    FutureProvider.autoDispose<SellerMarketSalesHistoryResponse>((ref) async {
+      final supabase = Supabase.instance.client;
+      final response = await supabase.rpc(
+        'get_seller_market_sales_history',
+        params: {'p_limit': 50},
+      );
+
+      if (response == null) {
+        return const SellerMarketSalesHistoryResponse(
+          success: true,
+          totalSalesCount: 0,
+          totalSoldQuantity: 0,
+          totalRevenue: 0.0,
+          sales: [],
+        );
+      }
+
+      return SellerMarketSalesHistoryResponse.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
+    });
+

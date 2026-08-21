@@ -265,12 +265,7 @@ begin
   if v_active_warning_count >= 5 then
     v_company_status := 'kritik';
   elsif v_active_warning_count >= 2 then
-    v_company_status := 'dikkat';
-  else
-    v_company_status := 'istikrarli';
-  end if;
-
-  select coalesce(
+    v_company  select coalesce(
     jsonb_agg(activity_row order by (activity_row->>'finish_at')::timestamptz asc),
     '[]'::jsonb
   )
@@ -295,9 +290,13 @@ begin
     select jsonb_build_object(
       'id', bu.id,
       'type', 'upgrade',
-      'kind', bu.target_entity_kind,
-      'title', coalesce(bu.params->>'name', bu.target_entity_kind, 'Yukseltme'),
-      'subtitle', 'Yukseltme',
+      'kind', bu.building_kind,
+      'title', coalesce(bu.params->>'name', bu.building_kind, 'Yukseltme'),
+      'subtitle', case
+        when coalesce(bu.target_level, 0) > 0
+          then 'Yukseltme Lv.' || bu.target_level::text
+        else 'Yukseltme'
+      end,
       'started_at', bu.started_at,
       'finish_at', bu.finish_at
     ) as activity_row
@@ -309,16 +308,33 @@ begin
     union all
 
     select jsonb_build_object(
+      'id', ar.id,
+      'type', 'research',
+      'kind', 'arge',
+      'title', coalesce(ar.product_name, 'AR-GE'),
+      'subtitle', 'Arastirma Q' || ar.current_quality::text || ' -> Q' || ar.target_quality::text,
+      'started_at', ar.started_at,
+      'finish_at', ar.finish_at
+    ) as activity_row
+    from public.arge_researches ar
+    where ar.player_id = v_player_id
+      and ar.status = 'in_progress'
+      and ar.finish_at > timezone('utc', now())
+
+    union all
+
+    select jsonb_build_object(
       'id', lt.id,
       'type', 'logistics',
       'kind', 'transfer',
-      'title', coalesce(lt.driver_name, 'Sevkiyat'),
+      'title', coalesce(p.urun_adi, 'Sevkiyat'),
       'subtitle', 'Lojistik',
       'started_at', lt.started_at,
       'finish_at', lt.finish_at
     ) as activity_row
     from public.logistics_transfers lt
-    where (lt.player_id = v_player_id or lt.seller_player_id = v_player_id)
+    left join public.products p on p.id = lt.product_id
+    where (lt.buyer_player_id = v_player_id or lt.seller_player_id = v_player_id)
       and lt.status = 'in_transit'
       and lt.finish_at > timezone('utc', now())
   ) combined_activities;
@@ -326,116 +342,112 @@ begin
   select coalesce(
     jsonb_agg(
       jsonb_build_object(
-        'id', pan.id,
-        'notification_type', pan.notification_type,
-        'title', pan.title,
-        'message', pan.message,
-        'priority', pan.priority,
-        'action_route', pan.action_route,
-        'is_read', pan.is_read,
-        'created_at', pan.created_at
+        'id', pn.id,
+        'kind', pn.kind,
+        'category', pn.category,
+        'title', pn.title,
+        'message', pn.message,
+        'entity_kind', pn.entity_kind,
+        'entity_id', pn.entity_id,
+        'severity', pn.severity,
+        'status', pn.status,
+        'meta', coalesce(pn.meta, '{}'::jsonb),
+        'created_at', pn.created_at
       )
-      order by
-        case pan.priority
-          when 'critical' then 1
-          when 'warning' then 2
-          else 3
-        end asc,
-        pan.created_at desc
+      order by pn.created_at desc
     ),
     '[]'::jsonb
   )
   into v_dashboard_notifications
-  from public.player_attention_notifications pan
-  where pan.player_id = v_player_id
-    and pan.is_dismissed = false
-    and pan.created_at >= (timezone('utc', now()) - interval '7 days');
+  from (
+    select *
+    from public.player_notifications pn
+    where pn.player_id = v_player_id
+      and (
+        pn.status = 'unread'
+        or (pn.kind = 'warning' and pn.status <> 'resolved')
+        or (pn.category = 'inactive_reminder' and pn.status <> 'resolved')
+      )
+    order by pn.created_at desc
+    limit 20
+  ) pn;
 
-  select coalesce(
+  SELECT coalesce(
     jsonb_agg(
       jsonb_build_object(
-        'id', prod.id,
-        'facility_kind', prod.facility_kind,
-        'facility_name', prod.facility_name,
-        'product_id', prod.product_id,
-        'product_name', prod.product_name,
-        'icon', prod.icon,
-        'started_at', prod.started_at,
-        'finish_at', prod.finish_at,
-        'remaining_seconds', greatest(0, floor(extract(epoch from (prod.finish_at - timezone('utc', now()))))::integer)
+        'product_id', active_p.product_id,
+        'product_name', active_p.urun_adi,
+        'product_icon', active_p.urun_iconu,
+        'owner_kind', active_p.owner_kind,
+        'quality_level', active_p.quality_level,
+        'active_slots', active_p.active_slots
       )
-      order by prod.finish_at asc
     ),
     '[]'::jsonb
   )
-  into v_active_productions
-  from (
-    select
-      f.id,
-      'factory' as facility_kind,
-      f.name as facility_name,
-      f.active_recipe_id as product_id,
-      p.name as product_name,
-      p.icon,
-      f.production_started_at as started_at,
-      f.production_finish_at as finish_at
-    from public.factories f
-    left join public.products p on p.id = f.active_recipe_id
-    where f.player_id = v_player_id
-      and f.production_finish_at is not null
-      and f.production_finish_at > timezone('utc', now())
+  INTO v_active_productions
+  FROM (
+    SELECT 
+      product_id,
+      urun_adi,
+      urun_iconu,
+      owner_kind,
+      quality_level,
+      sum(slots_count)::int as active_slots
+    FROM (
+      -- Fields and Farms (from production_slots)
+      SELECT 
+        ps.product_id,
+        p.urun_adi,
+        p.urun_iconu,
+        ps.owner_kind,
+        ps.quality_level,
+        count(*) as slots_count
+      FROM public.production_slots ps
+      JOIN public.products p ON p.id = ps.product_id
+      WHERE ps.is_active = true
+        AND (
+          ps.owner_id IN (SELECT id FROM public.farms WHERE player_id = v_player_id) OR
+          ps.owner_id IN (SELECT id FROM public.fields WHERE player_id = v_player_id)
+        )
+      GROUP BY ps.product_id, p.urun_adi, p.urun_iconu, ps.owner_kind, ps.quality_level
 
-    union all
+      UNION ALL
 
-    select
-      fl.id,
-      'field' as facility_kind,
-      fl.name as facility_name,
-      fl.crop_product_id as product_id,
-      p.name as product_name,
-      p.icon,
-      fl.planted_at as started_at,
-      fl.harvest_at as finish_at
-    from public.fields fl
-    left join public.products p on p.id = fl.crop_product_id
-    where fl.player_id = v_player_id
-      and fl.harvest_at is not null
-      and fl.harvest_at > timezone('utc', now())
+      -- Factories (direct active production)
+      SELECT
+        f.product_id,
+        p.urun_adi,
+        p.urun_iconu,
+        'factory' as owner_kind,
+        f.quality_level,
+        count(*) as slots_count
+      FROM public.factories f
+      JOIN public.products p ON p.id = f.product_id
+      WHERE f.is_active = true
+        AND f.product_id IS NOT NULL
+        AND f.player_id = v_player_id
+      GROUP BY f.product_id, p.urun_adi, p.urun_iconu, f.quality_level
 
-    union all
+      UNION ALL
 
-    select
-      fm.id,
-      'farm' as facility_kind,
-      fm.name as facility_name,
-      fm.animal_product_id as product_id,
-      p.name as product_name,
-      p.icon,
-      fm.cycle_started_at as started_at,
-      fm.cycle_finish_at as finish_at
-    from public.farms fm
-    left join public.products p on p.id = fm.animal_product_id
-    where fm.player_id = v_player_id
-      and fm.cycle_finish_at is not null
-      and fm.cycle_finish_at > timezone('utc', now())
-
-    union all
-
-    select
-      m.id,
-      'mine' as facility_kind,
-      m.name as facility_name,
-      m.resource_product_id as product_id,
-      p.name as product_name,
-      p.icon,
-      m.extraction_started_at as started_at,
-      m.extraction_finish_at as finish_at
-    from public.mines m
-    left join public.products p on p.id = m.resource_product_id
-    where m.player_id = v_player_id
-      and m.extraction_finish_at is not null
-      and m.extraction_finish_at > timezone('utc', now())
-  ) prod;
+      -- Mines (direct active production)
+      SELECT
+        m.product_id,
+        p.urun_adi,
+        p.urun_iconu,
+        'mine' as owner_kind,
+        1 as quality_level,
+        count(*) as slots_count
+      FROM public.mines m
+      JOIN public.products p ON p.id = m.product_id
+      WHERE m.is_active = true
+        AND m.product_id IS NOT NULL
+        AND m.player_id = v_player_id
+      GROUP BY m.product_id, p.urun_adi, p.urun_iconu
+    ) sub_active
+    GROUP BY product_id, urun_adi, urun_iconu, owner_kind, quality_level
+  ) active_p;
 
   return jsonb_build_object(
     'success', true,

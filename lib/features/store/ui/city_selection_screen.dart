@@ -53,18 +53,27 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
   void initState() {
     super.initState();
     _transformationController = TransformationController();
-
-    // Haritayı açılışta geçici bir varsayılan Matrix4 ile başlatırız
-    final zoomScale = 1.35;
-    // ignore: deprecated_member_use
-    final matrix = Matrix4.identity()
-      // ignore: deprecated_member_use
-      ..translate(-150.0, -100.0)
-      // ignore: deprecated_member_use
-      ..scale(zoomScale);
-    _transformationController.value = matrix;
-
     _loadCityList();
+  }
+
+  void _centerMap(Size viewportSize) {
+    final double rawWidth = SizeController.instance.mapSize.width;
+    final double rawHeight = SizeController.instance.mapSize.height;
+    if (rawWidth <= 0 || rawHeight <= 0) return;
+
+    final double targetScale = (viewportSize.width * 0.95) / rawWidth;
+    final double scaledWidth = rawWidth * targetScale;
+    final double scaledHeight = rawHeight * targetScale;
+
+    final double tx = (viewportSize.width - scaledWidth) / 2;
+    final double ty = (viewportSize.height - scaledHeight) / 2 - 25.h;
+
+    // ignore: deprecated_member_use
+    _transformationController.value = Matrix4.identity()
+      // ignore: deprecated_member_use
+      ..translate(tx, ty)
+      // ignore: deprecated_member_use
+      ..scale(targetScale);
   }
 
   @override
@@ -76,11 +85,19 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
   Future<void> _loadCityList() async {
     try {
       final list = await Parser.instance.svgToCityList(Maps.TURKEY);
+      if (!mounted) return;
       setState(() {
         _cityList = list;
         _isLoadingMap = false;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_hasCenteredMap) {
+          _hasCenteredMap = true;
+          _centerMap(MediaQuery.of(context).size);
+        }
+      });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoadingMap = false;
       });
@@ -144,23 +161,12 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
 
     // Harita tamamen yüklenip boyutu sıfırdan büyük olduğu an 1 kere merkezlemeyi tetikler
     if (citiesAsync.hasValue && !_isLoadingMap && !_hasCenteredMap && _cityList.isNotEmpty) {
-      final double childWidth = SizeController.instance.mapSize.width;
-      final double childHeight = SizeController.instance.mapSize.height;
-      if (childWidth > 0 && childHeight > 0) {
-        _hasCenteredMap = true;
-        final Size viewportSize = MediaQuery.of(context).size;
-        final double zoomScale = 1.25;
-
-        final double tx = (viewportSize.width - (childWidth * zoomScale)) / 2;
-        final double ty = (viewportSize.height - (childHeight * zoomScale)) / 2;
-
-        // ignore: deprecated_member_use
-        _transformationController.value = Matrix4.identity()
-          // ignore: deprecated_member_use
-          ..translate(tx, ty)
-          // ignore: deprecated_member_use
-          ..scale(zoomScale);
-      }
+      _hasCenteredMap = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _centerMap(MediaQuery.of(context).size);
+        }
+      });
     }
 
     return Scaffold(
@@ -539,7 +545,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
         horizontal: MediaQuery.of(context).size.width * 0.9,
         vertical: MediaQuery.of(context).size.height * 0.9,
       ),
-      minScale: 0.5,
+      minScale: 0.2,
       maxScale: 4.0,
       scaleEnabled: true,
       panEnabled: true,

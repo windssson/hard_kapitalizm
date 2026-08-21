@@ -19,6 +19,7 @@ import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 
 class StoreScreen extends ConsumerStatefulWidget {
   const StoreScreen({super.key});
@@ -125,7 +126,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                       },
                                       child: store.isUnderConstruction
                                           ? _buildConstructionCard(store)
-                                          : _buildAdvancedStoreCard(store),
+                                          : _buildAdvancedStoreCard(store, index),
                                     );
                                   },
                                 ),
@@ -244,9 +245,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
   Widget _buildConstructionCard(StoreModel store) {
     final finishAt = store.finishAt;
-    final starCost = finishAt == null
+    final int calculatedCost = finishAt == null
         ? 0
         : _calculateStarCost(finishAt.toLocal());
+    final bool isTutorial =
+        ref.watch(tutorialProvider).step == TutorialStep.clickQuickFinish;
+    final int starCost =
+        (isTutorial && calculatedCost <= 0) ? 1 : calculatedCost;
 
     return Column(
       children: [
@@ -349,6 +354,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                             );
                           }
                           await ref.read(storesListProvider.notifier).refresh();
+                          ref.invalidate(warehouseListProvider);
                         },
                       )
                     else
@@ -397,33 +403,31 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final bool isTutorial =
         ref.read(tutorialProvider).step == TutorialStep.clickQuickFinish;
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.cardBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.r),
-          side: BorderSide(color: AppColors.borderGold),
-        ),
-        title: Text(
-          isTutorial ? 'İnşaatı Hemen Tamamla' : 'İnşaatı Bitir',
-          style: AppTextStyles.title.standardCopyWith(
-            color: AppColors.goldLight,
-            fontSize: AppTypography.titleLarge,
-            fontWeight: FontWeight.bold,
+    if (!isTutorial) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: AppColors.cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+            side: BorderSide(color: AppColors.borderGold),
           ),
-        ),
-        content: Text(
-          isTutorial
-              ? 'Öğretici kapsamında manav inşaatını anında tamamlayalım!'
-              : '$starCost ⭐ yıldız kullanarak inşaatı anında tamamlamak istiyor musunuz?',
-          style: AppTextStyles.body.standardCopyWith(
-            color: AppColors.textSecondary,
-            fontSize: AppTypography.bodyLarge,
+          title: Text(
+            'İnşaatı Bitir',
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.goldLight,
+              fontSize: AppTypography.titleLarge,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        actions: [
-          if (!isTutorial)
+          content: Text(
+            '$starCost ⭐ yıldız kullanarak inşaatı anında tamamlamak istiyor musunuz?',
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textSecondary,
+              fontSize: AppTypography.bodyLarge,
+            ),
+          ),
+          actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: Text(
@@ -434,35 +438,37 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 ),
               ),
             ),
-          ElevatedButton(
-            key: TutorialKeys.quickFinishDialogConfirmKey,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gold,
-              foregroundColor: AppColors.textOnAccent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
+            ElevatedButton(
+              key: TutorialKeys.quickFinishDialogConfirmKey,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                foregroundColor: AppColors.textOnAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                'Tamamla',
+                style: AppTextStyles.button.standardCopyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: AppTypography.bodyLarge,
+                ),
               ),
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Tamamla',
-              style: AppTextStyles.button.standardCopyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: AppTypography.bodyLarge,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
-    if (confirm != true || !mounted) return;
+      if (confirm != true || !mounted) return;
+    }
 
     final result = await ref
         .read(storeActionProvider)
         .finishConstructionWithGold(constructionId);
     if (result['success'] == true) {
       await ref.read(storesListProvider.notifier).refresh();
+      ref.invalidate(warehouseListProvider);
       if (mounted) {
         AppSnackbar.show(
           context,
@@ -508,7 +514,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     }
   }
 
-  Widget _buildAdvancedStoreCard(StoreModel store) {
+  Widget _buildAdvancedStoreCard(StoreModel store, int index) {
     final double stockCost = store.summary.totalStockCostValue ?? 0.0;
     final double stockSale = store.summary.totalStockSaleValue ?? 0.0;
     final double potentialProfit = stockSale - stockCost;
@@ -516,7 +522,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final bool anySlotOutOfStock = store.slots.any((s) => !s.isEmpty && s.quantity == 0);
 
     final tutorial = ref.watch(tutorialProvider);
-    final isNewStoreKeyTarget = tutorial.step == TutorialStep.clickEnterStore;
+    final isNewStoreKeyTarget = index == 0 &&
+        (tutorial.step == TutorialStep.clickEnterStore ||
+            tutorial.step == TutorialStep.clickCreateShelf ||
+            tutorial.step == TutorialStep.clickGoToMarket ||
+            tutorial.step == TutorialStep.clickSelectProduct ||
+            tutorial.step == TutorialStep.clickSetPrice ||
+            tutorial.step == TutorialStep.clickAddStock);
 
     return GestureDetector(
       key: isNewStoreKeyTarget ? TutorialKeys.newStoreItemKey : null,

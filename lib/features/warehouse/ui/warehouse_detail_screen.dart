@@ -1681,16 +1681,25 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         );
       }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
 
+      final double freeCapacity = roughAvailable;
+      final freeCapacityLabel = '🟢 ${_formatValue(freeCapacity)} m³ Boş Alan';
+      final isStore = target['warehouse_type']?['code'] == 'store_warehouse' ||
+          (target['name']?.toString().toLowerCase().contains('mağaza') ?? false) ||
+          (target['name']?.toString().toLowerCase().contains('magaza') ?? false) ||
+          (target['name']?.toString().toLowerCase().contains('bakkal') ?? false);
+
       return WarehouseSelectionOption(
         id: target['id'].toString(),
         title: (target['name'] ?? 'Depo').toString(),
-        subtitle: '$cityName | Seviye: ${target['level'] ?? 1}',
-        badgeText: sameCity ? 'Ayni Sehir' : 'Sehirler Arasi',
-        infoText: '~${_formatValue(roughAvailable)} m3 bos',
+        subtitle: '$cityName • Seviye ${target['level'] ?? 1}',
+        cityName: cityName,
+        isStoreWarehouse: isStore,
+        badgeText: sameCity ? 'Aynı Şehir' : 'Lojistik',
+        infoText: '✓ ${_formatValue(roughAvailable)} m³ boş alan mevcut',
         isHighlightBadge: sameCity,
         capacityRatio: capacityRatio,
         capacityLabel: capacityLabel,
-        distanceLabel: sameCity ? 'Aynı Şehir' : 'Şehirler Arası',
+        freeCapacityLabel: freeCapacityLabel,
         productPreviews: previews,
         onTap: () {
           Navigator.pop(context);

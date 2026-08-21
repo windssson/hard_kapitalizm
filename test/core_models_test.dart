@@ -7,6 +7,7 @@ import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/features/bank/models/loan_model.dart';
 import 'package:hard_kapitalizm/features/bank/models/deposit_model.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
+import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 
 void main() {
   group('BuildingBoostModel Tests', () {
@@ -243,6 +244,36 @@ void main() {
       expect(city.name, equals('İstanbul'));
       expect(city.taxRate, equals(0.12));
       expect(city.isActive, isTrue);
+    });
+
+    test('PlayerModel parses headquartersCityId and headquartersCityName properly', () {
+      final json = {
+        'id': 'p_123',
+        'player_name': 'Test Patron',
+        'company_name': 'Patron Holding',
+        'avatar_id': 'ae1.webp',
+        'headquarters_city_id': '9d78fceb-3a67-4913-864f-95d7c6dc064e',
+        'headquarters_city_name': 'İstanbul',
+        'level': 2,
+        'experience': 500,
+        'cash': 250000.0,
+        'gold': 150.0,
+        'company_value': 1000000.0,
+      };
+
+      final player = PlayerModel.fromJson(json);
+
+      expect(player.id, equals('p_123'));
+      expect(player.headquartersCityId, equals('9d78fceb-3a67-4913-864f-95d7c6dc064e'));
+      expect(player.headquartersCityName, equals('İstanbul'));
+      expect(player.level, equals(2));
+
+      final updated = player.copyWith(
+        headquartersCityId: 'city_ankara',
+        headquartersCityName: 'Ankara',
+      );
+      expect(updated.headquartersCityId, equals('city_ankara'));
+      expect(updated.headquartersCityName, equals('Ankara'));
     });
   });
 }

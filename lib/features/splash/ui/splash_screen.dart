@@ -36,13 +36,38 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (_isStarting) return;
     _isStarting = true;
     try {
+      final session = Supabase.instance.client.auth.currentSession;
       final authManager = ref.read(authManagerProvider);
-      await authManager.signInAnonymouslyIfNeeded();
-
-      // Arka plan servislerini tetikle (Splash'i bloklamasın)
-      authManager.syncGoogleProfileIfLinked().ignore();
-
       final assetManager = ref.read(assetManagerProvider);
+
+      if (session == null) {
+        // Oturum yok: Statik katalog ve temel arayüz görsellerini yükleyip Auth ekranına geç
+        await Future.wait([
+          ref.read(staticCatalogsProvider.future),
+          assetManager.prefetchCriticalAssets(
+            onProgress: (current, total, fileName) {
+              if (mounted) {
+                setState(() {
+                  _currentFile = current;
+                  _totalFiles = total;
+                });
+              }
+            },
+          ),
+        ]);
+
+        if (mounted) {
+          setState(() {
+            _currentFile = _totalFiles > 0 ? _totalFiles : 1;
+            _totalFiles = _totalFiles > 0 ? _totalFiles : 1;
+          });
+          context.go('/auth');
+        }
+        return;
+      }
+
+      // Oturum var: Arka plan senkronizasyonu başlat
+      authManager.syncGoogleProfileIfLinked().ignore();
 
       // Kritik işlemleri aynı anda PARALEL olarak yürüt
       await Future.wait([

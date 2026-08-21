@@ -67,4 +67,18 @@ class FarmListItemModel {
     if (totalInputCapacity <= 0) return 0.0;
     return (inputStockQuantity / totalInputCapacity).clamp(0.0, 1.0);
   }
+
+  bool get hasActiveProduction => slots.any((s) => s.hasProduct);
+
+  String? get warningReason {
+    if (!farm.isActive) return 'Devre Dışı';
+    if (!hasActiveProduction) return 'Üretim Yok!';
+    if (outputStockRatio >= 1.0) return 'Depo Dolu!';
+    if (farm.inputCapacity > 0 && inputStockQuantity <= 0 && hasActiveProduction) {
+      return 'Yem Yok!';
+    }
+    return null;
+  }
+
+  bool get hasWarning => warningReason != null;
 }

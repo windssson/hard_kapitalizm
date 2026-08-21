@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -14,20 +16,42 @@ class TutorialOverlay extends ConsumerStatefulWidget {
 }
 
 class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   Rect? _targetRect;
+  late final AnimationController _pulseController;
+  Timer? _trackingTimer;
+  GlobalKey? _lastEnsuredKey;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _updateTargetRect();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _startTracking();
   }
 
   @override
   void dispose() {
+    _stopTracking();
+    _pulseController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _startTracking() {
+    _trackingTimer?.cancel();
+    _trackingTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      if (!mounted) return;
+      _updateTargetRect();
+    });
+  }
+
+  void _stopTracking() {
+    _trackingTimer?.cancel();
+    _trackingTimer = null;
   }
 
   @override
@@ -43,111 +67,236 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
   }
 
   void _updateTargetRect() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final step = ref.read(tutorialProvider).step;
-      final key = _getKeyForStep(step);
-      if (key == null) {
-        if (_targetRect != null) {
-          setState(() {
-            _targetRect = null;
-          });
-        }
-        return;
-      }
-
-      final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox == null) {
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted) _updateTargetRect();
-        });
-        return;
-      }
-
-      final size = renderBox.size;
-      final offset = renderBox.localToGlobal(Offset.zero);
-      final rect = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
-
-      if (_targetRect != rect) {
+    if (!mounted) return;
+    final step = ref.read(tutorialProvider).step;
+    if (step == TutorialStep.none) {
+      if (_targetRect != null) {
         setState(() {
-          _targetRect = rect;
+          _targetRect = null;
+          _lastEnsuredKey = null;
         });
       }
-    });
+      return;
+    }
+
+    final key = _getKeyForStep(step);
+    if (key == null) {
+      if (_targetRect != null) {
+        setState(() {
+          _targetRect = null;
+        });
+      }
+      return;
+    }
+
+    final currentContext = key.currentContext;
+    if (currentContext == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _updateTargetRect();
+      });
+      return;
+    }
+
+    final renderBox = currentContext.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize || renderBox.size.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _updateTargetRect();
+      });
+      return;
+    }
+
+    final size = renderBox.size;
+    final offset = renderBox.localToGlobal(Offset.zero);
+    final rect = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
+
+    if (_targetRect != rect) {
+      setState(() {
+        _targetRect = rect;
+      });
+    }
+
+    if (_lastEnsuredKey != key) {
+      _lastEnsuredKey = key;
+      Scrollable.ensureVisible(
+        currentContext,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 300),
+      ).catchError((_) {});
+    }
   }
 
   GlobalKey? _getKeyForStep(TutorialStep step) {
+    GlobalKey? directKey;
     switch (step) {
+      case TutorialStep.welcome:
+      case TutorialStep.finished:
+      case TutorialStep.none:
+        return null;
       case TutorialStep.clickFirstStore:
         return TutorialKeys.homeStoresModuleKey;
       case TutorialStep.clickStoreFab:
-        return TutorialKeys.storeScreenFabKey;
+        directKey = TutorialKeys.storeScreenFabKey;
+        break;
       case TutorialStep.selectCity:
         return null;
       case TutorialStep.confirmCity:
-        return TutorialKeys.citySelectionConfirmKey;
+        directKey = TutorialKeys.citySelectionConfirmKey;
+        break;
       case TutorialStep.selectManav:
-        return TutorialKeys.buildingTypeManavKey;
+        directKey = TutorialKeys.buildingTypeManavKey;
+        break;
       case TutorialStep.confirmManavBuild:
-        return TutorialKeys.buildingTypeConfirmKey;
+        directKey = TutorialKeys.buildingTypeConfirmKey;
+        break;
       case TutorialStep.clickQuickFinish:
         if (TutorialKeys.quickFinishDialogConfirmKey.currentContext != null) {
           return TutorialKeys.quickFinishDialogConfirmKey;
         }
-        return TutorialKeys.constructionGoldFinishKey;
+        directKey = TutorialKeys.constructionGoldFinishKey;
+        break;
       case TutorialStep.clickEnterStore:
-        return TutorialKeys.newStoreItemKey;
+        directKey = TutorialKeys.newStoreItemKey;
+        break;
+      case TutorialStep.clickCreateShelf:
+        if (TutorialKeys.storeEmptyShelfButtonKey.currentContext != null) {
+          return TutorialKeys.storeEmptyShelfButtonKey;
+        }
+        directKey = TutorialKeys.storeQuickActionOpenSlotKey;
+        break;
+      case TutorialStep.clickGoToMarket:
+        directKey = TutorialKeys.storeGoToMarketButtonKey;
+        break;
+      case TutorialStep.selectMarketWarehouse:
+        directKey = TutorialKeys.marketWarehouseFirstItemKey;
+        break;
+      case TutorialStep.selectMarketProduct:
+        directKey = TutorialKeys.marketProductFirstItemKey;
+        break;
+      case TutorialStep.clickMarketBuyListing:
+        directKey = TutorialKeys.marketListingFirstAddKey;
+        break;
+      case TutorialStep.confirmMarketCartBuy:
+        directKey = TutorialKeys.marketAddToCartConfirmKey;
+        break;
+      case TutorialStep.confirmMarketCheckout:
+        if (TutorialKeys.marketCheckoutConfirmKey.currentContext != null) {
+          return TutorialKeys.marketCheckoutConfirmKey;
+        }
+        directKey = TutorialKeys.marketCartLauncherKey;
+        break;
+      case TutorialStep.returnToStore:
+        if (TutorialKeys.marketReturnToStoreKey.currentContext != null) {
+          return TutorialKeys.marketReturnToStoreKey;
+        }
+        directKey = TutorialKeys.homeStoresModuleKey;
+        break;
       case TutorialStep.clickSelectProduct:
         if (TutorialKeys.productSelectionFirstItemKey.currentContext != null) {
           return TutorialKeys.productSelectionFirstItemKey;
         }
-        return TutorialKeys.storeSlotSelectProductKey;
+        directKey = TutorialKeys.storeSlotSelectProductKey;
+        break;
       case TutorialStep.clickSetPrice:
         if (TutorialKeys.priceDialogConfirmKey.currentContext != null) {
           return TutorialKeys.priceDialogConfirmKey;
         }
-        return TutorialKeys.storeSlotPriceKey;
+        directKey = TutorialKeys.storeSlotPriceKey;
+        break;
       case TutorialStep.clickAddStock:
-        return TutorialKeys.storeSlotOrderStockKey;
-      default:
-        return null;
+        if (TutorialKeys.stockRefillConfirmKey.currentContext != null) {
+          return TutorialKeys.stockRefillConfirmKey;
+        }
+        directKey = TutorialKeys.storeSlotOrderStockKey;
+        break;
     }
+
+    if (directKey.currentContext != null) {
+      return directKey;
+    }
+
+    // Ekran dışı akıllı geri yönlendirme (Örn: Kullanıcı ana sayfaya döndüyse veya oyunu kapatıp açtıysa)
+    if (step != TutorialStep.welcome &&
+        step != TutorialStep.finished &&
+        step != TutorialStep.none &&
+        step != TutorialStep.selectCity) {
+      if (TutorialKeys.newStoreItemKey.currentContext != null) {
+        return TutorialKeys.newStoreItemKey;
+      }
+      if (TutorialKeys.homeStoresModuleKey.currentContext != null) {
+        return TutorialKeys.homeStoresModuleKey;
+      }
+    }
+
+    return directKey;
   }
 
   String _getAssistantText(TutorialStep step) {
+    final effectiveKey = _getKeyForStep(step);
+    if (effectiveKey == TutorialKeys.homeStoresModuleKey &&
+        step != TutorialStep.clickFirstStore &&
+        step != TutorialStep.welcome &&
+        step != TutorialStep.finished) {
+      return 'Yarım kalan manav kurulumumuza devam etmek için "Mağazalar" menüsüne tıkla.';
+    }
+    if (effectiveKey == TutorialKeys.newStoreItemKey &&
+        step != TutorialStep.clickEnterStore &&
+        step != TutorialStep.welcome &&
+        step != TutorialStep.finished) {
+      return 'Manavımızın içine girerek kuruluma kaldığımız yerden devam edelim.';
+    }
+
     switch (step) {
       case TutorialStep.welcome:
-        return 'Hoş geldin patron! Birlikte büyük bir ticaret imparatorluğu kuracağız. Hadi ilk perakende mağazamızı açalım!';
+        return 'Hoş geldin patron! Ben danışmanın Leyla. Bu holdingde sıfırdan başlayıp Türkiye\'nin en büyük ticaret imparatorluğunu kuracağız. İlk gelir kapımızı açmak için perakende mağazamızı kuralım!';
       case TutorialStep.clickFirstStore:
-        return 'Öncelikle Mağazalar menüsüne tıklayarak mevcut yatırımlarımızı yönetelim.';
+        return 'Mağazalar; doğrudan şehirdeki tüketicilere perakende satış yaparak holdingimize düzenli nakit akışı ve kâr sağlayan ana gelir merkezimizdir. İncelemek için Mağazalar menüsüne tıkla.';
       case TutorialStep.clickStoreFab:
-        return 'Henüz hiç mağazamız yok. Yeni bir mağaza kurmak için sağ alttaki "+" (Mağaza Kur) butonuna tıkla.';
+        return 'Her yeni mağaza, yeni bir ciro ve kâr kaynağı demektir. Şehirde yeni bir perakende işletmesi açmak için sağ alttaki "+" (Mağaza Kur) butonuna dokun.';
       case TutorialStep.selectCity:
-        return 'Mağazayı kurmak istediğin şehri haritadan veya yukarıdaki listeden özgürce seç.';
+        return 'Şehir seçimi çok kritiktir patron! Her şehrin nüfusu, vergi oranları ve tüketici talebi farklıdır. Yüksek potansiyelli bir şehir seçerek ilk yatırımını başlat.';
       case TutorialStep.confirmCity:
-        return 'Harika seçim! Şimdi "Devam Et" butonuna tıklayarak mağaza türünü seçmeye geçelim.';
+        return 'Harika bir lokasyon seçtin! Şehirdeki tüketici potansiyelini değerlendirmek için "Devam Et" butonuna tıklayarak sektör seçimine geçelim.';
       case TutorialStep.selectManav:
-        return 'İlk mağazamız olarak halkın en çok ihtiyaç duyduğu taze sebze ve meyveleri satacağımız "Manav"ı seç.';
+        return 'Manav; halkın her gün tükettiği domates, elma gibi taze gıdaları satan, nakit dönüş hızı en yüksek perakende işletmesidir. Başlangıç yatırımı olarak "Manav"ı seç.';
       case TutorialStep.confirmManavBuild:
-        return 'Harika! "MAĞAZAYI KUR" butonuna tıklayarak manav inşaatını başlatalım.';
+        return 'Mağazamız kurulduğunda arkasında otomatik olarak soğuk hava deposu da faaliyete geçecek. "MAĞAZAYI KUR" butonuna tıklayarak inşaatı başlatalım.';
       case TutorialStep.clickQuickFinish:
-        return 'Mağazamızın kurulması normalde zaman alır. Ama biz bir kapitalistiz! Yıldız (Gold) harcayarak inşaatı hemen tamamlayalım.';
+        return 'Normalde inşaatlar zaman alır; fakat hızlı büyüyen kapitalistler Yıldız (Gold) kullanarak tesislerini anında faaliyete geçirir. Yıldız ile inşaatı hemen tamamlayalım!';
       case TutorialStep.clickEnterStore:
-        return 'Süper! Manavımız kuruldu. Yönetim sayfasına girmek için mağazanın üzerine tıkla.';
+        return 'Süper! Manavımız kuruldu. İçeri girerek rafları düzenleyelim, fiyat politikamızı belirleyelim ve tedarik zincirini başlatalım.';
+      case TutorialStep.clickCreateShelf:
+        return 'Mağazalar raf mantığıyla çalışır. Her raf ayrı bir ürün çeşidini temsil eder ve müşterilere buradan satış yapılır. İlk satış alanımızı açmak için "RAF OLUŞTUR" butonuna tıkla.';
+      case TutorialStep.clickGoToMarket:
+        return 'Pazar (Global Borsa); diğer oyuncuların ve üreticilerin ürünlerini toptan alıp satabildiğin serbest ticaret merkezidir. Manavımızı dolduracak taze ürünleri toptan almak için "PAZARA GİT" butonuna tıkla.';
+      case TutorialStep.selectMarketWarehouse:
+        return 'Pazardan yapacağın toptan alımlar doğrudan seçtiğin depoya sevk edilir. Manavımızın arkasındaki entegre depolama alanını kullanmak için "Manav Deposu"nu seç.';
+      case TutorialStep.selectMarketProduct:
+        return 'Pazardaki toptan ürün kataloğundan manavında satmak istediğin taze bir ürünü (örneğin Domates veya Elma) seç.';
+      case TutorialStep.clickMarketBuyListing:
+        return 'Pazarda farklı üreticilerin kalite ve fiyat tekliflerini görürsün. En düşük maliyetle en yüksek kârı elde etmek için en uygun ilanın yanındaki "EKLE" butonuna tıkla.';
+      case TutorialStep.confirmMarketCartBuy:
+        return 'Toptan alım miktarını belirle. Aldığın mallar anında depona aktarılacak. Şimdi "SEPETE EKLE" butonuna tıkla.';
+      case TutorialStep.confirmMarketCheckout:
+        return 'Pazar sepetindeki siparişi onaylamak için "ALIMI TAMAMLA" butonuna tıkla. Satın aldığın ürünler anında Manav Depona teslim edilecek.';
+      case TutorialStep.returnToStore:
+        return 'Toptan mallarımız depomuza ulaştı! Şimdi depodaki ürünleri tezgaha dizmek ve satış fiyatını belirlemek için "MANAVA DÖN" butonuna tıkla.';
       case TutorialStep.clickSelectProduct:
         if (TutorialKeys.productSelectionFirstItemKey.currentContext != null) {
-          return 'Harika! Şimdi listeden satmak istediğin ilk taze meyveyi (örn. Elma) seç.';
+          return 'Depoda bekleyen taze ürününü seçerek bu rafa bağla.';
         }
-        return 'Manavımızın rafları şu an boş! İlk olarak "Ürün Seç" butonuna tıklayarak rafa taze bir meyve/sebze koyalım.';
+        return 'Boş rafımıza depodaki ürünümüzü yerleştirmek için "Ürün Seç" butonuna dokun.';
       case TutorialStep.clickSetPrice:
         if (TutorialKeys.priceDialogConfirmKey.currentContext != null) {
-          return 'Hedef satış fiyatını belirledikten sonra "Kaydet" butonuna tıkla.';
+          return 'Birim satış fiyatını belirledikten sonra "Kaydet" butonuna tıkla. Maliyetinin üzerinde bir fiyat koymayı unutma!';
         }
-        return 'Tebrikler! Ürünü rafa dizdin. Şimdi ürünün birim satış fiyatını belirlemek için fiyat kutusuna tıkla ve satış fiyatını ayarla.';
+        return 'Fiyat Esnekliği Kuralı: Fiyatı maliyete yakın tutarsan ürünler çok HIZLI satılır, yüksek tutarsan kâr marjın artar ama satış hızı yavaşlar. Fiyat belirlemek için fiyat kutusuna dokun.';
       case TutorialStep.clickAddStock:
-        return 'Raflarımız hazır! Şimdi Pazar\'dan veya depodan ilk taze stok siparişimizi vermek için "Stok Ekle" butonuna tıkla.';
+        if (TutorialKeys.stockRefillConfirmKey.currentContext != null) {
+          return 'Depodaki stoğu satış tezgahına çekmek için "TRANSFER ET" butonuna tıkla.';
+        }
+        return 'Ürün ve fiyat hazır! Müşterilerin alışveriş yapabilmesi için depodaki malları tezgaha çekmemiz gerekiyor. "Stok Ekle" butonuna dokun.';
       case TutorialStep.finished:
-        return 'Tebrikler patron! Mağazanı kurdun, ürününü yerleştirdin, fiyatını belirledin ve tedarik zincirini başlattın. İşte sana şirket başlangıç sermayesi!';
+        return 'Tebrikler patron! Tam bir kapitalist gibi tüm tedarik zincirini yönettin: Mağazayı kurdun, toptan mal aldın, rafları doldurdun ve satışa başladın. Artık her dakika ciro ve kâr elde edeceksin. Yeni birimler aç, üretim zinciri kur ve imparatorluğunu büyüt!';
       default:
         return '';
     }
@@ -158,18 +307,17 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
     final tutorialState = ref.watch(tutorialProvider);
     final step = tutorialState.step;
 
-    if (step == TutorialStep.none) {
-      return widget.child;
-    }
-
     ref.listen(tutorialProvider, (previous, next) {
       _updateTargetRect();
     });
 
+    if (step == TutorialStep.none) {
+      return widget.child;
+    }
+
     final hasTarget = _targetRect != null;
     final isFullscreenMessage =
         step == TutorialStep.welcome || step == TutorialStep.finished;
-    final screenSize = MediaQuery.of(context).size;
 
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
@@ -179,12 +327,12 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
       child: Stack(
         children: [
           widget.child,
-          if (!isFullscreenMessage && step != TutorialStep.selectCity)
+          if (!isFullscreenMessage && step != TutorialStep.selectCity) ...[
             IgnorePointer(
               ignoring: true,
               child: ColorFiltered(
                 colorFilter: ColorFilter.mode(
-                  Colors.black.withValues(alpha: 0.82),
+                  Colors.black.withValues(alpha: 0.55),
                   BlendMode.srcOut,
                 ),
                 child: Stack(
@@ -192,80 +340,66 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
                     Container(color: Colors.transparent),
                     if (hasTarget)
                       Positioned.fromRect(
-                        rect: _targetRect!.inflate(6.0),
+                        rect: _targetRect!.inflate(4.0),
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(12.r),
+                            borderRadius: BorderRadius.circular(14.r),
                           ),
                         ),
                       ),
                   ],
                 ),
               ),
-            )
-          else if (isFullscreenMessage)
+            ),
+            if (hasTarget)
+              Positioned.fromRect(
+                rect: _targetRect!.inflate(4.0),
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      final pulseVal = _pulseController.value;
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14.r),
+                          border: Border.all(
+                            color: Color.lerp(
+                              AppColors.gold.withValues(alpha: 0.7),
+                              AppColors.goldLight,
+                              pulseVal,
+                            )!,
+                            width: 1.5.w,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.gold.withValues(
+                                alpha: 0.15 + (0.10 * pulseVal),
+                              ),
+                              blurRadius: 8.r + (4.r * pulseVal),
+                              spreadRadius: 0.5.r,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+          ] else if (isFullscreenMessage)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
-                ref.read(tutorialProvider.notifier).completeStep(step);
+                if (step != TutorialStep.finished) {
+                  ref.read(tutorialProvider.notifier).completeStep(step);
+                }
               },
-              child: Container(color: Colors.black.withValues(alpha: 0.85)),
+              child: Container(color: Colors.black.withValues(alpha: 0.65)),
             ),
-          if (!isFullscreenMessage && step != TutorialStep.selectCity) ...[
-            if (hasTarget) ..._buildTargetBarriers(_targetRect!, screenSize),
-          ],
           _buildAssistantCard(step),
         ],
       ),
     );
-  }
-
-  List<Widget> _buildTargetBarriers(Rect targetRect, Size screenSize) {
-    final inflated = targetRect.inflate(6.0);
-    final topHeight = inflated.top.clamp(0.0, screenSize.height);
-    final bottomTop = inflated.bottom.clamp(0.0, screenSize.height);
-    final leftWidth = inflated.left.clamp(0.0, screenSize.width);
-    final rightLeft = inflated.right.clamp(0.0, screenSize.width);
-    final targetHeight = inflated.height.clamp(0.0, screenSize.height);
-
-    Widget blocker() =>
-        GestureDetector(behavior: HitTestBehavior.opaque, onTap: () {});
-
-    return [
-      if (topHeight > 0)
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          height: topHeight,
-          child: blocker(),
-        ),
-      if (bottomTop < screenSize.height)
-        Positioned(
-          left: 0,
-          right: 0,
-          top: bottomTop,
-          bottom: 0,
-          child: blocker(),
-        ),
-      if (leftWidth > 0)
-        Positioned(
-          left: 0,
-          width: leftWidth,
-          top: topHeight,
-          height: targetHeight,
-          child: blocker(),
-        ),
-      if (rightLeft < screenSize.width)
-        Positioned(
-          left: rightLeft,
-          right: 0,
-          top: topHeight,
-          height: targetHeight,
-          child: blocker(),
-        ),
-    ];
   }
 
   Widget _buildAssistantCard(TutorialStep step) {
@@ -274,7 +408,13 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
 
     final targetRect = _targetRect;
     final bool hasTargetRect = targetRect != null;
-    final bool isTop = hasTargetRect && targetRect.top < 380.h;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final double spaceAbove = hasTargetRect ? targetRect.top : screenHeight / 2;
+    final double spaceBelow = hasTargetRect
+        ? screenHeight - targetRect.bottom
+        : screenHeight / 2;
+    final bool placeBelow =
+        spaceBelow >= 280.h || (spaceBelow > spaceAbove && spaceBelow >= 200.h);
     final isFullscreenMessage =
         step == TutorialStep.welcome || step == TutorialStep.finished;
 
@@ -325,30 +465,30 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
                   Container(
                     width: 52.w,
                     height: 52.w,
-                    padding: EdgeInsets.all(2.5.w),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.gold,
-                          AppColors.borderGold,
-                          AppColors.goldLight,
-                        ],
-                      ),
+                      border: Border.all(color: AppColors.gold, width: 1.8.w),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.gold.withValues(alpha: 0.35),
-                          blurRadius: 12.r,
+                          color: AppColors.gold.withValues(alpha: 0.3),
+                          blurRadius: 10.r,
                           spreadRadius: 1.r,
                         ),
                       ],
                     ),
-                    child: CircleAvatar(
-                      backgroundColor: AppColors.cardBg,
-                      child: Icon(
-                        AppIcons.person,
-                        color: AppColors.gold,
-                        size: 28.sp,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/asistan.webp',
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            CircleAvatar(
+                              backgroundColor: AppColors.cardBg,
+                              child: Icon(
+                                AppIcons.person,
+                                color: AppColors.gold,
+                                size: 28.sp,
+                              ),
+                            ),
                       ),
                     ),
                   ),
@@ -420,7 +560,7 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
                   if (!isFullscreenMessage)
                     GestureDetector(
                       onTap: () {
-                        ref.read(tutorialProvider.notifier).finishTutorial();
+                        ref.read(tutorialProvider.notifier).pauseTutorial();
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -436,7 +576,7 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
                           ),
                         ),
                         child: Text(
-                          'Atla ✕',
+                          'Kapat ✕',
                           style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
                             fontSize: AppTypography.micro,
@@ -464,28 +604,7 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
                 ),
               ),
               // Tam Ekran Mesajları İçin Özel Buton
-              if (step == TutorialStep.finished) ...[
-                SizedBox(height: 14.h),
-                Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildRewardChip('💰 +25.000 ₺', AppColors.green),
-                      _buildRewardChip('⭐ +10 Yıldız', AppColors.gold),
-                      _buildRewardChip('🏆 +100 XP', AppColors.blue),
-                    ],
-                  ),
-                ),
-              ],
+
               if (isFullscreenMessage) ...[
                 SizedBox(height: 16.h),
                 SizedBox(
@@ -508,7 +627,7 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
                       children: [
                         Text(
                           step == TutorialStep.finished
-                              ? 'Ödülleri Al & Başla 🚀'
+                              ? 'Başlayalım! 🚀'
                               : 'Devam Et ➔',
                           style: AppTextStyles.button.standardCopyWith(
                             color: AppColors.textOnAccent,
@@ -548,31 +667,16 @@ class _TutorialOverlayState extends ConsumerState<TutorialOverlay>
     return Positioned(
       left: 0,
       right: 0,
-      top: isTop ? targetRect.bottom + 25.h : null,
-      bottom: !isTop
-          ? MediaQuery.of(context).size.height - targetRect.top + 20.h
+      top: placeBelow
+          ? (targetRect.bottom + 16.h).clamp(0.0, screenHeight - 120.h)
           : null,
-      child: SafeArea(top: isTop, bottom: !isTop, child: cardContent),
-    );
-  }
-
-  Widget _buildRewardChip(String label, Color color) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 1),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11.sp,
-          fontWeight: FontWeight.bold,
-          decoration: TextDecoration.none,
-        ),
-      ),
+      bottom: !placeBelow
+          ? (screenHeight - targetRect.top + 16.h).clamp(
+              0.0,
+              screenHeight - 120.h,
+            )
+          : null,
+      child: SafeArea(top: placeBelow, bottom: !placeBelow, child: cardContent),
     );
   }
 }

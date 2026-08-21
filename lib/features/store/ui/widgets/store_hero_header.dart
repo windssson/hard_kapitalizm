@@ -158,7 +158,7 @@ class StoreHeroHeader extends StatelessWidget {
             color: AppColors.green,
           ),
           _buildCompactMetricCol(
-            title: 'Slot',
+            title: 'Raf',
             value: '${store.slots.length}/${store.maxSlotCount}',
             icon: AppIcons.gridView,
             color: AppColors.gold,

@@ -13,6 +13,14 @@ enum TutorialStep {
   confirmManavBuild,
   clickQuickFinish,
   clickEnterStore,
+  clickCreateShelf,
+  clickGoToMarket,
+  selectMarketWarehouse,
+  selectMarketProduct,
+  clickMarketBuyListing,
+  confirmMarketCartBuy,
+  confirmMarketCheckout,
+  returnToStore,
   clickSelectProduct,
   clickSetPrice,
   clickAddStock,
@@ -29,6 +37,16 @@ class TutorialKeys {
   static final GlobalKey constructionGoldFinishKey = GlobalKey(debugLabel: 'construction_gold_finish');
   static final GlobalKey quickFinishDialogConfirmKey = GlobalKey(debugLabel: 'quick_finish_dialog_confirm');
   static final GlobalKey newStoreItemKey = GlobalKey(debugLabel: 'new_store_item');
+  static final GlobalKey storeQuickActionOpenSlotKey = GlobalKey(debugLabel: 'store_quick_action_open_slot');
+  static final GlobalKey storeEmptyShelfButtonKey = GlobalKey(debugLabel: 'store_empty_shelf_button');
+  static final GlobalKey storeGoToMarketButtonKey = GlobalKey(debugLabel: 'store_go_to_market_button');
+  static final GlobalKey marketWarehouseFirstItemKey = GlobalKey(debugLabel: 'market_warehouse_first_item');
+  static final GlobalKey marketProductFirstItemKey = GlobalKey(debugLabel: 'market_product_first_item');
+  static final GlobalKey marketListingFirstAddKey = GlobalKey(debugLabel: 'market_listing_first_add');
+  static final GlobalKey marketAddToCartConfirmKey = GlobalKey(debugLabel: 'market_add_to_cart_confirm');
+  static final GlobalKey marketCartLauncherKey = GlobalKey(debugLabel: 'market_cart_launcher');
+  static final GlobalKey marketCheckoutConfirmKey = GlobalKey(debugLabel: 'market_checkout_confirm');
+  static final GlobalKey marketReturnToStoreKey = GlobalKey(debugLabel: 'market_return_to_store');
   static final GlobalKey storeSlotSelectProductKey = GlobalKey(debugLabel: 'store_slot_select_product');
   static final GlobalKey productSelectionFirstItemKey = GlobalKey(debugLabel: 'product_selection_first_item');
   static final GlobalKey storeSlotPriceKey = GlobalKey(debugLabel: 'store_slot_price');
@@ -40,19 +58,23 @@ class TutorialKeys {
 class TutorialState {
   final TutorialStep step;
   final bool hasSeenTutorial;
+  final bool isLoaded;
 
   TutorialState({
     required this.step,
     required this.hasSeenTutorial,
+    this.isLoaded = false,
   });
 
   TutorialState copyWith({
     TutorialStep? step,
     bool? hasSeenTutorial,
+    bool? isLoaded,
   }) {
     return TutorialState(
       step: step ?? this.step,
       hasSeenTutorial: hasSeenTutorial ?? this.hasSeenTutorial,
+      isLoaded: isLoaded ?? this.isLoaded,
     );
   }
 }
@@ -90,22 +112,30 @@ class TutorialNotifier extends Notifier<TutorialState> {
       state = TutorialState(
         step: restoredStep,
         hasSeenTutorial: hasSeen,
+        isLoaded: true,
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Tutorial: Prefs yüklenirken hata: $e');
+      state = state.copyWith(isLoaded: true);
+    }
   }
 
   Future<void> _saveStepToPrefs(TutorialStep step) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefStepKey, step.name);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Tutorial: Adım kaydedilirken hata: $e');
+    }
   }
 
   Future<void> _saveSeenToPrefs(bool value) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefSeenKey, value);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Tutorial: Görülme durumu kaydedilirken hata: $e');
+    }
   }
 
   void startTutorial({bool force = false}) {
@@ -125,12 +155,8 @@ class TutorialNotifier extends Notifier<TutorialState> {
   }
 
   void setStep(TutorialStep step) {
-    if (step == TutorialStep.finished) {
-      finishTutorial();
-    } else {
-      state = state.copyWith(step: step);
-      _saveStepToPrefs(step);
-    }
+    state = state.copyWith(step: step);
+    _saveStepToPrefs(step);
   }
 
   void completeStep(TutorialStep completedStep) {
@@ -138,16 +164,18 @@ class TutorialNotifier extends Notifier<TutorialState> {
       final nextIndex = state.step.index + 1;
       if (nextIndex < TutorialStep.values.length) {
         final nextStep = TutorialStep.values[nextIndex];
-        if (nextStep == TutorialStep.finished) {
-          finishTutorial();
-        } else {
-          state = state.copyWith(step: nextStep);
-          _saveStepToPrefs(nextStep);
-        }
+        state = state.copyWith(step: nextStep);
+        _saveStepToPrefs(nextStep);
       } else {
         finishTutorial();
       }
     }
+  }
+
+  void pauseTutorial() {
+    // Sadece bellekte kapat, prefs'e kaydetme.
+    // Uygulama yeniden açıldığında kaldığı adımdan devam eder.
+    state = state.copyWith(step: TutorialStep.none);
   }
 
   void finishTutorial() {

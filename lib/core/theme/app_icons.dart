@@ -162,10 +162,18 @@ abstract final class AppIcons {
   static const IconData notificationsActive = Icons.notifications_active;
   static const IconData notificationsActiveOutlined =
       Icons.notifications_active_outlined;
+  static const IconData notificationsActiveRounded =
+      Icons.notifications_active_rounded;
   static const IconData notificationsNoneRounded =
       Icons.notifications_none_rounded;
   static const IconData notificationsOffRounded =
       Icons.notifications_off_rounded;
+  static const IconData markEmailUnreadRounded =
+      Icons.mark_email_unread_rounded;
+  static const IconData checkCircleOutlineRounded =
+      Icons.check_circle_outline_rounded;
+  static const IconData scheduleRounded = Icons.schedule_rounded;
+  static const IconData filterListOffRounded = Icons.filter_alt_off_rounded;
   static const IconData openInFull = Icons.open_in_full;
   static const IconData openInNewRounded = Icons.open_in_new_rounded;
   static const IconData paletteOutlined = Icons.palette_outlined;

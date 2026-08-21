@@ -7,6 +7,10 @@ class ProductionLogisticsWarehouseOption {
   final String cityName;
   final bool isSameCity;
   final List<WarehouseSlotModel> slots;
+  final double capacity;
+  final double reservedCapacity;
+  final String? warehouseTypeCode;
+  final bool isStoreWarehouse;
 
   const ProductionLogisticsWarehouseOption({
     required this.id,
@@ -15,7 +19,14 @@ class ProductionLogisticsWarehouseOption {
     required this.cityName,
     required this.isSameCity,
     required this.slots,
+    this.capacity = 0.0,
+    this.reservedCapacity = 0.0,
+    this.warehouseTypeCode,
+    this.isStoreWarehouse = false,
   });
+
+  double get freeCapacity => (capacity - reservedCapacity).clamp(0.0, capacity);
+  double get capacityRatio => capacity > 0 ? (reservedCapacity / capacity).clamp(0.0, 1.0) : 0.0;
 
   factory ProductionLogisticsWarehouseOption.fromJson(
     Map<String, dynamic> json, {
@@ -23,6 +34,15 @@ class ProductionLogisticsWarehouseOption {
   }) {
     final cityId = (json['city_id'] ?? '').toString();
     final slotsRaw = json['warehouse_slots'] as List<dynamic>? ?? [];
+    final capacity = (json['capacity'] as num?)?.toDouble() ?? 0.0;
+    final reservedCapacity = (json['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
+    final typeMap = json['warehouse_type'] as Map?;
+    final typeCode = typeMap?['code']?.toString();
+    final isStore = typeCode == 'store_warehouse' ||
+        typeMap?['is_store_warehouse'] == true ||
+        (json['name']?.toString().toLowerCase().contains('mağaza') ?? false) ||
+        (json['name']?.toString().toLowerCase().contains('magaza') ?? false);
+
     return ProductionLogisticsWarehouseOption(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? 'Depo').toString(),
@@ -30,6 +50,10 @@ class ProductionLogisticsWarehouseOption {
       cityName: (json['city']?['name'] ?? 'Bilinmeyen Sehir').toString(),
       isSameCity: cityId.isNotEmpty && cityId == productionCityId,
       slots: slotsRaw.map((s) => WarehouseSlotModel.fromJson(s)).toList(),
+      capacity: capacity,
+      reservedCapacity: reservedCapacity,
+      warehouseTypeCode: typeCode,
+      isStoreWarehouse: isStore,
     );
   }
 }

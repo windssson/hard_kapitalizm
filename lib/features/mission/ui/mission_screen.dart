@@ -17,8 +17,7 @@ import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 enum _MissionTab {
   main('Ana Görev'),
   daily('Günlük'),
-  weekly('Haftalık'),
-  achievements('Yan Görevler');
+  weekly('Haftalık');
 
   const _MissionTab(this.label);
   final String label;
@@ -38,7 +37,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   bool _mainClaimedExpanded = false;
   bool _dailyClaimedExpanded = false;
   bool _weeklyClaimedExpanded = false;
-  bool _achievementsClaimedExpanded = false;
 
   Future<void> _refresh() async {
     ref.invalidate(playerMissionDashboardProvider);
@@ -140,6 +138,8 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                         _buildCustomTabBar(dashboard),
                         SizedBox(height: 14.h),
                         ..._buildTabContent(dashboard),
+                        SizedBox(height: 16.h),
+                        _buildPermanentAchievementsBanner(),
                       ],
                     ),
                   );
@@ -262,9 +262,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     final mainBadge = (dashboard.mainMission?.claimable == true) ? 1 : 0;
     final dailyBadge = dashboard.dailyClaimableCount;
     final weeklyBadge = dashboard.weeklyClaimableCount;
-    final achievementBadge = dashboard.sideMissions
-        .where((m) => m.claimable)
-        .length;
 
     return Container(
       height: 42.h,
@@ -282,7 +279,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           if (tab == _MissionTab.main) badgeCount = mainBadge;
           if (tab == _MissionTab.daily) badgeCount = dailyBadge;
           if (tab == _MissionTab.weekly) badgeCount = weeklyBadge;
-          if (tab == _MissionTab.achievements) badgeCount = achievementBadge;
 
           return Expanded(
             child: GestureDetector(
@@ -415,33 +411,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
             _weeklyClaimedExpanded,
             () => setState(
               () => _weeklyClaimedExpanded = !_weeklyClaimedExpanded,
-            ),
-          ),
-        ];
-
-      case _MissionTab.achievements:
-        final active = dashboard.sideMissions
-            .where((m) => !m.isClaimed)
-            .toList();
-        final claimed = dashboard.sideMissions
-            .where((m) => m.isClaimed)
-            .toList();
-
-        return [
-          _buildPermanentAchievementsBanner(),
-          SizedBox(height: 12.h),
-          if (active.isEmpty && claimed.isEmpty)
-            _buildEmptyState()
-          else if (active.isEmpty)
-            _buildAchievementsAllCompletedState()
-          else
-            ...active.map((m) => _buildMissionCard(m)),
-          _buildCollapsibleCompletedSection(
-            claimed,
-            _achievementsClaimedExpanded,
-            () => setState(
-              () =>
-                  _achievementsClaimedExpanded = !_achievementsClaimedExpanded,
             ),
           ),
         ];
@@ -1025,42 +994,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               hasClaimedMissions
                   ? 'Bu haftanın tüm haftalık görevlerini tamamladın.\nGelecek hafta yeni görevler gelecek!'
                   : 'Bu hafta için atanmış bir haftalık görev bulunmuyor.',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodySmall,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAchievementsAllCompletedState() {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 20.w),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              AppIcons.emojiEventsRounded,
-              color: AppColors.gold,
-              size: AppIconSizes.hero,
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              'Mükemmel!',
-              style: AppTextStyles.title.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.title,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              'Tüm başarımları ve yan görevleri tamamladın.',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.bodySmall,
