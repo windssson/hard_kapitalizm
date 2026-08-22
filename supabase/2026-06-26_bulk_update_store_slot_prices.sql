@@ -18,8 +18,8 @@ declare
   v_failed_slot_count integer := 0;
   v_affected_slot_ids uuid[] := '{}'::uuid[];
 begin
-  if p_markup_percent not in (25, 30, 50) then
-    raise exception 'Desteklenmeyen kar marji. Sadece 25, 30 veya 50 kullanilabilir.';
+  if p_markup_percent is null or p_markup_percent < 1 or p_markup_percent > 300 then
+    raise exception 'Kar marji 1 ile 300 arasinda olmalidir.';
   end if;
 
   select s.*

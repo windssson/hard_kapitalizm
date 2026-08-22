@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 
 class StoreQuickActions extends StatelessWidget {
   final bool canOpenNewSlot;
@@ -29,9 +30,9 @@ class StoreQuickActions extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final count = onBulkPricingTap != null ? 6 : 5;
-        final itemWidth = ((constraints.maxWidth - ((count - 1) * 4.w)) / count).clamp(
-          48.w,
-          72.w,
+        final itemWidth = ((constraints.maxWidth - ((count - 1) * 6.w)) / count).clamp(
+          52.w,
+          76.w,
         );
 
         return Row(
@@ -48,14 +49,14 @@ class StoreQuickActions extends StatelessWidget {
               width: itemWidth,
               icon: AppIcons.flashOnRounded,
               label: 'Boost',
-              color: AppColors.goldDark,
+              color: AppColors.gold,
               onTap: onBoostTap,
             ),
             _AnimatedQuickActionButton(
               width: itemWidth,
               icon: AppIcons.barChart,
               label: 'Rapor',
-              color: AppColors.purple,
+              color: AppColors.blue,
               onTap: onReportTap,
             ),
             if (onBulkPricingTap != null)
@@ -69,8 +70,8 @@ class StoreQuickActions extends StatelessWidget {
             _AnimatedQuickActionButton(
               key: openSlotKey,
               width: itemWidth,
-              icon: AppIcons.addBox,
-              label: 'Raf Oluştur',
+              icon: Icons.add_business_rounded,
+              label: 'Yeni Raf',
               color: AppColors.gold,
               onTap: canOpenNewSlot ? onOpenSlotTap : null,
             ),
@@ -78,7 +79,7 @@ class StoreQuickActions extends StatelessWidget {
               width: itemWidth,
               icon: AppIcons.history,
               label: 'Geçmiş',
-              color: AppColors.textPrimary,
+              color: AppColors.purple,
               onTap: onHistoryTap,
             ),
           ],
@@ -108,15 +109,21 @@ class _AnimatedQuickActionButton extends StatefulWidget {
   State<_AnimatedQuickActionButton> createState() => _AnimatedQuickActionButtonState();
 }
 
-class _AnimatedQuickActionButtonState extends State<_AnimatedQuickActionButton> with SingleTickerProviderStateMixin {
+class _AnimatedQuickActionButtonState extends State<_AnimatedQuickActionButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.90).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -126,7 +133,10 @@ class _AnimatedQuickActionButtonState extends State<_AnimatedQuickActionButton> 
   }
 
   void _onTapDown(TapDownDetails details) {
-    if (widget.onTap != null) _controller.forward();
+    if (widget.onTap != null) {
+      _controller.forward();
+      AppHaptic.light();
+    }
   }
 
   void _onTapUp(TapUpDetails details) {
@@ -151,31 +161,47 @@ class _AnimatedQuickActionButtonState extends State<_AnimatedQuickActionButton> 
         scale: _scaleAnimation,
         child: Container(
           width: widget.width,
-          padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 4.w),
+          padding: EdgeInsets.symmetric(vertical: 9.h, horizontal: 4.w),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                displayColor.withValues(alpha: 0.15),
-                displayColor.withValues(alpha: 0.05),
-              ],
+            color: AppColors.cardBg.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(14.r),
+            border: Border.all(
+              color: isDisabled
+                  ? AppColors.border.withValues(alpha: 0.15)
+                  : displayColor.withValues(alpha: 0.35),
+              width: 1.1,
             ),
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: displayColor.withValues(alpha: 0.3)),
             boxShadow: [
               if (!isDisabled)
                 BoxShadow(
-                  color: displayColor.withValues(alpha: 0.1),
+                  color: displayColor.withValues(alpha: 0.08),
                   blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  offset: const Offset(0, 3),
                 )
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(widget.icon, color: displayColor, size: AppIconSizes.medium),
+              Container(
+                padding: EdgeInsets.all(7.w),
+                decoration: BoxDecoration(
+                  color: isDisabled
+                      ? AppColors.cardBgLight.withValues(alpha: 0.3)
+                      : displayColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(
+                    color: isDisabled
+                        ? AppColors.transparent
+                        : displayColor.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Icon(
+                  widget.icon,
+                  color: displayColor,
+                  size: 18.sp,
+                ),
+              ),
               SizedBox(height: 5.h),
               Text(
                 widget.label,
@@ -183,9 +209,11 @@ class _AnimatedQuickActionButtonState extends State<_AnimatedQuickActionButton> 
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.caption.standardCopyWith(
-                  color: isDisabled ? AppColors.textMuted : AppColors.textPrimary,
-                  fontSize: AppTypography.caption,
-                  fontWeight: FontWeight.w600,
+                  color: isDisabled
+                      ? AppColors.textMuted
+                      : AppColors.white,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
