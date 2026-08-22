@@ -524,6 +524,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final tutorial = ref.watch(tutorialProvider);
     final isNewStoreKeyTarget = index == 0 &&
         (tutorial.step == TutorialStep.clickEnterStore ||
+            tutorial.step == TutorialStep.returnToStoreDetail ||
             tutorial.step == TutorialStep.clickCreateShelf ||
             tutorial.step == TutorialStep.clickGoToMarket ||
             tutorial.step == TutorialStep.clickSelectProduct ||
@@ -535,6 +536,11 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       onTap: () {
         if (ref.read(tutorialProvider).step == TutorialStep.clickEnterStore) {
           ref.read(tutorialProvider.notifier).completeStep(TutorialStep.clickEnterStore);
+        } else if (ref.read(tutorialProvider).step ==
+            TutorialStep.returnToStoreDetail) {
+          ref
+              .read(tutorialProvider.notifier)
+              .setStep(TutorialStep.clickSelectProduct);
         }
         context.go('/store/${store.id}');
       },

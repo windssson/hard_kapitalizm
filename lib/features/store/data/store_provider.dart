@@ -275,6 +275,33 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     );
   }
 
+  Future<StoreDetailPageModel> triggerTutorialFirstSale() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      throw Exception('Kullanici girisi yapilmamis.');
+    }
+
+    final response = await supabase.rpc(
+      'trigger_tutorial_first_sale',
+      params: {
+        'p_store_id': _storeId,
+      },
+    );
+
+    final json = Map<String, dynamic>.from(response as Map);
+    if (json['success'] != true) {
+      throw Exception(
+        json['message'] ?? 'Rehber satisi baslatilirken hata olustu.',
+      );
+    }
+
+    final page = StoreDetailPageModel.fromJson(json);
+    _applyPageChanges(page);
+    state = AsyncData(page);
+    return page;
+  }
+
   void patchSlotActive({
     required String slotId,
     required bool isActive,

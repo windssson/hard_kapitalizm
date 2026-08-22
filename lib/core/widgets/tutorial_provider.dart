@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 
 enum TutorialStep {
   none,
@@ -20,10 +21,13 @@ enum TutorialStep {
   clickMarketBuyListing,
   confirmMarketCartBuy,
   confirmMarketCheckout,
-  returnToStore,
+  returnToHome,
+  returnToStoresModule,
+  returnToStoreDetail,
   clickSelectProduct,
-  clickSetPrice,
   clickAddStock,
+  clickSetPrice,
+  viewSalesReport,
   finished
 }
 
@@ -39,41 +43,46 @@ class TutorialKeys {
   static final GlobalKey newStoreItemKey = GlobalKey(debugLabel: 'new_store_item');
   static final GlobalKey storeQuickActionOpenSlotKey = GlobalKey(debugLabel: 'store_quick_action_open_slot');
   static final GlobalKey storeEmptyShelfButtonKey = GlobalKey(debugLabel: 'store_empty_shelf_button');
-  static final GlobalKey storeGoToMarketButtonKey = GlobalKey(debugLabel: 'store_go_to_market_button');
+  static final GlobalKey navMarketKey = GlobalKey(debugLabel: 'nav_market');
+  static final GlobalKey navHomeKey = GlobalKey(debugLabel: 'nav_home');
   static final GlobalKey marketWarehouseFirstItemKey = GlobalKey(debugLabel: 'market_warehouse_first_item');
   static final GlobalKey marketProductFirstItemKey = GlobalKey(debugLabel: 'market_product_first_item');
   static final GlobalKey marketListingFirstAddKey = GlobalKey(debugLabel: 'market_listing_first_add');
   static final GlobalKey marketAddToCartConfirmKey = GlobalKey(debugLabel: 'market_add_to_cart_confirm');
   static final GlobalKey marketCartLauncherKey = GlobalKey(debugLabel: 'market_cart_launcher');
   static final GlobalKey marketCheckoutConfirmKey = GlobalKey(debugLabel: 'market_checkout_confirm');
-  static final GlobalKey marketReturnToStoreKey = GlobalKey(debugLabel: 'market_return_to_store');
   static final GlobalKey storeSlotSelectProductKey = GlobalKey(debugLabel: 'store_slot_select_product');
   static final GlobalKey productSelectionFirstItemKey = GlobalKey(debugLabel: 'product_selection_first_item');
   static final GlobalKey storeSlotPriceKey = GlobalKey(debugLabel: 'store_slot_price');
   static final GlobalKey priceDialogConfirmKey = GlobalKey(debugLabel: 'price_dialog_confirm');
   static final GlobalKey storeSlotOrderStockKey = GlobalKey(debugLabel: 'store_slot_order_stock');
   static final GlobalKey stockRefillConfirmKey = GlobalKey(debugLabel: 'stock_refill_confirm');
+  static final GlobalKey salesReportDialogKey = GlobalKey(debugLabel: 'sales_report_dialog');
 }
 
 class TutorialState {
   final TutorialStep step;
   final bool hasSeenTutorial;
+  final bool isPaused;
   final bool isLoaded;
 
   TutorialState({
     required this.step,
     required this.hasSeenTutorial,
+    this.isPaused = false,
     this.isLoaded = false,
   });
 
   TutorialState copyWith({
     TutorialStep? step,
     bool? hasSeenTutorial,
+    bool? isPaused,
     bool? isLoaded,
   }) {
     return TutorialState(
       step: step ?? this.step,
       hasSeenTutorial: hasSeenTutorial ?? this.hasSeenTutorial,
+      isPaused: isPaused ?? this.isPaused,
       isLoaded: isLoaded ?? this.isLoaded,
     );
   }
@@ -82,19 +91,23 @@ class TutorialState {
 class TutorialNotifier extends Notifier<TutorialState> {
   static const String _prefSeenKey = 'has_seen_tutorial';
   static const String _prefStepKey = 'current_tutorial_step';
-
-  // TODO: İleriki seviyelerde yeni birimler açıldıkça (örn. Seviye 4 Tarla, Seviye 7 Çiftlik, Seviye 10 Fabrika, Seviye 15 Maden) seviye bazlı öğretici adımları tetiklenecek.
+  static const String _prefPausedKey = 'is_tutorial_paused';
 
   @override
   TutorialState build() {
     _loadFromPrefs();
-    return TutorialState(step: TutorialStep.none, hasSeenTutorial: false);
+    return TutorialState(
+      step: TutorialStep.none,
+      hasSeenTutorial: false,
+      isPaused: false,
+    );
   }
 
   Future<void> _loadFromPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final hasSeen = prefs.getBool(_prefSeenKey) ?? false;
+      final isPaused = prefs.getBool(_prefPausedKey) ?? false;
       final savedStepName = prefs.getString(_prefStepKey);
 
       TutorialStep restoredStep = TutorialStep.none;
@@ -112,6 +125,7 @@ class TutorialNotifier extends Notifier<TutorialState> {
       state = TutorialState(
         step: restoredStep,
         hasSeenTutorial: hasSeen,
+        isPaused: isPaused,
         isLoaded: true,
       );
     } catch (e) {
@@ -138,23 +152,51 @@ class TutorialNotifier extends Notifier<TutorialState> {
     }
   }
 
+  Future<void> _savePausedToPrefs(bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefPausedKey, value);
+    } catch (e) {
+      debugPrint('Tutorial: Duraklatma durumu kaydedilirken hata: $e');
+    }
+  }
+
   void startTutorial({bool force = false}) {
     if (state.hasSeenTutorial && !force) return;
-    final initialStep = state.step != TutorialStep.none && !force
+    final initialStep = (state.step != TutorialStep.none && !force)
         ? state.step
         : TutorialStep.welcome;
-    state = TutorialState(step: initialStep, hasSeenTutorial: false);
+    state = state.copyWith(
+      step: initialStep,
+      hasSeenTutorial: false,
+      isPaused: false,
+    );
     _saveStepToPrefs(initialStep);
     _saveSeenToPrefs(false);
+    _savePausedToPrefs(false);
   }
 
   void restartTutorial() {
-    state = TutorialState(step: TutorialStep.welcome, hasSeenTutorial: false);
+    state = state.copyWith(
+      step: TutorialStep.welcome,
+      hasSeenTutorial: false,
+      isPaused: false,
+    );
     _saveStepToPrefs(TutorialStep.welcome);
     _saveSeenToPrefs(false);
+    _savePausedToPrefs(false);
+  }
+
+  void resumeTutorial() {
+    final targetStep = state.step != TutorialStep.none
+        ? state.step
+        : TutorialStep.welcome;
+    state = state.copyWith(step: targetStep, isPaused: false);
+    _savePausedToPrefs(false);
   }
 
   void setStep(TutorialStep step) {
+    if (state.isPaused && step != TutorialStep.finished) return;
     state = state.copyWith(step: step);
     _saveStepToPrefs(step);
   }
@@ -173,15 +215,20 @@ class TutorialNotifier extends Notifier<TutorialState> {
   }
 
   void pauseTutorial() {
-    // Sadece bellekte kapat, prefs'e kaydetme.
-    // Uygulama yeniden açıldığında kaldığı adımdan devam eder.
-    state = state.copyWith(step: TutorialStep.none);
+    state = state.copyWith(isPaused: true);
+    _savePausedToPrefs(true);
   }
 
   void finishTutorial() {
-    state = state.copyWith(step: TutorialStep.none, hasSeenTutorial: true);
+    state = state.copyWith(
+      step: TutorialStep.none,
+      hasSeenTutorial: true,
+      isPaused: false,
+    );
     _saveStepToPrefs(TutorialStep.none);
     _saveSeenToPrefs(true);
+    _savePausedToPrefs(false);
+    ref.invalidate(homeDashboardProvider);
   }
 }
 

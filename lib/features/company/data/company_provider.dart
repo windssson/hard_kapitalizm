@@ -55,6 +55,17 @@ class CompanyActionNotifier {
   final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  String _cleanErrorMessage(Object error) {
+    if (error is PostgrestException) {
+      return error.message;
+    }
+    final str = error.toString();
+    if (str.startsWith('Exception: ')) {
+      return str.substring('Exception: '.length);
+    }
+    return str;
+  }
+
   Future<Map<String, dynamic>> createBrandCompany({
     required String brandName,
     required String logoId,
@@ -62,7 +73,7 @@ class CompanyActionNotifier {
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
+      return {'success': false, 'message': 'Oturum açılmamış.'};
     }
 
     try {
@@ -78,7 +89,7 @@ class CompanyActionNotifier {
       _ref.invalidate(playerBrandCompanyProductsProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _cleanErrorMessage(e)};
     }
   }
 
@@ -88,7 +99,7 @@ class CompanyActionNotifier {
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
+      return {'success': false, 'message': 'Oturum açılmamış.'};
     }
 
     try {
@@ -102,7 +113,7 @@ class CompanyActionNotifier {
       _ref.invalidate(playerBrandCompanyProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _cleanErrorMessage(e)};
     }
   }
 
@@ -111,7 +122,7 @@ class CompanyActionNotifier {
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
+      return {'success': false, 'message': 'Oturum açılmamış.'};
     }
 
     try {
@@ -123,7 +134,7 @@ class CompanyActionNotifier {
       _ref.invalidate(playerBrandCompanyProductsProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _cleanErrorMessage(e)};
     }
   }
 
@@ -133,7 +144,7 @@ class CompanyActionNotifier {
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
+      return {'success': false, 'message': 'Oturum açılmamış.'};
     }
 
     try {
@@ -147,7 +158,7 @@ class CompanyActionNotifier {
       _ref.invalidate(playerBrandCompanyProductsProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _cleanErrorMessage(e)};
     }
   }
 
@@ -156,7 +167,7 @@ class CompanyActionNotifier {
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
+      return {'success': false, 'message': 'Oturum açılmamış.'};
     }
 
     try {
@@ -168,7 +179,7 @@ class CompanyActionNotifier {
       _ref.invalidate(activeMarketingCampaignsProvider);
       return Map<String, dynamic>.from(response as Map);
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _cleanErrorMessage(e)};
     }
   }
 }

@@ -650,6 +650,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _loginEmailController,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
             style: TextStyle(color: AppColors.textPrimary),
             decoration: _inputDecoration(
               label: 'E-posta Adresi',
@@ -669,6 +670,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _loginPasswordController,
             obscureText: _isLoginPasswordObscured,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => _handleEmailLogin(),
             style: TextStyle(color: AppColors.textPrimary),
             decoration: _inputDecoration(
               label: 'Şifre',
@@ -743,6 +746,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _registerEmailController,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
             style: TextStyle(color: AppColors.textPrimary),
             decoration: _inputDecoration(
               label: 'E-posta Adresi',
@@ -762,6 +766,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _registerPasswordController,
             obscureText: _isRegisterPasswordObscured,
+            textInputAction: TextInputAction.next,
             style: TextStyle(color: AppColors.textPrimary),
             decoration: _inputDecoration(
               label: 'Şifre (En az 6 karakter)',
@@ -792,6 +797,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           TextFormField(
             controller: _registerPasswordConfirmController,
             obscureText: _isRegisterPasswordConfirmObscured,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) => _handleEmailRegister(),
             style: TextStyle(color: AppColors.textPrimary),
             decoration: _inputDecoration(
               label: 'Şifre Tekrar',

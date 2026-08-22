@@ -459,6 +459,43 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                         ),
                       ),
                     ),
+                    if (listing.brandName != null &&
+                        listing.brandName!.trim().isNotEmpty) ...[
+                      SizedBox(width: 4.w),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 4.w,
+                          vertical: 1.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.blue.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4.r),
+                          border: Border.all(
+                            color: AppColors.blue.withValues(alpha: 0.35),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.verified_rounded,
+                              color: AppColors.blue,
+                              size: 9.sp,
+                            ),
+                            SizedBox(width: 2.w),
+                            Text(
+                              listing.brandName!,
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: AppColors.blue,
+                                fontSize: AppTypography.micro,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 SizedBox(height: 2.h),

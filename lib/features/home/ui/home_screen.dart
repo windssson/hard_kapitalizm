@@ -632,7 +632,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     SizedBox(width: 5.w),
                     Text(
-                      'SIRKET OZETI',
+                      'ŞİRKET ÖZETİ',
                       style: AppTextStyles.titleGoldBold.standardCopyWith(
                         color: AppColors.gold,
                         fontSize: AppTypography.bodyLarge,
@@ -641,7 +641,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     const Spacer(),
                     Text(
-                      'SIRKET DEGERI',
+                      'ŞİRKET DEĞERİ',
                       style: AppTextStyles.overline.standardCopyWith(
                         color: AppColors.textPrimary.withValues(alpha: 0.8),
                         fontSize: AppTypography.micro,
@@ -673,7 +673,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             dailyProfit < 0
                                 ? AppIcons.trendingDownRounded
                                 : AppIcons.trendingUpRounded,
-                            dailyProfit < 0 ? 'Bugunku Zarar:' : 'Bugunku Kar:',
+                            dailyProfit < 0 ? 'Bugünkü Zarar:' : 'Bugünkü Kâr:',
                             AppMoney.compact(dailyProfit),
                             dailyProfit < 0
                                 ? AppColors.red
@@ -689,7 +689,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           SizedBox(height: 6.h),
                           _buildSummaryStatLine(
                             AppIcons.accountBalanceRounded,
-                            'Aktif Isletme:',
+                            'Aktif İşletme:',
                             activeBusinessText,
                             AppColors.goldLight,
                           ),
@@ -789,7 +789,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   String _formatEstimatedHourlyIncome(double? value) {
-    if (value == null) return 'Hesaplaniyor';
+    if (value == null) return 'Hesaplanıyor';
     if (value <= 0) return '0 / saat';
     return '${AppMoney.compact(value)} / saat';
   }
@@ -817,144 +817,302 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 .clamp(0.0, 1.0)
                 .toDouble();
 
-            return Material(
-              color: AppColors.transparent,
-              child: InkWell(
-                onTap: () => context.push('/missions'),
-                borderRadius: BorderRadius.circular(14.r),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 10.h,
+            final accentColor = isClaimable ? AppColors.gold : const Color(0xFF00E5FF);
+
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16.r),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isClaimable
+                      ? [
+                          const Color(0xFF2C2208),
+                          AppColors.cardBg,
+                          const Color(0xFF1E1705),
+                        ]
+                      : [
+                          const Color(0xFF0A2238),
+                          AppColors.cardBg,
+                          const Color(0xFF061524),
+                        ],
+                ),
+                border: Border.all(
+                  color: isClaimable
+                      ? AppColors.gold.withValues(alpha: 0.65)
+                      : AppColors.blue.withValues(alpha: 0.4),
+                  width: isClaimable ? 1.4 : 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isClaimable
+                        ? AppColors.gold.withValues(alpha: 0.18)
+                        : Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
-                  decoration: AppDecorations.premiumCard(
-                    isClaimable
-                        ? AppColors.gold.withValues(alpha: 0.5)
-                        : AppColors.border,
-                    14.r,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36.w,
-                        height: 36.w,
-                        decoration: BoxDecoration(
-                          color: (isClaimable ? AppColors.gold : AppColors.blue)
-                              .withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10.r),
-                          border: Border.all(
-                            color:
-                                (isClaimable ? AppColors.gold : AppColors.blue)
-                                    .withValues(alpha: 0.32),
-                          ),
-                        ),
-                        child: Icon(
-                          isClaimable
-                              ? AppIcons.workspacePremiumRounded
-                              : AppIcons.flagRounded,
-                          color: isClaimable ? AppColors.gold : AppColors.blue,
-                          size: AppIconSizes.regular,
-                        ),
-                      ),
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => context.push('/missions'),
+                  borderRadius: BorderRadius.circular(16.r),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── ÜST ROZETLER (Kategori & Ödül) ──
+                        Row(
                           children: [
-                            Text(
-                              selectedMission.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.body.standardCopyWith(
-                                color: AppColors.textPrimary,
-                                fontSize: AppTypography.bodySmall,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            SizedBox(height: 5.h),
-                            Text(
-                              selectedMission.description,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.caption.standardCopyWith(
-                                color: AppColors.textSecondary,
-                                fontSize: AppTypography.micro,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(height: 5.h),
-                            if (isClaimable)
-                              Text(
-                                selectedMission.compactRewardText,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyles.caption.standardCopyWith(
-                                  color: AppColors.green,
-                                  fontSize: AppTypography.micro,
-                                  fontWeight: FontWeight.w700,
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.5.h),
+                              decoration: BoxDecoration(
+                                color: (isClaimable ? AppColors.gold : AppColors.blue)
+                                    .withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(6.r),
+                                border: Border.all(
+                                  color: (isClaimable ? AppColors.gold : AppColors.blue)
+                                      .withValues(alpha: 0.4),
+                                  width: 0.7,
                                 ),
-                              )
-                            else
-                              Column(
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isClaimable
+                                        ? Icons.workspace_premium_rounded
+                                        : Icons.flag_rounded,
+                                    color: isClaimable ? AppColors.gold : AppColors.blue,
+                                    size: 11.sp,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    isClaimable ? 'ÖDÜL HAZIR' : 'ÖNCELİKLİ GÖREV',
+                                    style: TextStyle(
+                                      color: isClaimable ? AppColors.gold : AppColors.blue,
+                                      fontSize: 9.5.sp,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.5.h),
+                              decoration: BoxDecoration(
+                                color: AppColors.green.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6.r),
+                                border: Border.all(
+                                  color: AppColors.green.withValues(alpha: 0.35),
+                                  width: 0.7,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.card_giftcard_rounded,
+                                    color: AppColors.green,
+                                    size: 11.sp,
+                                  ),
+                                  SizedBox(width: 3.5.w),
+                                  Text(
+                                    selectedMission.compactRewardText,
+                                    style: TextStyle(
+                                      color: AppColors.green,
+                                      fontSize: 9.5.sp,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+
+                        // ── GÖREV İÇERİĞİ VE AKSİYON BUTONU ──
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Sol Görev İkonu (Glow)
+                            Container(
+                              width: 38.w,
+                              height: 38.w,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: isClaimable
+                                      ? [AppColors.goldLight, AppColors.goldDark]
+                                      : [const Color(0xFF00E5FF), const Color(0xFF0D47A1)],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (isClaimable
+                                            ? AppColors.gold
+                                            : const Color(0xFF00E5FF))
+                                        .withValues(alpha: 0.35),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  isClaimable
+                                      ? Icons.emoji_events_rounded
+                                      : Icons.track_changes_rounded,
+                                  color: isClaimable
+                                      ? AppColors.background
+                                      : Colors.white,
+                                  size: 20.sp,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+
+                            // Orta Başlık ve Açıklama / İlerleme
+                            Expanded(
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(999.r),
-                                    child: AppProgressBar(
-                                      value: progress,
-                                      minHeight: 5.h,
-                                      backgroundColor: AppFx.softOverlay(0.08),
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.blue,
-                                      ),
+                                  Text(
+                                    selectedMission.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 13.5.sp,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.2,
                                     ),
                                   ),
                                   SizedBox(height: 3.h),
                                   Text(
-                                    '${selectedMission.progressCount}/${selectedMission.targetCount} ilerleme',
-                                    style: AppTextStyles.caption
-                                        .standardCopyWith(
-                                          color: AppColors.textMuted,
-                                          fontSize: AppTypography.micro,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                    selectedMission.description,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11.sp,
+                                    ),
                                   ),
+                                  if (!isClaimable) ...[
+                                    SizedBox(height: 6.h),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(4.r),
+                                            child: LinearProgressIndicator(
+                                              value: progress,
+                                              minHeight: 5.h,
+                                              backgroundColor:
+                                                  Colors.white.withValues(alpha: 0.08),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(accentColor),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 8.w),
+                                        Text(
+                                          '${selectedMission.progressCount}/${selectedMission.targetCount}',
+                                          style: TextStyle(
+                                            color: AppColors.textMuted,
+                                            fontSize: 10.sp,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ],
+                              ),
+                            ),
+                            SizedBox(width: 10.w),
+
+                            // Sağ Aksiyon Butonu / İlerleme Yüzdesi
+                            if (isClaimable)
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10.r),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppColors.gold,
+                                      AppColors.goldDark,
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.gold.withValues(alpha: 0.35),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.redeem_rounded,
+                                      color: AppColors.background,
+                                      size: 14.sp,
+                                    ),
+                                    SizedBox(width: 4.w),
+                                    Text(
+                                      'ÖDÜLÜ AL',
+                                      style: TextStyle(
+                                        color: AppColors.background,
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+                                decoration: BoxDecoration(
+                                  color: AppColors.blue.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8.r),
+                                  border: Border.all(
+                                    color: AppColors.blue.withValues(alpha: 0.3),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '%${(progress * 100).round()}',
+                                      style: TextStyle(
+                                        color: const Color(0xFF00E5FF),
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    SizedBox(width: 2.w),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: const Color(0xFF00E5FF),
+                                      size: 14.sp,
+                                    ),
+                                  ],
+                                ),
                               ),
                           ],
                         ),
-                      ),
-                      SizedBox(width: 10.w),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 6.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isClaimable
-                              ? AppColors.gold.withValues(alpha: 0.14)
-                              : AppColors.blue.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(999.r),
-                          border: Border.all(
-                            color: isClaimable
-                                ? AppColors.gold.withValues(alpha: 0.35)
-                                : AppColors.blue.withValues(alpha: 0.28),
-                          ),
-                        ),
-                        child: Text(
-                          isClaimable
-                              ? 'Odulu Al'
-                              : '%${(progress * 100).round()}',
-                          style: AppTextStyles.caption.standardCopyWith(
-                            color: isClaimable
-                                ? AppColors.gold
-                                : AppColors.blue,
-                            fontSize: AppTypography.micro,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1259,14 +1417,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       builder: (context, ref, child) {
         final dashboard = ref.watch(homeDashboardProvider).value;
         final tutorial = ref.watch(tutorialProvider);
-        if (dashboard != null &&
-            dashboard.modules.stores.count == 0 &&
-            tutorial.isLoaded &&
-            tutorial.step == TutorialStep.none &&
-            !tutorial.hasSeenTutorial) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(tutorialProvider.notifier).startTutorial(force: true);
-          });
+        if (dashboard != null && tutorial.isLoaded) {
+          final isBrandNewPlayer = dashboard.player.level == 1 &&
+              dashboard.player.currentLevelExperience == 0 &&
+              dashboard.modules.stores.count == 0;
+
+          if (!tutorial.hasSeenTutorial) {
+            if (isBrandNewPlayer) {
+              if (!tutorial.isPaused && tutorial.step == TutorialStep.none) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  ref.read(tutorialProvider.notifier).startTutorial();
+                });
+              }
+            } else {
+              // Seviyesi > 1 veya EXP > 0 olan mevcut oyuncular için rehberi otomatik tamamla
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ref.read(tutorialProvider.notifier).finishTutorial();
+              });
+            }
+          }
         }
         final alertedModules = _collectAlertedModules(dashboard);
 
@@ -1326,8 +1495,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             final isLocked = playerLevel < module.requiredLevel;
             final isWorking = !isLocked && _isModuleWorking(module);
 
+            final isStoreModuleTutorialTarget = module.title == 'Magazalar' &&
+                (ref.watch(tutorialProvider).step ==
+                        TutorialStep.clickFirstStore ||
+                    ref.watch(tutorialProvider).step ==
+                        TutorialStep.returnToStoresModule);
+
             return Material(
-              key: module.title == 'Magazalar'
+              key: isStoreModuleTutorialTarget
                   ? TutorialKeys.homeStoresModuleKey
                   : null,
               color: AppColors.transparent,
@@ -1549,11 +1724,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _handleModuleTap(String moduleTitle) async {
-    if (moduleTitle == 'Magazalar' &&
-        ref.read(tutorialProvider).step == TutorialStep.clickFirstStore) {
-      ref
-          .read(tutorialProvider.notifier)
-          .completeStep(TutorialStep.clickFirstStore);
+    if (moduleTitle == 'Magazalar') {
+      if (ref.read(tutorialProvider).step == TutorialStep.clickFirstStore) {
+        ref
+            .read(tutorialProvider.notifier)
+            .completeStep(TutorialStep.clickFirstStore);
+      } else if (ref.read(tutorialProvider).step ==
+          TutorialStep.returnToStoresModule) {
+        ref
+            .read(tutorialProvider.notifier)
+            .setStep(TutorialStep.returnToStoreDetail);
+      }
     }
     switch (moduleTitle) {
       case 'Magazalar':
@@ -1685,7 +1866,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
                 SizedBox(width: 5.w),
                 Text(
-                  '7 Gunluk Trend',
+                  '7 Günlük Trend',
                   style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.textPrimary.withValues(alpha: 0.88),
                     fontSize: AppTypography.micro,
@@ -1718,8 +1899,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             SizedBox(height: 5.h),
             Text(
               companyValueHistory.length >= 2
-                  ? 'Guncel deger: ${AppMoney.compact(currentValueEstimate)}'
-                  : 'Tahmini deger: ${AppMoney.compact(currentValueEstimate)}',
+                  ? 'Güncel Değer: ${AppMoney.compact(currentValueEstimate)}'
+                  : 'Tahmini Değer: ${AppMoney.compact(currentValueEstimate)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.caption.standardCopyWith(
@@ -1751,7 +1932,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
                 Expanded(
                   child: _buildSparklineMetric(
-                    'Bugun',
+                    'Bugün',
                     AppMoney.compact(currentValueEstimate),
                     AppColors.gold,
                     centered: true,

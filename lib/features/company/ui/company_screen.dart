@@ -182,39 +182,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
         .patentBrandProduct(productId: productId);
     if (!mounted) return;
     final success = result['success'] == true;
-    var message = (result['message'] ?? 'Patent işlemi tamamlanamadı.')
+    final message = (result['message'] ?? 'Patent işlemi tamamlanamadı.')
         .toString();
-    if (success) {
-      final syncedFactoryCount =
-          (result['synced_factory_count'] as num?)?.toInt() ?? 0;
-      final syncedMineCount =
-          (result['synced_mine_count'] as num?)?.toInt() ?? 0;
-      final syncedSlotCount =
-          (result['synced_slot_count'] as num?)?.toInt() ?? 0;
-      final syncedOutputInventoryCount =
-          (result['synced_output_inventory_count'] as num?)?.toInt() ?? 0;
-      final mergedOutputInventoryCount =
-          (result['merged_output_inventory_count'] as num?)?.toInt() ?? 0;
-      final syncParts = <String>[];
-      if (syncedFactoryCount > 0) {
-        syncParts.add('$syncedFactoryCount fabrika');
-      }
-      if (syncedMineCount > 0) {
-        syncParts.add('$syncedMineCount maden');
-      }
-      if (syncedSlotCount > 0) {
-        syncParts.add('$syncedSlotCount slot');
-      }
-      if (syncedOutputInventoryCount > 0) {
-        syncParts.add('$syncedOutputInventoryCount output kaydı');
-      }
-      if (mergedOutputInventoryCount > 0) {
-        syncParts.add('$mergedOutputInventoryCount birleşim');
-      }
-      if (syncParts.isNotEmpty) {
-        message = '$message Senkron: ${syncParts.join(', ')}.';
-      }
-    }
+
     AppSnackbar.show(
       context,
       title: success ? 'Başarılı' : 'Hata',

@@ -252,6 +252,14 @@ class AuthManager {
     );
   }
 
+  /// Kullanıcının şifresini doğrudan günceller
+  Future<UserResponse> updatePassword(String newPassword) async {
+    final response = await _supabase.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+    return response;
+  }
+
   /// Oturumu kapatır
   Future<void> signOut() async {
     try {

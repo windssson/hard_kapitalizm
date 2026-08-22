@@ -9,14 +9,15 @@ import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_history_item_model.dart';
 
 enum _StoreHistoryFilter {
-  all('Tum Hareketler'),
-  incoming('Girisler'),
-  outgoing('Cikislar'),
-  sales('Satislar');
+  all('Tüm Hareketler', AppIcons.history),
+  incoming('Girişler', AppIcons.southWest),
+  outgoing('Çıkışlar', AppIcons.northEast),
+  sales('Satışlar', AppIcons.pointOfSale);
 
-  const _StoreHistoryFilter(this.label);
+  const _StoreHistoryFilter(this.label, this.icon);
 
   final String label;
+  final IconData icon;
 }
 
 class StoreHistoryScreen extends ConsumerStatefulWidget {
@@ -59,8 +60,7 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Magaza Gecmisi'),
-            _buildFilterBar(),
+            const SecondaryTopBar(title: 'Mağaza Hareket Geçmişi'),
             Expanded(
               child: historyAsync.when(
                 loading: () => Center(
@@ -82,46 +82,50 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
                 data: (items) {
                   final filteredItems = _applyFilter(items);
                   return RefreshIndicator(
+                    color: AppColors.gold,
+                    backgroundColor: AppColors.cardBg,
                     onRefresh: () async {
                       await _refreshHistory(clearDirty: true);
                     },
-                    child: filteredItems.isEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: EdgeInsets.all(24.w),
-                            children: [
-                              _buildSummaryHeader(filteredItems),
-                              SizedBox(height: 16.h),
-                              SizedBox(height: 120.h),
-                              _buildEmptyState(),
-                            ],
-                          )
-                        : ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: EdgeInsets.all(16.w),
-                            itemCount: filteredItems.length + 1,
-                            separatorBuilder: (context, index) => SizedBox(height: 12.h),
-                            itemBuilder: (_, index) {
-                              if (index == 0) {
-                                return _buildSummaryHeader(filteredItems);
-                              }
-                              return TweenAnimationBuilder<double>(
-                                duration: Duration(milliseconds: 300 + (index * 50).clamp(0, 500)),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14.w,
+                        vertical: 8.h,
+                      ),
+                      children: [
+                        _buildFilterBar(items),
+                        SizedBox(height: 10.h),
+                        _buildSummaryHeader(filteredItems),
+                        SizedBox(height: 12.h),
+                        if (filteredItems.isEmpty)
+                          _buildEmptyState()
+                        else
+                          ...List.generate(filteredItems.length, (index) {
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: 10.h),
+                              child: TweenAnimationBuilder<double>(
+                                duration: Duration(
+                                  milliseconds: 250 +
+                                      (index * 40).clamp(0, 400),
+                                ),
                                 curve: Curves.easeOutCubic,
                                 tween: Tween<double>(begin: 0, end: 1),
                                 builder: (context, value, child) {
                                   return Opacity(
                                     opacity: value,
                                     child: Transform.translate(
-                                      offset: Offset(0, 20 * (1 - value)),
+                                      offset: Offset(0, 16 * (1 - value)),
                                       child: child,
                                     ),
                                   );
                                 },
-                                child: _buildHistoryCard(filteredItems[index - 1]),
-                              );
-                            },
-                          ),
+                                child: _buildHistoryCard(filteredItems[index]),
+                              ),
+                            );
+                          }),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -132,64 +136,115 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
     );
   }
 
-  Widget _buildFilterBar() {
-    return Column(
-      children: [
-        SizedBox(
-          height: 56.h,
-          child: ListView.separated(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-            scrollDirection: Axis.horizontal,
-            itemBuilder: (_, index) {
-              final filter = _StoreHistoryFilter.values[index];
-              final isSelected = filter == _selectedFilter;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedFilter = filter),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.gold.withValues(alpha: 0.18)
-                        : AppColors.cardBg,
-                    borderRadius: BorderRadius.circular(14.r),
-                    border: Border.all(
+  Widget _buildFilterBar(List<StoreHistoryItemModel> allItems) {
+    return SizedBox(
+      height: 44.h,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _StoreHistoryFilter.values.length,
+        separatorBuilder: (context, index) => SizedBox(width: 8.w),
+        itemBuilder: (_, index) {
+          final filter = _StoreHistoryFilter.values[index];
+          final isSelected = filter == _selectedFilter;
+          final count = _getFilterCount(allItems, filter);
+
+          return GestureDetector(
+            onTap: () => setState(() => _selectedFilter = filter),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                gradient: isSelected
+                    ? LinearGradient(
+                        colors: [
+                          AppColors.gold.withValues(alpha: 0.22),
+                          AppColors.gold.withValues(alpha: 0.08),
+                        ],
+                      )
+                    : null,
+                color: isSelected ? null : AppColors.cardBg.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.gold.withValues(alpha: 0.6)
+                      : AppColors.border.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.gold.withValues(alpha: 0.12),
+                          blurRadius: 6,
+                          offset: const Offset(0, 1),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    filter.icon,
+                    size: 14.sp,
+                    color: isSelected ? AppColors.gold : AppColors.textMuted,
+                  ),
+                  SizedBox(width: 6.w),
+                  Text(
+                    filter.label,
+                    style: AppTextStyles.label.standardCopyWith(
                       color: isSelected
-                          ? AppColors.gold.withValues(alpha: 0.55)
-                          : AppColors.border.withValues(alpha: 0.4),
+                          ? AppColors.gold
+                          : AppColors.textSecondary,
+                      fontSize: 11.5.sp,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                     ),
                   ),
-                  child: Center(
+                  SizedBox(width: 6.w),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 5.w,
+                      vertical: 1.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.gold.withValues(alpha: 0.25)
+                          : AppColors.cardBgLight,
+                      borderRadius: BorderRadius.circular(6.r),
+                    ),
                     child: Text(
-                      filter.label,
-                      style: AppTextStyles.label.standardCopyWith(
+                      count.toString(),
+                      style: AppTextStyles.caption.standardCopyWith(
                         color: isSelected
                             ? AppColors.gold
-                            : AppColors.textPrimary,
-                        fontSize: AppTypography.body,
-                        fontWeight: FontWeight.w600,
+                            : AppColors.textMuted,
+                        fontSize: 9.sp,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                ),
-              );
-            },
-            separatorBuilder: (context, index) => SizedBox(width: 8.w),
-            itemCount: _StoreHistoryFilter.values.length,
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(left: 18.w, right: 18.w, bottom: 6.h),
-          child: Text(
-            'Tamamlanan anlik ve sureli magaza hareketleri burada listelenir.',
-            style: AppTextStyles.body.standardCopyWith(
-              color: AppColors.textMuted,
-              fontSize: AppTypography.bodySmall,
+                ],
+              ),
             ),
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
+  }
+
+  int _getFilterCount(
+    List<StoreHistoryItemModel> items,
+    _StoreHistoryFilter filter,
+  ) {
+    switch (filter) {
+      case _StoreHistoryFilter.all:
+        return items.length;
+      case _StoreHistoryFilter.incoming:
+        return items.where((i) => i.isIncomingTransfer).length;
+      case _StoreHistoryFilter.outgoing:
+        return items.where((i) => i.isOutgoingTransfer).length;
+      case _StoreHistoryFilter.sales:
+        return items.where((i) => i.isSale).length;
+    }
   }
 
   Widget _buildSummaryHeader(List<StoreHistoryItemModel> items) {
@@ -209,53 +264,125 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
 
     return Container(
       padding: EdgeInsets.all(14.w),
-      decoration: AppDecorations.premiumCard(null, 18.r),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(
+          color: AppColors.borderGold.withValues(alpha: 0.25),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppFx.shadow(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _selectedFilter.label,
-            style: AppTextStyles.title.standardCopyWith(
-              color: AppColors.textPrimary,
-              fontSize: AppTypography.title,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _selectedFilter.label,
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.white,
+                  fontSize: AppTypography.bodyLarge,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '${items.length} Kayıt Bulundu',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.gold,
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 10.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSummaryMetric(
+                  'Toplam Hacim',
+                  _formatCompactNumber(totalQuantity.toDouble()),
+                  AppColors.white,
+                  AppIcons.inventoryRounded,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: _buildSummaryMetric(
+                  'Toplam Tutar',
+                  _formatCurrency(totalAmount),
+                  AppColors.green,
+                  AppIcons.paymentsRounded,
+                ),
+              ),
+              if (saleCount > 0) ...[
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: _buildSummaryMetric(
+                    'Toplam Kâr',
+                    _formatCurrency(totalSecondaryAmount),
+                    AppColors.gold,
+                    AppIcons.insightsRounded,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryMetric(
+    String label,
+    String value,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 12.sp),
+              SizedBox(width: 4.w),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 9.sp,
+                  ),
+                ),
+              ),
+            ],
           ),
           SizedBox(height: 4.h),
           Text(
-            '${items.length} kayit icin hizli ozet',
-            style: AppTextStyles.body.standardCopyWith(
-              color: AppColors.textMuted,
-              fontSize: AppTypography.bodySmall,
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.label.standardCopyWith(
+              color: color,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w900,
             ),
-          ),
-          SizedBox(height: 12.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: [
-              _buildSummaryChip(
-                'Kayit',
-                items.length.toString(),
-                AppColors.gold,
-              ),
-              _buildSummaryChip(
-                'Miktar',
-                _formatCompactNumber(totalQuantity.toDouble()),
-                AppColors.white,
-              ),
-              _buildSummaryChip(
-                'Toplam Tutar',
-                _formatCurrency(totalAmount),
-                AppColors.green,
-              ),
-              if (saleCount > 0)
-                _buildSummaryChip(
-                  'Toplam Kar',
-                  _formatCurrency(totalSecondaryAmount),
-                  AppColors.blue,
-                ),
-            ],
           ),
         ],
       ),
@@ -278,36 +405,55 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
   Widget _buildEmptyState() {
     final description = switch (_selectedFilter) {
       _StoreHistoryFilter.all =>
-        'Depodan gelen, pazardan alinan, depoya giden urunler ve satis ozetleri burada gorunecek.',
+        'Depodan gelen, pazardan alınan, depoya aktarılan ürünler ve satış özetleri burada listelenecektir.',
       _StoreHistoryFilter.incoming =>
-        'Bu magazaya gelen urun hareketi henuz yok.',
+        'Bu mağazaya henüz depodan veya pazardan giriş hareketi yapılmadı.',
       _StoreHistoryFilter.outgoing =>
-        'Bu magazadan depoya giden urun hareketi henuz yok.',
+        'Bu mağazadan henüz depoya giden çıkış hareketi bulunmuyor.',
       _StoreHistoryFilter.sales =>
-        'Bu magazada henuz listelenecek satis ozeti yok.',
+        'Bu mağazada henüz tamamlanmış bir satış hareketi yok.',
     };
+
     return Container(
-      padding: EdgeInsets.all(24.w),
-      decoration: AppDecorations.premiumCard(AppColors.border, 20.r),
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 32.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: AppColors.borderGold.withValues(alpha: 0.2),
+        ),
+      ),
       child: Column(
         children: [
-          Icon(AppIcons.history, color: AppColors.textMuted, size: AppIconSizes.hero),
-          SizedBox(height: 16.h),
+          Container(
+            width: 52.w,
+            height: 52.w,
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              AppIcons.history,
+              color: AppColors.gold,
+              size: 26.sp,
+            ),
+          ),
+          SizedBox(height: 14.h),
           Text(
-            'Henuz gecmis kaydi yok.',
+            'Hareket Kaydı Bulunamadı',
             style: AppTextStyles.title.standardCopyWith(
-              color: AppColors.textPrimary,
-              fontSize: AppTypography.titleLarge,
+              color: AppColors.white,
+              fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 6.h),
           Text(
             description,
             textAlign: TextAlign.center,
             style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
-              fontSize: AppTypography.body,
+              fontSize: AppTypography.bodySmall,
             ),
           ),
         ],
@@ -329,23 +475,40 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
             : AppIcons.northEast;
 
     return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: AppDecorations.premiumCard(accentColor, 18.r),
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: accentColor.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 42.w,
-                height: 42.w,
+                width: 38.w,
+                height: 38.w,
                 decoration: BoxDecoration(
                   color: accentColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.3),
+                  ),
                 ),
-                child: Icon(icon, color: accentColor, size: AppIconSizes.medium),
+                child: Icon(icon, color: accentColor, size: 18.sp),
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: 10.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,70 +516,105 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
                     Text(
                       item.title,
                       style: AppTextStyles.title.standardCopyWith(
-                        color: AppColors.textPrimary,
-                        fontSize: AppTypography.title,
+                        color: AppColors.white,
+                        fontSize: AppTypography.body,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 2.h),
                     Text(
                       item.subtitle,
                       style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: AppTypography.bodySmall,
+                        fontSize: 10.sp,
                       ),
                     ),
                   ],
                 ),
               ),
-              Text(
-                _formatDate(item.happenedAt),
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.bodySmall,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _buildStatusChip(_statusLabel(item.status), statusColor),
+                  SizedBox(height: 4.h),
+                  Text(
+                    _formatDate(item.happenedAt),
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 9.sp,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: [
-              _buildStatusChip(_statusLabel(item.status), statusColor),
-              if (!item.isSale)
-                _buildStatusChip(
-                  item.isIncomingTransfer ? 'Giris' : 'Cikis',
-                  accentColor,
-                ),
             ],
           ),
           SizedBox(height: 10.h),
-          Text(
-            item.productName,
-            style: AppTextStyles.body.standardCopyWith(
-              color: AppColors.textPrimary,
-              fontSize: AppTypography.bodyLarge,
-              fontWeight: FontWeight.w600,
-            ),
+          Divider(
+            color: AppColors.border.withValues(alpha: 0.2),
+            height: 1,
           ),
-          SizedBox(height: 8.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
+          SizedBox(height: 10.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMetricChip('Miktar', '${item.quantity}'),
-              if (item.qualityLevel != null)
-                _buildMetricChip('Kalite', 'Lv.${item.qualityLevel}'),
-              _buildMetricChip(
-                item.isSale ? 'Ciro' : 'Tutar',
-                item.amount.toStringAsFixed(1),
-              ),
-              if (item.secondaryAmount != null)
-                _buildMetricChip(
-                  item.isSale ? 'Kar' : 'Kira',
-                  item.secondaryAmount!.toStringAsFixed(1),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.productName,
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (item.qualityLevel != null) ...[
+                      SizedBox(height: 2.h),
+                      Row(
+                        children: [
+                          for (int i = 0; i < 5; i++)
+                            Icon(
+                              i < (item.qualityLevel ?? 1)
+                                  ? AppIcons.starRounded
+                                  : AppIcons.starBorderRounded,
+                              color: i < (item.qualityLevel ?? 1)
+                                  ? AppColors.gold
+                                  : AppColors.textMuted.withValues(alpha: 0.2),
+                              size: 10.sp,
+                            ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            'Kalite ${item.qualityLevel}',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.gold,
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
+              ),
+              Wrap(
+                spacing: 6.w,
+                children: [
+                  _buildMetricBadge('Miktar', '${item.quantity} Adet', AppColors.white),
+                  _buildMetricBadge(
+                    item.isSale ? 'Ciro' : 'Tutar',
+                    _formatCurrency(item.amount),
+                    AppColors.green,
+                  ),
+                  if (item.secondaryAmount != null)
+                    _buildMetricBadge(
+                      item.isSale ? 'Kâr' : 'Kira',
+                      _formatCurrency(item.secondaryAmount!),
+                      AppColors.gold,
+                    ),
+                ],
+              ),
             ],
           ),
         ],
@@ -424,39 +622,51 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
     );
   }
 
-  Widget _buildMetricChip(String label, String value) {
+  Widget _buildMetricBadge(String label, String value, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: AppFx.softOverlay(0.05),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.2)),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
-      child: Text(
-        '$label: $value',
-        style: AppTextStyles.body.standardCopyWith(
-          color: AppColors.textPrimary,
-          fontSize: AppTypography.bodySmall,
-          fontWeight: FontWeight.w500,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: 8.5.sp,
+            ),
+          ),
+          Text(
+            value,
+            style: AppTextStyles.label.standardCopyWith(
+              color: color,
+              fontSize: 10.5.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildStatusChip(String label, Color accentColor) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
       decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: accentColor.withValues(alpha: 0.28)),
+        color: accentColor.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,
         style: AppTextStyles.caption.standardCopyWith(
           color: accentColor,
-          fontSize: AppTypography.label,
-          fontWeight: FontWeight.w700,
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -467,9 +677,9 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
       case 'in_transit':
         return 'Yolda';
       case 'completed':
-        return 'Tamamlandi';
+        return 'Tamamlandı';
       case 'cancelled':
-        return 'Iptal';
+        return 'İptal';
       default:
         return status;
     }
@@ -486,39 +696,6 @@ class _StoreHistoryScreenState extends ConsumerState<StoreHistoryScreen> {
       default:
         return AppColors.textMuted;
     }
-  }
-
-  Widget _buildSummaryChip(String label, String value, Color accentColor) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.caption.standardCopyWith(
-              color: AppColors.textMuted,
-              fontSize: AppTypography.label,
-            ),
-          ),
-          SizedBox(height: 2.h),
-          Text(
-            value,
-            style: AppTextStyles.caption.standardCopyWith(
-              color: accentColor,
-              fontSize: AppTypography.bodySmall,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   String _formatCompactNumber(double value) {

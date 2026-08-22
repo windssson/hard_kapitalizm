@@ -57,16 +57,20 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
   }
 
   void _centerMap(Size viewportSize) {
-    final double rawWidth = SizeController.instance.mapSize.width;
-    final double rawHeight = SizeController.instance.mapSize.height;
-    if (rawWidth <= 0 || rawHeight <= 0) return;
+    final double rawWidth = SizeController.instance.mapSize.width > 0
+        ? SizeController.instance.mapSize.width
+        : 1007.0;
+    final double rawHeight = SizeController.instance.mapSize.height > 0
+        ? SizeController.instance.mapSize.height
+        : 450.0;
 
-    final double targetScale = (viewportSize.width * 0.95) / rawWidth;
+    // Haritayı %50 daha büyük ve ekranın tam merkezine odaklı başlatacak ölçek
+    final double targetScale = (viewportSize.width * 3) / rawWidth;
     final double scaledWidth = rawWidth * targetScale;
     final double scaledHeight = rawHeight * targetScale;
 
-    final double tx = (viewportSize.width - scaledWidth) / 2;
-    final double ty = (viewportSize.height - scaledHeight) / 2 - 25.h;
+    final double tx = (viewportSize.width - scaledWidth) / 5 + 50.w;
+    final double ty = (viewportSize.height - scaledHeight) / 2 - 35.h;
 
     // ignore: deprecated_member_use
     _transformationController.value = Matrix4.identity()
@@ -91,7 +95,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
         _isLoadingMap = false;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !_hasCenteredMap) {
+        if (mounted) {
           _hasCenteredMap = true;
           _centerMap(MediaQuery.of(context).size);
         }
@@ -147,9 +151,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
           _selectedCity = matched;
         });
         if (ref.read(tutorialProvider).step == TutorialStep.selectCity) {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.confirmCity);
+          ref.read(tutorialProvider.notifier).setStep(TutorialStep.confirmCity);
         }
       }
     }
@@ -160,7 +162,10 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
     final citiesAsync = ref.watch(citiesProvider);
 
     // Harita tamamen yüklenip boyutu sıfırdan büyük olduğu an 1 kere merkezlemeyi tetikler
-    if (citiesAsync.hasValue && !_isLoadingMap && !_hasCenteredMap && _cityList.isNotEmpty) {
+    if (citiesAsync.hasValue &&
+        !_isLoadingMap &&
+        !_hasCenteredMap &&
+        _cityList.isNotEmpty) {
       _hasCenteredMap = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -215,59 +220,34 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
                     ),
                   ),
 
-                  // 3. Şehir Listesi Seçim ve Yenileme Butonları
+                  // 3. Haritayı Ortala ve Yenile Butonu
                   Positioned(
-                    top: 80.h,
-                    left: 16.w,
+                    top: 75.h,
                     right: 16.w,
                     child: SafeArea(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () => _showCityListSheet(cities),
-                            icon: Icon(
-                              AppIcons.locationOn,
-                              size: 18.sp,
-                              color: AppColors.textOnAccent,
-                            ),
-                            label: Text(
-                              'Listeden Şehir Seç 🏙️',
-                              style: AppTextStyles.button.standardCopyWith(
-                                color: AppColors.textOnAccent,
-                                fontSize: AppTypography.caption,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.gold,
-                              elevation: 6,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 14.w,
-                                vertical: 8.h,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20.r),
-                              ),
-                            ),
+                      child: FloatingActionButton(
+                        onPressed: () {
+                          _centerMap(MediaQuery.of(context).size);
+                          ref.read(staticCatalogControllerProvider).refresh();
+                        },
+                        backgroundColor: AppColors.cardBg.withValues(
+                          alpha: 0.90,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.r),
+                          side: BorderSide(
+                            color: AppColors.gold.withValues(alpha: 0.6),
+                            width: 1.2,
                           ),
-                          FloatingActionButton(
-                            onPressed: () {
-                              ref
-                                  .read(staticCatalogControllerProvider)
-                                  .refresh();
-                            },
-                            backgroundColor: AppColors.gold.withValues(
-                              alpha: 0.85,
-                            ),
-                            mini: true,
-                            tooltip: 'Koordinatları Yenile',
-                            child: Icon(
-                              AppIcons.refresh,
-                              color: AppColors.textOnAccent,
-                            ),
-                          ),
-                        ],
+                        ),
+                        elevation: 4,
+                        mini: true,
+                        tooltip: 'Haritayı Ortala & Yenile',
+                        child: Icon(
+                          Icons.center_focus_strong_rounded,
+                          color: AppColors.gold,
+                          size: 20.sp,
+                        ),
                       ),
                     ),
                   ),
@@ -311,59 +291,59 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
       child: IgnorePointer(
         ignoring: true,
         child: SafeArea(
-        top: false,
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg.withValues(alpha: 0.90),
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(
-              color: AppColors.gold.withValues(alpha: 0.3),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.45),
-                blurRadius: 15,
-                spreadRadius: 2,
+          top: false,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg.withValues(alpha: 0.90),
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color: AppColors.gold.withValues(alpha: 0.3),
+                width: 1.0,
               ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.gesture_rounded, color: AppColors.gold, size: 20.sp),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Harita Kontrolleri',
-                      style: AppTextStyles.body.standardCopyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.gold,
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-                    Text(
-                      '• Haritada gezinmek için tek parmakla kaydırın.\n'
-                      '• Yakınlaştırmak için iki parmağınızı kıstırın.\n'
-                      '• Yatırım detayları için bir şehre dokunun.',
-                      style: AppTextStyles.caption
-                          .standardCopyWith(color: AppColors.textMuted)
-                          .copyWith(height: 1.35),
-                    ),
-                  ],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 15,
+                  spreadRadius: 2,
                 ),
-              ),
-            ],
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.gesture_rounded, color: AppColors.gold, size: 20.sp),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Harita Kontrolleri',
+                        style: AppTextStyles.body.standardCopyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.gold,
+                        ),
+                      ),
+                      SizedBox(height: 6.h),
+                      Text(
+                        '• Haritada gezinmek için tek parmakla kaydırın.\n'
+                        '• Yakınlaştırmak için iki parmağınızı kıstırın.\n'
+                        '• Yatırım detayları için bir şehre dokunun.',
+                        style: AppTextStyles.caption
+                            .standardCopyWith(color: AppColors.textMuted)
+                            .copyWith(height: 1.35),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildLegendCard() {
@@ -591,6 +571,9 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
     final city = _selectedCity!;
 
     return Container(
+      key: ref.watch(tutorialProvider).step == TutorialStep.confirmCity
+          ? TutorialKeys.citySelectionConfirmKey
+          : null,
       width: 320.w,
       margin: EdgeInsets.all(20.w),
       padding: EdgeInsets.all(20.w),
@@ -734,7 +717,6 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
 
           // Devam Et Butonu
           SizedBox(
-            key: TutorialKeys.citySelectionConfirmKey,
             width: double.infinity,
             height: 50.h,
             child: ElevatedButton(
@@ -951,126 +933,6 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
 
     context.push(targetRoute, extra: _selectedCity);
   }
-
-  void _showCityListSheet(List<CityModel> cities) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (modalContext) {
-        return Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(modalContext).size.height * 0.7,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-            border: Border.all(
-              color: AppColors.gold.withValues(alpha: 0.6),
-              width: 1.5,
-            ),
-          ),
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40.w,
-                height: 4.h,
-                decoration: BoxDecoration(
-                  color: AppColors.textMuted.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2.r),
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Şehir Seçimi',
-                    style: AppTextStyles.h2.standardCopyWith(
-                      color: AppColors.gold,
-                      fontSize: AppTypography.titleLarge,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(modalContext),
-                    icon: Icon(
-                      AppIcons.closeRounded,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12.h),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: cities.length,
-                  separatorBuilder:
-                      (_, _) =>
-                          Divider(color: AppColors.border.withValues(alpha: 0.3)),
-                  itemBuilder: (itemContext, index) {
-                    final city = cities[index];
-                    final isSelected = _selectedCity?.id == city.id;
-                    return ListTile(
-                      onTap: () {
-                        setState(() {
-                          _selectedCity = city;
-                        });
-                        if (ref.read(tutorialProvider).step ==
-                            TutorialStep.selectCity) {
-                          ref
-                              .read(tutorialProvider.notifier)
-                              .setStep(TutorialStep.confirmCity);
-                        }
-                        Navigator.pop(itemContext);
-                      },
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            isSelected
-                                ? AppColors.gold
-                                : AppColors.cardBgLight,
-                        child: Icon(
-                          AppIcons.locationOn,
-                          color:
-                              isSelected ? AppColors.cardBg : AppColors.gold,
-                        ),
-                      ),
-                      title: Text(
-                        city.name,
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: isSelected ? AppColors.gold : AppColors.white,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Nüfus: ${_formatPopulation(city.population)} • Vergi Oranı: %${city.taxRate.toStringAsFixed(1)}',
-                        style: AppTextStyles.caption.standardCopyWith(
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                      trailing:
-                          isSelected
-                              ? Icon(
-                                Icons.check_circle_rounded,
-                                color: AppColors.gold,
-                              )
-                              : Icon(
-                                Icons.chevron_right_rounded,
-                                color: AppColors.textMuted,
-                              ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }
 
 // 5. Haritayı Boyayan Yüksek Performanslı CustomPainter
@@ -1081,9 +943,8 @@ class TurkeyMapPainter extends CustomPainter {
   final String buildingKind;
   final String Function(String) normalizeFn;
 
-  // Performans Optimizasyonu: Her karede (zoom/pan sırasında) TextPainter.layout()
-  // çağrısı yapmamak için text painter'ları oluşturup önbellekliyoruz.
-  late final Map<String, TextPainter> _textPainterCache;
+  // Performans Optimizasyonu: TextPainter.layout() her karede 81 kez çağrılmasın diye static cache'liyoruz.
+  static final Map<String, TextPainter> _staticTextPainterCache = {};
 
   TurkeyMapPainter({
     required this.cities,
@@ -1096,7 +957,7 @@ class TurkeyMapPainter extends CustomPainter {
   }
 
   void _initTextPainterCache() {
-    _textPainterCache = {};
+    if (_staticTextPainterCache.isNotEmpty) return;
     for (final city in cities) {
       final activeCity = activeCities.cast<CityModel?>().firstWhere(
         (c) => c != null && normalizeFn(c.name) == normalizeFn(city.title),
@@ -1127,7 +988,7 @@ class TurkeyMapPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-      _textPainterCache[city.id] = textPainter;
+      _staticTextPainterCache[city.id] = textPainter;
     }
   }
 
@@ -1230,17 +1091,17 @@ class TurkeyMapPainter extends CustomPainter {
       }
 
       // Şehir adını (il sınırları içinde) küçük ve şık şekilde yaz
-      final textPainter = _textPainterCache[city.id];
-      if (textPainter != null) {
+      final tp = _staticTextPainterCache[city.id];
+      if (tp != null) {
         final bool isActive = activeCity != null;
         // Pin ile çakışmayı önlemek için aktif şehirlerin yazısını 11 birim aşağı kaydırırız
         final double offsetY = isActive ? 11.0 : 0.0;
         final textOffset = Offset(
-          bounds.center.dx - (textPainter.width / 2),
-          bounds.center.dy - (textPainter.height / 2) + offsetY,
+          bounds.center.dx - (tp.width / 2),
+          bounds.center.dy - (tp.height / 2) + offsetY,
         );
 
-        textPainter.paint(canvas, textOffset);
+        tp.paint(canvas, textOffset);
       }
     }
 

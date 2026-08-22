@@ -83,7 +83,10 @@ Future<void> main() async {
   runApp(const ProviderScope(child: HardKapitalizmApp()));
 }
 
-final _router = GoRouter(
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+final appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   observers: [appRouteObserver],
   routes: [
@@ -448,7 +451,7 @@ class HardKapitalizmApp extends StatelessWidget {
               ),
             );
           },
-          routerConfig: _router,
+          routerConfig: appRouter,
         );
       },
     );

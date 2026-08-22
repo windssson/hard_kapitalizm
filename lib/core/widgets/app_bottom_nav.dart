@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
+import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 
-class AppBottomNav extends StatelessWidget {
+class AppBottomNav extends ConsumerWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
 
@@ -15,7 +17,7 @@ class AppBottomNav extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.navBg,
@@ -28,23 +30,51 @@ class AppBottomNav extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavItem(context, 0, AppIcons.home, 'Ana Sayfa'),
-            _buildNavItem(context, 1, AppIcons.chatBubbleRounded, 'Sohbet'),
-            _buildNavItem(context, 2, AppIcons.map, 'Harita'),
-            _buildNavItem(context, 3, AppIcons.storefront, 'Pazar'),
-            _buildNavItem(context, 4, AppIcons.person, 'Profil'),
+            _buildNavItem(context, ref, 0, AppIcons.home, 'Ana Sayfa'),
+            _buildNavItem(context, ref, 1, AppIcons.chatBubbleRounded, 'Sohbet'),
+            _buildNavItem(context, ref, 2, AppIcons.map, 'Harita'),
+            _buildNavItem(context, ref, 3, AppIcons.storefront, 'Pazar'),
+            _buildNavItem(context, ref, 4, AppIcons.person, 'Profil'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
+  Widget _buildNavItem(
+    BuildContext context,
+    WidgetRef ref,
+    int index,
+    IconData icon,
+    String label,
+  ) {
     final isSelected = selectedIndex == index;
     final color = isSelected ? AppColors.gold : AppColors.textSecondary;
+    final currentTutorialStep = ref.watch(tutorialProvider).step;
+
+    GlobalKey? navKey;
+    if (index == 3 && currentTutorialStep == TutorialStep.clickGoToMarket) {
+      navKey = TutorialKeys.navMarketKey;
+    } else if (index == 0 &&
+        currentTutorialStep == TutorialStep.returnToHome) {
+      navKey = TutorialKeys.navHomeKey;
+    }
 
     return GestureDetector(
+      key: navKey,
       onTap: () {
+        if (index == 3 &&
+            ref.read(tutorialProvider).step == TutorialStep.clickGoToMarket) {
+          ref
+              .read(tutorialProvider.notifier)
+              .setStep(TutorialStep.selectMarketWarehouse);
+        } else if (index == 0 &&
+            ref.read(tutorialProvider).step == TutorialStep.returnToHome) {
+          ref
+              .read(tutorialProvider.notifier)
+              .setStep(TutorialStep.returnToStoresModule);
+        }
+
         if (index == selectedIndex) return;
         AppHaptic.light();
         switch (index) {

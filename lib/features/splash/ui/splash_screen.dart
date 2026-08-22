@@ -69,15 +69,36 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       // Oturum var: Arka plan senkronizasyonu başlat
       authManager.syncGoogleProfileIfLinked().ignore();
 
-      // Kritik işlemleri aynı anda PARALEL olarak yürüt
-      await Future.wait([
-        // 1. Oturum başlatma ve üretim/lojistik durumunu hesapla
-        Supabase.instance.client.rpc('bootstrap_game_session').then((_) {}).catchError((_) {}),
+      // 1. Oturum başlatma ve geçerlilik kontrolü
+      bool isSessionValid = true;
+      try {
+        await Supabase.instance.client.rpc('bootstrap_game_session');
+      } catch (err) {
+        final errStr = err.toString().toLowerCase();
+        if (errStr.contains('oturum acilmamis') ||
+            errStr.contains('invalid jwt') ||
+            errStr.contains('jwt expired') ||
+            errStr.contains('user not found') ||
+            errStr.contains('unauthorized') ||
+            errStr.contains('yetkisiz')) {
+          isSessionValid = false;
+        }
+      }
 
-        // 2. Statik Şehir, Ürün ve Bina tipleri paketini tekil RPC ile çek
+      if (!isSessionValid) {
+        await Supabase.instance.client.auth.signOut();
+        if (mounted) {
+          context.go('/auth');
+        }
+        return;
+      }
+
+      // 2. Kritik işlemleri aynı anda PARALEL olarak yürüt
+      await Future.wait([
+        // Statik Şehir, Ürün ve Bina tipleri paketini tekil RPC ile çek
         ref.read(staticCatalogsProvider.future),
 
-        // 3. Sadece ana ekran ve temel arayüz için kritik ~20 görseli önbelleğe al
+        // Sadece ana ekran ve temel arayüz için kritik ~20 görseli önbelleğe al
         assetManager.prefetchCriticalAssets(
           onProgress: (current, total, fileName) {
             if (mounted) {

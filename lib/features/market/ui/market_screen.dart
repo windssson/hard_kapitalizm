@@ -2402,53 +2402,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         child: Column(
           children: [
             const SecondaryTopBar(title: 'Global Pazar'),
-            if (ref.watch(tutorialProvider).step == TutorialStep.returnToStore)
-              Container(
-                width: double.infinity,
-                margin: EdgeInsets.fromLTRB(14.w, 4.h, 14.w, 8.h),
-                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-                decoration: AppDecorations.glowingAction(AppColors.gold, 14.r),
-                child: Row(
-                  children: [
-                    Icon(AppIcons.checkCircle, color: AppColors.textOnAccent, size: 22.sp),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Text(
-                        'Ürünler Manav Depona aktarıldı! Şimdi Manavına dönüp ürünü rafa diz.',
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.textOnAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: AppTypography.bodySmall,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    ElevatedButton(
-                      key: TutorialKeys.marketReturnToStoreKey,
-                      onPressed: () {
-                        if (Navigator.of(context).canPop()) {
-                          Navigator.of(context).pop();
-                        } else {
-                          context.go('/store');
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.background,
-                        foregroundColor: AppColors.gold,
-                        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                      ),
-                      child: Text(
-                        'MANAVA DÖN',
-                        style: AppTextStyles.button.standardCopyWith(
-                          color: AppColors.gold,
-                          fontWeight: FontWeight.bold,
-                          fontSize: AppTypography.label,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             _buildMarketTabBar(),
             Expanded(
               child: _marketViewTab == 0
@@ -2697,6 +2650,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final priceDeltaBadge = _buildPriceDeltaBadge(priceDeltaPercent);
 
     return Container(
+      key: (ref.watch(tutorialProvider).step ==
+                  TutorialStep.clickMarketBuyListing &&
+              isCheapest)
+          ? TutorialKeys.marketListingFirstAddKey
+          : null,
       margin: EdgeInsets.only(bottom: 10.h),
       decoration: BoxDecoration(
         color: AppColors.cardBg,
@@ -2925,11 +2883,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           SizedBox(
                             height: 28.h,
                             child: ElevatedButton(
-                              key: (ref.watch(tutorialProvider).step ==
-                                          TutorialStep.clickMarketBuyListing &&
-                                      isCheapest)
-                                  ? TutorialKeys.marketListingFirstAddKey
-                                  : null,
                               onPressed: canAddToCart
                                   ? () {
                                       if (ref.read(tutorialProvider).step ==
@@ -3310,6 +3263,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return SafeArea(
       top: false,
       child: Container(
+        key: ref.watch(tutorialProvider).step ==
+                TutorialStep.confirmMarketCheckout
+            ? TutorialKeys.marketCheckoutConfirmKey
+            : null,
         padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 20.h),
         decoration: AppDecorations.panelGlass(24.r),
         child: Column(
@@ -3449,10 +3406,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               width: double.infinity,
               height: 42.h,
               child: ElevatedButton(
-                key: ref.watch(tutorialProvider).step ==
-                        TutorialStep.confirmMarketCheckout
-                    ? TutorialKeys.marketCheckoutConfirmKey
-                    : null,
                 onPressed: capacityOk
                     ? () {
                         Navigator.of(sheetContext).pop();
@@ -3755,7 +3708,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     if (tutorial.step == TutorialStep.confirmMarketCheckout ||
         tutorial.step == TutorialStep.confirmMarketCartBuy ||
         tutorial.step == TutorialStep.clickMarketBuyListing) {
-      ref.read(tutorialProvider.notifier).setStep(TutorialStep.returnToStore);
+      ref.read(tutorialProvider.notifier).setStep(TutorialStep.returnToHome);
     }
 
     if (!mounted) return;

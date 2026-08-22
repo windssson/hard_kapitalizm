@@ -55,7 +55,7 @@ class _StorePerformanceScreenState
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Magaza Raporu'),
+            const SecondaryTopBar(title: 'Mağaza Finans Raporu'),
             _buildTabBar(),
             Expanded(
               child: performanceAsync.when(
@@ -64,18 +64,23 @@ class _StorePerformanceScreenState
                 ),
                 error: (error, _) => _buildErrorState(context, ref, error),
                 data: (data) => RefreshIndicator(
+                  color: AppColors.gold,
+                  backgroundColor: AppColors.cardBg,
                   onRefresh: () async {
                     await _refreshPerformance(clearDirty: true);
                   },
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.all(12.w),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 10.h,
+                    ),
                     children: [
                       if (_selectedTabIndex == 0) ...[
                         _buildMainProfitCard(data.summary),
                         SizedBox(height: 12.h),
                         _buildKpiGrid(data.summary),
-                        SizedBox(height: 12.h),
+                        SizedBox(height: 14.h),
                         _buildTopProductsList(
                           data.rows,
                           data.summary.totalProfit,
@@ -98,21 +103,28 @@ class _StorePerformanceScreenState
 
   Widget _buildTabBar() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+      margin: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12.r),
+        color: AppColors.cardBg.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(14.r),
         border: Border.all(
-          color: AppColors.border.withValues(alpha: 0.3),
+          color: AppColors.border.withValues(alpha: 0.35),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppFx.shadow(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          _buildTabItem(0, 'Ozet', AppIcons.barChartRounded),
-          _buildTabItem(1, 'Urunler', AppIcons.categoryRounded),
-          _buildTabItem(2, 'Gunluk', AppIcons.calendarMonthRounded),
+          _buildTabItem(0, 'Genel Bakış', AppIcons.barChartRounded),
+          _buildTabItem(1, 'Ürün Analizi', AppIcons.categoryRounded),
+          _buildTabItem(2, 'Günlük Akış', AppIcons.calendarMonthRounded),
         ],
       ),
     );
@@ -128,20 +140,36 @@ class _StorePerformanceScreenState
           });
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 220),
           curve: Curves.easeInOut,
-          padding: EdgeInsets.symmetric(vertical: 8.h),
+          padding: EdgeInsets.symmetric(vertical: 9.h),
           decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.gold.withValues(alpha: 0.12)
-                : AppColors.transparent,
+            gradient: isSelected
+                ? LinearGradient(
+                    colors: [
+                      AppColors.gold.withValues(alpha: 0.22),
+                      AppColors.gold.withValues(alpha: 0.08),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  )
+                : null,
             borderRadius: BorderRadius.circular(10.r),
             border: Border.all(
               color: isSelected
-                  ? AppColors.gold.withValues(alpha: 0.35)
+                  ? AppColors.gold.withValues(alpha: 0.5)
                   : AppColors.transparent,
               width: 1,
             ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.12),
+                      blurRadius: 6,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -149,17 +177,17 @@ class _StorePerformanceScreenState
               Icon(
                 icon,
                 color: isSelected ? AppColors.gold : AppColors.textMuted,
-                size: AppIconSizes.small,
+                size: 15.sp,
               ),
               SizedBox(width: 6.w),
               Text(
                 label,
                 style: AppTextStyles.label.standardCopyWith(
                   color: isSelected
-                      ? AppColors.textPrimary
+                      ? AppColors.gold
                       : AppColors.textSecondary,
-                  fontSize: AppTypography.bodySmall,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 12.sp,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                 ),
               ),
             ],
@@ -173,94 +201,220 @@ class _StorePerformanceScreenState
     final profitMargin = summary.totalRevenue > 0
         ? (summary.totalProfit / summary.totalRevenue) * 100
         : 0.0;
+    final totalCost = (summary.totalRevenue - summary.totalProfit).clamp(0.0, double.infinity);
 
     return Container(
       padding: EdgeInsets.all(16.w),
-      decoration: AppDecorations.premiumCard(AppColors.gold, 18.r),
-      child: Row(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.gold.withValues(alpha: 0.14),
+            AppColors.cardBg.withValues(alpha: 0.95),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.45),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.10),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppFx.shadow(0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      AppIcons.insightsRounded,
-                      color: AppColors.gold,
-                      size: AppIconSizes.small,
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(5.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            AppIcons.insightsRounded,
+                            color: AppColors.gold,
+                            size: 14.sp,
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'TOPLAM NET KÂR',
+                          style: AppTextStyles.overline.standardCopyWith(
+                            color: AppColors.gold,
+                            fontSize: AppTypography.caption,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 6.w),
+                    SizedBox(height: 8.h),
                     Text(
-                      'TOPLAM NET KAR',
-                      style: AppTextStyles.overline.standardCopyWith(
-                        color: AppColors.textSecondary,
-                        fontSize: AppTypography.caption,
-                        fontWeight: FontWeight.w800,
+                      _formatCurrency(summary.totalProfit),
+                      style: AppTextStyles.largeTitle.standardCopyWith(
+                        color: summary.totalProfit >= 0
+                            ? AppColors.gold
+                            : AppColors.red,
+                        fontSize: 26.sp,
+                        fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      'Son 14 Günlük Toplam Mağaza Kazancı',
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: AppColors.textMuted,
+                        fontSize: AppTypography.caption,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 6.h),
-                Text(
-                  _formatCurrency(summary.totalProfit),
-                  style: AppTextStyles.largeTitle.standardCopyWith(
-                    color: AppColors.gold,
-                    fontSize: AppTypography.display,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
+              ),
+              Container(
+                width: 68.w,
+                height: 68.w,
+                padding: EdgeInsets.all(6.w),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBgLight.withValues(alpha: 0.7),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: (profitMargin >= 20 ? AppColors.green : AppColors.gold)
+                        .withValues(alpha: 0.4),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (profitMargin >= 20 ? AppColors.green : AppColors.gold)
+                          .withValues(alpha: 0.15),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '%${profitMargin.toStringAsFixed(1)}',
+                        style: AppTextStyles.label.standardCopyWith(
+                          color: profitMargin >= 20
+                              ? AppColors.green
+                              : AppColors.gold,
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        'Marj',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(height: 4.h),
-                Text(
-                  'Son 14 Gunluk Toplam Kazancli Bakiye',
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.label,
+              ),
+            ],
+          ),
+          SizedBox(height: 14.h),
+          // Finansal Hacim Çubuğu (Ciro vs Maliyet)
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: AppColors.cardBgLight.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(
+                color: AppColors.border.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8.w,
+                        height: 8.w,
+                        decoration: BoxDecoration(
+                          color: AppColors.green,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        'Ciro: ',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.caption,
+                        ),
+                      ),
+                      Text(
+                        _formatCurrency(summary.totalRevenue),
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.green,
+                          fontSize: AppTypography.caption,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Container(
+                        width: 8.w,
+                        height: 8.w,
+                        decoration: BoxDecoration(
+                          color: AppColors.red.withValues(alpha: 0.8),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        'Maliyet: ',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.caption,
+                        ),
+                      ),
+                      Text(
+                        _formatCurrency(totalCost),
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.red,
+                          fontSize: AppTypography.caption,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
-          ),
-          Container(
-            width: 64.w,
-            height: 64.w,
-            padding: EdgeInsets.all(6.w),
-            decoration: BoxDecoration(
-              color: AppColors.cardBg.withValues(alpha: 0.45),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.gold.withValues(alpha: 0.25),
-                width: 1.5,
-              ),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '%${profitMargin.toStringAsFixed(1)}',
-                    style: AppTextStyles.label.standardCopyWith(
-                      color: profitMargin >= 20
-                          ? AppColors.green
-                          : AppColors.gold,
-                      fontSize: AppTypography.bodySmall,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  SizedBox(height: 1.h),
-                  Text(
-                    'Marj',
-                    style: AppTextStyles.caption.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.micro,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
             ),
           ),
         ],
@@ -279,29 +433,33 @@ class _StorePerformanceScreenState
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 10.w,
       mainAxisSpacing: 10.h,
-      childAspectRatio: 1.7,
+      childAspectRatio: 1.85,
       children: [
         _buildGridKpiCard(
           'Toplam Ciro',
           _formatCurrency(summary.totalRevenue),
+          'Brüt Satış',
           AppColors.green,
           AppIcons.paymentsRounded,
         ),
         _buildGridKpiCard(
-          'Satilan Adet',
-          summary.totalSoldQuantity.toString(),
-          AppColors.white,
+          'Satılan Adet',
+          _formatCompactNumber(summary.totalSoldQuantity.toDouble()),
+          'Ürün Hacmi',
+          AppColors.gold,
           AppIcons.inventoryRounded,
         ),
         _buildGridKpiCard(
-          'Satis Islemi',
-          summary.totalSaleEvents.toString(),
+          'Satış İşlemi',
+          '${summary.totalSaleEvents} Fiş',
+          'Kasa Hareketi',
           AppColors.blue,
           AppIcons.receiptLongRounded,
         ),
         _buildGridKpiCard(
-          'Islem Basi Ciro',
+          'İşlem Başı Ciro',
           _formatCurrency(avgRevenuePerEvent),
+          'Sepet Ort.',
           AppColors.textSecondary,
           AppIcons.trendingUpRounded,
         ),
@@ -312,37 +470,74 @@ class _StorePerformanceScreenState
   Widget _buildGridKpiCard(
     String label,
     String value,
+    String subtitle,
     Color color,
     IconData icon,
   ) {
     return Container(
-      padding: EdgeInsets.all(10.w),
-      decoration: AppDecorations.premiumCard(AppColors.border, 14.r),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: color, size: AppIconSizes.small),
-              SizedBox(width: 6.w),
-              Text(
-                label,
-                style: AppTextStyles.caption.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.label,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: color.withValues(alpha: 0.25),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          SizedBox(height: 6.h),
-          Text(
-            value,
-            style: AppTextStyles.title.standardCopyWith(
-              color: color,
-              fontSize: AppTypography.body,
-              fontWeight: FontWeight.w800,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38.w,
+            height: 38.w,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: color.withValues(alpha: 0.25)),
+            ),
+            child: Icon(icon, color: color, size: 18.sp),
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: color,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted.withValues(alpha: 0.7),
+                    fontSize: 8.5.sp,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -363,35 +558,57 @@ class _StorePerformanceScreenState
     final productList = productsAsync.value ?? [];
 
     return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: AppDecorations.premiumCard(AppColors.border, 16.r),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: AppColors.borderGold.withValues(alpha: 0.25),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppFx.shadow(0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                AppIcons.starRounded,
-                color: AppColors.gold,
-                size: AppIconSizes.small,
+              Container(
+                padding: EdgeInsets.all(5.w),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  AppIcons.starRounded,
+                  color: AppColors.gold,
+                  size: 15.sp,
+                ),
               ),
-              SizedBox(width: 6.w),
-              Text(
-                'En Karli Urunler (Top 3)',
-                style: AppTextStyles.title.standardCopyWith(
-                  color: AppColors.white,
-                  fontSize: AppTypography.bodyLarge,
-                  fontWeight: FontWeight.bold,
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  'En Çok Kazandıran Ürünler (Top 3)',
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: AppColors.white,
+                    fontSize: AppTypography.bodyLarge,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 10.h),
+          SizedBox(height: 14.h),
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: topProducts.length,
-            separatorBuilder: (context, index) => SizedBox(height: 10.h),
+            separatorBuilder: (context, index) => SizedBox(height: 12.h),
             itemBuilder: (context, index) {
               final item = topProducts[index];
               final matchingProd = productList.firstWhere(
@@ -422,72 +639,111 @@ class _StorePerformanceScreenState
                 100.0,
               );
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 22.w,
-                        height: 22.w,
-                        child: CachedAssetImage(
-                          fileName: matchingProd.urunIconu,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: Text(
-                          item.productName,
-                          style: AppTextStyles.label.standardCopyWith(
-                            color: AppColors.textPrimary,
-                            fontSize: AppTypography.bodySmall,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        _formatCurrency(item.profit),
-                        style: AppTextStyles.label.standardCopyWith(
-                          color: AppColors.gold,
-                          fontSize: AppTypography.bodySmall,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
+              return Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBgLight.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.2),
                   ),
-                  SizedBox(height: 4.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4.r),
-                          child: AppProgressBar(
-                            value: contributionRatio.clamp(0.0, 1.0),
-                            backgroundColor: AppColors.border,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.gold,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 32.w,
+                          height: 32.w,
+                          padding: EdgeInsets.all(3.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardBg,
+                            borderRadius: BorderRadius.circular(8.r),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.3),
                             ),
-                            minHeight: 5.h,
+                          ),
+                          child: CachedAssetImage(
+                            fileName: matchingProd.urunIconu,
+                            fit: BoxFit.contain,
                           ),
                         ),
-                      ),
-                      SizedBox(width: 8.w),
-                      SizedBox(
-                        width: 32.w,
-                        child: Text(
-                          '%${contributionPercent.toStringAsFixed(1)}',
+                        SizedBox(width: 10.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.productName,
+                                style: AppTextStyles.label.standardCopyWith(
+                                  color: AppColors.textPrimary,
+                                  fontSize: AppTypography.bodySmall,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '${item.soldQuantity} Adet Satıldı',
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.textMuted,
+                                  fontSize: 10.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              _formatCurrency(item.profit),
+                              style: AppTextStyles.label.standardCopyWith(
+                                color: AppColors.gold,
+                                fontSize: AppTypography.bodySmall,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              'Ciro: ${_formatCurrency(item.revenue)}',
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: AppColors.green,
+                                fontSize: 9.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4.r),
+                            child: LinearProgressIndicator(
+                              value: contributionRatio.clamp(0.0, 1.0),
+                              backgroundColor: AppColors.background,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.gold,
+                              ),
+                              minHeight: 5.h,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Kâr Payı: %${contributionPercent.toStringAsFixed(1)}',
                           style: AppTextStyles.caption.standardCopyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: AppTypography.caption,
+                            color: AppColors.gold,
+                            fontSize: 10.sp,
                             fontWeight: FontWeight.bold,
                           ),
-                          textAlign: TextAlign.end,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -510,7 +766,7 @@ class _StorePerformanceScreenState
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: aggregated.length,
-      separatorBuilder: (context, index) => SizedBox(height: 8.h),
+      separatorBuilder: (context, index) => SizedBox(height: 10.h),
       itemBuilder: (context, index) {
         final item = aggregated[index];
         final matchingProd = productList.firstWhere(
@@ -541,21 +797,42 @@ class _StorePerformanceScreenState
             : 0.0;
 
         return Container(
-          padding: EdgeInsets.all(12.w),
-          decoration: AppDecorations.premiumCard(null, 16.r),
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(18.r),
+            border: Border.all(
+              color: AppColors.border.withValues(alpha: 0.35),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppFx.shadow(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Column(
             children: [
               Row(
                 children: [
-                  SizedBox(
-                    width: 32.w,
-                    height: 32.w,
+                  Container(
+                    width: 38.w,
+                    height: 38.w,
+                    padding: EdgeInsets.all(4.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBgLight,
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.25),
+                      ),
+                    ),
                     child: CachedAssetImage(
                       fileName: matchingProd.urunIconu,
                       fit: BoxFit.contain,
                     ),
                   ),
-                  SizedBox(width: 10.w),
+                  SizedBox(width: 12.w),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -570,7 +847,7 @@ class _StorePerformanceScreenState
                         ),
                         SizedBox(height: 2.h),
                         Text(
-                          'Toplam ${item.saleEventCount} islemde satildi',
+                          '${item.saleEventCount} Ayrı Satış İşlemi',
                           style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
                             fontSize: AppTypography.label,
@@ -583,11 +860,11 @@ class _StorePerformanceScreenState
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        'Kar: ${_formatCurrency(item.profit)}',
+                        _formatCurrency(item.profit),
                         style: AppTextStyles.title.standardCopyWith(
                           color: AppColors.gold,
                           fontSize: AppTypography.body,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                       SizedBox(height: 2.h),
@@ -595,7 +872,7 @@ class _StorePerformanceScreenState
                         'Ciro: ${_formatCurrency(item.revenue)}',
                         style: AppTextStyles.label.standardCopyWith(
                           color: AppColors.green,
-                          fontSize: AppTypography.bodySmall,
+                          fontSize: 10.sp,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -603,24 +880,34 @@ class _StorePerformanceScreenState
                   ),
                 ],
               ),
+              SizedBox(height: 12.h),
+              Divider(
+                color: AppColors.border.withValues(alpha: 0.2),
+                height: 1,
+              ),
               SizedBox(height: 10.h),
-              Divider(color: AppColors.border, thickness: 0.5),
-              SizedBox(height: 6.h),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildMiniMetric(
-                    'Satilan Adet',
+                    'Satılan Adet',
                     item.soldQuantity.toString(),
+                    AppColors.white,
                   ),
-                  _buildMiniMetric('Ort. Fiyat', _formatCurrency(avgPrice)),
                   _buildMiniMetric(
-                    'Kar Marji',
+                    'Ort. Fiyat',
+                    _formatCurrency(avgPrice),
+                    AppColors.textSecondary,
+                  ),
+                  _buildMiniMetric(
+                    'Kâr Marjı',
                     '%${margin.toStringAsFixed(1)}',
+                    margin >= 20 ? AppColors.green : AppColors.gold,
                   ),
                   _buildMiniMetric(
-                    'Kar Payi',
+                    'Kâr Payı',
                     '%${(totalProfit > 0 ? (item.profit / totalProfit * 100) : 0).toStringAsFixed(1)}',
+                    AppColors.gold,
                   ),
                 ],
               ),
@@ -642,7 +929,7 @@ class _StorePerformanceScreenState
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: grouped.length,
-      separatorBuilder: (context, index) => SizedBox(height: 8.h),
+      separatorBuilder: (context, index) => SizedBox(height: 10.h),
       itemBuilder: (context, index) {
         final date = grouped.keys.elementAt(index);
         final dayRows = grouped[date]!;
@@ -657,17 +944,37 @@ class _StorePerformanceScreenState
         return Theme(
           data: Theme.of(context).copyWith(dividerColor: AppColors.transparent),
           child: Container(
-            decoration: AppDecorations.premiumCard(null, 14.r),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color: AppColors.border.withValues(alpha: 0.35),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppFx.shadow(0.2),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: ExpansionTile(
               key: PageStorageKey<String>(date.toIso8601String()),
               title: Row(
                 children: [
-                  Icon(
-                    AppIcons.calendarTodayRounded,
-                    color: AppColors.textSecondary,
-                    size: AppIconSizes.small,
+                  Container(
+                    padding: EdgeInsets.all(6.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Icon(
+                      AppIcons.calendarTodayRounded,
+                      color: AppColors.gold,
+                      size: 15.sp,
+                    ),
                   ),
-                  SizedBox(width: 8.w),
+                  SizedBox(width: 10.w),
                   Text(
                     _formatDate(date),
                     style: AppTextStyles.title.standardCopyWith(
@@ -679,37 +986,37 @@ class _StorePerformanceScreenState
                 ],
               ),
               subtitle: Padding(
-                padding: EdgeInsets.only(top: 4.h),
+                padding: EdgeInsets.only(top: 6.h),
                 child: Row(
                   children: [
                     Text(
                       'Ciro: ',
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: AppTypography.label,
+                        fontSize: 10.sp,
                       ),
                     ),
                     Text(
                       _formatCompactNumber(dayRevenue),
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.green,
-                        fontSize: AppTypography.label,
+                        fontSize: 10.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(width: 12.w),
+                    SizedBox(width: 14.w),
                     Text(
-                      'Kar: ',
+                      'Kâr: ',
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
-                        fontSize: AppTypography.label,
+                        fontSize: 10.sp,
                       ),
                     ),
                     Text(
                       _formatCompactNumber(dayProfit),
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.gold,
-                        fontSize: AppTypography.label,
+                        fontSize: 10.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -718,7 +1025,7 @@ class _StorePerformanceScreenState
               ),
               iconColor: AppColors.gold,
               collapsedIconColor: AppColors.textMuted,
-              childrenPadding: EdgeInsets.all(10.w),
+              childrenPadding: EdgeInsets.fromLTRB(12.w, 0, 12.w, 12.h),
               children: dayRows.map((row) {
                 final matchingProd = productList.firstWhere(
                   (p) => p.id == row.productId,
@@ -741,11 +1048,11 @@ class _StorePerformanceScreenState
                 );
 
                 return Container(
-                  margin: EdgeInsets.only(bottom: 6.h),
-                  padding: EdgeInsets.all(8.w),
+                  margin: EdgeInsets.only(bottom: 8.h),
+                  padding: EdgeInsets.all(10.w),
                   decoration: BoxDecoration(
-                    color: AppColors.cardBg.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(10.r),
+                    color: AppColors.cardBgLight.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(12.r),
                     border: Border.all(
                       color: AppColors.border.withValues(alpha: 0.15),
                       width: 0.5,
@@ -753,15 +1060,23 @@ class _StorePerformanceScreenState
                   ),
                   child: Row(
                     children: [
-                      SizedBox(
-                        width: 24.w,
-                        height: 24.w,
+                      Container(
+                        width: 28.w,
+                        height: 28.w,
+                        padding: EdgeInsets.all(3.w),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardBg,
+                          borderRadius: BorderRadius.circular(6.r),
+                          border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.2),
+                          ),
+                        ),
                         child: CachedAssetImage(
                           fileName: matchingProd.urunIconu,
                           fit: BoxFit.contain,
                         ),
                       ),
-                      SizedBox(width: 8.w),
+                      SizedBox(width: 10.w),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,10 +1091,10 @@ class _StorePerformanceScreenState
                             ),
                             SizedBox(height: 2.h),
                             Text(
-                              'Slot ${row.slotIndex} | Q${row.qualityLevel}',
+                              'Slot ${row.slotIndex} | Kalite ${row.qualityLevel}',
                               style: AppTextStyles.caption.standardCopyWith(
                                 color: AppColors.textMuted,
-                                fontSize: AppTypography.caption,
+                                fontSize: 9.sp,
                               ),
                             ),
                           ],
@@ -792,7 +1107,7 @@ class _StorePerformanceScreenState
                             '+${row.soldQuantity} Adet',
                             style: AppTextStyles.label.standardCopyWith(
                               color: AppColors.white,
-                              fontSize: AppTypography.label,
+                              fontSize: 10.sp,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -803,15 +1118,15 @@ class _StorePerformanceScreenState
                                 'Ciro: ${_formatCompactNumber(row.revenue)}',
                                 style: AppTextStyles.caption.standardCopyWith(
                                   color: AppColors.green,
-                                  fontSize: AppTypography.caption,
+                                  fontSize: 9.sp,
                                 ),
                               ),
                               SizedBox(width: 6.w),
                               Text(
-                                'Kar: ${_formatCompactNumber(row.profit)}',
+                                'Kâr: ${_formatCompactNumber(row.profit)}',
                                 style: AppTextStyles.caption.standardCopyWith(
                                   color: AppColors.gold,
-                                  fontSize: AppTypography.caption,
+                                  fontSize: 9.sp,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -830,7 +1145,7 @@ class _StorePerformanceScreenState
     );
   }
 
-  Widget _buildMiniMetric(String label, String value) {
+  Widget _buildMiniMetric(String label, String value, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -838,16 +1153,16 @@ class _StorePerformanceScreenState
           label,
           style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: AppTypography.label,
+            fontSize: 9.5.sp,
           ),
         ),
         SizedBox(height: 3.h),
         Text(
           value,
           style: AppTextStyles.label.standardCopyWith(
-            color: AppColors.white,
+            color: color,
             fontSize: AppTypography.bodySmall,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ],
@@ -856,17 +1171,48 @@ class _StorePerformanceScreenState
 
   Widget _buildEmptyState() {
     return Container(
-      padding: EdgeInsets.all(18.w),
-      decoration: AppDecorations.premiumCard(AppColors.border, 16.r),
-      child: Center(
-        child: Text(
-          'Son 14 gunde performans kaydi yok.',
-          style: AppTextStyles.body.standardCopyWith(
-            color: AppColors.textMuted,
-            fontSize: AppTypography.bodyLarge,
-          ),
-          textAlign: TextAlign.center,
+      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 36.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: AppColors.borderGold.withValues(alpha: 0.2),
         ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 56.w,
+            height: 56.w,
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              AppIcons.insightsRounded,
+              color: AppColors.gold,
+              size: 28.sp,
+            ),
+          ),
+          SizedBox(height: 14.h),
+          Text(
+            'Henüz Performans Kaydı Yok',
+            style: AppTextStyles.title.standardCopyWith(
+              color: AppColors.white,
+              fontSize: AppTypography.bodyLarge,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            'Mağazanızda ilk satışlar gerçekleştikçe 14 günlük detaylı analiz raporları burada listelenecektir.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body.standardCopyWith(
+              color: AppColors.textMuted,
+              fontSize: AppTypography.bodySmall,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -885,7 +1231,7 @@ class _StorePerformanceScreenState
             ),
             SizedBox(height: 14.h),
             Text(
-              'Magaza raporu yuklenemedi.',
+              'Mağaza raporu yüklenemedi.',
               style: AppTextStyles.title.standardCopyWith(
                 color: AppColors.white,
                 fontSize: AppTypography.titleLarge,
@@ -905,6 +1251,10 @@ class _StorePerformanceScreenState
             SizedBox(height: 14.h),
             ElevatedButton(
               onPressed: () => _refreshPerformance(clearDirty: true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                foregroundColor: AppColors.background,
+              ),
               child: const Text('Tekrar Dene'),
             ),
           ],

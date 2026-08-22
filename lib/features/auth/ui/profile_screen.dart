@@ -19,6 +19,8 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
+import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -987,14 +989,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Row(
               children: [
                 Icon(
-                  Icons.lock_reset_rounded,
+                  (authIdentity?.isGoogleLinked == true ||
+                          currentUser?.appMetadata['provider'] == 'google')
+                      ? Icons.verified_user_rounded
+                      : Icons.lock_reset_rounded,
                   color: AppColors.gold,
                   size: 20.sp,
                 ),
                 SizedBox(width: 8.w),
                 Expanded(
                   child: Text(
-                    'Güvenlik & Şifre',
+                    'Güvenlik & Giriş Yöntemi',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold,
@@ -1004,39 +1009,125 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
             SizedBox(height: 8.h),
-            Text(
-              'Şifrenizi güncellemek veya sıfırlamak isterseniz kayıtlı e-posta adresinize güvenli sıfırlama bağlantısı gönderebilirsiniz.',
-              style: AppTextStyles.caption.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.caption,
-                height: 1.35,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _handleSendPasswordResetEmail(email),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.gold,
-                  side: BorderSide(
-                    color: AppColors.gold.withValues(alpha: 0.5),
-                  ),
-                  padding: EdgeInsets.symmetric(vertical: 10.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                ),
-                icon: Icon(Icons.mark_email_read_rounded, size: 18.sp),
-                label: Text(
-                  'Şifre Sıfırlama E-postası Gönder',
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.gold,
-                    fontWeight: FontWeight.bold,
-                  ),
+            if (authIdentity?.isGoogleLinked == true ||
+                currentUser?.appMetadata['provider'] == 'google') ...[
+              Text(
+                'Hesabınız Google Güvenlik Protokolü ile korunmaktadır. Şifreye ihtiyaç duymadan cihazınızdaki Google hesabınızla anında ve güvenle giriş yapabilirsiniz.',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.caption,
+                  height: 1.35,
                 ),
               ),
-            ),
+              SizedBox(height: 10.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: AppColors.gold, size: 16.sp),
+                    SizedBox(width: 6.w),
+                    Text(
+                      'Google ile Doğrulandı',
+                      style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              Text(
+                'Şifrenizi güvenle güncelleyebilir veya e-posta adresinize sıfırlama bağlantısı isteyebilirsiniz.',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.caption,
+                  height: 1.35,
+                ),
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showChangePasswordDialog(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: AppColors.background,
+                        padding: EdgeInsets.symmetric(vertical: 10.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                      ),
+                      icon: Icon(Icons.lock_reset_rounded, size: 18.sp),
+                      label: Text(
+                        'Şifre Değiştir',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _handleSendPasswordResetEmail(email),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.gold,
+                        side: BorderSide(
+                          color: AppColors.gold.withValues(alpha: 0.5),
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 10.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                      ),
+                      icon: Icon(Icons.mark_email_read_rounded, size: 18.sp),
+                      label: Text(
+                        'E-posta Gönder',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10.h),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _handleLinkGoogleAccount,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF4285F4),
+                    side: BorderSide(
+                      color: const Color(0xFF4285F4).withValues(alpha: 0.6),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                  icon: Icon(AppIcons.gMobiledataRounded, size: 22.sp),
+                  label: Text(
+                    'Google Hesabını Bağla',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1492,6 +1583,201 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  void _showChangePasswordDialog(BuildContext context) {
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool isObscuredNew = true;
+    bool isObscuredConfirm = true;
+    bool isSubmitting = false;
+    final formKey = GlobalKey<FormState>();
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18.r),
+            side: BorderSide(color: AppColors.gold.withValues(alpha: 0.5)),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.lock_reset_rounded, color: AppColors.gold, size: 22.sp),
+              SizedBox(width: 8.w),
+              Text(
+                'Şifre Değiştir',
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: AppTypography.bodyLarge,
+                ),
+              ),
+            ],
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Yeni şifrenizi belirleyin. Şifreniz en az 6 karakter olmalıdır.',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                SizedBox(height: 14.h),
+                TextFormField(
+                  controller: newPasswordController,
+                  obscureText: isObscuredNew,
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14.sp),
+                  decoration: InputDecoration(
+                    labelText: 'Yeni Şifre',
+                    labelStyle: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+                    prefixIcon: Icon(Icons.lock_outline_rounded, color: AppColors.gold, size: 18.sp),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        isObscuredNew ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: AppColors.textMuted,
+                        size: 18.sp,
+                      ),
+                      onPressed: () => setDialogState(() => isObscuredNew = !isObscuredNew),
+                    ),
+                    filled: true,
+                    fillColor: AppColors.cardBgLight,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r)),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.length < 6) {
+                      return 'En az 6 karakter olmalıdır.';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 12.h),
+                TextFormField(
+                  controller: confirmPasswordController,
+                  obscureText: isObscuredConfirm,
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14.sp),
+                  decoration: InputDecoration(
+                    labelText: 'Yeni Şifre Tekrar',
+                    labelStyle: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+                    prefixIcon: Icon(Icons.lock_rounded, color: AppColors.gold, size: 18.sp),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        isObscuredConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: AppColors.textMuted,
+                        size: 18.sp,
+                      ),
+                      onPressed: () => setDialogState(() => isObscuredConfirm = !isObscuredConfirm),
+                    ),
+                    filled: true,
+                    fillColor: AppColors.cardBgLight,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r)),
+                  ),
+                  validator: (val) {
+                    if (val != newPasswordController.text) {
+                      return 'Şifreler uyuşmuyor.';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                'Vazgeç',
+                style: AppTextStyles.caption.standardCopyWith(color: AppColors.textMuted),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                foregroundColor: AppColors.background,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+              ),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => isSubmitting = true);
+                      AppHaptic.selection();
+                      try {
+                        await ref.read(authManagerProvider).updatePassword(
+                              newPasswordController.text.trim(),
+                            );
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        AppHaptic.medium();
+                        AppSnackbar.show(
+                          context,
+                          title: 'Başarılı',
+                          message: 'Şifreniz başarıyla güncellendi.',
+                          type: SnackbarType.success,
+                        );
+                      } catch (e) {
+                        if (!ctx.mounted) return;
+                        setDialogState(() => isSubmitting = false);
+                        AppSnackbar.show(
+                          context,
+                          title: 'Hata',
+                          message: 'Şifre güncellenemedi: $e',
+                          type: SnackbarType.error,
+                        );
+                      }
+                    },
+              child: isSubmitting
+                  ? SizedBox(
+                      width: 16.w,
+                      height: 16.w,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background),
+                    )
+                  : const Text('Güncelle', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleLinkGoogleAccount() async {
+    AppHaptic.selection();
+    try {
+      await ref.read(authManagerProvider).linkGoogleIdentity();
+      ref.invalidate(authIdentityProvider);
+      ref.invalidate(playerProvider);
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('canceled') || msg.contains('cancelled') || msg.contains('code: 16')) {
+        return;
+      }
+
+      String userFriendlyMessage = 'Google hesabı bağlanamadı: $e';
+      if (msg.contains('already linked') ||
+          msg.contains('identity_already_exists') ||
+          msg.contains('duplicate')) {
+        userFriendlyMessage = 'Bu Google hesabı zaten başka bir oyuncu hesabına bağlı.';
+      } else if (msg.contains('network') ||
+          msg.contains('socketexception') ||
+          msg.contains('clientexception')) {
+        userFriendlyMessage = 'İnternet bağlantınızı kontrol edin.';
+      }
+
+      AppSnackbar.show(
+        context,
+        title: 'Google Bağlama',
+        message: userFriendlyMessage,
+        type: SnackbarType.error,
+      );
+    }
+  }
+
   // ── DIALOGS & ACTION HANDLERS ───────────────────────────────────────
   void _showChangeCompanyNameDialog(BuildContext context, PlayerModel player) {
     final controller = TextEditingController(text: player.companyName);
@@ -1794,6 +2080,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         try {
           await ref.read(pushNotificationServiceProvider).unregisterToken();
         } catch (_) {}
+        ref.invalidate(playerProvider);
         await supabase.auth.signOut();
         if (mounted) {
           context.go('/');
