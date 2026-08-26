@@ -5,6 +5,10 @@ class LogisticsVehiclePerformanceModel {
   final int activeTrips;
   final int rentalTrips;
   final double rentalRevenue;
+  final double totalDistanceKm;
+  final double totalFuelUsed;
+  final int totalCargoQuantity;
+  final double totalTransportCost;
   final DateTime? lastActivityAt;
 
   const LogisticsVehiclePerformanceModel({
@@ -14,6 +18,10 @@ class LogisticsVehiclePerformanceModel {
     required this.activeTrips,
     required this.rentalTrips,
     required this.rentalRevenue,
+    this.totalDistanceKm = 0.0,
+    this.totalFuelUsed = 0.0,
+    this.totalCargoQuantity = 0,
+    this.totalTransportCost = 0.0,
     required this.lastActivityAt,
   });
 
@@ -25,6 +33,10 @@ class LogisticsVehiclePerformanceModel {
         activeTrips: 0,
         rentalTrips: 0,
         rentalRevenue: 0,
+        totalDistanceKm: 0.0,
+        totalFuelUsed: 0.0,
+        totalCargoQuantity: 0,
+        totalTransportCost: 0.0,
         lastActivityAt: null,
       );
 }

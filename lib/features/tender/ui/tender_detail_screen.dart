@@ -822,16 +822,47 @@ class _BidActionCard extends StatelessWidget {
     final hasEnough = totalStock >= tender.requiredQuantity;
     final diff = (tender.requiredQuantity - totalStock).abs();
 
+    // Ortalama depo birim maliyeti veya ürün taban fiyatı
+    double avgCost = 0;
+    int costCount = 0;
+    for (final w in detail.warehouseOptions) {
+      if (w.unitCost > 0) {
+        avgCost += w.unitCost;
+        costCount++;
+      }
+    }
+    final double estimatedUnitCost = costCount > 0
+        ? (avgCost / costCount)
+        : (tender.productBasePrice > 0
+            ? tender.productBasePrice
+            : (tender.requiredQuantity > 0
+                ? (tender.rewardCash / tender.requiredQuantity * 0.6)
+                : 0.0));
+
     return Container(
       padding: EdgeInsets.all(12.w),
-      decoration: AppDecorations.premiumCard(AppColors.green, 16.r),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: AppColors.green.withValues(alpha: 0.35),
+          width: 1.w,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withValues(alpha: 0.25),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Teklif Ver',
             style: AppTextStyles.title.standardCopyWith(
-              color: AppColors.white,
+              color: AppColors.textPrimary,
               fontSize: AppTypography.bodyLarge,
               fontWeight: FontWeight.w800,
             ),
@@ -839,7 +870,10 @@ class _BidActionCard extends StatelessWidget {
           SizedBox(height: 4.h),
           Text(
             'En düşük geçerli teklif kazanır. Teminat ilk teklifinizde kasanızdan ayrılır, kazanamazsanız eksiksiz iade edilir.',
-            style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.label),
+            style: AppTextStyles.body.standardCopyWith(
+              fontSize: AppTypography.label,
+              color: AppColors.textSecondary,
+            ),
           ),
           SizedBox(height: 10.h),
           // Depo Mevcut Stok Durumu Özeti
@@ -867,7 +901,7 @@ class _BidActionCard extends StatelessWidget {
                       Text(
                         'Depolarınızdaki Toplam Stok: $totalStock adet',
                         style: AppTextStyles.label.standardCopyWith(
-                          color: AppColors.white,
+                          color: AppColors.textPrimary,
                           fontSize: AppTypography.bodySmall,
                           fontWeight: FontWeight.w800,
                         ),
@@ -895,15 +929,15 @@ class _BidActionCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: _DetailMetric(
-                    label: 'Teklifin',
-                    value: AppMoney.full(playerBid.bidAmount),
+                    label: 'Mevcut Teklifin',
+                    value: '₺${AppMoney.compact(playerBid.bidAmount)}',
                     color: AppColors.gold,
                   ),
                 ),
                 Expanded(
                   child: _DetailMetric(
                     label: 'Bağlanan Teminat',
-                    value: AppMoney.full(playerBid.bondPaid),
+                    value: '₺${AppMoney.compact(playerBid.bondPaid)}',
                     color: AppColors.red,
                   ),
                 ),
@@ -916,11 +950,103 @@ class _BidActionCard extends StatelessWidget {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: AppTextStyles.input,
             decoration: InputDecoration(
-              labelText: 'Teklif Tutarı',
+              labelText: 'Teklif Tutarı (₺)',
               hintText: tender.rewardCash.round().toString(),
               helperText:
-                  'Tavan ödül: ${AppMoney.full(tender.rewardCash)}',
+                  'Tavan ödül: ₺${AppMoney.compact(tender.rewardCash)} | Tahmini Birim Maliyet: ₺${AppMoney.compact(estimatedUnitCost)}',
             ),
+          ),
+          SizedBox(height: 10.h),
+
+          // Canlı Kârlılık ve Maliyet Rehberi
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              final raw = value.text.replaceAll(RegExp(r'[^0-9.,]'), '').replaceAll(',', '.');
+              final enteredBid = double.tryParse(raw) ?? 0;
+              if (enteredBid <= 0) return const SizedBox.shrink();
+
+              final totalEstimatedCost = estimatedUnitCost * tender.requiredQuantity;
+              final estNetProfit = enteredBid - totalEstimatedCost;
+              final isProfitable = estNetProfit > 0;
+              final isOverCap = enteredBid > tender.rewardCash;
+              final marginPct = enteredBid > 0 ? (estNetProfit / enteredBid * 100) : 0.0;
+
+              return Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: (isOverCap
+                          ? AppColors.red
+                          : (isProfitable ? AppColors.green : AppColors.warning))
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(
+                    color: (isOverCap
+                            ? AppColors.red
+                            : (isProfitable ? AppColors.green : AppColors.warning))
+                        .withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isOverCap
+                          ? Icons.error_outline_rounded
+                          : (isProfitable
+                              ? Icons.trending_up_rounded
+                              : Icons.warning_amber_rounded),
+                      size: 16.sp,
+                      color: isOverCap
+                          ? AppColors.red
+                          : (isProfitable ? AppColors.green : AppColors.warning),
+                    ),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (isOverCap)
+                            Text(
+                              'Teklif tavan ödülü (₺${AppMoney.compact(tender.rewardCash)}) aşamaz!',
+                              style: AppTextStyles.label.standardCopyWith(
+                                color: AppColors.red,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          else if (isProfitable)
+                            Text(
+                              'Tahmini Net Kâr: +₺${AppMoney.compact(estNetProfit)} (%${marginPct.toStringAsFixed(1)} Marj)',
+                              style: AppTextStyles.label.standardCopyWith(
+                                color: AppColors.green,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            )
+                          else
+                            Text(
+                              'Dikkat: Teklif toplam maliyetin (₺${AppMoney.compact(totalEstimatedCost)}) altında!',
+                              style: AppTextStyles.label.standardCopyWith(
+                                color: AppColors.warning,
+                                fontSize: 10.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            'Birim Fiyat: ₺${(enteredBid / (tender.requiredQuantity > 0 ? tender.requiredQuantity : 1)).toStringAsFixed(1)} / adet',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 9.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
           SizedBox(height: 12.h),
           SizedBox(

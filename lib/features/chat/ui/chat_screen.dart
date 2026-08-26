@@ -132,6 +132,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (!mounted || action == null) return;
 
     switch (action) {
+      case _ChatMessageAction.reply:
+        ref.read(chatProvider.notifier).setReply(msg);
+        return;
+      case _ChatMessageAction.mention:
+        _controller.text = '@${msg.playerName} ${_controller.text}';
+        return;
+      case _ChatMessageAction.directMessage:
+        await _openDirectMessageDialog(msg.playerId, msg.playerName);
+        return;
       case _ChatMessageAction.openProfile:
         context.push('/profile/public/${msg.playerId}');
         return;
@@ -151,6 +160,128 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       case _ChatMessageAction.blockPlayer:
         await _confirmBlockPlayer(msg.playerId, msg.playerName);
         return;
+    }
+  }
+
+  Future<void> _openDirectMessageDialog(
+    String targetPlayerId,
+    String targetPlayerName,
+  ) async {
+    final dmController = TextEditingController();
+
+    final sent = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.3)),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.lock_rounded, color: AppColors.gold, size: 20.sp),
+            SizedBox(width: 8.w),
+            Expanded(
+              child: Text(
+                'Özel Mesaj: $targetPlayerName',
+                style: AppTextStyles.title.standardCopyWith(
+                  color: AppColors.gold,
+                  fontSize: AppTypography.bodyLarge,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bu mesaj sadece $targetPlayerName tarafından görülecektir.',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            TextField(
+              controller: dmController,
+              minLines: 3,
+              maxLines: 5,
+              maxLength: 500,
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Özel mesajınızı yazın...',
+                hintStyle: AppTextStyles.caption,
+                filled: true,
+                fillColor: AppColors.cardBgLight,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.r),
+                  borderSide: BorderSide(color: AppColors.cardBorder),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(
+              'Vazgeç',
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.textOnAccent,
+            ),
+            child: const Text('Gönder'),
+          ),
+        ],
+      ),
+    );
+
+    if (sent == true && dmController.text.trim().isNotEmpty) {
+      try {
+        final result = await ChatService.sendDirectMessage(
+          receiverId: targetPlayerId,
+          content: dmController.text.trim(),
+        );
+
+        if (!mounted) return;
+
+        if (result['success'] == true) {
+          AppSnackbar.show(
+            context,
+            title: 'Mesaj Gönderildi',
+            message: '$targetPlayerName kullanıcısına özel mesajınız iletildi.',
+            type: SnackbarType.success,
+          );
+        } else {
+          AppSnackbar.show(
+            context,
+            title: 'Hata',
+            message: result['message'] ?? 'Özel mesaj gönderilemedi.',
+            type: SnackbarType.error,
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: e.toString(),
+          type: SnackbarType.error,
+        );
+      }
     }
   }
 
@@ -257,8 +388,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatProvider);
-    final currentPlayerId = ref.watch(playerProvider).value?.id;
+    final player = ref.watch(playerProvider).value;
+    final currentPlayerId = player?.id;
     final blockedPlayers = ref.watch(blockedPlayersProvider);
+    final cityId = int.tryParse(player?.headquartersCityId ?? '');
 
     final visibleMessages = chatState.messages
         .where((m) => !blockedPlayers.contains(m.playerId))
@@ -291,7 +424,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
-          const SecondaryTopBar(title: 'Sohbet'),
+          const SecondaryTopBar(title: 'Sohbet Odaları'),
+          _buildChannelTabBar(chatState, cityId),
           if (chatState.error != null) _buildErrorBanner(chatState.error!),
           Expanded(
             child: chatState.isLoading && visibleMessages.isEmpty
@@ -302,7 +436,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
                   )
                 : visibleMessages.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(chatState.activeChannel)
                 : ListView.builder(
                     controller: _scrollController,
                     padding: EdgeInsets.symmetric(
@@ -342,7 +476,98 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildChannelTabBar(ChatState chatState, int? playerCityId) {
+    final channels = [
+      {'key': 'global', 'label': 'Genel', 'icon': Icons.public_rounded},
+      {
+        'key': 'trade',
+        'label': 'Ticaret & Pazar',
+        'icon': Icons.storefront_rounded,
+      },
+      {
+        'key': 'city',
+        'label': 'Şehir Ağı',
+        'icon': Icons.location_city_rounded,
+      },
+    ];
+
+    return Container(
+      height: 40.h,
+      margin: EdgeInsets.fromLTRB(12.w, 4.h, 12.w, 4.h),
+      decoration: BoxDecoration(
+        color: AppFx.panelWash(0.3),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      padding: EdgeInsets.all(3.w),
+      child: Row(
+        children: channels.map((ch) {
+          final isSelected = chatState.activeChannel == ch['key'];
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                ref.read(chatProvider.notifier).switchChannel(
+                  ch['key'] as String,
+                  cityId: ch['key'] == 'city' ? playerCityId : null,
+                );
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.gold.withValues(alpha: 0.15)
+                      : AppColors.transparent,
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.gold.withValues(alpha: 0.4)
+                        : AppColors.transparent,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      ch['icon'] as IconData,
+                      size: 14.sp,
+                      color: isSelected
+                          ? AppColors.gold
+                          : AppColors.textSecondary,
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      ch['label'] as String,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: isSelected
+                            ? AppColors.gold
+                            : AppColors.textSecondary,
+                        fontSize: AppTypography.micro,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String channel) {
+    String title = 'Henüz mesaj yok';
+    String desc = 'İlk mesajı sen gönder!';
+    if (channel == 'trade') {
+      title = 'Pazar & Ticaret Sohbeti';
+      desc = 'Ürün ilanlarını paylaş, alım-satım teklifleri ver!';
+    } else if (channel == 'city') {
+      title = 'Şehir Sohbeti';
+      desc = 'Şehrindeki diğer şirketlerle iletişime geç!';
+    }
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -353,9 +578,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             size: AppIconSizes.hero,
           ),
           SizedBox(height: 12.h),
-          Text('Henuz mesaj yok', style: AppTextStyles.title),
+          Text(title, style: AppTextStyles.title),
           SizedBox(height: 6.h),
-          Text('Ilk mesaji sen gonder!', style: AppTextStyles.body),
+          Text(desc, style: AppTextStyles.body),
         ],
       ),
     );
@@ -460,6 +685,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               ),
                             ),
                           ),
+                          if (msg.badgeTitle != null) ...[
+                            SizedBox(width: 4.w),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 4.w,
+                                vertical: 1.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.blue.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4.r),
+                                border: Border.all(
+                                  color: AppColors.blue.withValues(alpha: 0.3),
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Text(
+                                msg.badgeTitle!,
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.blue,
+                                  fontSize: AppTypography.micro,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (msg.companyName != null &&
+                              msg.companyName!.isNotEmpty) ...[
+                            SizedBox(width: 4.w),
+                            Text(
+                              '• ${msg.companyName}',
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: AppColors.textMuted,
+                                fontSize: AppTypography.micro,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -489,6 +751,49 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Yanıtlanan Mesaj Alıntı Kutucuğu
+                        if (msg.replyToPlayerName != null)
+                          Container(
+                            margin: EdgeInsets.only(bottom: 6.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 4.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardBg.withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(6.r),
+                              border: Border(
+                                left: BorderSide(
+                                  color: AppColors.gold,
+                                  width: 2.5.w,
+                                ),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '↩ @${msg.replyToPlayerName}',
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: AppColors.gold,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: AppTypography.micro,
+                                  ),
+                                ),
+                                if (msg.replyToContent != null &&
+                                    msg.replyToContent!.isNotEmpty)
+                                  Text(
+                                    msg.replyToContent!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.caption.standardCopyWith(
+                                      color: AppColors.textMuted,
+                                      fontSize: AppTypography.micro,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                         if (msg.linkedProduct != null)
                           Padding(
                             padding: EdgeInsets.only(
@@ -575,6 +880,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildInputBar(ChatState chatState) {
+    final replyingTo = chatState.replyingTo;
+
     return Container(
       padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 12.h),
       decoration: BoxDecoration(
@@ -588,6 +895,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Aktif Yanıt Çubuğu
+            if (replyingTo != null) ...[
+              Container(
+                margin: EdgeInsets.only(bottom: 8.h),
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBgLight,
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.reply_rounded,
+                      color: AppColors.gold,
+                      size: 16.sp,
+                    ),
+                    SizedBox(width: 6.w),
+                    Expanded(
+                      child: Text(
+                        'Yanıt: @${replyingTo.playerName} "${replyingTo.content}"',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: AppTypography.micro,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () =>
+                          ref.read(chatProvider.notifier).clearReply(),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: AppColors.textMuted,
+                        size: 16.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (_selectedLinkedListing != null) ...[
               _ChatDraftLinkedProductCard(
                 listing: _selectedLinkedListing!,
@@ -632,7 +983,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                       decoration: InputDecoration(
                         hintText: _selectedLinkedListing == null
-                            ? 'Mesaj yaz...'
+                            ? (replyingTo != null
+                                ? 'Yanıtınızı yazın...'
+                                : 'Mesaj yaz...')
                             : 'Mesaja bir not ekle...',
                         hintStyle: AppTextStyles.body,
                         border: InputBorder.none,
@@ -1077,7 +1430,15 @@ class _QualityStars extends StatelessWidget {
   }
 }
 
-enum _ChatMessageAction { openProfile, copyMessage, reportMessage, blockPlayer }
+enum _ChatMessageAction {
+  reply,
+  mention,
+  directMessage,
+  openProfile,
+  copyMessage,
+  reportMessage,
+  blockPlayer,
+}
 
 class _ChatMessageActionsSheet extends StatelessWidget {
   const _ChatMessageActionsSheet({required this.message, required this.isMine});
@@ -1124,21 +1485,41 @@ class _ChatMessageActionsSheet extends StatelessWidget {
             ),
             SizedBox(height: 16.h),
             _ChatActionTile(
+              icon: Icons.reply_rounded,
+              label: 'Mesajı Yanıtla',
+              onTap: () => Navigator.pop(context, _ChatMessageAction.reply),
+            ),
+            if (!isMine) ...[
+              _ChatActionTile(
+                icon: Icons.mark_chat_unread_rounded,
+                label: 'Özel Mesaj Gönder (DM)',
+                color: AppColors.gold,
+                onTap: () =>
+                    Navigator.pop(context, _ChatMessageAction.directMessage),
+              ),
+              _ChatActionTile(
+                icon: Icons.alternate_email_rounded,
+                label: 'Kullanıcıdan Bahset (@)',
+                onTap: () =>
+                    Navigator.pop(context, _ChatMessageAction.mention),
+              ),
+            ],
+            _ChatActionTile(
               icon: AppIcons.openInNewRounded,
-              label: 'Profili Ac',
+              label: 'Profili Aç',
               onTap: () =>
                   Navigator.pop(context, _ChatMessageAction.openProfile),
             ),
             _ChatActionTile(
               icon: Icons.content_copy_rounded,
-              label: 'Mesaji Kopyala',
+              label: 'Mesajı Kopyala',
               onTap: () =>
                   Navigator.pop(context, _ChatMessageAction.copyMessage),
             ),
             if (!isMine) ...[
               _ChatActionTile(
                 icon: AppIcons.flagOutlined,
-                label: 'Mesaji Raporla',
+                label: 'Mesajı Raporla',
                 color: AppColors.red,
                 onTap: () =>
                     Navigator.pop(context, _ChatMessageAction.reportMessage),

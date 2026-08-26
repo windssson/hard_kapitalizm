@@ -1220,7 +1220,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('farms') ||
             (modules?.farms.warningCount ?? 0) > 0,
-        requiredLevel: 3,
+        requiredLevel: 2,
       ),
       _HomeModuleCardData(
         title: 'Nakliye',
@@ -1236,7 +1236,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('logistics') ||
             (modules?.logistics.warningCount ?? 0) > 0,
-        requiredLevel: 4,
+        requiredLevel: 3,
       ),
       _HomeModuleCardData(
         title: 'Ciftlikler',
@@ -1255,6 +1255,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('fields') ||
             (modules?.fields.warningCount ?? 0) > 0,
+        requiredLevel: 4,
+      ),
+      _HomeModuleCardData(
+        title: 'AR-GE',
+        image: 'arge.webp',
+        accentColor: AppColors.info,
+        primaryLabel: 'Arastirma',
+        primaryValue: '${modules?.arge.activeResearchCount ?? 0}',
+        secondaryLabel: 'Kalan',
+        secondaryValue: _formatRemainingTime(
+          modules?.arge.remainingSeconds ?? 0,
+        ),
+        badgeText: (modules?.arge.warningCount ?? 0) > 0
+            ? '${modules!.arge.warningCount} uyari'
+            : (modules?.arge.activeResearchCount ?? 0) > 0
+            ? 'Devam ediyor'
+            : 'Hazir',
+        hasAlert:
+            alertedModules.contains('arge') ||
+            (modules?.arge.warningCount ?? 0) > 0,
         requiredLevel: 5,
       ),
       _HomeModuleCardData(
@@ -1288,18 +1308,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         requiredLevel: 7,
       ),
       _HomeModuleCardData(
-        title: 'Ihale',
-        image: 'ihale.webp',
-        accentColor: openTenders > 0 ? AppColors.gold : AppColors.blue,
-        primaryLabel: 'Acik',
-        primaryValue: '$openTenders',
-        secondaryLabel: 'Aktif',
-        secondaryValue: '$activeTenders',
-        badgeText: openTenders > 0 ? 'Ihale' : 'Yok',
-        hasAlert: openTenders > 0,
-        requiredLevel: 8,
-      ),
-      _HomeModuleCardData(
         title: 'Fabrikalar',
         image: 'fabrikalar.webp',
         accentColor: AppColors.gold,
@@ -1314,6 +1322,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         hasAlert:
             alertedModules.contains('factories') ||
             (modules?.factories.blockedCount ?? 0) > 0,
+        requiredLevel: 8,
+      ),
+      _HomeModuleCardData(
+        title: 'Ihale',
+        image: 'ihale.webp',
+        accentColor: openTenders > 0 ? AppColors.gold : AppColors.blue,
+        primaryLabel: 'Acik',
+        primaryValue: '$openTenders',
+        secondaryLabel: 'Aktif',
+        secondaryValue: '$activeTenders',
+        badgeText: openTenders > 0 ? 'Ihale' : 'Yok',
+        hasAlert: openTenders > 0,
         requiredLevel: 10,
       ),
       _HomeModuleCardData(
@@ -1329,26 +1349,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             : 'Sv. 1',
         hasAlert: false,
         requiredLevel: 12,
-      ),
-      _HomeModuleCardData(
-        title: 'AR-GE',
-        image: 'arge.webp',
-        accentColor: AppColors.info,
-        primaryLabel: 'Arastirma',
-        primaryValue: '${modules?.arge.activeResearchCount ?? 0}',
-        secondaryLabel: 'Kalan',
-        secondaryValue: _formatRemainingTime(
-          modules?.arge.remainingSeconds ?? 0,
-        ),
-        badgeText: (modules?.arge.warningCount ?? 0) > 0
-            ? '${modules!.arge.warningCount} uyari'
-            : (modules?.arge.activeResearchCount ?? 0) > 0
-            ? 'Devam ediyor'
-            : 'Hazir',
-        hasAlert:
-            alertedModules.contains('arge') ||
-            (modules?.arge.warningCount ?? 0) > 0,
-        requiredLevel: 13,
       ),
       _HomeModuleCardData(
         title: 'Madenler',

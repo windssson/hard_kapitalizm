@@ -24,6 +24,25 @@ final storePerformanceDirtyProvider = StateProvider.family<bool, String>(
   (ref, storeId) => false,
 );
 
+final cityStoreSaturationsProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>((ref, cityId) async {
+  final supabase = Supabase.instance.client;
+  try {
+    final response = await supabase.rpc(
+      'get_city_store_saturations',
+      params: {'p_city_id': cityId},
+    );
+    if (response is List) {
+      return response
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+});
+
 Future<List<StoreModel>> _fetchStoresList() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;

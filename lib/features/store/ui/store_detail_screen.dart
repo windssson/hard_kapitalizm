@@ -2437,7 +2437,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   ) {
     final canAddStock = _canAddStockToSlot(slot);
     final canSendStock = _canSendStockFromSlot(slot);
-    final canEditProduct = _canEditSlotProduct(slot);
 
     final qColor = slot.qualityLevel <= 1
         ? AppColors.red
@@ -2516,12 +2515,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       index == 1)
                   ? TutorialKeys.storeSlotSelectProductKey
                   : null,
-              onTap: canEditProduct
-                  ? () => _showProductSelectionDialog(context, ref, store, slot)
-                  : () => _showStoreSlotLockedMessage(
-                      context,
-                      'Yolda ürün varken raf ürünü değiştirilemez.',
-                    ),
+              onTap: () =>
+                  _showProductSelectionDialog(context, ref, store, slot),
               borderRadius: BorderRadius.circular(10.r),
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
@@ -2843,16 +2838,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     _startStoreWarehouseOutboundFlow(context, ref, store, slot);
                   } else if (val == 'toggle') {
                     _toggleStoreSlotActive(context, ref, store, slot);
-                  } else if (val == 'clear' && canEditProduct) {
+                  } else if (val == 'clear') {
                     _confirmClearStoreSlot(context, ref, store, slot);
-                  } else if (val == 'change' && canEditProduct) {
+                  } else if (val == 'change') {
                     _showProductSelectionDialog(context, ref, store, slot);
-                  } else if (!canEditProduct &&
-                      (val == 'change' || val == 'clear')) {
-                    _showStoreSlotLockedMessage(
-                      context,
-                      'Yolda stok varken ürün değiştirilemez.',
-                    );
                   }
                 },
                 itemBuilder: (ctx) => [
@@ -2862,13 +2851,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     child: Row(
                       children: [
                         Icon(
-                          AppIcons.localShipping,
+                          AppIcons.addShoppingCart,
                           color: AppColors.green,
                           size: AppIconSizes.regular,
                         ),
                         SizedBox(width: 8.w),
                         Text(
-                          'Stok Ekle (Sipariş)',
+                          'Depodan Rafa Stok Ekle',
                           style: AppTextStyles.label.standardCopyWith(
                             color: AppColors.textPrimary,
                             fontSize: AppTypography.body,
@@ -2883,13 +2872,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     child: Row(
                       children: [
                         Icon(
-                          AppIcons.localShipping,
+                          Icons.inventory_2_outlined,
                           color: AppColors.blue,
                           size: AppIconSizes.regular,
                         ),
                         SizedBox(width: 8.w),
                         Text(
-                          'Mağaza Deposuna Gönder',
+                          'Stoğu Depoya Geri Aktar',
                           style: AppTextStyles.label.standardCopyWith(
                             color: AppColors.textPrimary,
                             fontSize: AppTypography.body,
@@ -2924,7 +2913,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   ),
                   PopupMenuItem(
                     value: 'change',
-                    enabled: canEditProduct,
                     child: Row(
                       children: [
                         Icon(
@@ -2945,7 +2933,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   ),
                   PopupMenuItem(
                     value: 'clear',
-                    enabled: canEditProduct,
                     child: Row(
                       children: [
                         Icon(
@@ -3110,10 +3097,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         ],
       ),
     );
-  }
-
-  bool _canEditSlotProduct(StoreSlotModel slot) {
-    return slot.quantity <= 0 && slot.pendingQuantity <= 0;
   }
 
   bool _canAddStockToSlot(StoreSlotModel slot) {
@@ -3780,10 +3763,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     AppSnackbar.show(context, message: message, type: SnackbarType.warning);
   }
 
-  void _showStoreSlotLockedMessage(BuildContext context, String message) {
-    _showWarning(context, message);
-  }
-
   Future<void> _toggleStoreSlotActive(
     BuildContext context,
     WidgetRef ref,
@@ -3837,7 +3816,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           ),
         ),
         content: Text(
-          '${(slot.productName ?? 'Bu urun') + (slot.brandId != _defaultBrandId ? ' (${ref.read(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})' : '')} secimini kaldirmak istiyor musun? Fiyat ve bekleyen kesirli satis verisi de sifirlanir.',
+          slot.quantity > 0
+              ? '${slot.productName ?? 'Bu ürün'} seçimini kaldırmak istiyor musun?\n\nRafta bulunan ${slot.quantity} adet ürün mağaza deposuna geri aktarılacaktır.'
+              : '${slot.productName ?? 'Bu ürün'} seçimini kaldırmak istiyor musun?',
           style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textPrimary,
             fontSize: AppTypography.bodyLarge,

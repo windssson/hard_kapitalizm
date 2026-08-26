@@ -48,7 +48,16 @@ class ArgeProductModel {
 
   bool get isMaxQuality => currentQualityLevel >= maxQualityLevel;
 
-  int get requiredPlayerLevel => isMaxQuality ? 0 : targetQuality * 10;
+  int get requiredPlayerLevel {
+    if (isMaxQuality) return 0;
+    return switch (targetQuality) {
+      2 => 5,
+      3 => 15,
+      4 => 30,
+      5 => 45,
+      _ => 50,
+    };
+  }
 
   static const List<int> _multipliers = [0, 10, 25, 60, 150];
   static const List<double> _minimumCosts = [0, 2500, 15000, 75000, 300000];

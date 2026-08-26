@@ -282,7 +282,7 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
 
   Widget _buildInfoCard() {
     final String kind = widget.buildingKind;
-    final bool hasLegend = kind != 'store' && kind != 'warehouse';
+    final bool hasLegend = kind != 'warehouse';
 
     return Positioned(
       bottom: hasLegend ? 155.h : 24.h,
@@ -348,10 +348,18 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
 
   Widget _buildLegendCard() {
     final String kind = widget.buildingKind;
-    if (kind == 'store' || kind == 'warehouse') return const SizedBox.shrink();
+    if (kind == 'warehouse') return const SizedBox.shrink();
 
     final List<MapEntry<String, Color>> legendItems = [];
-    if (kind == 'farm') {
+    if (kind == 'store') {
+      legendItems.addAll([
+        const MapEntry('Yüksek Nüfus (>3M)', Colors.green),
+        const MapEntry('Orta-Yüksek (1.5M - 3M)', Colors.lightGreen),
+        const MapEntry('Orta Nüfus (750K - 1.5M)', Colors.amber),
+        const MapEntry('Düşük-Orta (300K - 750K)', Colors.orange),
+        const MapEntry('Düşük Nüfus (<300K)', Colors.redAccent),
+      ]);
+    } else if (kind == 'farm') {
       legendItems.addAll([
         const MapEntry('Meyve Bahçesi', Colors.red),
         const MapEntry('Tahıl Tarlası', Colors.amber),
@@ -387,6 +395,8 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
 
     if (legendItems.isEmpty) return const SizedBox.shrink();
 
+    final isStore = kind == 'store';
+
     return Positioned(
       bottom: 20.h,
       left: 16.w,
@@ -418,10 +428,16 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.map_rounded, color: AppColors.gold, size: 18.sp),
+                    Icon(
+                      isStore ? Icons.people_alt_rounded : Icons.map_rounded,
+                      color: AppColors.gold,
+                      size: 18.sp,
+                    ),
                     SizedBox(width: 8.w),
                     Text(
-                      'Katsayı Avantaj Renkleri (Parlaklık Oranına Göre)',
+                      isStore
+                          ? 'Nüfus Dağılımı & Müşteri Potansiyeli'
+                          : 'Katsayı Avantaj Renkleri (Parlaklık Oranına Göre)',
                       style: AppTextStyles.body.standardCopyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.gold,
@@ -471,7 +487,9 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
                 ),
                 SizedBox(height: 8.h),
                 Text(
-                  '• Renkler Şehirlerin Üretim Avantajlarını temsil eder.',
+                  isStore
+                      ? '• Yeşil tonlar yüksek nüfus ve tüketici potansiyelini, kırmızı tonlar düşük nüfusu temsil eder.'
+                      : '• Renkler Şehirlerin Üretim Avantajlarını temsil eder.',
                   style: AppTextStyles.caption
                       .standardCopyWith(color: AppColors.textMuted)
                       .copyWith(fontSize: 9.5.sp, fontStyle: FontStyle.italic),
@@ -1025,10 +1043,35 @@ class TurkeyMapPainter extends CustomPainter {
           fillPaint = Paint()
             ..color = AppColors.gold.withValues(alpha: 0.65)
             ..style = PaintingStyle.fill;
+        } else if (buildingKind == 'store') {
+          // Mağaza için nüfusa göre ısı haritası renklendirmesi (Yeşil -> Sarı -> Kırmızı)
+          final pop = activeCity.population;
+          Color popColor;
+          double opacity = 0.50;
+
+          if (pop >= 3000000) {
+            popColor = Colors.green;
+            opacity = 0.65;
+          } else if (pop >= 1500000) {
+            popColor = Colors.lightGreen;
+            opacity = 0.55;
+          } else if (pop >= 750000) {
+            popColor = Colors.amber;
+            opacity = 0.45;
+          } else if (pop >= 300000) {
+            popColor = Colors.orange;
+            opacity = 0.40;
+          } else {
+            popColor = Colors.redAccent;
+            opacity = 0.45;
+          }
+
+          fillPaint = Paint()
+            ..color = popColor.withValues(alpha: opacity)
+            ..style = PaintingStyle.fill;
         } else {
-          // Kurulan birim türüne göre (tarla, maden vb.) bu ilin katsayı bonusunu kontrol et (depo ve mağaza hariç)
-          final bool shouldColor =
-              buildingKind != 'store' && buildingKind != 'warehouse';
+          // Kurulan birim türüne göre (tarla, maden vb.) bu ilin katsayı bonusunu kontrol et (depo hariç)
+          final bool shouldColor = buildingKind != 'warehouse';
           final MapEntry<Color, double>? colorAndBonus = shouldColor
               ? _getSpecificCategoryColorAndBonus(activeCity, buildingKind)
               : null;

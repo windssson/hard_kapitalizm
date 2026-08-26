@@ -105,6 +105,9 @@ class _BuildingTypeSelectionScreenState
   Widget build(BuildContext context) {
     final playerAsync = ref.watch(playerProvider);
     final catalogsAsync = ref.watch(staticCatalogsProvider);
+    final saturationsAsync = widget.buildingKind == 'store'
+        ? ref.watch(cityStoreSaturationsProvider(widget.selectedCity.id))
+        : const AsyncValue.data(<Map<String, dynamic>>[]);
 
     return Scaffold(
       backgroundColor: AppColors.transparent,
@@ -118,6 +121,7 @@ class _BuildingTypeSelectionScreenState
               child: playerAsync.when(
                 data: (player) => catalogsAsync.when(
                   data: (catalogs) {
+                    final saturations = saturationsAsync.value ?? const [];
                     // buildingKind'e göre ilgili kataloğu seç
                     final List<dynamic> rawTypes;
                     switch (widget.buildingKind) {
@@ -148,6 +152,7 @@ class _BuildingTypeSelectionScreenState
                       catalogs.products,
                       (player?.cash ?? 0).toDouble(),
                       player?.level ?? 1,
+                      saturations,
                     );
                   },
                   loading: () => Center(
@@ -176,8 +181,9 @@ class _BuildingTypeSelectionScreenState
     List<dynamic> types,
     List<ProductModel> products,
     double playerCash,
-    int playerLevel,
-  ) {
+    int playerLevel, [
+    List<Map<String, dynamic>> saturations = const [],
+  ]) {
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       itemCount: types.length,
@@ -191,6 +197,13 @@ class _BuildingTypeSelectionScreenState
 
         final bool isManav = type['name'].toString().toLowerCase().contains('manav') ||
                              type['icon'].toString().toLowerCase().contains('manav');
+
+        final saturationData = widget.buildingKind == 'store'
+            ? saturations.cast<Map<String, dynamic>?>().firstWhere(
+                (s) => s?['store_type_id'] == type['id'],
+                orElse: () => null,
+              )
+            : null;
 
         return GestureDetector(
           key: isManav ? TutorialKeys.buildingTypeManavKey : null,
@@ -270,6 +283,10 @@ class _BuildingTypeSelectionScreenState
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        if (widget.buildingKind == 'store' && saturationData != null) ...[
+                          SizedBox(height: 5.h),
+                          _buildSaturationBadge(saturationData),
+                        ],
                         if (_getCategoryBonus(type['name'] ?? '') > 1.0) ...[
                           SizedBox(height: 6.h),
                           _buildBonusBadge(_getCategoryBonus(type['name'] ?? '')),
@@ -580,6 +597,56 @@ class _BuildingTypeSelectionScreenState
               color: isGolden ? AppColors.gold : Colors.green,
               fontWeight: FontWeight.bold,
               fontSize: 10.sp,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSaturationBadge(Map<String, dynamic> data) {
+    final status = data['status'] as String? ?? 'balanced';
+    final label = data['status_label'] as String? ?? 'Dengeli Pazar';
+    final currentCount = data['current_count'] ?? 0;
+    final idealCapacity = data['ideal_capacity'] ?? 1;
+    final saturationPct = (data['saturation_pct'] ?? 0).toString();
+
+    Color badgeColor;
+    IconData badgeIcon;
+    if (status == 'opportunity') {
+      badgeColor = Colors.green;
+      badgeIcon = Icons.trending_up_rounded;
+    } else if (status == 'balanced') {
+      badgeColor = AppColors.gold;
+      badgeIcon = Icons.balance_rounded;
+    } else if (status == 'competitive') {
+      badgeColor = Colors.orange;
+      badgeIcon = Icons.local_fire_department_rounded;
+    } else {
+      badgeColor = Colors.redAccent;
+      badgeIcon = Icons.warning_amber_rounded;
+    }
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.4), width: 1.w),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(badgeIcon, color: badgeColor, size: 13.sp),
+          SizedBox(width: 5.w),
+          Flexible(
+            child: Text(
+              '$label • $currentCount/$idealCapacity Mağaza (%$saturationPct)',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: badgeColor,
+                fontSize: 9.5.sp,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

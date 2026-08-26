@@ -196,27 +196,35 @@ class StoreSlotModel {
         : json['product'] is Map
             ? Map<String, dynamic>.from(json['product'] as Map)
             : null;
-    
+    final productId = json['product_id'] as String?;
+    final hasProduct = productId != null && productId.isNotEmpty;
+    final capacity = (json['capacity'] as num?)?.toInt() ?? 0;
+    final quantity = (json['quantity'] as num?)?.toInt() ?? 0;
+    final pendingQuantity = (json['pending_quantity'] as num?)?.toInt() ?? 0;
+
     return StoreSlotModel(
       id: (json['id'] ?? json['slot_id'] ?? '').toString(),
       storeId: (json['store_id'] ?? '').toString(),
       slotIndex: (json['slot_index'] as num?)?.toInt() ?? 0,
       brandId: (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
           .toString(),
-      productId: json['product_id'] as String?,
-      productName: json['product_name'] as String? ?? productJson?['urun_adi'] as String?,
-      productIcon: json['product_icon'] as String? ?? productJson?['urun_iconu'] as String?,
-      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
-      pendingQuantity: (json['pending_quantity'] as num?)?.toInt() ?? 0,
+      productId: productId,
+      productName: json['product_name'] as String? ??
+          productJson?['urun_adi'] as String?,
+      productIcon: json['product_icon'] as String? ??
+          productJson?['urun_iconu'] as String?,
+      quantity: quantity,
+      pendingQuantity: pendingQuantity,
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       price: (json['price'] as num?)?.toDouble(),
       cost: (json['cost'] as num?)?.toDouble(),
-      capacity: (json['capacity'] as num?)?.toInt() ?? 0,
+      capacity: capacity,
       boostMultiplier: (json['boost_multiplier'] as num?)?.toDouble() ?? 1.0,
       pendingSale: (json['pending_sale'] as num?)?.toDouble(),
       isActive: json['is_active'] as bool? ?? true,
-      isEmpty: json['is_empty'] as bool? ?? true,
-      usedCapacityRatio: (json['used_capacity_ratio'] as num?)?.toDouble() ?? 0.0,
+      isEmpty: json['is_empty'] as bool? ?? !hasProduct,
+      usedCapacityRatio: (json['used_capacity_ratio'] as num?)?.toDouble() ??
+          (capacity > 0 ? ((quantity + pendingQuantity) / capacity) : 0.0),
       product: productJson != null ? ProductModel.fromJson(productJson) : null,
     );
   }

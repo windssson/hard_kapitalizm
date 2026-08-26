@@ -124,6 +124,10 @@ final logisticsVehiclePerformanceProvider =
           activeTrips: (row['active_trips'] as num?)?.toInt() ?? 0,
           rentalTrips: (row['rental_trips'] as num?)?.toInt() ?? 0,
           rentalRevenue: (row['rental_revenue'] as num?)?.toDouble() ?? 0.0,
+          totalDistanceKm: (row['total_distance_km'] as num?)?.toDouble() ?? 0.0,
+          totalFuelUsed: (row['total_fuel_used'] as num?)?.toDouble() ?? 0.0,
+          totalCargoQuantity: (row['total_cargo_quantity'] as num?)?.toInt() ?? 0,
+          totalTransportCost: (row['total_transport_cost'] as num?)?.toDouble() ?? 0.0,
           lastActivityAt: DateTime.tryParse(
             row['last_activity_at']?.toString() ?? '',
           ),
@@ -509,6 +513,41 @@ class LogisticsActionNotifier {
           ? 'Rota guncelleme islemi su anda tamamlanamadi.'
           : e.message;
       return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> refuelAllVehicles() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'refuel_all_logistics_vehicles',
+        params: {'p_player_id': user.id},
+      );
+      _ref.invalidate(logisticsVehicleListProvider);
+      _ref.invalidate(playerLogisticsCompanyProvider);
+      return _sync(response);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> repairAllVehicles() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'repair_all_logistics_vehicles',
+        params: {'p_player_id': user.id},
+      );
+      _ref.invalidate(logisticsVehicleListProvider);
+      _ref.invalidate(logisticsFinanceSummaryProvider);
+      _ref.invalidate(logisticsFinanceEntriesProvider);
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

@@ -16,15 +16,18 @@ final playerMissionDashboardProvider =
     return const PlayerMissionDashboardModel(
       success: false,
       mainMission: null,
+      mainMissions: [],
       dailyMissions: [],
+      achievements: [],
       weeklyMissions: [],
       sideMissions: [],
       claimableCount: 0,
+      mainClaimableCount: 0,
       dailyClaimableCount: 0,
+      achievementClaimableCount: 0,
       weeklyClaimableCount: 0,
       completedCount: 0,
       dailyCompletedCount: 0,
-      weeklyCompletedCount: 0,
       totalCount: 0,
     );
   }

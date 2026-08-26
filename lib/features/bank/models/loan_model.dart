@@ -29,6 +29,12 @@ class LoanModel {
     required this.updatedAt,
   });
 
+  int get remainingInstallments => installmentsTotal - installmentsPaid;
+  double get remainingPrincipal =>
+      installmentsTotal > 0 ? (amount * (remainingInstallments / installmentsTotal)) : 0.0;
+  bool get isDefaulted => status == 'defaulted';
+  bool get isPaid => status == 'paid';
+
   factory LoanModel.fromJson(Map<String, dynamic> json) {
     return LoanModel(
       id: json['id'] as String,

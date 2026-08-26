@@ -170,6 +170,149 @@ class _BankScreenState extends ConsumerState<BankScreen> {
     }
   }
 
+  Future<void> _handlePayFullLoan(LoanModel loan) async {
+    final player = ref.read(playerProvider).value;
+    if (player == null) return;
+
+    final payoffAmount = loan.remainingPrincipal;
+    final totalSavings = (loan.totalDue - loan.totalPaid) - payoffAmount;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14.r),
+          side: BorderSide(color: AppColors.borderGold),
+        ),
+        title: Text(
+          'Krediyi Erken Kapat',
+          style: AppTextStyles.title.standardCopyWith(
+            color: AppColors.gold,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Kredinin kalan ${loan.remainingInstallments} taksitini tek seferde kapatmak üzeresiniz.',
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            if (totalSavings > 0)
+              Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: AppColors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(
+                    color: AppColors.green.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.savings_rounded,
+                      color: AppColors.green,
+                      size: 20.sp,
+                    ),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Text(
+                        'Faiz İndirimi Avantajı: +${AppMoney.full(totalSavings)} tasarruf edeceksiniz!',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            SizedBox(height: 12.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Ödenecek Tutar:',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                Text(
+                  AppMoney.full(payoffAmount),
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Vazgeç',
+              style: AppTextStyles.label.standardCopyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.textOnAccent,
+            ),
+            child: const Text('Borcu Kapat'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    if (player.cash < payoffAmount) {
+      AppSnackbar.show(
+        context,
+        message: 'Yetersiz nakit bakiye.',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
+    setState(() => _isProcessingLoan = true);
+    final result = await ref.read(bankActionProvider).payFullLoan(loan.id);
+    setState(() => _isProcessingLoan = false);
+
+    if (mounted) {
+      if (result['success'] == true) {
+        FloatingFeedback.show(
+          context,
+          amount: payoffAmount,
+          type: FloatingFeedbackType.cashRemove,
+        );
+        AppSnackbar.show(
+          context,
+          message: result['message'] ?? 'Kredi erken kapatıldı.',
+          type: SnackbarType.success,
+        );
+      } else {
+        AppSnackbar.show(
+          context,
+          message: result['message'] ?? 'Kredi kapatma sırasında hata oluştu.',
+          type: SnackbarType.error,
+        );
+      }
+    }
+  }
+
   Future<void> _handleCreateDeposit(double playerCash) async {
     final amount = double.tryParse(_depositAmountController.text.trim()) ?? 0.0;
     if (amount <= 0) {
@@ -569,6 +712,44 @@ class _BankScreenState extends ConsumerState<BankScreen> {
               ),
             ),
           ),
+          SizedBox(height: 8.h),
+          Row(
+            children: [0.25, 0.50, 0.75, 1.0].map((ratio) {
+              final label = ratio == 1.0 ? 'Max' : '%${(ratio * 100).toInt()}';
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 3.w),
+                  child: OutlinedButton(
+                    onPressed: () {
+                      final val = (remainingLimit * ratio).floorToDouble();
+                      _loanAmountController.text = val.toInt().toString();
+                      setState(() {});
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 6.h),
+                      backgroundColor: AppColors.cardBgLight.withValues(alpha: 0.3),
+                      side: BorderSide(
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                    ),
+                    child: Text(
+                      label,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.gold,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11.sp,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
           SizedBox(height: 16.h),
           Text(
             'Geri Ödeme Süresi (Günlük Taksit)',
@@ -807,29 +988,61 @@ class _BankScreenState extends ConsumerState<BankScreen> {
                     _formatDateTime(loan.nextInstallmentDueAt),
                   ),
                   SizedBox(height: 12.h),
-                  ElevatedButton(
-                    onPressed: _isProcessingLoan
-                        ? null
-                        : () => _handlePayInstallment(loan),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDefaulted
-                          ? AppColors.dangerCore
-                          : AppColors.gold,
-                      foregroundColor: AppColors.textOnAccent,
-                      minimumSize: Size(double.infinity, 38.h),
-                    ),
-                    child: _isProcessingLoan
-                        ? SizedBox(
-                            width: 16.w,
-                            height: 16.w,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 1.5.w,
-                              color: AppColors.textOnAccent,
-                            ),
-                          )
-                        : Text(
-                            'Manuel Taksit Öde (${AppMoney.full(loan.installmentAmount)})',
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isProcessingLoan
+                              ? null
+                              : () => _handlePayInstallment(loan),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDefaulted
+                                ? AppColors.dangerCore
+                                : AppColors.gold,
+                            foregroundColor: AppColors.textOnAccent,
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
+                            minimumSize: Size.zero,
                           ),
+                          child: _isProcessingLoan
+                              ? SizedBox(
+                                  width: 16.w,
+                                  height: 16.w,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.5.w,
+                                    color: AppColors.textOnAccent,
+                                  ),
+                                )
+                              : Text(
+                                  'Taksit Öde (${AppMoney.full(loan.installmentAmount)})',
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: AppColors.textOnAccent,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _isProcessingLoan
+                              ? null
+                              : () => _handlePayFullLoan(loan),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.green,
+                            side: BorderSide(color: AppColors.green),
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
+                            minimumSize: Size.zero,
+                          ),
+                          child: Text(
+                            'Erken Kapat (${AppMoney.full(loan.remainingPrincipal)})',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -842,6 +1055,7 @@ class _BankScreenState extends ConsumerState<BankScreen> {
 
   Widget _buildDepositTab() {
     final depositsAsync = ref.watch(playerDepositsProvider);
+    final maxDepositLimitAsync = ref.watch(maxDepositLimitProvider);
     final playerAsync = ref.watch(playerProvider);
 
     return playerAsync.when(
@@ -870,6 +1084,8 @@ class _BankScreenState extends ConsumerState<BankScreen> {
                 0,
                 (sum, d) => sum + d.amount,
               );
+              final maxLimit = maxDepositLimitAsync.value ?? 1000000.0;
+              final remainingDepositLimit = (maxLimit - totalActiveDeposits).clamp(0.0, double.infinity);
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -879,12 +1095,12 @@ class _BankScreenState extends ConsumerState<BankScreen> {
                     title: 'VADELİ MEVDUAT DURUMU',
                     primaryVal: AppMoney.full(player.cash),
                     secondaryVal:
-                        'Toplam Aktif Yatırım: ${AppMoney.full(totalActiveDeposits)}',
+                        'Toplam Aktif Yatırım: ${AppMoney.full(totalActiveDeposits)} (Kalan Limit: ${AppMoney.full(remainingDepositLimit)})',
                     activeDebt: 0,
                     progress: 0,
                   ),
                   SizedBox(height: 16.h),
-                  _buildNewDepositSection(player.cash),
+                  _buildNewDepositSection(player.cash, remainingDepositLimit),
                   SizedBox(height: 24.h),
                   _buildActiveDepositsList(deposits),
                 ],
@@ -896,7 +1112,7 @@ class _BankScreenState extends ConsumerState<BankScreen> {
     );
   }
 
-  Widget _buildNewDepositSection(double playerCash) {
+  Widget _buildNewDepositSection(double playerCash, double remainingDepositLimit) {
     final double interestRate = _getDepositRate(_selectedDepositDays);
     final double amount =
         double.tryParse(_depositAmountController.text.trim()) ?? 0.0;
@@ -929,31 +1145,40 @@ class _BankScreenState extends ConsumerState<BankScreen> {
           ),
           SizedBox(height: 8.h),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [0.25, 0.50, 1.0].map((pct) {
-              return Padding(
-                padding: EdgeInsets.only(left: 6.w),
-                child: TextButton(
-                  onPressed: () {
-                    _depositAmountController.text = (playerCash * pct)
-                        .toInt()
-                        .toString();
-                    setState(() {});
-                  },
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 10.w,
-                      vertical: 4.h,
+            children: [0.25, 0.50, 0.75, 1.0].map((pct) {
+              final maxAllowed = playerCash < remainingDepositLimit
+                  ? playerCash
+                  : remainingDepositLimit;
+              final label = pct == 1.0 ? 'Max' : '%${(pct * 100).toInt()}';
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 3.w),
+                  child: OutlinedButton(
+                    onPressed: () {
+                      final val = (maxAllowed * pct).floorToDouble();
+                      _depositAmountController.text = val.toInt().toString();
+                      setState(() {});
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 6.h),
+                      backgroundColor:
+                          AppColors.cardBgLight.withValues(alpha: 0.3),
+                      side: BorderSide(
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
                     ),
-                    backgroundColor: AppColors.cardBgLight.withValues(
-                      alpha: 0.3,
-                    ),
-                  ),
-                  child: Text(
-                    pct == 1.0 ? 'HEPSİ' : '%${(pct * 100).toInt()}',
-                    style: AppTextStyles.label.standardCopyWith(
-                      color: AppColors.gold,
-                      fontSize: 11.sp,
+                    child: Text(
+                      label,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.gold,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11.sp,
+                      ),
                     ),
                   ),
                 ),
@@ -1039,9 +1264,12 @@ class _BankScreenState extends ConsumerState<BankScreen> {
           SizedBox(height: 16.h),
           ElevatedButton(
             onPressed:
-                _isProcessingDeposit || amount <= 0 || amount > playerCash
-                ? null
-                : () => _handleCreateDeposit(playerCash),
+                _isProcessingDeposit ||
+                        amount <= 0 ||
+                        amount > playerCash ||
+                        amount > remainingDepositLimit
+                    ? null
+                    : () => _handleCreateDeposit(playerCash),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.textOnAccent,

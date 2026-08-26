@@ -18,6 +18,8 @@ class LeaderboardEntryModel {
   final double productionInventoryValue;
   final int achievementUnlockedCount;
   final int achievementTotalCount;
+  final String? headquartersCityId;
+  final String? headquartersCityName;
 
   const LeaderboardEntryModel({
     required this.playerId,
@@ -39,6 +41,8 @@ class LeaderboardEntryModel {
     required this.productionInventoryValue,
     required this.achievementUnlockedCount,
     required this.achievementTotalCount,
+    this.headquartersCityId,
+    this.headquartersCityName,
   });
 
   factory LeaderboardEntryModel.fromJson(Map<String, dynamic> json) {
@@ -47,6 +51,8 @@ class LeaderboardEntryModel {
       playerName: json['player_name'] as String? ?? 'Oyuncu',
       companyName: json['company_name'] as String? ?? 'Yeni Holding',
       avatarId: json['avatar_id'] as String? ?? 'ae1.webp',
+      headquartersCityId: json['headquarters_city_id'] as String?,
+      headquartersCityName: json['headquarters_city_name'] as String?,
       level: json['level'] as int? ?? 1,
       experience: json['experience'] as int? ?? 0,
       cash: double.tryParse(json['cash']?.toString() ?? '0') ?? 0.0,

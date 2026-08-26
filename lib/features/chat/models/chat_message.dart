@@ -36,9 +36,16 @@ class ChatMessage {
   final String playerName;
   final String avatarId;
   final int playerLevel;
+  final String? companyName;
+  final String? badgeTitle;
+  final String channel;
+  final String? cityName;
   final String content;
   final DateTime createdAt;
   final ChatLinkedProduct? linkedProduct;
+  final String? replyToMessageId;
+  final String? replyToPlayerName;
+  final String? replyToContent;
 
   const ChatMessage({
     required this.id,
@@ -46,9 +53,16 @@ class ChatMessage {
     required this.playerName,
     required this.avatarId,
     required this.playerLevel,
+    this.companyName,
+    this.badgeTitle,
+    this.channel = 'global',
+    this.cityName,
     required this.content,
     required this.createdAt,
     required this.linkedProduct,
+    this.replyToMessageId,
+    this.replyToPlayerName,
+    this.replyToContent,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
@@ -61,6 +75,10 @@ class ChatMessage {
       playerName: (json['player_name'] ?? 'Oyuncu').toString(),
       avatarId: (json['avatar_id'] ?? 'ae1.webp').toString(),
       playerLevel: (json['player_level'] as num?)?.toInt() ?? 1,
+      companyName: json['company_name']?.toString(),
+      badgeTitle: json['badge_title']?.toString(),
+      channel: (json['channel'] ?? 'global').toString(),
+      cityName: json['city_name']?.toString(),
       content: (json['content'] ?? '').toString(),
       createdAt: json['created_at'] != null
           ? (DateTime.tryParse(json['created_at'].toString())?.toLocal() ??
@@ -71,6 +89,9 @@ class ChatMessage {
               (linkedSlotId == null || linkedSlotId.isEmpty)
           ? null
           : ChatLinkedProduct.fromJson(json),
+      replyToMessageId: json['reply_to_message_id']?.toString(),
+      replyToPlayerName: json['reply_to_player_name']?.toString(),
+      replyToContent: json['reply_to_content']?.toString(),
     );
   }
 }

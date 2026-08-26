@@ -133,7 +133,7 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(
           path: 'new/city',
-          builder: (context, state) => const CitySelectionScreen(),
+          builder: (context, state) => const CitySelectionScreen(buildingKind: 'store'),
         ),
         GoRoute(
           path: 'new/type',

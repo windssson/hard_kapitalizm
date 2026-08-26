@@ -15,9 +15,9 @@ import 'package:hard_kapitalizm/features/mission/data/daily_streak_provider.dart
 import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 
 enum _MissionTab {
-  main('Ana Görev'),
-  daily('Günlük'),
-  weekly('Haftalık');
+  main('Ana Hikaye'),
+  daily('Günlük (3)'),
+  achievement('Başarımlar');
 
   const _MissionTab(this.label);
   final String label;
@@ -36,7 +36,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
 
   bool _mainClaimedExpanded = false;
   bool _dailyClaimedExpanded = false;
-  bool _weeklyClaimedExpanded = false;
+  bool _achievementClaimedExpanded = false;
 
   Future<void> _refresh() async {
     ref.invalidate(playerMissionDashboardProvider);
@@ -105,7 +105,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Görevler'),
+            const SecondaryTopBar(title: 'Görevler & Başarımlar'),
             Expanded(
               child: dashboardAsync.when(
                 loading: () =>
@@ -138,8 +138,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                         _buildCustomTabBar(dashboard),
                         SizedBox(height: 14.h),
                         ..._buildTabContent(dashboard),
-                        SizedBox(height: 16.h),
-                        _buildPermanentAchievementsBanner(),
                       ],
                     ),
                   );
@@ -173,25 +171,38 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       ),
       child: Row(
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              AppProgressRing(
-                value: ratio,
-                diameter: 44.w,
-                strokeWidth: 4.w,
-                semanticsLabel: 'Gorev tamamlama orani',
-              ),
-              Icon(
-                dashboard.claimableCount > 0
-                    ? AppIcons.cardGiftcardRounded
-                    : AppIcons.emojiEventsRounded,
-                color: dashboard.claimableCount > 0
-                    ? AppColors.green
-                    : AppColors.gold,
-                size: AppIconSizes.medium,
-              ),
-            ],
+          GestureDetector(
+            onLongPress: () {
+              showExperienceFeedbackFromResult(context, {
+                'experience': {
+                  'success': true,
+                  'amount': 250,
+                  'old_level': 1,
+                  'new_level': 2,
+                  'leveled_up': true,
+                },
+              });
+            },
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                AppProgressRing(
+                  value: ratio,
+                  diameter: 44.w,
+                  strokeWidth: 4.w,
+                  semanticsLabel: 'Gorev tamamlama orani',
+                ),
+                Icon(
+                  dashboard.claimableCount > 0
+                      ? AppIcons.cardGiftcardRounded
+                      : AppIcons.emojiEventsRounded,
+                  color: dashboard.claimableCount > 0
+                      ? AppColors.green
+                      : AppColors.gold,
+                  size: AppIconSizes.medium,
+                ),
+              ],
+            ),
           ),
           SizedBox(width: 14.w),
           Expanded(
@@ -259,9 +270,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   }
 
   Widget _buildCustomTabBar(PlayerMissionDashboardModel dashboard) {
-    final mainBadge = (dashboard.mainMission?.claimable == true) ? 1 : 0;
+    final mainBadge = dashboard.mainClaimableCount;
     final dailyBadge = dashboard.dailyClaimableCount;
-    final weeklyBadge = dashboard.weeklyClaimableCount;
+    final achievementBadge = dashboard.achievementClaimableCount;
 
     return Container(
       height: 42.h,
@@ -278,7 +289,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           int badgeCount = 0;
           if (tab == _MissionTab.main) badgeCount = mainBadge;
           if (tab == _MissionTab.daily) badgeCount = dailyBadge;
-          if (tab == _MissionTab.weekly) badgeCount = weeklyBadge;
+          if (tab == _MissionTab.achievement) badgeCount = achievementBadge;
 
           return Expanded(
             child: GestureDetector(
@@ -352,16 +363,13 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     switch (_selectedTab!) {
       case _MissionTab.main:
         final main = dashboard.mainMission;
-        if (main == null) {
-          return [_buildMainMissionEmptyState()];
-        }
-
-        final active = !main.isClaimed ? main : null;
-        final claimed = main.isClaimed ? [main] : <PlayerMissionModel>[];
+        final claimed = dashboard.mainMissions
+            .where((m) => m.isClaimed)
+            .toList();
 
         return [
-          if (active != null)
-            _buildMissionCard(active, featured: true)
+          if (main != null && !main.isClaimed)
+            _buildMissionCard(main, featured: true)
           else
             _buildMainMissionEmptyState(),
           _buildCollapsibleCompletedSection(
@@ -393,24 +401,24 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
           ),
         ];
 
-      case _MissionTab.weekly:
-        final active = dashboard.weeklyMissions
+      case _MissionTab.achievement:
+        final active = dashboard.achievements
             .where((m) => !m.isClaimed)
             .toList();
-        final claimed = dashboard.weeklyMissions
+        final claimed = dashboard.achievements
             .where((m) => m.isClaimed)
             .toList();
 
         return [
-          if (active.isEmpty)
-            _buildWeekliesAllCompletedState(claimed.isNotEmpty)
+          if (active.isEmpty && claimed.isEmpty)
+            _buildEmptyState()
           else
             ...active.map((m) => _buildMissionCard(m)),
           _buildCollapsibleCompletedSection(
             claimed,
-            _weeklyClaimedExpanded,
+            _achievementClaimedExpanded,
             () => setState(
-              () => _weeklyClaimedExpanded = !_weeklyClaimedExpanded,
+              () => _achievementClaimedExpanded = !_achievementClaimedExpanded,
             ),
           ),
         ];
@@ -461,86 +469,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       return '/bank';
     }
     return null;
-  }
-
-  Widget _buildPermanentAchievementsBanner() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.gold.withValues(alpha: 0.18),
-            AppColors.cardBg,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: AppColors.gold.withValues(alpha: 0.45),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: AppColors.gold.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              AppIcons.emojiEventsRounded,
-              color: AppColors.gold,
-              size: 20.sp,
-            ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Kalıcı Başarılar & Rozetler',
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.goldLight,
-                    fontSize: AppTypography.bodySmall,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  'Kazanılan kalıcı unvanları ve rozetleri incele',
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.micro,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => context.push('/achievements'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gold,
-              foregroundColor: AppColors.textOnAccent,
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-            ),
-            child: Text(
-              'İncele ➔',
-              style: AppTextStyles.caption.standardCopyWith(
-                color: AppColors.textOnAccent,
-                fontSize: AppTypography.micro,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildMissionCard(
@@ -968,44 +896,6 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     );
   }
 
-  Widget _buildWeekliesAllCompletedState(bool hasClaimedMissions) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 40.h, horizontal: 20.w),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              AppIcons.taskAltRounded,
-              color: AppColors.green,
-              size: AppIconSizes.hero,
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              hasClaimedMissions ? 'Harika İş!' : 'Haftalık Görev Yok',
-              style: AppTextStyles.title.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.title,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 4.h),
-            Text(
-              hasClaimedMissions
-                  ? 'Bu haftanın tüm haftalık görevlerini tamamladın.\nGelecek hafta yeni görevler gelecek!'
-                  : 'Bu hafta için atanmış bir haftalık görev bulunmuyor.',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodySmall,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildErrorState(String message) => Center(
     child: Padding(
       padding: EdgeInsets.all(24.w),
@@ -1141,37 +1031,37 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                       
                       switch (dayNum) {
                         case 1:
-                          rewardText = '10K TL';
+                          rewardText = '5K TL';
                           rewardIcon = Icons.payments_rounded;
                           rewardColor = AppColors.green;
                           break;
                         case 2:
-                          rewardText = '25K TL';
+                          rewardText = '10K TL';
                           rewardIcon = Icons.payments_rounded;
                           rewardColor = AppColors.green;
                           break;
                         case 3:
-                          rewardText = '5 Altın';
+                          rewardText = '1 Altın';
                           rewardIcon = Icons.stars_rounded;
                           rewardColor = AppColors.gold;
                           break;
                         case 4:
-                          rewardText = '50K TL';
+                          rewardText = '15K TL';
                           rewardIcon = Icons.payments_rounded;
                           rewardColor = AppColors.green;
                           break;
                         case 5:
-                          rewardText = '10 Altın';
+                          rewardText = '2 Altın';
                           rewardIcon = Icons.stars_rounded;
                           rewardColor = AppColors.gold;
                           break;
                         case 6:
-                          rewardText = '100K TL';
+                          rewardText = '25K TL';
                           rewardIcon = Icons.payments_rounded;
                           rewardColor = AppColors.green;
                           break;
                         case 7:
-                          rewardText = '50 Altın';
+                          rewardText = '50K + 5 Altın';
                           rewardIcon = Icons.stars_rounded;
                           rewardColor = AppColors.gold;
                           break;
@@ -1270,13 +1160,13 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                             
                             final nextDay = streak.streakCount + 1;
                             String rewardStr = '';
-                            if (nextDay == 1) rewardStr = '10.000 TL';
-                            if (nextDay == 2) rewardStr = '25.000 TL';
-                            if (nextDay == 3) rewardStr = '5 Altın';
-                            if (nextDay == 4) rewardStr = '50.000 TL';
-                            if (nextDay == 5) rewardStr = '10 Altın';
-                            if (nextDay == 6) rewardStr = '100.000 TL';
-                            if (nextDay == 7) rewardStr = '50 Altın';
+                            if (nextDay == 1) rewardStr = '5.000 TL';
+                            if (nextDay == 2) rewardStr = '10.000 TL';
+                            if (nextDay == 3) rewardStr = '1 Altın';
+                            if (nextDay == 4) rewardStr = '15.000 TL';
+                            if (nextDay == 5) rewardStr = '2 Altın';
+                            if (nextDay == 6) rewardStr = '25.000 TL';
+                            if (nextDay == 7) rewardStr = '50.000 TL + 5 Altın';
 
                             AppSnackbar.show(
                               context,

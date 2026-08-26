@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/leaderboard/data/leaderboard_provider.dart';
 import 'package:hard_kapitalizm/features/leaderboard/models/leaderboard_entry_model.dart';
 
@@ -21,6 +22,7 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
 class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   final int _selectedIndex = 4; // Stays on Profile tab high-light
   String _selectedCategory = 'company_value'; // 'company_value', 'level', 'achievement_unlocked_count'
+  String _selectedScope = 'global'; // 'global' or 'city'
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
@@ -57,8 +59,18 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final leaderboardAsync = ref.watch(leaderboardProvider(_selectedCategory));
-    final playerRankAsync = ref.watch(currentPlayerRankProvider(_selectedCategory));
+    final playerAsync = ref.watch(playerProvider);
+    final player = playerAsync.value;
+    final cityId = _selectedScope == 'city' ? player?.headquartersCityId : null;
+    final cityName = player?.headquartersCityName ?? 'Şehrim';
+
+    final query = LeaderboardQuery(
+      sortByField: _selectedCategory,
+      cityId: cityId,
+    );
+
+    final leaderboardAsync = ref.watch(leaderboardProvider(query));
+    final playerRankAsync = ref.watch(currentPlayerRankProvider(query));
 
     return Scaffold(
       backgroundColor: AppColors.transparent,
@@ -66,15 +78,16 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
         child: Column(
           children: [
             const SecondaryTopBar(title: 'Sıralama ve Liderlik'),
+            _buildScopeTabs(cityName, player?.headquartersCityId),
             _buildCategoryTabs(),
             Expanded(
               child: RefreshIndicator(
                 color: AppColors.gold,
                 onRefresh: () async {
-                  ref.invalidate(leaderboardProvider(_selectedCategory));
-                  ref.invalidate(currentPlayerRankProvider(_selectedCategory));
-                  await ref.read(leaderboardProvider(_selectedCategory).future);
-                  await ref.read(currentPlayerRankProvider(_selectedCategory).future);
+                  ref.invalidate(leaderboardProvider(query));
+                  ref.invalidate(currentPlayerRankProvider(query));
+                  await ref.read(leaderboardProvider(query).future);
+                  await ref.read(currentPlayerRankProvider(query).future);
                 },
                 child: leaderboardAsync.when(
                   data: (entries) {
@@ -84,9 +97,23 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                         children: [
                           SizedBox(height: 100.h),
                           Center(
-                            child: Text(
-                              'Henüz sıralama verisi bulunmuyor.',
-                              style: AppTextStyles.body,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _selectedScope == 'city' ? AppIcons.locationOn : AppIcons.emojiEventsRounded,
+                                  color: AppColors.textMuted,
+                                  size: 44.sp,
+                                ),
+                                SizedBox(height: 12.h),
+                                Text(
+                                  _selectedScope == 'city'
+                                      ? '$cityName şehrinde henüz kayıtlı şirket bulunmuyor.'
+                                      : 'Henüz sıralama verisi bulunmuyor.',
+                                  style: AppTextStyles.body.standardCopyWith(color: AppColors.textSecondary),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -109,7 +136,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                                 if (listEntries.isNotEmpty) ...[
                                   SizedBox(height: 20.h),
                                   Text(
-                                    'Sıralama Listesi',
+                                    _selectedScope == 'city' ? '$cityName Sıralama Listesi' : 'Genel Sıralama Listesi',
                                     style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.titleLarge),
                                   ),
                                   SizedBox(height: 10.h),
@@ -165,7 +192,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 if (rankInfo == null || rankInfo.entry == null) {
                   return const SizedBox.shrink();
                 }
-                return _buildStickyBottomCard(rankInfo.rank, rankInfo.entry!);
+                return _buildStickyBottomCard(rankInfo.rank, rankInfo.entry!, cityName);
               },
               loading: () => const SizedBox.shrink(),
               error: (err, stack) => const SizedBox.shrink(),
@@ -180,6 +207,117 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     );
   }
 
+  Widget _buildScopeTabs(String cityName, String? userCityId) {
+    return Container(
+      margin: EdgeInsets.only(left: 16.w, right: 16.w, top: 6.h, bottom: 2.h),
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (_selectedScope != 'global') {
+                  setState(() {
+                    _selectedScope = 'global';
+                  });
+                }
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 7.h),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(7.r),
+                  color: _selectedScope == 'global' ? AppColors.gold : Colors.transparent,
+                  boxShadow: _selectedScope == 'global'
+                      ? [
+                          BoxShadow(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                            blurRadius: 6.r,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('🌍', style: TextStyle(fontSize: 13.sp)),
+                    SizedBox(width: 6.w),
+                    Text(
+                      'Türkiye Geneli',
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: _selectedScope == 'global' ? AppColors.textOnAccent : AppColors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: _selectedScope == 'global' ? FontWeight.w900 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 4.w),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (userCityId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Merkez şehriniz henüz tanımlanmamış.')),
+                  );
+                  return;
+                }
+                if (_selectedScope != 'city') {
+                  setState(() {
+                    _selectedScope = 'city';
+                  });
+                }
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 7.h),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(7.r),
+                  color: _selectedScope == 'city' ? AppColors.gold : Colors.transparent,
+                  boxShadow: _selectedScope == 'city'
+                      ? [
+                          BoxShadow(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                            blurRadius: 6.r,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('📍', style: TextStyle(fontSize: 13.sp)),
+                    SizedBox(width: 6.w),
+                    Text(
+                      cityName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: _selectedScope == 'city' ? AppColors.textOnAccent : AppColors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: _selectedScope == 'city' ? FontWeight.w900 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCategoryTabs() {
     final categories = [
       {'key': 'company_value', 'label': 'Şirket Değeri'},
@@ -188,7 +326,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     ];
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
         color: AppColors.cardBg,
@@ -206,7 +344,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 });
               },
               child: Container(
-                padding: EdgeInsets.symmetric(vertical: 10.h),
+                padding: EdgeInsets.symmetric(vertical: 8.h),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8.r),
                   gradient: isSelected
@@ -243,6 +381,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       ),
     );
   }
+
 
   Widget _buildPodium(List<LeaderboardEntryModel> topThree) {
     if (topThree.isEmpty) return const SizedBox.shrink();
@@ -410,7 +549,29 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             fontSize: AppTypography.caption,
           ),
         ),
-        SizedBox(height: 6.h),
+        if (entry.headquartersCityName != null && entry.headquartersCityName!.isNotEmpty) ...[
+          SizedBox(height: 2.h),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(AppIcons.locationOn, color: AppColors.gold.withValues(alpha: 0.8), size: 10.sp),
+              SizedBox(width: 2.w),
+              Flexible(
+                child: Text(
+                  entry.headquartersCityName!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.gold.withValues(alpha: 0.9),
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+        SizedBox(height: 4.h),
         // Value indicator
         Text(
           valueStr,
@@ -514,7 +675,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             ),
           ),
           SizedBox(width: 12.w),
-          // Player & Company names
+          // Player & Company names + City badge
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,12 +689,46 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                   ),
                 ),
                 SizedBox(height: 2.h),
-                Text(
-                  entry.companyName,
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.label,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        entry.companyName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.label,
+                        ),
+                      ),
+                    ),
+                    if (entry.headquartersCityName != null && entry.headquartersCityName!.isNotEmpty) ...[
+                      SizedBox(width: 6.w),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardBgLight,
+                          borderRadius: BorderRadius.circular(4.r),
+                          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(AppIcons.locationOn, color: AppColors.gold, size: 9.sp),
+                            SizedBox(width: 2.w),
+                            Text(
+                              entry.headquartersCityName!,
+                              style: AppTextStyles.caption.standardCopyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 9.sp,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -552,7 +747,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
     );
   }
 
-  Widget _buildStickyBottomCard(int rank, LeaderboardEntryModel entry) {
+  Widget _buildStickyBottomCard(int rank, LeaderboardEntryModel entry, String cityName) {
     final valueStr = _formatMetricValue(
       _selectedCategory,
       _selectedCategory == 'company_value'
@@ -562,6 +757,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               : entry.achievementUnlockedCount.toDouble(),
       entry.achievementTotalCount,
     );
+
+    final isCityScope = _selectedScope == 'city';
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -583,7 +780,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
       ),
       child: Row(
         children: [
-          // Rank Badge
+          // Rank Badge with Scope indicator
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
             decoration: BoxDecoration(
@@ -591,13 +788,28 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               borderRadius: BorderRadius.circular(8.r),
               border: Border.all(color: AppColors.gold.withValues(alpha: 0.45)),
             ),
-            child: Text(
-              '#$rank',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.gold,
-                fontSize: AppTypography.title,
-                fontWeight: FontWeight.w900,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '#$rank',
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.gold,
+                    fontSize: AppTypography.title,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  isCityScope ? cityName : 'Türkiye',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 8.5.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
           SizedBox(width: 12.w),

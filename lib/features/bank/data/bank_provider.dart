@@ -58,6 +58,22 @@ final loanLimitProvider = FutureProvider<double>((ref) async {
   }
 });
 
+final maxDepositLimitProvider = FutureProvider<double>((ref) async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+  if (user == null) return 0.0;
+
+  try {
+    final response = await supabase.rpc(
+      'get_player_max_deposit_limit',
+      params: {'p_player_id': user.id},
+    );
+    return (response as num).toDouble();
+  } catch (e, stackTrace) {
+    Error.throwWithStackTrace(Exception('Mevduat limiti alinamadi: $e'), stackTrace);
+  }
+});
+
 class BankActionNotifier {
   final Ref _ref;
   BankActionNotifier(this._ref);
@@ -104,6 +120,29 @@ class BankActionNotifier {
       return {
         'success': false,
         'message': 'Taksit ödeme işlemi başarısız: ${e.toString()}',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> payFullLoan(String loanId) async {
+    final supabase = Supabase.instance.client;
+    try {
+      final response = await supabase.rpc(
+        'pay_full_loan',
+        params: {'p_loan_id': loanId},
+      );
+
+      final result = Map<String, dynamic>.from(response as Map);
+      if (result['success'] == true) {
+        _ref.invalidate(playerLoansProvider);
+        _ref.invalidate(loanLimitProvider);
+        _ref.read(mutationSyncServiceProvider).applyRaw(result);
+      }
+      return result;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Kredi erken kapatma işlemi başarısız: ${e.toString()}',
       };
     }
   }

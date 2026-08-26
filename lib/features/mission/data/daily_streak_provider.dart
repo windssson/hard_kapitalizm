@@ -97,25 +97,26 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
 
     switch (nextStreakCount) {
       case 1:
-        rewardCash = 10000;
+        rewardCash = 5000;
         break;
       case 2:
-        rewardCash = 25000;
+        rewardCash = 10000;
         break;
       case 3:
-        rewardGold = 5;
+        rewardGold = 1;
         break;
       case 4:
-        rewardCash = 50000;
+        rewardCash = 15000;
         break;
       case 5:
-        rewardGold = 10;
+        rewardGold = 2;
         break;
       case 6:
-        rewardCash = 100000;
+        rewardCash = 25000;
         break;
       case 7:
-        rewardGold = 50;
+        rewardCash = 50000;
+        rewardGold = 5;
         break;
     }
 

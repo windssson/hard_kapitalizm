@@ -253,92 +253,138 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final int starCost =
         (isTutorial && calculatedCost <= 0) ? 1 : calculatedCost;
 
-    return Column(
-      children: [
-        Container(
-          margin: EdgeInsets.only(bottom: starCost > 0 ? 0 : 10.h),
-          padding: EdgeInsets.all(8.w),
-          decoration: AppDecorations.premiumCard(
-            AppColors.gold.withValues(alpha: 0.4),
-            24.r,
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.4),
+          width: 1.w,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Row(
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Sol: İnşaat Avatarı
               Container(
-                width: 115.w,
-                height: 115.w,
+                width: 74.w,
+                height: 74.w,
                 decoration: BoxDecoration(
-                  color: AppColors.transparent,
-                  borderRadius: BorderRadius.circular(16.r),
+                  color: AppColors.cardBgLight.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(12.r),
                   border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.3),
-                    width: 0.8,
+                    color: AppColors.gold.withValues(alpha: 0.4),
+                    width: 1.w,
                   ),
                 ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     Opacity(
-                      opacity: 0.8,
-                      child: Padding(
-                        padding: EdgeInsets.zero,
-                        child: CachedAssetImage(
-                          fileName: store.storeType.icon,
-                          fit: BoxFit.cover,
-                        ),
+                      opacity: 0.35,
+                      child: CachedAssetImage(
+                        fileName: store.storeType.icon,
+                        width: 60.w,
+                        height: 60.w,
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    Icon(
-                      AppIcons.construction,
-                      color: AppColors.gold,
-                      size: AppIconSizes.displayLarge,
-                    ),
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        width: 12.w,
-                        height: 12.w,
-                        decoration: BoxDecoration(
-                          color: AppColors.gold,
-                          shape: BoxShape.circle,
+                    Container(
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.5),
                         ),
+                      ),
+                      child: Icon(
+                        AppIcons.construction,
+                        color: AppColors.gold,
+                        size: 22.sp,
                       ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(width: 16.w),
+              SizedBox(width: 12.w),
+
+              // Sağ: Başlık, Lokasyon ve Sayaç
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    RichText(
-                      overflow: TextOverflow.ellipsis,
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: store.name,
-                            style: AppTextStyles.h1.standardCopyWith(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            store.name,
+                            style: AppTextStyles.title.standardCopyWith(
                               color: AppColors.textPrimary,
-                              fontSize: AppTypography.titleLarge,
+                              fontSize: 14.5.sp,
                               fontWeight: FontWeight.bold,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          TextSpan(
-                            text: ' - ${store.cityName ?? "Bilinmeyen"}',
-                            style: AppTextStyles.body.standardCopyWith(
-                              color: AppColors.gold.withValues(alpha: 0.7),
-                              fontSize: AppTypography.bodyLarge,
-                              fontWeight: FontWeight.w500,
+                        ),
+                        SizedBox(width: 6.w),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6.w,
+                            vertical: 2.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4.r),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.35),
                             ),
                           ),
-                        ],
-                      ),
+                          child: Text(
+                            '🏗️ İnşaat',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.gold,
+                              fontSize: 8.5.sp,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 12.h),
+                    SizedBox(height: 4.h),
+                    Row(
+                      children: [
+                        Icon(
+                          AppIcons.locationOn,
+                          color: AppColors.gold,
+                          size: 11.sp,
+                        ),
+                        SizedBox(width: 2.w),
+                        Text(
+                          store.cityName ?? 'Bilinmiyor',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.gold,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
                     if (finishAt != null)
                       _ConstructionCountdown(
                         startedAt: store.startedAt ?? DateTime.now(),
@@ -359,37 +405,45 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       )
                     else
                       Text(
-                        'Insaat verisi guncelleniyor...',
+                        'İnşaat verisi güncelleniyor...',
                         style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
-                          fontSize: AppTypography.body,
+                          fontSize: 11.sp,
                         ),
                       ),
-                    if (finishAt != null) ...[
-                      SizedBox(height: 10.h),
-                      RewardedTimeReduceButton(
-                        onPressed: () =>
-                            _handleReduceConstructionTimeWithAd(store.id),
-                        caption:
-                            'Bir reklam odulu al ve magaza insaat suresini 10 dakika kisalt.',
-                      ),
-                    ],
                   ],
                 ),
               ),
             ],
           ),
-        ),
-        if (starCost > 0)
-          Padding(
-            padding: EdgeInsets.only(bottom: 10.h),
-            child: GoldFinishButton(
-              key: TutorialKeys.constructionGoldFinishKey,
-              starCost: starCost,
-              onPressed: () => _handleQuickFinish(store.id, starCost),
+
+          // Alt Aksiyon Butonları
+          if (finishAt != null) ...[
+            SizedBox(height: 10.h),
+            Row(
+              children: [
+                Expanded(
+                  child: RewardedTimeReduceButton(
+                    onPressed: () =>
+                        _handleReduceConstructionTimeWithAd(store.id),
+                    caption: '10 Dk Kısalt',
+                  ),
+                ),
+                if (starCost > 0) ...[
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: GoldFinishButton(
+                      key: TutorialKeys.constructionGoldFinishKey,
+                      starCost: starCost,
+                      onPressed: () => _handleQuickFinish(store.id, starCost),
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ),
-      ],
+          ],
+        ],
+      ),
     );
   }
 
@@ -472,12 +526,14 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       if (mounted) {
         AppSnackbar.show(
           context,
-          title: 'Tamamlandi',
-          message: 'Insaat basariyla tamamlandi!',
+          title: 'Tamamlandı',
+          message: 'İnşaat başarıyla tamamlandı!',
           type: SnackbarType.success,
         );
         if (ref.read(tutorialProvider).step == TutorialStep.clickQuickFinish) {
-          ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickEnterStore);
+          ref
+              .read(tutorialProvider.notifier)
+              .setStep(TutorialStep.clickEnterStore);
         }
         await showExperienceFeedbackFromResult(context, result);
       }
@@ -488,7 +544,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           title: 'Hata',
           message:
               result['message']?.toString() ??
-              'Altin ile aninda tamamlama basarisiz oldu. Altin bakiyeni kontrol edip tekrar dene.',
+              'Altın ile anında tamamlama başarısız oldu. Altın bakiyeni kontrol edip tekrar dene.',
           type: SnackbarType.error,
         );
       }
@@ -505,7 +561,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       onApplyReduction: () => ref
           .read(storeActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
-      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+      successMessage: 'İnşaat süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
@@ -519,10 +575,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final double stockSale = store.summary.totalStockSaleValue ?? 0.0;
     final double potentialProfit = stockSale - stockCost;
     final bool allSlotsEmpty = store.slots.every((s) => s.isEmpty);
-    final bool anySlotOutOfStock = store.slots.any((s) => !s.isEmpty && s.quantity == 0);
+    final bool anySlotOutOfStock = store.slots.any(
+      (s) => !s.isEmpty && s.quantity == 0,
+    );
 
     final tutorial = ref.watch(tutorialProvider);
-    final isNewStoreKeyTarget = index == 0 &&
+    final isNewStoreKeyTarget =
+        index == 0 &&
         (tutorial.step == TutorialStep.clickEnterStore ||
             tutorial.step == TutorialStep.returnToStoreDetail ||
             tutorial.step == TutorialStep.clickCreateShelf ||
@@ -535,7 +594,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       key: isNewStoreKeyTarget ? TutorialKeys.newStoreItemKey : null,
       onTap: () {
         if (ref.read(tutorialProvider).step == TutorialStep.clickEnterStore) {
-          ref.read(tutorialProvider.notifier).completeStep(TutorialStep.clickEnterStore);
+          ref
+              .read(tutorialProvider.notifier)
+              .completeStep(TutorialStep.clickEnterStore);
         } else if (ref.read(tutorialProvider).step ==
             TutorialStep.returnToStoreDetail) {
           ref
@@ -547,194 +608,291 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
         padding: EdgeInsets.all(12.w),
-        decoration: AppDecorations.premiumCard(AppColors.borderGold, 20.r),
-        child: Row(
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: AppColors.borderGold.withValues(alpha: 0.35),
+            width: 1.w,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withValues(alpha: 0.25),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // LEFT COLUMN
-            Column(
+            // ÜST BÖLÜM: Avatar + Bilgiler + Durum Rozetleri
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 90.w,
-                  height: 90.w,
-                  padding: EdgeInsets.zero,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBgLight.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.3),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: CachedAssetImage(
-                    fileName: store.storeType.icon,
-                    width: 90.w,
-                    height: 90.w,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                // Sol Avatar (74x74, Seviye Rozeti ve Glow ile)
+                Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    Icon(
-                      AppIcons.locationOn,
-                      color: AppColors.gold,
-                      size: AppIconSizes.xxSmall,
-                    ),
-                    SizedBox(width: 2.w),
-                    Text(
-                      store.cityName ?? 'Bilinmiyor',
-                      style: AppTextStyles.body.standardCopyWith(
-                        color: AppColors.gold,
-                        fontSize: AppTypography.bodySmall,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      width: 68.w,
+                      height: 68.w,
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBgLight.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.45),
+                          width: 1.w,
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(13.r),
+                        child: CachedAssetImage(
+                          fileName: store.storeType.icon,
+                          width: 68.w,
+                          height: 68.w,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    // Köşe: Seviye Rozeti
+                    Positioned(
+                      top: -4.h,
+                      left: -4.w,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 5.w,
+                          vertical: 1.5.h,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.gold, AppColors.goldDark],
+                          ),
+                          borderRadius: BorderRadius.circular(5.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.black.withValues(alpha: 0.4),
+                              blurRadius: 3,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          'Lv.${store.level}',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.black,
+                            fontSize: 8.5.sp,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
-            SizedBox(width: 12.w),
-            // MIDDLE & RIGHT COLUMNS
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                SizedBox(width: 12.w),
+
+                // Orta & Sağ: Başlık, Şehir, Durum Rozetleri & Doluluk
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          store.name,
-                          style: AppTextStyles.title.standardCopyWith(
-                            color: AppColors.textPrimary,
-                            fontSize: AppTypography.title,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
+                      // 1. Satır: İsim, Şehir ve Aktif/Pasif
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildSmallBadge(
-                            'Lv. ${store.level}',
-                            AppColors.gold,
+                          Expanded(
+                            child: Text(
+                              store.name,
+                              style: AppTextStyles.title.standardCopyWith(
+                                color: AppColors.textPrimary,
+                                fontSize: 14.5.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           SizedBox(width: 6.w),
                           _buildSmallBadge(
                             store.isActive ? 'Aktif' : 'Pasif',
                             store.isActive ? AppColors.green : AppColors.red,
                           ),
+                          if (allSlotsEmpty) ...[
+                            SizedBox(width: 4.w),
+                            _buildSmallBadge('Boş Raf', AppColors.orange),
+                          ] else if (anySlotOutOfStock) ...[
+                            SizedBox(width: 4.w),
+                            _buildSmallBadge('Stok Yok', AppColors.red),
+                          ],
                         ],
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 10.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(999.r),
-                          child: AppProgressBar(
-                            value: store.summary.usedCapacityRatio.clamp(
-                              0.0,
-                              1.0,
-                            ),
-                            minHeight: 5.h,
-                            backgroundColor: AppColors.textPrimary.withValues(
-                              alpha: 0.08,
-                            ),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              store.summary.usedCapacityRatio < 0.25
-                                  ? AppColors.red
-                                  : AppColors.green,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 10.w),
-                      Text(
-                        '%${(store.summary.usedCapacityRatio * 100).round()}',
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: store.summary.usedCapacityRatio < 0.25
-                              ? AppColors.red
-                              : AppColors.green,
-                          fontSize: AppTypography.bodySmall,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
+                      SizedBox(height: 3.h),
+
+                      // 2. Satır: Şehir Rozeti
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            AppIcons.inventory2Outlined,
-                            color: AppColors.textMuted,
-                            size: 11.sp,
+                            AppIcons.locationOn,
+                            color: AppColors.gold,
+                            size: 10.5.sp,
                           ),
-                          SizedBox(width: 4.w),
+                          SizedBox(width: 2.w),
                           Text(
-                            'Stok: ${AppMoney.compact(stockSale)}',
+                            store.cityName ?? 'Bilinmiyor',
                             style: AppTextStyles.caption.standardCopyWith(
-                              color: AppColors.textMuted,
-                              fontSize: AppTypography.bodySmall,
-                              fontWeight: FontWeight.w500,
+                              color: AppColors.gold,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 6.h),
+
+                      // 3. Satır: Doluluk Barı
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(3.r),
+                              child: LinearProgressIndicator(
+                                value: store.summary.usedCapacityRatio.clamp(
+                                  0.0,
+                                  1.0,
+                                ),
+                                minHeight: 4.5.h,
+                                backgroundColor: AppColors.background,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  store.summary.usedCapacityRatio < 0.25
+                                      ? AppColors.red
+                                      : store.summary.usedCapacityRatio < 0.60
+                                      ? AppColors.gold
+                                      : AppColors.green,
+                                ),
+                              ),
                             ),
                           ),
                           SizedBox(width: 8.w),
-                          Container(width: 1.w, height: 12.h, color: AppColors.border.withValues(alpha: 0.5)),
-                          SizedBox(width: 8.w),
-                          Icon(
-                            AppIcons.trendingUp,
-                            color: potentialProfit > 0 ? AppColors.green : AppColors.textMuted,
-                            size: 11.sp,
-                          ),
-                          SizedBox(width: 4.w),
                           Text(
-                            'Kâr: ${AppMoney.compact(potentialProfit, signed: true)}',
+                            '%${(store.summary.usedCapacityRatio * 100).round()}',
                             style: AppTextStyles.caption.standardCopyWith(
-                              color: potentialProfit > 0 ? AppColors.green : AppColors.textMuted,
-                              fontSize: AppTypography.bodySmall,
+                              color: store.summary.usedCapacityRatio < 0.25
+                                  ? AppColors.red
+                                  : store.summary.usedCapacityRatio < 0.60
+                                  ? AppColors.gold
+                                  : AppColors.green,
+                              fontSize: 9.5.sp,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (allSlotsEmpty)
-                            _buildSmallBadge('Boş Mağaza', AppColors.orange)
-                          else if (anySlotOutOfStock)
-                            _buildSmallBadge('Stok Tükendi', AppColors.red),
-                        ],
+                    ],
+                  ),
+                ),
+
+                // Sağ Ok (Tıklanabilirlik Göstergesi)
+                Padding(
+                  padding: EdgeInsets.only(left: 4.w, top: 4.h),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.gold.withValues(alpha: 0.6),
+                    size: 20.sp,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 10.h),
+
+            // ORTA BÖLÜM: Finansal Mikro Metrikler (Stok Değeri & Kâr)
+            Row(
+              children: [
+                // Stok Değeri Çipi
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBgLight.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(5.r),
+                    border: Border.all(
+                      color: AppColors.border.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        AppIcons.inventory2Outlined,
+                        color: AppColors.textMuted,
+                        size: 11.sp,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        'Stok: ₺${AppMoney.compact(stockSale)}',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 9.5.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
-                  if (store.slots.isNotEmpty) ...[
-                    SizedBox(height: 12.h),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: store.slots
-                            .map((slot) => _buildSlotItem(slot))
-                            .toList(),
-                      ),
+                ),
+                SizedBox(width: 6.w),
+
+                // Kâr Potansiyeli Çipi
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: (potentialProfit > 0
+                            ? AppColors.green
+                            : AppColors.cardBgLight)
+                        .withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(5.r),
+                    border: Border.all(
+                      color: (potentialProfit > 0
+                              ? AppColors.green
+                              : AppColors.border)
+                          .withValues(alpha: 0.3),
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        AppIcons.trendingUp,
+                        color: potentialProfit > 0
+                            ? AppColors.green
+                            : AppColors.textMuted,
+                        size: 11.sp,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        'Kâr: ${AppMoney.compact(potentialProfit, signed: true)}',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: potentialProfit > 0
+                              ? AppColors.green
+                              : AppColors.textMuted,
+                          fontSize: 9.5.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+
+            // ALT BÖLÜM: Raf (Slot) Mini Önizlemeleri
+            if (store.slots.isNotEmpty) ...[
+              SizedBox(height: 10.h),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: store.slots
+                      .map((slot) => _buildSlotItem(slot))
+                      .toList(),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -751,43 +909,46 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         : 0.0;
 
     return Container(
-      margin: EdgeInsets.only(right: 8.w),
+      margin: EdgeInsets.only(right: 6.w),
       width: 44.w,
       height: 44.w,
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // Doluluk Çemberi veya Kenarlık
           if (!slot.isEmpty && slot.isActive) ...[
             AppProgressRing.stock(
               value: fillRatio,
               diameter: 44.w,
-              strokeWidth: 2.2.w,
-              semanticsLabel: 'Slot stok dolulugu',
+              strokeWidth: 2.w,
+              semanticsLabel: 'Slot stok doluluğu',
             ),
           ] else
             Container(
               width: 44.w,
               height: 44.w,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(10.r),
                 border: Border.all(
-                  color: AppColors.borderGoldLight.withValues(alpha: 0.18),
+                  color: AppColors.borderGoldLight.withValues(alpha: 0.2),
                 ),
               ),
             ),
+
+          // Ürün Görseli / Boş Slot İkonu
           Container(
-            width: 32.w,
-            height: 32.w,
-            padding: EdgeInsets.all(4.w),
+            width: 34.w,
+            height: 34.w,
+            padding: EdgeInsets.all(3.w),
             decoration: BoxDecoration(
-              color: AppColors.cardBgLight.withValues(alpha: 0.45),
-              shape: BoxShape.circle,
+              color: AppColors.cardBgLight.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8.r),
             ),
             child: slot.isEmpty
                 ? Icon(
                     AppIcons.add,
-                    color: AppColors.textMuted.withValues(alpha: 0.3),
-                    size: AppIconSizes.regular,
+                    color: AppColors.textMuted.withValues(alpha: 0.35),
+                    size: 16.sp,
                   )
                 : BrandedProductImage(
                     fileName: slot.productIcon ?? 'default.webp',
@@ -800,37 +961,42 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     showFrame: false,
                   ),
           ),
-          // Pasif indicator
+
+          // Pasif Göstergesi (Karartma & Pause)
           if (!slot.isEmpty && !slot.isActive)
             Container(
               width: 44.w,
               height: 44.w,
               decoration: BoxDecoration(
-                color: AppFx.panelWash(0.62),
-                shape: BoxShape.circle,
+                color: AppFx.panelWash(0.65),
+                borderRadius: BorderRadius.circular(10.r),
               ),
               child: Center(
                 child: Icon(
                   AppIcons.pause,
                   color: AppColors.red,
-                  size: AppIconSizes.regular,
+                  size: 16.sp,
                 ),
               ),
             ),
-          // Quality badge overlay
+
+          // Kalite Yıldız Rozeti (Sağ Alt)
           if (!slot.isEmpty && slot.qualityLevel > 0)
             Positioned(
               right: 0,
               bottom: 0,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 0.5.h),
+                padding: EdgeInsets.symmetric(
+                  horizontal: 2.5.w,
+                  vertical: 0.5.h,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.cardBg,
                   border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.5),
+                    color: AppColors.gold.withValues(alpha: 0.6),
                     width: 0.5,
                   ),
-                  borderRadius: BorderRadius.circular(4.r),
+                  borderRadius: BorderRadius.circular(3.r),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -838,15 +1004,15 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     Icon(
                       AppIcons.star,
                       color: AppColors.gold,
-                      size: 8.sp,
+                      size: 7.5.sp,
                     ),
                     SizedBox(width: 1.w),
                     Text(
                       slot.qualityLevel.toString(),
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.gold,
-                        fontSize: 8.sp,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 7.5.sp,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ],
@@ -860,18 +1026,18 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
   Widget _buildSmallBadge(String label, Color color) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        color: color.withValues(alpha: 0.12),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 1.w),
         borderRadius: BorderRadius.circular(4.r),
       ),
       child: Text(
         label,
         style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: AppTypography.micro,
-          fontWeight: FontWeight.bold,
+          fontSize: 8.5.sp,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );

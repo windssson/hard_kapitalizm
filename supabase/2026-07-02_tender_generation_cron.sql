@@ -14,17 +14,19 @@ declare
   v_generated_count integer := 0;
   v_iteration integer := 0;
   v_pick record;
-  v_roll double precision;
+  v_tier_roll double precision;
+  v_tier_type integer; -- 1: Yerel/Hızlı, 2: Kurumsal/Belediye, 3: Stratejik/Mega
+  v_target_min_revenue numeric;
+  v_target_max_revenue numeric;
+  v_target_revenue numeric;
   v_quality_level integer;
-  v_base_units integer;
-  v_quantity_multiplier numeric;
-  v_required_quantity integer;
   v_quality_multiplier numeric;
-  v_difficulty_multiplier numeric;
-  v_base_value numeric;
+  v_wholesale_markup numeric;
+  v_unit_price numeric;
+  v_required_quantity integer;
   v_reward_cash numeric;
-  v_bond_ratio numeric;
   v_bond_amount numeric;
+  v_award_type text;
   v_accept_hours integer;
   v_delivery_hours integer;
   v_accept_until timestamptz;
@@ -69,9 +71,8 @@ begin
       chosen_product.id as product_id,
       chosen_product.urun_adi,
       chosen_product.baz_satis_fiyati,
-      chosen_product.uretim_adedi,
-      chosen_product.satis_adedi,
-      chosen_product.uretim_birimi
+      chosen_product.uretim_birimi,
+      chosen_product.kategori
     into v_pick
     from (
       select c.id, c.name
@@ -80,7 +81,7 @@ begin
       limit 1
     ) chosen_city
     cross join lateral (
-      select p.id, p.urun_adi, p.baz_satis_fiyati, p.uretim_adedi, p.satis_adedi, p.uretim_birimi
+      select p.id, p.urun_adi, p.baz_satis_fiyati, p.uretim_birimi, p.kategori
       from public.products p
       where coalesce(p.baz_satis_fiyati, 0) > 0
         and not exists (
@@ -99,75 +100,124 @@ begin
       continue;
     end if;
 
-    v_roll := random();
-    if v_pick.baz_satis_fiyati < 100 then
+    -- 1. Tier Belirleme
+    v_tier_roll := random();
+    if v_tier_roll < 0.45 then
+      -- Tier 1: Yerel & Flaş Tedarik (Küçük Ölçek)
+      v_tier_type := 1;
+      v_target_min_revenue := 50000;
+      v_target_max_revenue := 250000;
+      v_accept_hours := 1 + floor(random() * 3)::integer; -- 1 - 3 saat
+      v_delivery_hours := 3 + floor(random() * 6)::integer; -- 3 - 8 saat
       v_quality_level := 1;
-    elsif v_pick.baz_satis_fiyati < 1000 then
-      v_quality_level := case when v_roll < 0.80 then 1 else 2 end;
-    elsif v_pick.baz_satis_fiyati < 10000 then
-      v_quality_level := case when v_roll < 0.60 then 1 when v_roll < 0.90 then 2 else 3 end;
+      v_min_player_level := 1;
+    elsif v_tier_roll < 0.80 then
+      -- Tier 2: Kurumsal & Belediye Tedariği (Orta Ölçek)
+      v_tier_type := 2;
+      v_target_min_revenue := 300000;
+      v_target_max_revenue := 1500000;
+      v_accept_hours := 3 + floor(random() * 5)::integer; -- 3 - 7 saat
+      v_delivery_hours := 8 + floor(random() * 16)::integer; -- 8 - 24 saat
+      v_quality_level := case when random() < 0.70 then 2 else 1 end;
+      v_min_player_level := 3 + floor(random() * 4)::integer; -- Seviye 3 - 6
     else
-      v_quality_level := case when v_roll < 0.45 then 1 when v_roll < 0.80 then 2 else 3 end;
+      -- Tier 3: Stratejik, Askeri & Mega İhracat (Büyük Ölçek)
+      v_tier_type := 3;
+      v_target_min_revenue := 2000000;
+      v_target_max_revenue := 10000000;
+      v_accept_hours := 6 + floor(random() * 12)::integer; -- 6 - 18 saat
+      v_delivery_hours := 24 + floor(random() * 24)::integer; -- 24 - 48 saat
+      v_quality_level := case when random() < 0.50 then 3 when random() < 0.85 then 2 else 1 end;
+      v_min_player_level := 7 + floor(random() * 6)::integer; -- Seviye 7 - 12
     end if;
 
-    v_base_units := greatest(
-      coalesce(nullif(v_pick.satis_adedi, 0), nullif(v_pick.uretim_adedi, 0), 20),
-      1
-    );
+    -- 2. Fiyat ve Kârlılık Katsayıları
+    v_quality_multiplier := 1 + ((v_quality_level - 1) * 0.20);
+    v_wholesale_markup := round((1.25 + (random() * 0.20))::numeric, 2); -- %25 - %45 garantili kâr marjı
+    v_unit_price := coalesce(v_pick.baz_satis_fiyati, 50) * v_quality_multiplier * v_wholesale_markup;
 
-    if v_pick.baz_satis_fiyati < 100 then
-      v_quantity_multiplier := 3 + (random() * 3);
-    elsif v_pick.baz_satis_fiyati < 1000 then
-      v_quantity_multiplier := 2 + (random() * 2.5);
-    elsif v_pick.baz_satis_fiyati < 10000 then
-      v_quantity_multiplier := 1.2 + (random() * 1.8);
+    -- Hedef ciro
+    v_target_revenue := v_target_min_revenue + (random() * (v_target_max_revenue - v_target_min_revenue));
+
+    -- Mantıklı Adet Hesaplama
+    v_required_quantity := greatest(round(v_target_revenue / v_unit_price)::integer, 10);
+
+    -- Temiz yuvarlak adet formatlaması
+    if v_required_quantity >= 10000 then
+      v_required_quantity := (round(v_required_quantity / 1000.0) * 1000)::integer;
+    elsif v_required_quantity >= 1000 then
+      v_required_quantity := (round(v_required_quantity / 100.0) * 100)::integer;
+    elsif v_required_quantity >= 100 then
+      v_required_quantity := (round(v_required_quantity / 10.0) * 10)::integer;
     else
-      v_quantity_multiplier := 0.8 + (random() * 1.4);
+      v_required_quantity := (round(v_required_quantity / 5.0) * 5)::integer;
     end if;
+    v_required_quantity := greatest(v_required_quantity, 10);
 
-    v_required_quantity := greatest(
-      1,
-      least(1500, round(v_base_units * v_quantity_multiplier)::integer)
-    );
+    -- Toplam Ödül ve Teminat
+    v_reward_cash := round(v_required_quantity * v_unit_price);
+    v_bond_amount := round(v_reward_cash * 0.10); -- Standart %10 teminat
+    v_award_type := case when random() < 0.45 then 'first_claim' else 'lowest_bid' end;
 
-    v_quality_multiplier := 1 + ((v_quality_level - 1) * 0.15);
-    v_difficulty_multiplier := round((1.10 + (random() * 0.50))::numeric, 2);
-    v_base_value := coalesce(v_pick.baz_satis_fiyati, 1) * v_required_quantity;
-    v_reward_cash := round(v_base_value * v_quality_multiplier * v_difficulty_multiplier);
-    v_bond_ratio := round((0.10 + (random() * 0.15))::numeric, 2);
-    v_bond_amount := round(v_reward_cash * v_bond_ratio);
-
-    v_accept_hours := 1 + floor(random() * 8)::integer;
-    v_delivery_hours := 1 + floor(random() * 6)::integer;
     v_accept_until := timezone('utc'::text, now()) + make_interval(hours => v_accept_hours);
     v_delivery_minutes := v_delivery_hours * 60;
 
-    v_min_player_level := case
-      when v_pick.baz_satis_fiyati < 100 then 1
-      when v_pick.baz_satis_fiyati < 500 then 2
-      when v_pick.baz_satis_fiyati < 1000 then 4
-      when v_pick.baz_satis_fiyati < 5000 then 6
-      when v_pick.baz_satis_fiyati < 15000 then 10
-      else 14
-    end + greatest(v_quality_level - 1, 0) * 2;
-
-    v_min_player_level := least(greatest(v_min_player_level, 1), 25);
-
-    v_title := case coalesce(v_pick.uretim_birimi, '')
-      when 'TARLA' then format('%s Belediye Gida Tedarigi', v_pick.city_name)
-      when 'CIFTLIK' then format('%s Kamu Gida Programi', v_pick.city_name)
-      when 'MADEN' then format('%s Sanayi Hammadde Alimi', v_pick.city_name)
-      when 'FABRIKA' then format('%s Kurumsal Tedarik Ihalesi', v_pick.city_name)
-      else format('%s Kamu Tedarik Ihalesi', v_pick.city_name)
-    end;
-
-    v_description := format(
-      '%s icin %s adet %s kalite %s urun teslimi bekleniyor.',
-      v_pick.city_name,
-      v_required_quantity,
-      v_quality_level,
-      v_pick.urun_adi
-    );
+    -- 3. Gerçekçi Başlık ve Açıklamalar
+    if v_tier_type = 1 then
+      case coalesce(v_pick.uretim_birimi, '')
+        when 'TARLA' then
+          v_title := format('%s Restoran ve Oteller Birliği Alımı', v_pick.city_name);
+          v_description := format('%s bölgesi turizm ve yeme-içme tesisleri için toptan %s adet %s kalite %s tedarik ihalesi.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        when 'CIFTLIK' then
+          v_title := format('%s İlçe Yemekhaneleri Besi Alımı', v_pick.city_name);
+          v_description := format('%s ilçe merkezindeki yemekhaneler için acil %s adet %s kalite %s tedariği.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        when 'MADEN' then
+          v_title := format('%s Sanayi Sitesi Maden Tedariği', v_pick.city_name);
+          v_description := format('%s küçük sanayi sitesi atölyeleri için toptan %s adet %s kalite %s alımı.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        when 'FABRIKA' then
+          v_title := format('%s İmalatçı Tedarik İhalesi', v_pick.city_name);
+          v_description := format('%s bölgesindeki yerel üreticiler için %s adet %s kalite %s temini.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        else
+          v_title := format('%s Yerel Tedarik İhalesi', v_pick.city_name);
+          v_description := format('%s için acil %s adet %s kalite %s teslimi beklenmektedir.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+      end case;
+    elsif v_tier_type = 2 then
+      case coalesce(v_pick.uretim_birimi, '')
+        when 'TARLA' then
+          v_title := format('%s BŞB Sosyal Yardım Gıda Alımı', v_pick.city_name);
+          v_description := format('%s Büyükşehir Belediyesi sosyal yardım paketleri ve aşevleri için %s adet %s kalite %s alım ihalesi.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        when 'CIFTLIK' then
+          v_title := format('%s Kamu Hastaneleri Gıda Konsorsiyumu', v_pick.city_name);
+          v_description := format('%s ili kamu sağlık tesisleri ve hastaneler için %s adet %s kalite %s tedarik programı.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        when 'MADEN' then
+          v_title := format('%s Organize Sanayi Hammadde Alımı', v_pick.city_name);
+          v_description := format('%s Organize Sanayi Bölgesi metal ve maden işleme hatları için %s adet %s kalite %s ihalesi.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        when 'FABRIKA' then
+          v_title := format('%s Altyapı ve İnşaat Tedarik Paketi', v_pick.city_name);
+          v_description := format('%s kentsel gelişim ve sanayi projeleri kapsamında %s adet %s kalite %s alımı yapılacaktır.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        else
+          v_title := format('%s Kurumsal Tedarik İhalesi', v_pick.city_name);
+          v_description := format('%s kamu ve kurumsal projeleri için %s adet %s kalite %s alımı.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+      end case;
+    else
+      case coalesce(v_pick.uretim_birimi, '')
+        when 'TARLA' then
+          v_title := format('%s Uluslararası Tarım İhracat Konsorsiyumu', v_pick.city_name);
+          v_description := format('%s lojistik merkezinden yurt dışına sevk edilmek üzere stratejik %s adet %s kalite %s ihracat partisi.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        when 'CIFTLIK' then
+          v_title := format('%s MSB Stratejik İaşe Rezerv Alımı', v_pick.city_name);
+          v_description := format('Milli Savunma Bakanlığı ve AFAD stratejik iaşe stokları için %s ili teslimatlı %s adet %s kalite %s tedariği.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        when 'MADEN' then
+          v_title := format('%s Devlet Demiryolları ve Ağır Sanayi Alımı', v_pick.city_name);
+          v_description := format('Ulusal altyapı ve ağır sanayi tesisleri için %s teslimatlı yüksek hacimli %s adet %s kalite %s alım ihalesi.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        when 'FABRIKA' then
+          v_title := format('%s Liman Bölgesi Küresel İhracat Partisi', v_pick.city_name);
+          v_description := format('%s Limanı üzerinden global pazara ihraç edilecek %s adet %s kalite %s mega tedarik kontratı.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+        else
+          v_title := format('%s Stratejik Mega Tedarik İhalesi', v_pick.city_name);
+          v_description := format('%s için yüksek hacimli uluslararası standartta %s adet %s kalite %s alım kontratı.', v_pick.city_name, v_required_quantity, v_quality_level, v_pick.urun_adi);
+      end case;
+    end if;
 
     insert into public.tenders (
       title,
@@ -178,6 +228,7 @@ begin
       required_quantity,
       reward_cash,
       bond_amount,
+      award_type,
       accept_until,
       delivery_duration_minutes,
       status,
@@ -193,6 +244,7 @@ begin
       v_required_quantity,
       v_reward_cash,
       v_bond_amount,
+      v_award_type,
       v_accept_until,
       v_delivery_minutes,
       'open',

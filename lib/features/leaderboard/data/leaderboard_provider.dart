@@ -2,7 +2,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/features/leaderboard/models/leaderboard_entry_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final leaderboardProvider = FutureProvider.family<List<LeaderboardEntryModel>, String>((ref, sortByField) async {
+class LeaderboardQuery {
+  final String sortByField;
+  final String? cityId;
+
+  const LeaderboardQuery({
+    required this.sortByField,
+    this.cityId,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LeaderboardQuery &&
+          runtimeType == other.runtimeType &&
+          sortByField == other.sortByField &&
+          cityId == other.cityId;
+
+  @override
+  int get hashCode => sortByField.hashCode ^ (cityId?.hashCode ?? 0);
+}
+
+final leaderboardProvider = FutureProvider.family<List<LeaderboardEntryModel>, LeaderboardQuery>((ref, query) async {
   final supabase = Supabase.instance.client;
   
   // Call the refresh RPC for the current player first, to ensure up-to-date stats
@@ -19,8 +40,9 @@ final leaderboardProvider = FutureProvider.family<List<LeaderboardEntryModel>, S
     final response = await supabase.rpc(
       'get_leaderboard',
       params: {
-        'p_sort_by_field': sortByField,
+        'p_sort_by_field': query.sortByField,
         'p_limit': 100,
+        if (query.cityId != null) 'p_city_id': query.cityId,
       },
     );
 
@@ -41,13 +63,13 @@ class PlayerRankInfo {
   PlayerRankInfo({required this.rank, required this.entry});
 }
 
-final currentPlayerRankProvider = FutureProvider.family<PlayerRankInfo?, String>((ref, sortByField) async {
+final currentPlayerRankProvider = FutureProvider.family<PlayerRankInfo?, LeaderboardQuery>((ref, query) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
   if (user == null) return null;
 
   // Let's first check if current player is in top 100 leaderboard list
-  final leaderboardList = ref.watch(leaderboardProvider(sortByField)).value ?? [];
+  final leaderboardList = ref.watch(leaderboardProvider(query)).value ?? [];
   
   final topIdx = leaderboardList.indexWhere((element) => element.playerId == user.id);
   if (topIdx != -1) {
@@ -63,7 +85,8 @@ final currentPlayerRankProvider = FutureProvider.family<PlayerRankInfo?, String>
       'get_player_leaderboard_rank_info',
       params: {
         'p_player_id': user.id,
-        'p_sort_by_field': sortByField,
+        'p_sort_by_field': query.sortByField,
+        if (query.cityId != null) 'p_city_id': query.cityId,
       },
     );
 
@@ -81,3 +104,4 @@ final currentPlayerRankProvider = FutureProvider.family<PlayerRankInfo?, String>
     return null;
   }
 });
+

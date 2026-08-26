@@ -18,6 +18,7 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_model.dart';
+import 'package:hard_kapitalizm/features/logistics/models/logistics_finance_summary_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_performance_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_type_model.dart';
@@ -140,6 +141,64 @@ class _LogisticsManagementScreenState
     );
   }
 
+  Future<void> _handleBatchRefuelAction(BuildContext context) async {
+    final result = await ref
+        .read(logisticsActionProvider)
+        .refuelAllVehicles();
+    if (!context.mounted) return;
+    _handleOpResult(
+      context,
+      result,
+      result['message'] ?? 'Tüm araçlara yakıt ikmali yapıldı.',
+    );
+  }
+
+  Future<void> _handleBatchRepairAction(
+    BuildContext context,
+    double playerCash,
+  ) async {
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        title: Text('Toplu Bakım Onayı', style: AppTextStyles.h2),
+        content: Text(
+          'Boşta olan ve bakım gerektiren tüm araçlar onarılacaktır. Bakiyeniz yettiği kadar araç onarımı tamamlanacaktır.',
+          style: AppTextStyles.body,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+            child: Text(
+              'Tümünü Onar',
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textOnAccent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldProceed != true) return;
+
+    final result = await ref
+        .read(logisticsActionProvider)
+        .repairAllVehicles();
+    if (!context.mounted) return;
+    _handleOpResult(
+      context,
+      result,
+      result['message'] ?? 'Toplu bakım tamamlandı.',
+      includeCompany: false,
+    );
+  }
+
   Future<void> _handleActiveToggle(
     BuildContext context,
     LogisticsVehicleModel vehicle,
@@ -165,6 +224,7 @@ class _LogisticsManagementScreenState
   Future<void> _handleRentalAction(
     BuildContext context,
     LogisticsVehicleModel vehicle,
+    LogisticsVehicleTypeModel? type,
   ) async {
     if (vehicle.isAvailableForRent) {
       final result = await ref
@@ -185,25 +245,143 @@ class _LogisticsManagementScreenState
       return;
     }
 
-    final controller = TextEditingController();
+    final fuelCostPerKm = vehicle.fuelRate * vehicle.fuelCost;
+    final purchasePrice = type?.purchasePrice ?? 0.0;
+    // 200 km'de 1 kondisyon puanı düşer. 1 kondisyon tamiri = (purchasePrice * 0.15) / 100 TL.
+    // Dolayısıyla 1 km başına bakım maliyeti = (purchasePrice * 0.15) / 20000 TL = purchasePrice / 133333 TL.
+    final maintenanceCostPerKm = purchasePrice > 0 ? (purchasePrice / 133333.0) : 0.0;
+    final totalCostPerKm = fuelCostPerKm + maintenanceCostPerKm;
+    final suggestedMinPrice = (totalCostPerKm * 1.3).ceilToDouble();
+
+    final controller = TextEditingController(
+      text: vehicle.rentalPrice > 0 ? vehicle.rentalPrice.toStringAsFixed(0) : '',
+    );
+
     final rentalPrice = await showDialog<double>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.cardBg,
-        title: Text('Kira Fiyatı Belirle', style: AppTextStyles.h2),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+        title: Row(
           children: [
-            TextField(
-              controller: controller,
-              readOnly: true,
-              showCursor: true,
-              enableInteractiveSelection: false,
-              decoration: const InputDecoration(hintText: 'Günlük kira bedeli'),
-            ),
-            SizedBox(height: 12.h),
-            NumericKeyboard(controller: controller, allowDecimal: true),
+            Icon(AppIcons.vpnKey, color: AppColors.gold, size: AppIconSizes.medium),
+            SizedBox(width: 8.w),
+            Text('Kiraya Verme Ayarı', style: AppTextStyles.h2),
           ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                type?.name ?? 'Araç',
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: AppTypography.title,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 12.h),
+              Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBgLight.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: Border.all(
+                    color: AppColors.borderGold.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Yakıt Maliyeti:',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        Text(
+                          '${fuelCostPerKm.toStringAsFixed(2)} TL / km',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 4.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Bakım/Yıpranma Payı:',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        Text(
+                          '${maintenanceCostPerKm.toStringAsFixed(2)} TL / km',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Divider(
+                      color: AppColors.border.withValues(alpha: 0.3),
+                      height: 12.h,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Net Toplam Maliyet:',
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.gold,
+                            fontWeight: FontWeight.bold,
+                            fontSize: AppTypography.bodySmall,
+                          ),
+                        ),
+                        Text(
+                          '${totalCostPerKm.toStringAsFixed(2)} TL / km',
+                          style: AppTextStyles.body.standardCopyWith(
+                            color: AppColors.gold,
+                            fontWeight: FontWeight.w900,
+                            fontSize: AppTypography.bodyLarge,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 12.h),
+              Text(
+                '💡 Tavsiye edilen kârlı kira bedeli: en az ${suggestedMinPrice.toStringAsFixed(0)} TL / km',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.green,
+                  fontSize: AppTypography.caption,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 12.h),
+              TextField(
+                controller: controller,
+                readOnly: true,
+                showCursor: true,
+                enableInteractiveSelection: false,
+                decoration: const InputDecoration(
+                  labelText: 'KM Başına Kira Ücreti (TL/km)',
+                  hintText: 'Örn: 25',
+                ),
+              ),
+              SizedBox(height: 12.h),
+              NumericKeyboard(controller: controller, allowDecimal: true),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -213,7 +391,14 @@ class _LogisticsManagementScreenState
           ElevatedButton(
             onPressed: () =>
                 Navigator.pop(dialogContext, double.tryParse(controller.text)),
-            child: const Text('Tamam'),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+            child: Text(
+              'Kiraya Ver',
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textOnAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -324,6 +509,9 @@ class _LogisticsManagementScreenState
                       final performanceAsync = ref.watch(
                         logisticsVehiclePerformanceProvider,
                       );
+                      final financeSummaryAsync = ref.watch(
+                        logisticsFinanceSummaryProvider,
+                      );
 
                       return playerAsync.when(
                         data: (player) => vehicleTypesAsync.when(
@@ -340,6 +528,8 @@ class _LogisticsManagementScreenState
                                       cities: cities,
                                       performanceByVehicle:
                                           performanceByVehicle,
+                                      financeSummary:
+                                          financeSummaryAsync.asData?.value,
                                       playerCash: player?.cash ?? 0,
                                     ),
                                     loading: _buildLoading,
@@ -387,6 +577,7 @@ class _LogisticsManagementScreenState
     required List<LogisticsVehicleTypeModel> vehicleTypes,
     required List<CityModel> cities,
     required Map<String, LogisticsVehiclePerformanceModel> performanceByVehicle,
+    required LogisticsFinanceSummaryModel? financeSummary,
     required double playerCash,
   }) {
     if (company == null && construction == null) {
@@ -415,7 +606,13 @@ class _LogisticsManagementScreenState
         if (company != null) ...[
           _buildCompanyCard(context, company, playerCash),
           SizedBox(height: 16.h),
-          _buildFleetOverview(vehicles, performanceByVehicle),
+          _buildFleetOverview(
+            context,
+            vehicles,
+            performanceByVehicle,
+            financeSummary,
+            playerCash,
+          ),
           SizedBox(height: 16.h),
           _buildSectionHeader('FİLO YÖNETİMİ', '${vehicles.length} Araç'),
           SizedBox(height: 8.h),
@@ -788,107 +985,289 @@ class _LogisticsManagementScreenState
   }
 
   Widget _buildFleetOverview(
+    BuildContext context,
     List<LogisticsVehicleModel> vehicles,
     Map<String, LogisticsVehiclePerformanceModel> performanceByVehicle,
+    LogisticsFinanceSummaryModel? financeSummary,
+    double playerCash,
   ) {
     final onRouteCount = vehicles
         .where((vehicle) => vehicle.status == 'on_route')
         .length;
+    final idleCount = vehicles
+        .where((vehicle) => vehicle.status == 'idle')
+        .length;
+    final lowFuelCount = vehicles
+        .where((v) => v.currentFuel < v.fuelCapacity && v.status == 'idle')
+        .length;
+    final damagedCount = vehicles
+        .where((v) => v.condition < 100 && v.status == 'idle')
+        .length;
+
     final totalTrips = performanceByVehicle.values.fold<int>(
       0,
-      (sum, performance) => sum + performance.totalTrips,
+      (sum, p) => sum + p.totalTrips,
     );
-    final financeEntriesAsync = ref.watch(logisticsFinanceEntriesProvider);
-    final now = DateTime.now();
-    final todayEntries =
-        financeEntriesAsync.asData?.value
-            .where((entry) => _isSameDay(entry.createdAt.toLocal(), now))
-            .toList() ??
-        const [];
-    final dailyIncome = todayEntries
-        .where((entry) => entry.isIncome)
-        .fold<double>(0, (sum, entry) => sum + entry.amount);
-    final dailyExpense = todayEntries
-        .where((entry) => entry.isExpense)
-        .fold<double>(0, (sum, entry) => sum + entry.amount);
-    final netDaily = dailyIncome - dailyExpense;
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildOverviewStat(
-            'Aktif Filo',
-            '$onRouteCount / ${vehicles.length}',
-            AppIcons.localShippingOutlined,
-            AppColors.blue,
-          ),
-          _buildOverviewDivider(),
-          _buildOverviewStat(
-            'Toplam Sefer',
-            '$totalTrips',
-            AppIcons.routeOutlined,
-            AppColors.gold,
-          ),
-          _buildOverviewDivider(),
-          _buildOverviewStat(
-            'Günlük Kâr',
-            '${netDaily >= 0 ? '+' : ''}${_formatMoney(netDaily)} TL',
-            AppIcons.paymentsOutlined,
-            netDaily >= 0 ? AppColors.green : AppColors.red,
-          ),
-        ],
-      ),
+    final totalDistance = performanceByVehicle.values.fold<double>(
+      0,
+      (sum, p) => sum + p.totalDistanceKm,
     );
-  }
+    final totalCargo = performanceByVehicle.values.fold<int>(
+      0,
+      (sum, p) => sum + p.totalCargoQuantity,
+    );
+    final totalRentalRevenue = performanceByVehicle.values.fold<double>(
+      0,
+      (sum, p) => sum + p.rentalRevenue,
+    );
 
-  Widget _buildOverviewStat(
-    String label,
-    String value,
-    IconData icon,
-    Color valueColor,
-  ) {
+    final totalDistanceDisplay = totalDistance > 0
+        ? totalDistance.toStringAsFixed(0)
+        : (financeSummary?.totalDistanceKm.toStringAsFixed(0) ?? '0');
+    final totalCargoDisplay = totalCargo > 0
+        ? totalCargo
+        : (financeSummary?.totalCargoDelivered ?? 0);
+    final rentalRevenueDisplay = totalRentalRevenue > 0
+        ? totalRentalRevenue
+        : (financeSummary?.rentalIncome ?? 0.0);
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: AppColors.textMuted, size: AppIconSizes.xSmall),
-            SizedBox(width: 4.w),
-            Text(
-              label,
-              style: AppTextStyles.caption.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.caption,
-                fontWeight: FontWeight.w600,
-              ),
+        Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(18.r),
+            border: Border.all(
+              color: AppColors.borderGold.withValues(alpha: 0.2),
             ),
-          ],
-        ),
-        SizedBox(height: 4.h),
-        Text(
-          value,
-          style: AppTextStyles.body.standardCopyWith(
-            color: valueColor,
-            fontSize: AppTypography.bodyLarge,
-            fontWeight: FontWeight.bold,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        AppIcons.insightsRounded,
+                        color: AppColors.gold,
+                        size: AppIconSizes.small,
+                      ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        'FİLO PERFORMANS & KPI',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '${vehicles.length} Araç • $totalTrips Sefer',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.gold,
+                      fontSize: AppTypography.caption,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildKpiBox(
+                      'Aktif / Boşta',
+                      '$onRouteCount / $idleCount',
+                      AppIcons.localShippingOutlined,
+                      AppColors.blue,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: _buildKpiBox(
+                      'Toplam Yol',
+                      '$totalDistanceDisplay km',
+                      AppIcons.altRoute,
+                      AppColors.gold,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildKpiBox(
+                      'Taşınan Yük',
+                      '$totalCargoDisplay Adet',
+                      AppIcons.inventory2Outlined,
+                      AppColors.green,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: _buildKpiBox(
+                      'Kira Geliri',
+                      '${_formatMoney(rentalRevenueDisplay)} TL',
+                      AppIcons.paymentsOutlined,
+                      AppColors.warning,
+                    ),
+                  ),
+                ],
+              ),
+              if (lowFuelCount > 0 || damagedCount > 0) ...[
+                SizedBox(height: 12.h),
+                Divider(color: AppColors.border.withValues(alpha: 0.3), height: 1),
+                SizedBox(height: 10.h),
+                Row(
+                  children: [
+                    if (lowFuelCount > 0)
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _handleBatchRefuelAction(context),
+                          borderRadius: BorderRadius.circular(10.r),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 8.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.gold.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: AppColors.gold.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  AppIcons.localGasStationRounded,
+                                  color: AppColors.gold,
+                                  size: AppIconSizes.xSmall,
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  'Toplu Yakıt ($lowFuelCount)',
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: AppColors.gold,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: AppTypography.label,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (lowFuelCount > 0 && damagedCount > 0)
+                      SizedBox(width: 8.w),
+                    if (damagedCount > 0)
+                      Expanded(
+                        child: InkWell(
+                          onTap: () =>
+                              _handleBatchRepairAction(context, playerCash),
+                          borderRadius: BorderRadius.circular(10.r),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 8.h),
+                            decoration: BoxDecoration(
+                              color: AppColors.green.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: AppColors.green.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  AppIcons.buildRounded,
+                                  color: AppColors.green,
+                                  size: AppIconSizes.xSmall,
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  'Toplu Bakım ($damagedCount)',
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: AppColors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: AppTypography.label,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildOverviewDivider() {
+  Widget _buildKpiBox(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
-      height: 24.h,
-      width: 1,
-      color: AppColors.border.withValues(alpha: 0.5),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(6.w),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Icon(icon, color: color, size: AppIconSizes.small),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.caption,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  value,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodyLarge,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1155,7 +1534,7 @@ class _LogisticsManagementScreenState
               : AppIcons.vpnKey,
           label: vehicle.isAvailableForRent ? 'Kiralama Kapat' : 'Kiraya Ver',
           color: AppColors.warning,
-          onTap: () => _handleRentalAction(context, vehicle),
+          onTap: () => _handleRentalAction(context, vehicle, type),
         ),
         if (canToggleActive)
           _buildActionButton(
@@ -1209,12 +1588,6 @@ class _LogisticsManagementScreenState
         ),
       ),
     );
-  }
-
-  bool _isSameDay(DateTime first, DateTime second) {
-    return first.year == second.year &&
-        first.month == second.month &&
-        first.day == second.day;
   }
 
   Widget _buildRoutePanel(
@@ -1307,37 +1680,129 @@ class _LogisticsManagementScreenState
   Widget _buildVehiclePerformancePanel(
     LogisticsVehiclePerformanceModel performance,
   ) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildMiniStat(
-          'Sefer',
-          '${performance.totalTrips}',
-          AppIcons.localShipping,
-        ),
-        _buildMiniStat('Aktif', '${performance.activeTrips}', AppIcons.route),
-        _buildMiniStat(
-          'Gelir',
-          '${performance.rentalRevenue.toStringAsFixed(0)} TL',
-          AppIcons.payments,
-        ),
-      ],
+    return Container(
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                AppIcons.insightsRounded,
+                color: AppColors.gold,
+                size: AppIconSizes.xSmall,
+              ),
+              SizedBox(width: 4.w),
+              Text(
+                'ARAÇ PERFORMANS GEÇMİŞİ',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textMuted,
+                  fontSize: AppTypography.caption,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildVehicleKpiTile(
+                  'Seferler',
+                  '${performance.totalTrips} (${performance.completedTrips} Bitti)',
+                  AppIcons.localShippingOutlined,
+                  AppColors.blue,
+                ),
+              ),
+              SizedBox(width: 6.w),
+              Expanded(
+                child: _buildVehicleKpiTile(
+                  'Toplam Mesafe',
+                  '${performance.totalDistanceKm.toStringAsFixed(0)} km',
+                  AppIcons.altRoute,
+                  AppColors.gold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 6.h),
+          Row(
+            children: [
+              Expanded(
+                child: _buildVehicleKpiTile(
+                  'Taşınan Yük',
+                  '${performance.totalCargoQuantity} Adet',
+                  AppIcons.inventory2Outlined,
+                  AppColors.green,
+                ),
+              ),
+              SizedBox(width: 6.w),
+              Expanded(
+                child: _buildVehicleKpiTile(
+                  'Kira Geliri',
+                  '${performance.rentalRevenue.toStringAsFixed(0)} TL',
+                  AppIcons.paymentsOutlined,
+                  AppColors.warning,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildMiniStat(String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.gold, size: AppIconSizes.xSmall),
-        SizedBox(width: 4.w),
-        Text(
-          '$value $label',
-          style: AppTextStyles.caption.standardCopyWith(
-            color: AppColors.textMuted,
-            fontSize: AppTypography.label,
+  Widget _buildVehicleKpiTile(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: AppIconSizes.xSmall),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.caption,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  value,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: AppTypography.label,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

@@ -8,10 +8,16 @@ class ChatService {
   static const _table = 'chat_messages';
   static const _pageSize = 50;
 
-  static Future<List<ChatMessage>> fetchLatest() async {
-    final rows = await _db
-        .from(_table)
-        .select()
+  static Future<List<ChatMessage>> fetchLatest({
+    String channel = 'global',
+    int? cityId,
+  }) async {
+    var query = _db.from(_table).select().eq('channel', channel);
+    if (channel == 'city' && cityId != null) {
+      query = query.eq('city_id', cityId);
+    }
+
+    final rows = await query
         .order('created_at', ascending: false)
         .limit(_pageSize);
 
@@ -22,11 +28,22 @@ class ChatService {
         .toList();
   }
 
-  static Future<List<ChatMessage>> fetchBefore(DateTime before) async {
-    final rows = await _db
+  static Future<List<ChatMessage>> fetchBefore(
+    DateTime before, {
+    String channel = 'global',
+    int? cityId,
+  }) async {
+    var query = _db
         .from(_table)
         .select()
-        .lt('created_at', before.toUtc().toIso8601String())
+        .eq('channel', channel)
+        .lt('created_at', before.toUtc().toIso8601String());
+
+    if (channel == 'city' && cityId != null) {
+      query = query.eq('city_id', cityId);
+    }
+
+    final rows = await query
         .order('created_at', ascending: false)
         .limit(_pageSize);
 
@@ -39,10 +56,13 @@ class ChatService {
 
   static Future<void> sendMessage({
     required String content,
+    String channel = 'global',
     MarketListingModel? linkedListing,
+    String? replyToMessageId,
   }) async {
     final params = {
       'p_content': content.trim(),
+      'p_channel': channel,
       'p_linked_listing_slot_id': linkedListing?.slotId.isNotEmpty == true
           ? linkedListing!.slotId
           : null,
@@ -54,18 +74,20 @@ class ChatService {
       'p_linked_product_quality_level': linkedListing?.qualityLevel,
       'p_linked_product_quantity': linkedListing?.quantity,
       'p_linked_product_price': linkedListing?.price,
+      'p_reply_to_message_id': replyToMessageId,
     };
 
     debugPrint(
-      '[CHAT][SEND] content="${content.trim()}" '
+      '[CHAT][SEND] channel=$channel content="${content.trim()}" '
       'slot=${params['p_linked_listing_slot_id']} '
-      'product=${params['p_linked_product_id']} '
-      'qty=${params['p_linked_product_quantity']} '
-      'price=${params['p_linked_product_price']}',
+      'replyTo=$replyToMessageId',
     );
 
     try {
-      await _db.rpc('send_chat_message', params: params);
+      final res = await _db.rpc('send_chat_message', params: params);
+      if (res is Map && res['success'] == false) {
+        throw Exception(res['message'] ?? 'Mesaj gönderilemedi.');
+      }
       debugPrint('[CHAT][SEND] rpc send_chat_message success');
     } catch (e, st) {
       debugPrint('[CHAT][SEND][ERROR] type=${e.runtimeType} error=$e');
@@ -91,11 +113,26 @@ class ChatService {
     return Map<String, dynamic>.from(response as Map);
   }
 
+  static Future<Map<String, dynamic>> sendDirectMessage({
+    required String receiverId,
+    required String content,
+  }) async {
+    final response = await _db.rpc(
+      'send_direct_message',
+      params: {
+        'p_receiver_id': receiverId,
+        'p_content': content.trim(),
+      },
+    );
+
+    return Map<String, dynamic>.from(response as Map);
+  }
+
   static RealtimeChannel subscribeToNewMessages({
     required void Function(ChatMessage msg) onInsert,
   }) {
     return _db
-        .channel('global_chat')
+        .channel('chat_messages_realtime')
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
