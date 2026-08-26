@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
-import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/cash_flow/data/cash_flow_provider.dart';
 import 'package:hard_kapitalizm/features/cash_flow/models/cash_movement_entry_model.dart';
@@ -91,6 +92,15 @@ class CashFlowScreen extends ConsumerStatefulWidget {
 
 class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
   int _selectedTab = 0;
+  String _selectedFilter = 'all';
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,19 +122,18 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
                   message: error.toString(),
                   onRetry: () => ref.invalidate(cashMovementEntriesProvider),
                 ),
-                data:
-                    (entries) => RefreshIndicator(
-                      onRefresh: () async {
-                        ref.invalidate(cashMovementEntriesProvider);
-                        await ref.read(cashMovementEntriesProvider.future);
-                      },
-                      child:
-                          entries.isEmpty
-                              ? const _CashFlowEmpty()
-                              : _selectedTab == 0
-                              ? _buildAnalysisView(entries)
-                              : _CashFlowList(entries: entries),
-                    ),
+                data: (entries) => RefreshIndicator(
+                  color: AppColors.gold,
+                  onRefresh: () async {
+                    ref.invalidate(cashMovementEntriesProvider);
+                    await ref.read(cashMovementEntriesProvider.future);
+                  },
+                  child: entries.isEmpty
+                      ? const _CashFlowEmpty()
+                      : _selectedTab == 0
+                          ? _buildAnalysisView(entries)
+                          : _buildHistoryView(entries),
+                ),
               ),
             ),
           ],
@@ -167,16 +176,14 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(vertical: 10.h),
         decoration: BoxDecoration(
-          color:
-              isSelected
-                  ? AppColors.gold.withValues(alpha: 0.12)
-                  : AppColors.transparent,
+          color: isSelected
+              ? AppColors.gold.withValues(alpha: 0.12)
+              : AppColors.transparent,
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color:
-                isSelected
-                    ? AppColors.gold.withValues(alpha: 0.4)
-                    : AppColors.transparent,
+            color: isSelected
+                ? AppColors.gold.withValues(alpha: 0.4)
+                : AppColors.transparent,
           ),
         ),
         child: Row(
@@ -228,6 +235,201 @@ class _CashFlowScreenState extends ConsumerState<CashFlowScreen> {
         SizedBox(height: 14.h),
         _CashFlowCategoryBreakdown(entries: entries),
       ],
+    );
+  }
+
+  Widget _buildHistoryView(List<CashMovementEntryModel> allEntries) {
+    // 1. Filtreleme
+    final filtered = allEntries.where((entry) {
+      if (_selectedFilter == 'income' && !entry.isIncome) return false;
+      if (_selectedFilter == 'expense' && entry.isIncome) return false;
+      if (_selectedFilter == 'tender') {
+        final cat = (entry.category ?? '').toLowerCase();
+        final ref = (entry.referenceType ?? '').toLowerCase();
+        if (!cat.contains('tender') && !ref.contains('tender')) return false;
+      }
+      if (_selectedFilter == 'store') {
+        final cat = (entry.category ?? '').toLowerCase();
+        final ref = (entry.referenceType ?? '').toLowerCase();
+        if (!cat.contains('store') && !cat.contains('sale') && !ref.contains('store')) {
+          return false;
+        }
+      }
+      if (_selectedFilter == 'production') {
+        final cat = (entry.category ?? '').toLowerCase();
+        final ref = (entry.referenceType ?? '').toLowerCase();
+        if (!cat.contains('farm') &&
+            !cat.contains('field') &&
+            !cat.contains('factory') &&
+            !cat.contains('mine') &&
+            !cat.contains('construction') &&
+            !ref.contains('farm') &&
+            !ref.contains('field') &&
+            !ref.contains('factory') &&
+            !ref.contains('mine')) {
+          return false;
+        }
+      }
+
+      // Arama filtresi
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final title = entry.title.toLowerCase();
+        final desc = (entry.description ?? '').toLowerCase();
+        final cat = _formatLabel(entry.category ?? '').toLowerCase();
+        final refKind = _formatLabel(entry.referenceType ?? '').toLowerCase();
+        if (!title.contains(q) && !desc.contains(q) && !cat.contains(q) && !refKind.contains(q)) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
+
+    return Column(
+      children: [
+        // Arama ve Filtre Çubuğu
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+          child: Column(
+            children: [
+              // Arama Çubuğu
+              Container(
+                height: 42.h,
+                decoration: BoxDecoration(
+                  color: AppFx.panelWash(0.3),
+                  borderRadius: BorderRadius.circular(14.r),
+                  border: Border.all(color: AppFx.softOverlay(0.08)),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodySmall,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'İşlem, kategori veya açıklama ara...',
+                    hintStyle: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontSize: AppTypography.bodySmall,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: AppColors.gold,
+                      size: AppIconSizes.compact,
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? GestureDetector(
+                            onTap: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                            child: Icon(
+                              AppIcons.closeRounded,
+                              color: AppColors.textMuted,
+                              size: AppIconSizes.compact,
+                            ),
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 10.h),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8.h),
+              // Filtre Butonları (Horizontal Scroll)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFilterChip('all', 'Tümü', Icons.list_alt_rounded),
+                    SizedBox(width: 6.w),
+                    _buildFilterChip('income', 'Gelirler (+)', AppIcons.southWestRounded, color: AppColors.green),
+                    SizedBox(width: 6.w),
+                    _buildFilterChip('expense', 'Giderler (-)', AppIcons.northEastRounded, color: AppColors.red),
+                    SizedBox(width: 6.w),
+                    _buildFilterChip('tender', 'İhaleler', AppIcons.gavelRounded, color: AppColors.gold),
+                    SizedBox(width: 6.w),
+                    _buildFilterChip('store', 'Mağaza / Satış', AppIcons.storefrontOutlined, color: AppColors.blue),
+                    SizedBox(width: 6.w),
+                    _buildFilterChip('production', 'Üretim / Tesis', AppIcons.factoryOutlined, color: AppColors.orange),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Liste Görünümü
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.filter_alt_off_outlined, size: AppIconSizes.hero, color: AppColors.textMuted),
+                      SizedBox(height: 10.h),
+                      Text(
+                        'Arama kriterlerine uygun işlem bulunamadı.',
+                        style: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(14.w, 6.h, 14.w, 28.h),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, _) => SizedBox(height: 8.h),
+                  itemBuilder: (context, index) {
+                    final entry = filtered[index];
+                    return _CashFlowEntryCard(
+                      entry: entry,
+                      onTap: () => _showTransactionReceiptSheet(context, entry),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(String key, String label, IconData icon, {Color? color}) {
+    final isSelected = _selectedFilter == key;
+    final activeColor = color ?? AppColors.gold;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = key),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.16) : AppFx.panelWash(0.25),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(
+            color: isSelected ? activeColor.withValues(alpha: 0.6) : AppFx.softOverlay(0.06),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14.sp,
+              color: isSelected ? activeColor : AppColors.textMuted,
+            ),
+            SizedBox(width: 5.w),
+            Text(
+              label,
+              style: AppTextStyles.caption.standardCopyWith(
+                color: isSelected ? AppColors.textPrimary : AppColors.textMuted,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontSize: AppTypography.label,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -348,23 +550,23 @@ class _ChartPainter extends CustomPainter {
     for (int i = 0; i <= gridLinesCount; i++) {
       final double ratio = i / gridLinesCount;
       final double y = paddingTop + chartHeight * (1 - ratio);
+      final double val = maxVal * ratio;
 
       canvas.drawLine(
         Offset(paddingLeft, y),
-        Offset(paddingLeft + chartWidth, y),
+        Offset(size.width - paddingRight, y),
         gridPaint,
       );
 
-      final double val = maxVal * ratio;
       textPainter.text = TextSpan(
-        text: _formatMoney(val),
-        style: AppTextStyles.caption.standardCopyWith(
-          color: AppColors.textMuted,
-          fontSize: AppTypography.caption,
-          fontWeight: FontWeight.w500,
+        text: _formatCompactNumber(val),
+        style: TextStyle(
+          color: AppColors.textMuted.withValues(alpha: 0.6),
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w600,
         ),
       );
-      textPainter.layout();
+      textPainter.layout(maxWidth: paddingLeft - 6.w);
       textPainter.paint(
         canvas,
         Offset(
@@ -374,111 +576,100 @@ class _ChartPainter extends CustomPainter {
       );
     }
 
-    final datePaint =
-        Paint()
-          ..color = AppFx.softOverlay(0.08)
-          ..strokeWidth = 1;
+    final int count = points.length;
+    final double stepX = count > 1 ? chartWidth / (count - 1) : chartWidth;
 
-    canvas.drawLine(
-      Offset(paddingLeft, paddingTop + chartHeight),
-      Offset(paddingLeft + chartWidth, paddingTop + chartHeight),
-      datePaint,
-    );
+    for (int i = 0; i < count; i++) {
+      final double x = paddingLeft + (i * stepX);
+      final date = points[i].date;
+      final label = '${date.day}/${date.month}';
 
-    final double stepX = chartWidth / (points.length - 1);
-    for (int i = 0; i < points.length; i++) {
-      final double x = paddingLeft + i * stepX;
-
-      final dayStr =
-          '${points[i].date.day.toString().padLeft(2, '0')}.${points[i].date.month.toString().padLeft(2, '0')}';
       textPainter.text = TextSpan(
-        text: dayStr,
-        style: AppTextStyles.caption.standardCopyWith(
-          color: AppColors.textMuted,
-          fontSize: AppTypography.micro,
-          fontWeight: FontWeight.w500,
+        text: label,
+        style: TextStyle(
+          color: AppColors.textMuted.withValues(alpha: 0.7),
+          fontSize: 9.sp,
+          fontWeight: FontWeight.bold,
         ),
       );
       textPainter.layout();
       textPainter.paint(
         canvas,
-        Offset(x - textPainter.width / 2, paddingTop + chartHeight + 6.h),
+        Offset(x - (textPainter.width / 2), size.height - paddingBottom + 6.h),
       );
     }
 
-    Path getPath(double Function(_ChartDataPoint) getValue) {
-      final path = Path();
-      for (int i = 0; i < points.length; i++) {
-        final double x = paddingLeft + i * stepX;
-        final double val = getValue(points[i]);
-        final double y = paddingTop + chartHeight * (1 - (val / maxVal));
-        if (i == 0) {
-          path.moveTo(x, y);
-        } else {
-          path.lineTo(x, y);
-        }
-      }
-      return path;
-    }
+    final incomePath = Path();
+    final expensePath = Path();
 
-    void drawTrend(
-      double Function(_ChartDataPoint) getValue,
-      Color color,
-    ) {
-      final path = getPath(getValue);
+    final List<Offset> incomePoints = [];
+    final List<Offset> expensePoints = [];
 
-      final fillPath = Path.from(path);
-      fillPath.lineTo(paddingLeft + chartWidth, paddingTop + chartHeight);
-      fillPath.lineTo(paddingLeft, paddingTop + chartHeight);
-      fillPath.close();
+    for (int i = 0; i < count; i++) {
+      final double x = paddingLeft + (i * stepX);
+      final double yInc =
+          paddingTop + chartHeight * (1 - (points[i].income / maxVal));
+      final double yExp =
+          paddingTop + chartHeight * (1 - (points[i].expense / maxVal));
 
-      final fillPaint =
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [color.withValues(alpha: 0.18), color.withValues(alpha: 0.01)],
-            ).createShader(
-              Rect.fromLTRB(
-                paddingLeft,
-                paddingTop,
-                paddingLeft + chartWidth,
-                paddingTop + chartHeight,
-              ),
-            )
-            ..style = PaintingStyle.fill;
-      canvas.drawPath(fillPath, fillPaint);
+      incomePoints.add(Offset(x, yInc));
+      expensePoints.add(Offset(x, yExp));
 
-      final linePaint =
-          Paint()
-            ..color = color
-            ..strokeWidth = 2.5
-            ..style = PaintingStyle.stroke
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round;
-      canvas.drawPath(path, linePaint);
-
-      final dotPaint = Paint()..color = color;
-      final dotBgPaint = Paint()..color = AppColors.cardBg;
-      for (int i = 0; i < points.length; i++) {
-        final double x = paddingLeft + i * stepX;
-        final double val = getValue(points[i]);
-        final double y = paddingTop + chartHeight * (1 - (val / maxVal));
-
-        if (val > 0) {
-          canvas.drawCircle(Offset(x, y), 4.r, dotPaint);
-          canvas.drawCircle(Offset(x, y), 2.r, dotBgPaint);
-        }
+      if (i == 0) {
+        incomePath.moveTo(x, yInc);
+        expensePath.moveTo(x, yExp);
+      } else {
+        incomePath.lineTo(x, yInc);
+        expensePath.lineTo(x, yExp);
       }
     }
 
-    drawTrend((p) => p.income, AppColors.green);
-    drawTrend((p) => p.expense, AppColors.red);
+    final incomePaint =
+        Paint()
+          ..color = AppColors.green
+          ..strokeWidth = 2.5
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+
+    final expensePaint =
+        Paint()
+          ..color = AppColors.red
+          ..strokeWidth = 2.5
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+
+    canvas.drawPath(incomePath, incomePaint);
+    canvas.drawPath(expensePath, expensePaint);
+
+    final dotPaint = Paint()..style = PaintingStyle.fill;
+    final dotBorderPaint =
+        Paint()
+          ..color = AppColors.cardBg
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke;
+
+    for (final p in incomePoints) {
+      dotPaint.color = AppColors.green;
+      canvas.drawCircle(p, 4.w, dotPaint);
+      canvas.drawCircle(p, 4.w, dotBorderPaint);
+    }
+
+    for (final p in expensePoints) {
+      dotPaint.color = AppColors.red;
+      canvas.drawCircle(p, 4.w, dotPaint);
+      canvas.drawCircle(p, 4.w, dotBorderPaint);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _ChartPainter oldDelegate) {
-    return oldDelegate.points != points;
+  bool shouldRepaint(covariant _ChartPainter oldDelegate) => true;
+
+  String _formatCompactNumber(double val) {
+    if (val >= 1000000) return '${(val / 1000000).toStringAsFixed(1)}M';
+    if (val >= 1000) return '${(val / 1000).toStringAsFixed(0)}K';
+    return val.toStringAsFixed(0);
   }
 }
 
@@ -489,28 +680,34 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, double> incomeMap = {};
-    double totalIncome = 0;
+    final Map<String, double> categoryIncome = {};
+    final Map<String, double> categoryExpense = {};
 
-    final Map<String, double> expenseMap = {};
+    double totalIncome = 0;
     double totalExpense = 0;
 
     for (final entry in entries) {
-      final category = entry.category ?? 'Diğer';
+      final rawCat =
+          (entry.category ?? entry.referenceType ?? 'Diger').trim().isEmpty
+              ? 'Diger'
+              : (entry.category ?? entry.referenceType ?? 'Diger');
+      final label = _formatLabel(rawCat);
+
       if (entry.isIncome) {
-        incomeMap[category] = (incomeMap[category] ?? 0) + entry.amount;
+        categoryIncome[label] = (categoryIncome[label] ?? 0) + entry.amount;
         totalIncome += entry.amount;
       } else {
-        expenseMap[category] = (expenseMap[category] ?? 0) + entry.amount.abs();
-        totalExpense += entry.amount.abs();
+        final exp = entry.amount.abs();
+        categoryExpense[label] = (categoryExpense[label] ?? 0) + exp;
+        totalExpense += exp;
       }
     }
 
-    final sortedIncomes =
-        incomeMap.entries.toList()
+    final sortedExpense =
+        categoryExpense.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
-    final sortedExpenses =
-        expenseMap.entries.toList()
+    final sortedIncome =
+        categoryIncome.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
 
     return Container(
@@ -520,7 +717,7 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Kategori Dağılım Analizi',
+            'Harcama ve Gelir Dağılımı',
             style: AppTextStyles.title.standardCopyWith(
               color: AppColors.textPrimary,
               fontSize: AppTypography.title,
@@ -528,151 +725,137 @@ class _CashFlowCategoryBreakdown extends StatelessWidget {
             ),
           ),
           SizedBox(height: 16.h),
-
-          Text(
-            'Gelir Kaynakları',
-            style: AppTextStyles.body.standardCopyWith(
-              color: AppColors.green,
-              fontSize: AppTypography.body,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          if (sortedIncomes.isEmpty)
+          if (sortedExpense.isNotEmpty) ...[
             Text(
-              'Gelir kaydı bulunmuyor.',
+              'En Çok Harcanan Kalemler',
               style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodySmall,
-              ),
-            )
-          else
-            ...sortedIncomes.map(
-              (e) => _buildBreakdownRow(
-                label: e.key,
-                amount: e.value,
-                total: totalIncome,
-                color: AppColors.green,
-              ),
-            ),
-
-          SizedBox(height: 20.h),
-
-          Text(
-            'Gider Kalemleri',
-            style: AppTextStyles.body.standardCopyWith(
-              color: AppColors.red,
-              fontSize: AppTypography.body,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          if (sortedExpenses.isEmpty)
-            Text(
-              'Gider kaydı bulunmuyor.',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodySmall,
-              ),
-            )
-          else
-            ...sortedExpenses.map(
-              (e) => _buildBreakdownRow(
-                label: e.key,
-                amount: e.value,
-                total: totalExpense,
                 color: AppColors.red,
+                fontSize: AppTypography.bodySmall,
+                fontWeight: FontWeight.bold,
               ),
             ),
+            SizedBox(height: 8.h),
+            ...sortedExpense
+                .take(4)
+                .map(
+                  (e) => _buildCategoryBar(
+                    label: e.key,
+                    amount: e.value,
+                    total: totalExpense,
+                    color: AppColors.red,
+                  ),
+                ),
+            SizedBox(height: 16.h),
+          ],
+          if (sortedIncome.isNotEmpty) ...[
+            Text(
+              'En Yüksek Gelir Kaynakları',
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.green,
+                fontSize: AppTypography.bodySmall,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            ...sortedIncome
+                .take(4)
+                .map(
+                  (e) => _buildCategoryBar(
+                    label: e.key,
+                    amount: e.value,
+                    total: totalIncome,
+                    color: AppColors.green,
+                  ),
+                ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildBreakdownRow({
+  Widget _buildCategoryBar({
     required String label,
     required double amount,
     required double total,
     required Color color,
   }) {
-    final percent = total > 0 ? (amount / total) : 0.0;
+    final double ratio = total > 0 ? (amount / total).clamp(0.0, 1.0) : 0.0;
+    final int percent = (ratio * 100).round();
+
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 6.h),
+      padding: EdgeInsets.symmetric(vertical: 5.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _formatLabel(label),
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textPrimary.withValues(alpha: 0.9),
-                  fontSize: AppTypography.bodySmall,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: AppTypography.label,
+                  ),
                 ),
               ),
-              Text(
-                '${AppMoney.compact(amount)} (%${(percent * 100).toStringAsFixed(1)})',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: color,
-                  fontSize: AppTypography.bodySmall,
-                  fontWeight: FontWeight.bold,
+              Row(
+                children: [
+                  Text(
+                    '₺${_formatMoney(amount)}',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.label,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(width: 6.w),
+                  Text(
+                    '%$percent',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: color,
+                      fontSize: AppTypography.label,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(height: 4.h),
+          Stack(
+            children: [
+              Container(
+                height: 5.h,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppFx.softOverlay(0.06),
+                  borderRadius: BorderRadius.circular(4.r),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: ratio,
+                child: Container(
+                  height: 5.h,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(4.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 5.h),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4.r),
-            child: SizedBox(
-              height: 6.h,
-              child: AppProgressBar(
-                value: percent,
-                backgroundColor: color.withValues(alpha: 0.08),
-                valueColor: AlwaysStoppedAnimation<Color>(color),
-              ),
-            ),
-          ),
         ],
       ),
-    );
-  }
-}
-
-class _CashFlowList extends StatelessWidget {
-  const _CashFlowList({required this.entries});
-
-  final List<CashMovementEntryModel> entries;
-
-  @override
-  Widget build(BuildContext context) {
-    final income = entries
-        .where((entry) => entry.isIncome)
-        .fold<double>(0, (sum, entry) => sum + entry.amount);
-    final expense = entries
-        .where((entry) => !entry.isIncome)
-        .fold<double>(0, (sum, entry) => sum + entry.amount.abs());
-    final net = income - expense;
-
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(14.w, 14.h, 14.w, 28.h),
-      itemCount: entries.length + 1,
-      separatorBuilder: (_, _) => SizedBox(height: 10.h),
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _CashFlowSummaryCard(
-            totalCount: entries.length,
-            income: income,
-            expense: expense,
-            net: net,
-          );
-        }
-
-        final entry = entries[index - 1];
-        return _CashFlowEntryCard(entry: entry);
-      },
     );
   }
 }
@@ -804,9 +987,10 @@ class _MetricCard extends StatelessWidget {
 }
 
 class _CashFlowEntryCard extends StatelessWidget {
-  const _CashFlowEntryCard({required this.entry});
+  const _CashFlowEntryCard({required this.entry, this.onTap});
 
   final CashMovementEntryModel entry;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -815,97 +999,293 @@ class _CashFlowEntryCard extends StatelessWidget {
         entry.isIncome ? AppIcons.arrowDownwardRounded : AppIcons.arrowUpwardRounded;
     final amountPrefix = entry.isIncome ? '+' : '-';
 
-    return Container(
-      padding: EdgeInsets.all(14.w),
-      decoration: AppDecorations.premiumCard(accentColor, 18.r),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42.w,
-                height: 42.w,
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12.r),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(14.w),
+        decoration: AppDecorations.premiumCard(accentColor.withValues(alpha: 0.3), 16.r),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 40.w,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Icon(icon, color: accentColor, size: AppIconSizes.medium),
                 ),
-                child: Icon(icon, color: accentColor, size: AppIconSizes.medium),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.title,
+                        style: AppTextStyles.title.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: AppTypography.title,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 3.h),
+                      Text(
+                        _formatDateTime(entry.createdAt),
+                        style: AppTextStyles.body.standardCopyWith(
+                          color: AppColors.textMuted,
+                          fontSize: AppTypography.label,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      entry.title,
-                      style: AppTextStyles.title.standardCopyWith(
-                        color: AppColors.textPrimary,
+                      '$amountPrefix₺${_formatMoney(entry.amount.abs())}',
+                      style: AppTextStyles.body.standardCopyWith(
+                        color: accentColor,
                         fontSize: AppTypography.title,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      _formatDateTime(entry.createdAt),
-                      style: AppTextStyles.body.standardCopyWith(
-                        color: AppColors.textMuted,
-                        fontSize: AppTypography.label,
-                      ),
+                    SizedBox(height: 2.h),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Detay',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: 10.sp,
+                          ),
+                        ),
+                        Icon(AppIcons.chevronRight, size: 12.sp, color: AppColors.textMuted),
+                      ],
                     ),
                   ],
                 ),
-              ),
+              ],
+            ),
+            if ((entry.description ?? '').trim().isNotEmpty) ...[
+              SizedBox(height: 8.h),
               Text(
-                '$amountPrefix${_formatMoney(entry.amount.abs())}',
+                entry.description!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.body.standardCopyWith(
-                  color: accentColor,
-                  fontSize: AppTypography.title,
-                  fontWeight: FontWeight.w900,
+                  color: AppColors.textSecondary,
+                  fontSize: AppTypography.bodySmall,
+                  height: 1.3,
                 ),
               ),
             ],
-          ),
-          if ((entry.description ?? '').trim().isNotEmpty) ...[
-            SizedBox(height: 10.h),
-            Text(
-              entry.description!,
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textSecondary,
-                fontSize: AppTypography.bodySmall,
-                height: 1.35,
-              ),
+            SizedBox(height: 8.h),
+            Wrap(
+              spacing: 6.w,
+              runSpacing: 6.h,
+              children: [
+                if ((entry.category ?? '').trim().isNotEmpty)
+                  _InfoChip(
+                    label: 'Kategori',
+                    value: _formatLabel(entry.category!),
+                    color: AppColors.gold,
+                  ),
+                if (entry.balanceAfter != null)
+                  _InfoChip(
+                    label: 'Bakiye',
+                    value: '₺${_formatMoney(entry.balanceAfter!)}',
+                    color: AppColors.blue,
+                  ),
+                if ((entry.referenceType ?? '').trim().isNotEmpty)
+                  _InfoChip(
+                    label: 'Kaynak',
+                    value: _formatLabel(entry.referenceType!),
+                    color: AppColors.textPrimary,
+                  ),
+              ],
             ),
           ],
-          SizedBox(height: 10.h),
-          Wrap(
-            spacing: 8.w,
-            runSpacing: 8.h,
-            children: [
-              if ((entry.category ?? '').trim().isNotEmpty)
-                _InfoChip(
-                  label: 'Kategori',
-                  value: _formatLabel(entry.category!),
-                  color: AppColors.gold,
-                ),
-              if (entry.balanceAfter != null)
-                _InfoChip(
-                  label: 'Bakiye',
-                  value: _formatMoney(entry.balanceAfter!),
-                  color: AppColors.blue,
-                ),
-              if ((entry.referenceType ?? '').trim().isNotEmpty)
-                _InfoChip(
-                  label: 'Kaynak',
-                  value: _formatLabel(entry.referenceType!),
-                  color: AppColors.textPrimary,
-                ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
+}
+
+void _showTransactionReceiptSheet(BuildContext context, CashMovementEntryModel entry) {
+  final accentColor = entry.isIncome ? AppColors.green : AppColors.red;
+  final icon = entry.isIncome ? AppIcons.arrowDownwardRounded : AppIcons.arrowUpwardRounded;
+  final prefix = entry.isIncome ? '+' : '-';
+
+  final double? beforeBal = entry.raw['balance_before'] != null
+      ? (entry.raw['balance_before'] as num).toDouble()
+      : (entry.balanceAfter != null ? entry.balanceAfter! - entry.amount : null);
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.transparent,
+    builder: (ctx) {
+      return Container(
+        margin: EdgeInsets.only(top: 60.h),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          border: Border.all(color: AppFx.softOverlay(0.1)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(18.w, 16.h, 18.w, 20.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Tutamaç
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.textMuted.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(999.r),
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                // İkon & Başlık
+                Container(
+                  width: 56.w,
+                  height: 56.w,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+                  ),
+                  child: Icon(icon, color: accentColor, size: AppIconSizes.large),
+                ),
+                SizedBox(height: 10.h),
+                Text(
+                  entry.title,
+                  style: AppTextStyles.title.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.titleLarge,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  '$prefix₺${_formatMoney(entry.amount.abs())}',
+                  style: AppTextStyles.h1.standardCopyWith(
+                    color: accentColor,
+                    fontSize: 26.sp,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Divider(color: AppFx.softOverlay(0.08), height: 1),
+                SizedBox(height: 14.h),
+                // Dekont Detay Listesi
+                _buildReceiptRow('İşlem Tarihi', _formatDateTime(entry.createdAt)),
+                _buildReceiptRow('Kategori', _formatLabel(entry.category ?? '-')),
+                if (entry.referenceType != null && entry.referenceType!.isNotEmpty)
+                  _buildReceiptRow('İşlem Kaynağı', _formatLabel(entry.referenceType!)),
+                if (beforeBal != null)
+                  _buildReceiptRow('Önceki Bakiye', '₺${_formatMoney(beforeBal)}'),
+                if (entry.balanceAfter != null)
+                  _buildReceiptRow('Sonraki Bakiye', '₺${_formatMoney(entry.balanceAfter!)}'),
+                if ((entry.description ?? '').trim().isNotEmpty)
+                  _buildReceiptRow('Açıklama / Not', entry.description!),
+                if (entry.id.isNotEmpty)
+                  _buildReceiptRow(
+                    'İşlem No',
+                    entry.id,
+                    isCopyable: true,
+                    context: ctx,
+                  ),
+                SizedBox(height: 20.h),
+                // Kapat Butonu
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.gold,
+                      foregroundColor: AppColors.black,
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.r)),
+                    ),
+                    child: Text(
+                      'Tamam',
+                      style: AppTextStyles.button.standardCopyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: AppTypography.body,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildReceiptRow(String label, String value, {bool isCopyable = false, BuildContext? context}) {
+  return Padding(
+    padding: EdgeInsets.symmetric(vertical: 5.h),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.bodySmall,
+          ),
+        ),
+        SizedBox(width: 12.w),
+        Flexible(
+          child: GestureDetector(
+            onTap: isCopyable && context != null
+                ? () {
+                    Clipboard.setData(ClipboardData(text: value));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('İşlem No kopyalandı: $value'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                : null,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.end,
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: isCopyable ? AppColors.gold : AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: AppTypography.bodySmall,
+                    ),
+                  ),
+                ),
+                if (isCopyable) ...[
+                  SizedBox(width: 4.w),
+                  Icon(Icons.content_copy_rounded, size: 14.sp, color: AppColors.gold),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _InfoChip extends StatelessWidget {
@@ -922,17 +1302,17 @@ class _InfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(999.r),
+        borderRadius: BorderRadius.circular(8.r),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Text(
         '$label: $value',
         style: AppTextStyles.caption.standardCopyWith(
           color: color,
-          fontSize: AppTypography.label,
+          fontSize: 10.sp,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -1051,46 +1431,62 @@ String _formatDateTime(DateTime value) {
 
 String _formatLabel(String value) {
   final cleanValue = value.trim().toLowerCase();
-  
+
   const Map<String, String> translations = {
     // Categories
     'achievement_reward': 'Başarım Ödülü',
     'mission_reward': 'Görev Ödülü',
+    'daily_streak_reward': 'Günlük Giriş Ödülü',
     'store_sale': 'Mağaza Satışı',
+    'store_sales': 'Mağaza Satışları',
+    'store_purchase': 'Mağaza Alımı',
+    'sales': 'Satış Geliri',
     'market_purchase': 'Pazar Alımı',
+    'market_sale': 'Pazar Satışı',
     'building_construction': 'Bina İnşaatı',
+    'building_sale': 'Tesis Satış İadesi',
+    'factory_sale': 'Fabrika Satışı',
+    'farm_sale': 'Tarla Satışı',
+    'field_sale': 'Çiftlik Satışı',
+    'mine_sale': 'Maden Satışı',
+    'warehouse_sale': 'Depo Satışı',
+    'factory_construction': 'Fabrika İnşaatı',
+    'farm_construction': 'Tarla İnşaatı',
+    'field_construction': 'Çiftlik İnşaatı',
+    'mine_construction': 'Maden İnşaatı',
+    'store_construction': 'Mağaza İnşaatı',
+    'warehouse_construction': 'Depo İnşaatı',
     'arge_research': 'Ar-Ge Araştırması',
-    'loan_payout': 'Kredi Ödemesi',
+    'arge_construction': 'Ar-Ge Merkezi Kurulumu',
+    'loan_payout': 'Kredi Çekimi',
     'loan_payment': 'Kredi Taksit Ödemesi',
     'loan_payment_auto': 'Otomatik Taksit Tahsilatı',
     'deposit_placed': 'Vadeli Mevduat Açılışı',
     'deposit_claimed': 'Mevduat Tahsilatı',
     'deposit_early_withdrawal': 'Mevduat Erken Kapatma',
     'building_upgrade': 'Bina Yükseltme',
+    'warehouse_expansion': 'Depo Genişletme',
+    'warehouse_upgrade': 'Depo Yükseltme',
     'tax_payment': 'Vergi Ödemesi',
     'tax_debt_payment': 'Vergi Borcu Ödemesi',
     'sales_tax': 'Satış Vergisi',
-    'store_sales': 'Mağaza Satışları',
-    'sales': 'Satış Geliri',
     'vehicle_purchase': 'Araç Satın Alımı',
-    'warehouse_expansion': 'Depo Genişletme',
-    'warehouse_upgrade': 'Depo Yükseltme',
+    'vehicle_repair': 'Araç Bakım/Onarım',
+    'vehicle_rental_income': 'Araç Kiralama Geliri',
     'license_purchase': 'Lisans Satın Alımı',
     'reward': 'Ödül',
     'tender_bid': 'İhale Teklifi',
     'tender_award': 'İhale Kazanımı',
     'transfer_cost': 'Nakliye / Sevk Maliyeti',
     'tender_reward_paid': 'İhale Hakediş Ödemesi',
-    'arge_construction': 'Ar-Ge Merkezi Kurulumu',
-    'market_sale': 'Pazar Satışı',
-    'vehicle_repair': 'Araç Bakım/Onarım',
-    'vehicle_rental_income': 'Araç Kiralama Geliri',
     'tender_bond_paid': 'İhale Teminat Ödemesi',
+    'tender_bond_refunded': 'İhale Teminat İadesi',
     'tender_bid_bond_paid': 'İhale Teklif Teminatı',
+    'tender_bid_bond_refunded': 'İhale Teklif Teminat İadesi',
     'tender_delivery_transport_paid': 'İhale Sevkiyat Maliyeti',
     'logistics_construction': 'Lojistik Tesisi Kurulumu',
     'marketing_campaign': 'Pazarlama Kampanyası',
-    'tender_bond_refunded': 'İhale Teminat İadesi',
+    'brand_registration': 'Marka Tescil Harcı',
 
     // Reference Kinds / Reference Types
     'store': 'Mağaza',
@@ -1099,8 +1495,8 @@ String _formatLabel(String value) {
     'logistics_transfer': 'Lojistik Transfer',
     'warehouse': 'Depo',
     'factory': 'Fabrika',
-    'farm': 'Çiftlik',
-    'field': 'Tarla',
+    'farm': 'Tarla',
+    'field': 'Çiftlik',
     'mine': 'Maden',
     'loan': 'Banka Kredisi',
     'deposit': 'Vadeli Mevduat',
@@ -1114,6 +1510,7 @@ String _formatLabel(String value) {
     'player_tender': 'Kamu İhalesi',
     'logistics_company': 'Lojistik Şirketi',
     'vehicle': 'Araç',
+    'brand': 'Marka Şirketi',
   };
 
   if (translations.containsKey(cleanValue)) {
