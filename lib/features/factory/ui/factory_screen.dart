@@ -26,7 +26,6 @@ class FactoryScreen extends ConsumerStatefulWidget {
 class _FactoryScreenState extends ConsumerState<FactoryScreen>
     with RouteRefreshMixin<FactoryScreen> {
   final int _selectedIndex = -1;
-  String _selectedFilter = 'Tumu';
 
   @override
   void initState() {
@@ -80,7 +79,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: result['message'] ?? 'Fabrika insaati tamamlanamadi.',
+        message: result['message'] ?? 'Fabrika inşaatı tamamlanamadı.',
         type: SnackbarType.error,
       );
       return;
@@ -101,8 +100,8 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Tamamlandi',
-        message: 'Insaat aninda tamamlandi.',
+        title: 'Tamamlandı',
+        message: 'İnşaat anında tamamlandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -112,7 +111,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Yildiz ile bitirme basarisiz oldu.',
+      message: result['message'] ?? 'Yıldız ile bitirme başarısız oldu.',
       type: SnackbarType.error,
     );
   }
@@ -125,8 +124,14 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
       onApplyReduction: () => ref
           .read(factoryActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
-      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+      successMessage: 'İnşaat süresi 10 dakika kısaltıldı.',
     );
+  }
+
+  int _calculateStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
   }
 
   @override
@@ -143,7 +148,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
         extendedPadding: EdgeInsets.symmetric(horizontal: 14.w),
         icon: Icon(AppIcons.add, size: AppIconSizes.compact),
         label: Text(
-          'YENI FABRIKA',
+          'YENİ FABRİKA',
           style: AppTextStyles.button.standardCopyWith(
             fontWeight: FontWeight.bold,
             fontSize: AppTypography.bodySmall,
@@ -157,12 +162,11 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Fabrikalarim'),
+            const SecondaryTopBar(title: 'Fabrikalarım'),
             Expanded(
               child: factoriesAsync.when(
                 data: (factories) => constructionAsync.when(
                   data: (construction) {
-                    final filteredFactories = _getFilteredFactories(factories);
                     return RefreshIndicator(
                       onRefresh: _refreshAll,
                       child: CustomScrollView(
@@ -173,10 +177,6 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                             sliver: SliverToBoxAdapter(
                               child: _buildStatsHeader(factories),
                             ),
-                          ),
-                          SliverPadding(
-                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
-                            sliver: SliverToBoxAdapter(child: _buildFilters()),
                           ),
                           if (construction != null)
                             SliverPadding(
@@ -192,17 +192,17 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                               10.w,
                               80.h,
                             ),
-                            sliver: filteredFactories.isEmpty
+                            sliver: factories.isEmpty
                                 ? SliverToBoxAdapter(
                                     child: construction == null
                                         ? _buildEmptyState()
                                         : const SizedBox.shrink(),
                                   )
                                 : SliverList.builder(
-                                    itemCount: filteredFactories.length,
+                                    itemCount: factories.length,
                                     itemBuilder: (context, index) {
                                       return _buildAdvancedFactoryCard(
-                                        filteredFactories[index],
+                                        factories[index],
                                       );
                                     },
                                   ),
@@ -248,7 +248,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
       children: [
         ConstructionCountdownCard(
           title: name?.isNotEmpty == true ? name! : 'Yeni Fabrika',
-          subtitle: 'Fabrika insaati devam ediyor',
+          subtitle: 'Fabrika inşaatı devam ediyor',
           finishAt: finishAt.toLocal(),
           icon: AppIcons.factory,
           onFinished: () => _completeConstruction(constructionId),
@@ -265,22 +265,6 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           ),
       ],
     );
-  }
-
-  int _calculateStarCost(DateTime finishAt) {
-    final remaining = finishAt.difference(DateTime.now());
-    if (remaining.inSeconds <= 0) return 0;
-    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
-  }
-
-  List<FactoryListItemModel> _getFilteredFactories(
-    List<FactoryListItemModel> factories,
-  ) {
-    return factories.where((item) {
-      if (_selectedFilter == 'Aktif') return item.factory.isActive;
-      if (_selectedFilter == 'Pasif') return !item.factory.isActive;
-      return true;
-    }).toList();
   }
 
   Widget _buildStatsHeader(List<FactoryListItemModel> factories) {
@@ -383,89 +367,6 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     );
   }
 
-  Widget _buildFilters() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildFilterChip('Tumu', null),
-          SizedBox(width: 8.w),
-          _buildFilterChip('Aktif', AppColors.green),
-          SizedBox(width: 8.w),
-          _buildFilterChip('Pasif', AppColors.red),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, Color? dotColor) {
-    final isSelected = _selectedFilter == label;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFilter = label;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.gold.withValues(alpha: 0.15)
-              : AppColors.cardBg.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.gold
-                : AppColors.border.withValues(alpha: 0.5),
-            width: isSelected ? 1.5 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.gold.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            if (dotColor != null) ...[
-              Container(
-                width: 6.w,
-                height: 6.w,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: dotColor.withValues(alpha: 0.6),
-                      blurRadius: 4,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 8.w),
-            ],
-            Text(
-              label,
-              style: AppTextStyles.body.standardCopyWith(
-                color: isSelected
-                    ? AppColors.goldLight
-                    : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: AppTypography.body,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -478,7 +379,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           ),
           SizedBox(height: 16.h),
           Text(
-            'Henuz bir fabrikan yok.',
+            'Henüz bir fabrikan yok.',
             style: AppTextStyles.h2.standardCopyWith(
               color: AppColors.textMuted,
             ),
@@ -491,7 +392,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
               side: BorderSide(color: AppColors.gold),
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
             ),
-            child: Text('ILK FABRIKANI KUR', style: AppTextStyles.titleGold),
+            child: Text('İLK FABRİKANI KUR', style: AppTextStyles.titleGold),
           ),
         ],
       ),
@@ -721,7 +622,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   Widget _buildOutputSection(FactoryListItemModel item) {
     final ratio = item.outputStockRatio;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: AppFx.panelWash(0.15),
         borderRadius: BorderRadius.circular(12.r),
@@ -733,33 +634,26 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Icon(
-                      AppIcons.inventory2,
+              Row(
+                children: [
+                  Icon(
+                    AppIcons.inventory2,
+                    color: AppColors.textSecondary,
+                    size: AppIconSizes.small,
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Ürün Stoğu',
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textSecondary,
-                      size: AppIconSizes.small,
+                      fontSize: AppTypography.label,
+                      fontWeight: FontWeight.w500,
                     ),
-                    SizedBox(width: 5.w),
-                    Expanded(
-                      child: Text(
-                        'Urun Deposu',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.caption.standardCopyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: AppTypography.label,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              SizedBox(width: 4.w),
               Text(
-                '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.factory.outputCapacity)} adet',
+                '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.factory.outputCapacity)}',
                 style: AppTextStyles.caption.standardCopyWith(
                   color: ratio >= 0.6
                       ? AppColors.green
@@ -780,7 +674,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   Widget _buildInputSection(FactoryListItemModel item) {
     final ratio = item.inputStockRatio;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: AppFx.panelWash(0.15),
         borderRadius: BorderRadius.circular(12.r),
@@ -792,33 +686,26 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Icon(
-                      AppIcons.scienceOutlined,
+              Row(
+                children: [
+                  Icon(
+                    AppIcons.scienceOutlined,
+                    color: AppColors.textSecondary,
+                    size: AppIconSizes.small,
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Hammadde',
+                    style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textSecondary,
-                      size: AppIconSizes.small,
+                      fontSize: AppTypography.label,
+                      fontWeight: FontWeight.w500,
                     ),
-                    SizedBox(width: 5.w),
-                    Expanded(
-                      child: Text(
-                        'Hammadde Deposu',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.caption.standardCopyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: AppTypography.label,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              SizedBox(width: 4.w),
               Text(
-                '${_formatCompact(item.inputStockQuantity)} adet / ${_formatCompact(item.factory.inputCapacity)} adet',
+                '${_formatCompact(item.inputStockQuantity)} / ${_formatCompact(item.factory.inputCapacity)}',
                 style: AppTextStyles.caption.standardCopyWith(
                   color: ratio >= 0.6
                       ? AppColors.green
@@ -885,45 +772,78 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  hasProduct ? 'Uretilen urun' : 'Urun ayari gerekli',
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: hasProduct
-                        ? AppColors.textSecondary
-                        : AppColors.gold.withValues(alpha: 0.8),
-                    fontSize: AppTypography.label,
-                    fontWeight: FontWeight.w600,
+                if (!hasProduct) ...[
+                  Text(
+                    'Ürün ayarı gerekli',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.gold.withValues(alpha: 0.8),
+                      fontSize: AppTypography.label,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  hasProduct ? product!.urunAdi : 'Urun secilmedi',
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: hasProduct
-                        ? AppColors.textPrimary
-                        : AppColors.textMuted,
-                    fontSize: AppTypography.body,
-                    fontWeight: FontWeight.bold,
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Ürün seçilmedi',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontSize: AppTypography.body,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  hasProduct
-                      ? 'Kalite ${factory.qualityLevel} | Saatlik ${(product!.uretimAdedi * (1.0 + (factory.qualityLevel - 1) * 0.20)).toInt()} | Hammadde ${_formatCompact(item.inputStockQuantity)}'
-                      : 'Detay ekranindan urun secerek uretimi baslat.',
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.label,
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Detay ekranından ürün seçerek üretimi başlat.',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textMuted,
+                      fontSize: AppTypography.label,
+                    ),
                   ),
-                ),
+                ] else ...[
+                  Text(
+                    product!.urunAdi,
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.bodyLarge,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        index < factory.qualityLevel
+                            ? AppIcons.star
+                            : AppIcons.starBorder,
+                        color: index < factory.qualityLevel
+                            ? AppColors.gold
+                            : AppColors.textMuted,
+                        size: AppIconSizes.xxSmall,
+                      );
+                    }),
+                  ),
+                ],
               ],
             ),
           ),
-          if (factory.boostMultiplier > 1.0)
-            _buildSmallBadge(
-              'Boost x${factory.boostMultiplier.toStringAsFixed(1)}',
-              AppColors.gold,
-            ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (hasProduct)
+                _buildSmallBadge(
+                  'Saatlik ${(product!.uretimAdedi * (1.0 + (factory.qualityLevel - 1) * 0.20)).toInt()}',
+                  AppColors.blue,
+                ),
+              if (factory.boostMultiplier > 1.0) ...[
+                if (hasProduct) SizedBox(height: 4.h),
+                _buildSmallBadge(
+                  'Boost x${factory.boostMultiplier.toStringAsFixed(1)}',
+                  AppColors.gold,
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );

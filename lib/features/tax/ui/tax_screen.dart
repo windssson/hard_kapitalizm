@@ -64,7 +64,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
           );
 
     if (amount <= 0) {
-      AppSnackbar.show(context, message: 'Lutfen gecerli bir tutar girin.', type: SnackbarType.error);
+      AppSnackbar.show(context, message: 'Lütfen geçerli bir tutar girin.', type: SnackbarType.error);
       return;
     }
 
@@ -96,7 +96,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
           amount: actualPaid,
           type: FloatingFeedbackType.cashRemove,
         );
-        AppSnackbar.show(context, message: result['message'] ?? 'Odeme basarili.', type: SnackbarType.success);
+        AppSnackbar.show(context, message: result['message'] ?? 'Ödeme başarılı.', type: SnackbarType.success);
         _customAmountController.clear();
       } else {
         AppSnackbar.show(context, message: result['message'] ?? 'Odeme sirasinda hata olustu.', type: SnackbarType.error);
@@ -131,7 +131,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                     child: Padding(
                       padding: EdgeInsets.all(24.w),
                       child: Text(
-                        'Vergi borcu bilgisi alinamadi.\n$err',
+                        'Vergi borcu bilgisi alınamadı.\n$err',
                         textAlign: TextAlign.center,
                         style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                       ),
@@ -145,7 +145,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                       child: Padding(
                         padding: EdgeInsets.all(24.w),
                         child: Text(
-                          'Vergi borcu bilgisi alinamadi.\n$err',
+                          'Vergi borcu bilgisi alınamadı.\n$err',
                           textAlign: TextAlign.center,
                           style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
                         ),
@@ -205,7 +205,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
           ),
           SizedBox(height: 14.h),
           Text(
-            'BIRIKMIS VERGI BORCU',
+            'BİRİKMİŞ VERGİ BORCU',
             style: AppTextStyles.caption.standardCopyWith(
               color: AppColors.textMuted,
               fontSize: AppTypography.label,
@@ -236,7 +236,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
               ),
             ),
             child: Text(
-              hasDebt ? 'VERGI BORCUNUZ BULUNMAKTADIR' : 'VERGI BORCUNUZ TEMIZ',
+              hasDebt ? 'VERGİ BORCUNUZ BULUNMAKTADIR' : 'VERGİ BORCUNUZ TEMİZ',
               style: AppTextStyles.caption.standardCopyWith(
                 color: hasDebt ? AppColors.red : AppColors.green,
                 fontSize: AppTypography.caption,
@@ -272,7 +272,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
           ),
           SizedBox(height: 6.h),
           Text(
-            'Mevcut tum vergileriniz odenmis durumdadir. Devlete borcunuz bulunmuyor.',
+            'Mevcut tüm vergileriniz ödenmiş durumdadır. Devlete borcunuz bulunmuyor.',
             textAlign: TextAlign.center,
             style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textSecondary,
@@ -369,7 +369,7 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
                         if (val != null) {
                           _handlePayment(val, taxDebt);
                         } else {
-                          AppSnackbar.show(context, message: 'Lutfen gecerli bir sayi girin.', type: SnackbarType.error);
+                          AppSnackbar.show(context, message: 'Lütfen geçerli bir sayı girin.', type: SnackbarType.error);
                         }
                       },
                 style: ElevatedButton.styleFrom(

@@ -73,7 +73,7 @@ class TypeProductPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     if (products.isEmpty) {
       return Text(
-        'Bu tur icin urun listesi bulunamadi.',
+        'Bu tür için ürün listesi bulunamadı.',
         style: AppTextStyles.caption.standardCopyWith(
           color: AppColors.textMuted,
           fontSize: AppTypography.label,

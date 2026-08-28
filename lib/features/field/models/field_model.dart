@@ -36,11 +36,11 @@ class FieldModel {
       fieldTypeId: json['field_type_id'] as String,
       cityId: json['city_id'] as String,
       name: json['name'] as String,
-      level: json['level'] as int? ?? 1,
-      currentSlotCount: json['current_slot_count'] as int? ?? 0,
-      maxSlotCount: json['max_slot_count'] as int? ?? 0,
-      inputCapacity: json['input_capacity'] as int? ?? 0,
-      outputCapacity: json['output_capacity'] as int? ?? 0,
+      level: (json['level'] as num?)?.toInt() ?? 1,
+      currentSlotCount: (json['current_slot_count'] as num?)?.toInt() ?? 0,
+      maxSlotCount: (json['max_slot_count'] as num?)?.toInt() ?? 0,
+      inputCapacity: (json['input_capacity'] as num?)?.toInt() ?? 0,
+      outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -63,5 +63,37 @@ class FieldModel {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
+  }
+
+  FieldModel copyWith({
+    String? id,
+    String? playerId,
+    String? fieldTypeId,
+    String? cityId,
+    String? name,
+    int? level,
+    int? currentSlotCount,
+    int? maxSlotCount,
+    int? inputCapacity,
+    int? outputCapacity,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return FieldModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      fieldTypeId: fieldTypeId ?? this.fieldTypeId,
+      cityId: cityId ?? this.cityId,
+      name: name ?? this.name,
+      level: level ?? this.level,
+      currentSlotCount: currentSlotCount ?? this.currentSlotCount,
+      maxSlotCount: maxSlotCount ?? this.maxSlotCount,
+      inputCapacity: inputCapacity ?? this.inputCapacity,
+      outputCapacity: outputCapacity ?? this.outputCapacity,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 }

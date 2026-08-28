@@ -61,8 +61,8 @@ class _BrandProductDesignScreenState
     final success = result['success'] == true;
     AppSnackbar.show(
       context,
-      title: success ? 'Basarili' : 'Hata',
-      message: (result['message'] ?? 'Islem tamamlanamadi.').toString(),
+      title: success ? 'Başarılı' : 'Hata',
+      message: (result['message'] ?? 'İşlem tamamlanamadı.').toString(),
       type: success ? SnackbarType.success : SnackbarType.error,
     );
     if (success) {
@@ -80,7 +80,7 @@ class _BrandProductDesignScreenState
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Urun Tasarimi'),
+            const SecondaryTopBar(title: 'Ürün Tasarımı'),
             Expanded(
               child: companyAsync.when(
                 loading: () => Center(
@@ -89,7 +89,7 @@ class _BrandProductDesignScreenState
                 error: (error, _) => _buildErrorState(error.toString()),
                 data: (company) {
                   if (company == null) {
-                    return _buildErrorState('Aktif marka bulunamadi.');
+                    return _buildErrorState('Aktif marka bulunamadı.');
                   }
 
                   final brandColor = _parseHexColor(company.themeColor);
@@ -111,7 +111,7 @@ class _BrandProductDesignScreenState
 
                       if (product == null) {
                         return _buildErrorState(
-                          'Markali urun bulunamadi veya tasarim acik degil.',
+                          'Markalı ürün bulunamadı veya tasarım açık değil.',
                         );
                       }
 
@@ -163,7 +163,7 @@ class _BrandProductDesignScreenState
                                 ),
                                 SizedBox(height: 14.h),
                                 Text(
-                                  'Bu sayfa urune atanacak filigrani duzenlemek icin hazirlandi.',
+                                  'Bu sayfa ürüne atanacak filigranı düzenlemek için hazırlandı.',
                                   textAlign: TextAlign.center,
                                   style: AppTextStyles.body.standardCopyWith(
                                     color: AppColors.textSecondary,

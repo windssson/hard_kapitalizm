@@ -39,7 +39,7 @@ final mineListProvider =
       mine: MineModel.fromJson(
         Map<String, dynamic>.from(map['mine'] as Map),
       ),
-      cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+      cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
       mineTypeName: (map['mine_type_name'] ?? 'Bilinmeyen Maden').toString(),
       mineTypeIcon: (map['mine_type_icon'] ?? 'mine.webp').toString(),
       outputStockQuantity:
@@ -86,7 +86,7 @@ final mineDetailProvider = FutureProvider.family<MineDetailModel, String>((
   final user = supabase.auth.currentUser;
 
   if (user == null) {
-    throw Exception('Kullanici girisi yapilmamis.');
+    throw Exception('Kullanıcı girişi yapılmamış.');
   }
 
   await processProductionEntry(
@@ -108,7 +108,7 @@ final mineDetailProvider = FutureProvider.family<MineDetailModel, String>((
     mineType: MineTypeDetailModel.fromJson(
       Map<String, dynamic>.from(map['mine_type'] as Map),
     ),
-    cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+    cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
     product: map['product'] == null
         ? null
         : ProductModel.fromJson(

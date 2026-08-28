@@ -28,12 +28,12 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
           data: (page) {
             final warehouse = page.storeWarehouse;
             if (warehouse == null) {
-              return _buildErrorState('Bu magazaya bagli depo bulunamadi.');
+              return _buildErrorState('Bu mağazaya bağlı depo bulunamadı.');
             }
 
             return Column(
               children: [
-                const SecondaryTopBar(title: 'Magaza Deposu'),
+                const SecondaryTopBar(title: 'Mağaza Deposu'),
                 Expanded(
                   child: RefreshIndicator(
                     color: AppColors.gold,
@@ -86,7 +86,7 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
             child: AppLoadingIndicator(color: AppColors.gold),
           ),
           error: (error, _) => _buildErrorState(
-            'Magaza deposu yuklenemedi.\n$error',
+            'Mağaza deposu yüklenemedi.\n$error',
           ),
         ),
       ),
@@ -111,7 +111,7 @@ class StoreWarehouseDetailScreen extends ConsumerWidget {
           ),
           SizedBox(height: 10.h),
           Text(
-            'Magaza deposu bos.',
+            'Mağaza deposu boş.',
             style: AppTextStyles.title.standardCopyWith(
               color: AppColors.textPrimary,
               fontSize: AppTypography.title,
@@ -229,7 +229,7 @@ class _StoreWarehouseHeaderCard extends StatelessWidget {
               SizedBox(width: 10.w),
               Expanded(
                 child: _MetricCard(
-                  label: 'Urun Cesidi',
+                  label: 'Ürün Çeşidi',
                   value: slotCount.toString(),
                 ),
               ),

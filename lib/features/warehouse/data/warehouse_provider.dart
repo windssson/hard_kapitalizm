@@ -152,6 +152,46 @@ class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
     );
   }
 
+  void patchLevelAndCapacity({
+    required String warehouseId,
+    required int level,
+    required double capacity,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final index = current.indexWhere((item) => item.id == warehouseId);
+    if (index < 0) return;
+
+    final warehouse = current[index];
+    final next = [...current];
+    next[index] = warehouse.copyWith(level: level, capacity: capacity);
+    state = AsyncData(next);
+  }
+
+  void patchSlotQuantities({
+    required String warehouseId,
+    required Map<String, int> slotQuantities,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final index = current.indexWhere((item) => item.id == warehouseId);
+    if (index < 0) return;
+
+    final warehouse = current[index];
+    final updatedSlots = warehouse.slots.map((slot) {
+      if (slotQuantities.containsKey(slot.id)) {
+        return slot.copyWith(quantity: slotQuantities[slot.id]!);
+      }
+      return slot;
+    }).where((slot) => slot.quantity > 0).toList();
+
+    final next = [...current];
+    next[index] = warehouse.copyWith(slots: updatedSlots);
+    state = AsyncData(next);
+  }
+
   void _patchSlot({
     required String warehouseId,
     required String slotId,
@@ -195,6 +235,32 @@ class WarehouseDetailNotifier extends AsyncNotifier<WarehouseModel> {
 
   void replaceWarehouse(WarehouseModel warehouse) {
     state = AsyncData(warehouse);
+  }
+
+  void patchLevelAndCapacity({
+    required int level,
+    required double capacity,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    state = AsyncData(
+      current.copyWith(level: level, capacity: capacity),
+    );
+  }
+
+  void patchSlotQuantities(Map<String, int> slotQuantities) {
+    final current = state.value;
+    if (current == null) return;
+
+    final updatedSlots = current.slots.map((slot) {
+      if (slotQuantities.containsKey(slot.id)) {
+        return slot.copyWith(quantity: slotQuantities[slot.id]!);
+      }
+      return slot;
+    }).where((slot) => slot.quantity > 0).toList();
+
+    state = AsyncData(current.copyWith(slots: updatedSlots));
   }
 
   void patchSlotPrice({
@@ -290,7 +356,7 @@ final warehouseHistoryProvider =
       final user = supabase.auth.currentUser;
 
       if (user == null) {
-        throw Exception('Kullanici girisi yapilmamis.');
+        throw Exception('Kullanıcı girişi yapılmamış.');
       }
 
       final response = await supabase.rpc(
@@ -307,28 +373,55 @@ final warehouseHistoryProvider =
           .toList();
     });
 
-final activeWarehouseUpgradeProvider =
-    FutureProvider.autoDispose.family<BuildingUpgradeModel?, String>((ref, warehouseId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+class ActiveWarehouseUpgradeNotifier
+    extends AsyncNotifier<BuildingUpgradeModel?> {
+  ActiveWarehouseUpgradeNotifier(this._warehouseId);
 
-      if (user == null) {
-        return null;
-      }
+  final String _warehouseId;
 
-      final response = await supabase.rpc(
-        'get_player_active_warehouse_upgrade',
-        params: {'p_warehouse_id': warehouseId},
-      );
+  @override
+  Future<BuildingUpgradeModel?> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
 
-      if (response == null) {
-        return null;
-      }
+    if (user == null) {
+      return null;
+    }
 
-      return BuildingUpgradeModel.fromJsonNullable(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
+    final response = await supabase.rpc(
+      'get_player_active_warehouse_upgrade',
+      params: {'p_warehouse_id': _warehouseId},
+    );
+
+    if (response == null) {
+      return null;
+    }
+
+    return BuildingUpgradeModel.fromJsonNullable(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  void setUpgrade(BuildingUpgradeModel? upgrade) {
+    state = AsyncData(upgrade);
+  }
+
+  void reduceTime(Duration duration) {
+    final current = state.value;
+    if (current == null) return;
+    final reducedFinishAt = current.finishAt.subtract(duration);
+    state = AsyncData(current.copyWith(finishAt: reducedFinishAt));
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final activeWarehouseUpgradeProvider = AsyncNotifierProvider.autoDispose
+    .family<ActiveWarehouseUpgradeNotifier, BuildingUpgradeModel?, String>(
+      ActiveWarehouseUpgradeNotifier.new,
+    );
 
 final anyActiveWarehouseUpgradeProvider =
     FutureProvider.autoDispose<BuildingUpgradeModel?>((ref) async {
@@ -727,6 +820,26 @@ class WarehouseActionNotifier {
       final response = await _supabase.rpc(
         'finish_logistics_transfer_with_ad_reward',
         params: {'p_transfer_id': transferId},
+      );
+      return _sync(response);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> discardWarehouseSlot({
+    required String warehouseSlotId,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'discard_warehouse_slot',
+        params: {
+          'p_player_id': user.id,
+          'p_warehouse_slot_id': warehouseSlotId,
+        },
       );
       return _sync(response);
     } catch (e) {

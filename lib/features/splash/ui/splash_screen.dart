@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
+import 'package:hard_kapitalizm/core/managers/session_manager.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -86,6 +87,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       }
 
       if (!isSessionValid) {
+        SessionManager.invalidateAllGameProviders(ref);
         await Supabase.instance.client.auth.signOut();
         if (mounted) {
           context.go('/auth');
@@ -291,7 +293,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                       SizedBox(height: 12.h),
                       AppProgressBar(
                         value: progress,
-                        semanticsLabel: 'Varliklar yukleniyor',
+                        semanticsLabel: 'Varlıklar yükleniyor',
                       ),
                     ],
                   ],

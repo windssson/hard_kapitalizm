@@ -131,6 +131,11 @@ class FactoryDetailModel {
     required this.inventories,
   });
 
+  int get requiredInputQualityLevel {
+    final q = factory.qualityLevel;
+    return q <= 2 ? 1 : q - 1;
+  }
+
   Set<String> get _activeInputProductIds {
     final currentProduct = product;
     if (currentProduct == null) return const <String>{};
@@ -141,7 +146,10 @@ class FactoryDetailModel {
   List<FactoryProductionInventoryModel> get inputInventories =>
       inventories
           .where(
-            (e) => e.isInput && _activeInputProductIds.contains(e.productId),
+            (e) =>
+                e.isInput &&
+                _activeInputProductIds.contains(e.productId) &&
+                e.qualityLevel == requiredInputQualityLevel,
           )
           .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));
@@ -164,7 +172,8 @@ class FactoryDetailModel {
           .where(
             (e) =>
                 e.isInput &&
-                !_activeInputProductIds.contains(e.productId) &&
+                (!_activeInputProductIds.contains(e.productId) ||
+                    e.qualityLevel != requiredInputQualityLevel) &&
                 (e.quantity > 0 || e.pendingQuantity > 0),
           )
           .toList()

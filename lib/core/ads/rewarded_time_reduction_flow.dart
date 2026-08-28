@@ -10,14 +10,14 @@ class RewardedTimeReductionFlow {
     required String rewardKind,
     required String resourceId,
     required String successMessage,
-    String loadingMessage = 'Google AdMob test reklami yukleniyor.',
+    String loadingMessage = 'Google AdMob test reklamı yükleniyor.',
   }) async {
     return RewardedAdActionFlow.run(
       context,
       onApplyAction: onApplyReduction,
       rewardKind: rewardKind,
       resourceId: resourceId,
-      successTitle: 'Sure Kisaltildi',
+      successTitle: 'Süre Kısaltıldı',
       successMessage: successMessage,
       loadingMessage: loadingMessage,
       feedbackAmount: RewardedAdService.timeReductionPerAd.inMinutes.toDouble(),

@@ -20,7 +20,7 @@ class BrandCompanyProductModel {
   factory BrandCompanyProductModel.fromJson(Map<String, dynamic> json) {
     return BrandCompanyProductModel(
       productId: (json['product_id'] ?? json['id'] ?? '').toString(),
-      productName: (json['product_name'] ?? json['urun_adi'] ?? 'Urun')
+      productName: (json['product_name'] ?? json['urun_adi'] ?? 'Ürün')
           .toString(),
       productIcon: (json['product_icon'] ?? json['urun_iconu'] ?? 'default.webp')
           .toString(),

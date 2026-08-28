@@ -37,7 +37,7 @@ class StoreSaleItemModel {
       slotId: (json['slot_id'] ?? '').toString(),
       slotIndex: (json['slot_index'] as num?)?.toInt() ?? 0,
       productId: (json['product_id'] ?? '').toString(),
-      productName: (json['product_name'] ?? 'Urun').toString(),
+      productName: (json['product_name'] ?? 'Ürün').toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
       elapsedMinutes: (json['elapsed_minutes'] as num?)?.toInt() ?? 0,
       soldQuantity: (json['sold_quantity'] as num?)?.toInt() ?? 0,

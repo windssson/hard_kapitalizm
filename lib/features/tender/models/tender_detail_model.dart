@@ -135,7 +135,7 @@ class TenderDetailTenderModel {
   factory TenderDetailTenderModel.fromJson(Map<String, dynamic> json) {
     return TenderDetailTenderModel(
       id: (json['id'] ?? '').toString(),
-      title: (json['title'] ?? 'Ihale').toString(),
+      title: (json['title'] ?? 'İhale').toString(),
       description: (json['description'] ?? '').toString(),
       cityId: (json['city_id'] ?? '').toString(),
       cityName: (json['city_name'] ?? '-').toString(),
@@ -242,7 +242,7 @@ class TenderVehicleOptionModel {
     return TenderVehicleOptionModel(
       vehicleId: (json['vehicle_id'] ?? '').toString(),
       vehicleOwnerPlayerId: vehicleOwnerPlayerId,
-      vehicleName: (json['vehicle_name'] ?? 'Arac').toString(),
+      vehicleName: (json['vehicle_name'] ?? 'Araç').toString(),
       isRental: json['is_rental'] as bool? ??
           (vehicleOwnerPlayerId.isEmpty || rentalPrice > 0 || rentalCost > 0),
       capacity: (json['capacity'] as num?)?.toInt() ?? 0,

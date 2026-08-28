@@ -61,7 +61,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                           title:
                               (params?['name'] ?? 'Lojistik Firmasi').toString(),
                           message:
-                              'Lojistik merkezinizin insaati devam ediyor.',
+                              'Lojistik merkezinizin inşaatı devam ediyor.',
                         );
                       }
 
@@ -74,16 +74,16 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                           ),
                           loading: _buildLoading,
                           error: (error, stack) =>
-                              _buildError('Firma tipleri yuklenemedi.'),
+                              _buildError('Firma tipleri yüklenemedi.'),
                         ),
                         loading: _buildLoading,
                         error: (error, stack) =>
-                            _buildError('Oyuncu bilgisi okunamadi.'),
+                            _buildError('Oyuncu bilgisi okunamadı.'),
                       );
                     },
                     loading: _buildLoading,
                     error: (error, stack) =>
-                        _buildError('Insaat durumu okunamadi.'),
+                        _buildError('İnşaat durumu okunamadı.'),
                   );
                 },
                 loading: _buildLoading,
@@ -154,7 +154,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  'Ticaretin kalbi burada atar. Mal tasiyin, arac kiralayin ve imparatorlugunuzu buyutun.',
+                  'Ticaretin kalbi burada atar. Mal taşıyın, araç kiralayın ve imparatorluğunuzu büyütün.',
                   style: AppTextStyles.body.standardCopyWith(height: 1.4),
                 ),
               ],
@@ -269,7 +269,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                         ),
                         _buildTypeChip(
                           AppIcons.gasMeterOutlined,
-                          '${type.fuelCapacity} L Yakit',
+                          '${type.fuelCapacity} L Yakıt',
                           AppColors.warning,
                         ),
                       ],
@@ -284,7 +284,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                         ),
                         SizedBox(width: 4.w),
                         Text(
-                          'Insaat: ${type.constructionTimeMinutes} Dakika',
+                          'İnşaat: ${type.constructionTimeMinutes} Dakika',
                           style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
                         ),
                       ],
@@ -470,8 +470,8 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         ref.invalidate(playerLogisticsConstructionProvider);
         AppSnackbar.show(
           context,
-          title: 'Basarili',
-          message: 'Insaat baslatildi.',
+          title: 'Başarılı',
+          message: 'İnşaat başlatıldı.',
           type: SnackbarType.success,
         );
         context.go('/logistics');
@@ -479,7 +479,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         AppSnackbar.show(
           context,
           title: 'Hata',
-          message: res['message'] ?? 'Islem basarisiz.',
+          message: res['message'] ?? 'İşlem başarısız.',
           type: SnackbarType.error,
         );
       }

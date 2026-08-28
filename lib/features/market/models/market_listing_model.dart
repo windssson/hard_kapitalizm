@@ -112,7 +112,7 @@ class MarketListingModel {
       slotId: (json['slot_id'] ?? json['id'] ?? '').toString(),
       productId: (json['product_id'] ?? productJson['id'] ?? '').toString(),
       productName:
-          (json['product_name'] ?? productJson['urun_adi'] ?? 'Urun')
+          (json['product_name'] ?? productJson['urun_adi'] ?? 'Ürün')
               .toString(),
       productIcon:
           (json['product_icon'] ?? productJson['urun_iconu'] ?? 'default.webp')

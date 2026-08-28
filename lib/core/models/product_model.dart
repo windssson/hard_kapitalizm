@@ -64,13 +64,13 @@ class ProductModel {
       hammadde3Miktar: (json['hammadde_3_miktar'] as num?)?.toDouble(),
       uretimBirimi: json['uretim_birimi'] as String?,
       bazSatisFiyati: (json['baz_satis_fiyati'] as num?)?.toDouble() ?? 0.0,
-      uretimAdedi: json['uretim_adedi'] as int? ?? 0,
-      satisAdedi: json['satis_adedi'] as int? ?? 0,
+      uretimAdedi: (json['uretim_adedi'] as num?)?.toInt() ?? 0,
+      satisAdedi: (json['satis_adedi'] as num?)?.toInt() ?? 0,
       enDusukFiyat: (json['en_dusuk_fiyat'] as num?)?.toDouble() ?? 0.0,
       enYuksekFiyat: (json['en_yuksek_fiyat'] as num?)?.toDouble() ?? 0.0,
       ortalamaFiyat: (json['ortalama_fiyat'] as num?)?.toDouble() ?? 0.0,
-      saticiSayisi: json['satici_sayisi'] as int? ?? 0,
-      piyasadakiStok: json['piyasadaki_stok'] as int? ?? 0,
+      saticiSayisi: (json['satici_sayisi'] as num?)?.toInt() ?? 0,
+      piyasadakiStok: (json['piyasadaki_stok'] as num?)?.toInt() ?? 0,
       iscilikMaliyeti: (json['iscilik_maliyeti'] as num?)?.toDouble() ?? 0.0,
       createdAt: json['created_at'] != null 
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()

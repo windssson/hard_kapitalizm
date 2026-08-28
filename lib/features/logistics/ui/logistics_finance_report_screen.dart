@@ -304,7 +304,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
   Widget _buildError() {
     return Center(
       child: Text(
-        'Rapor verileri yuklenemedi.',
+        'Rapor verileri yüklenemedi.',
         style: AppTextStyles.body,
       ),
     );
@@ -322,9 +322,9 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
 
   String _categoryLabel(String category) {
     return switch (category) {
-      'vehicle_purchase' => 'Arac Alimi',
-      'fuel_purchase' => 'Yakit Gideri',
-      'maintenance' => 'Bakim Gideri',
+      'vehicle_purchase' => 'Araç Alımı',
+      'fuel_purchase' => 'Yakıt Gideri',
+      'maintenance' => 'Bakım Gideri',
       'rental_income' => 'Kira Geliri',
       _ => 'Kayit',
     };

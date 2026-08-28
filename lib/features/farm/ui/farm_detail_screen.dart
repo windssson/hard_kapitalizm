@@ -26,7 +26,7 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
@@ -39,6 +39,7 @@ import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/production_quality_warning_dialog.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -114,7 +115,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         child: Column(
           children: [
             SecondaryTopBar(
-              title: 'Tarla Yonetimi',
+              title: 'Tarla Yönetimi',
               actions: [
                 PopupMenuButton<String>(
                   padding: EdgeInsets.zero,
@@ -143,7 +144,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                           ),
                           SizedBox(width: 8.w),
                           Text(
-                            'Tarlayi Sat',
+                            'Tarlayı Sat',
                             style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.textPrimary,
                             ),
@@ -309,14 +310,14 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                       SizedBox(height: 14.h),
                       _buildSectionHeader(
                         'Tarlalar',
-                        'Her tarlada ekili urunu, kaliteyi ve uretim akislarini buradan yonetebilirsin.',
+                        'Her tarlada ekili ürünü, kaliteyi ve üretim akışlarını buradan yönetebilirsin.',
                         icon: AppIcons.tuneRounded,
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
                       if (detail.slots.isEmpty)
                         _buildEmptyCard(
-                          'Bu tarlada henuz aktif uretim slotu yok.',
+                          'Bu tarlada henüz aktif üretim slotu yok.',
                         )
                       else
                         ...detail.slots.map(
@@ -332,7 +333,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                         SizedBox(height: 16.h),
                         _buildSectionHeader(
                           'Bagli Olmayan Hammaddeler',
-                          'Urun degisikligi sonrasinda elde kalan hammaddeleri burada depoya geri aktarabilirsin.',
+                          'Ürün değişikliği sonrasında elde kalan hammaddeleri burada depoya geri aktarabilirsin.',
                           icon: AppIcons.inventory2Outlined,
                           color: AppColors.blue,
                         ),
@@ -485,7 +486,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               SizedBox(width: 10.w),
               Expanded(
                 child: _buildHeroStat(
-                  'Uretilen urun',
+                  'Üretilen ürün',
                   '${_calculateUsedCapacity(detail.outputInventories)}/${detail.farm.outputCapacity}',
                   AppColors.green,
                   ratio: _inventoryRatio(
@@ -584,7 +585,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             children: [
               Expanded(
                 child: _buildActionButton(
-                  'Urun Al',
+                  'Ürün Al',
                   AppIcons.downloadRounded,
                   AppColors.gold,
                   () => _startFarmReceiveFlow(context, ref, detail),
@@ -593,7 +594,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
               SizedBox(width: 8.w),
               Expanded(
                 child: _buildActionButton(
-                  'Urun Gonder',
+                  'Ürün Gönder',
                   AppIcons.localShippingRounded,
                   AppColors.blue,
                   () => _startFarmSendFlow(context, ref, detail),
@@ -790,7 +791,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     final isBranded =
         slot.brandId != SelectableProductionProductModel.defaultBrandId;
     final slotTitle = slot.isEmpty
-        ? 'Bos Tarla ${slot.slotIndex}'
+        ? 'Boş Tarla ${slot.slotIndex}'
         : '${slot.product?.urunAdi ?? slot.productId ?? 'Bilinmeyen Urun'}${isBranded ? ' (${_currentBrandName ?? 'Markali'})' : ''}';
     final outputInventory = slot.isEmpty
         ? null
@@ -919,7 +920,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                   ),
                                   SizedBox(width: 8.w),
                                   Text(
-                                    slot.isEmpty ? 'Urun Sec' : 'Urun Degistir',
+                                    slot.isEmpty ? 'Ürün Seç' : 'Ürün Değiştir',
                                     style: AppTextStyles.body.standardCopyWith(
                                       color: AppColors.textPrimary,
                                       fontSize: AppTypography.bodyLarge,
@@ -961,7 +962,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                     SizedBox(height: 8.h),
                     if (slot.isEmpty)
                       Text(
-                        'Beklemede. Urun secerek uretimi baslat.',
+                        'Beklemede. Ürün seçerek üretimi başlat.',
                         style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.textMuted,
                           fontSize: AppTypography.label,
@@ -1126,7 +1127,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   }
 
   String _formatCountdown(Duration remaining) {
-    if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+    if (remaining.inSeconds <= 0) return 'Tamamlanıyor';
     final hours = remaining.inHours;
     final minutes = remaining.inMinutes % 60;
     if (hours > 0) {
@@ -1295,8 +1296,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             SizedBox(height: 8.h),
             Text(
               activeBoost != null
-                  ? 'Bu tarlada zaten aktif bir boost var. Sure dolana kadar tum slotlar x${activeBoost.multiplier.toStringAsFixed(1)} hizla calisir.'
-                  : 'Boost basladiginda tum tarla slotlarinin boost katsayisi 2 olur. Uretim hizi sure boyunca artar.',
+                  ? 'Bu tarlada zaten aktif bir boost var. Süre dolana kadar tüm slotlar x${activeBoost.multiplier.toStringAsFixed(1)} hızla çalışır.'
+                  : 'Boost başladığında tüm tarla slotlarının boost katsayısı 2 olur. Üretim hızı süre boyunca artar.',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.body,
@@ -1314,10 +1315,10 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                       context,
                       rewardKind: 'building_boost_start',
                       resourceId: 'farm:${detail.farm.id}',
-                      loadingMessage: '30 dakikalik boost reklami yukleniyor.',
+                      loadingMessage: '30 dakikalık boost reklamı yükleniyor.',
                       successTitle: 'Boost Baslatildi',
                       successMessage:
-                          'Ciftlik boostu 30 dakika icin baslatildi.',
+                          'Tarla boostu 30 dakika için başlatıldı.',
                       feedbackAmount: 30,
                       feedbackType: FloatingFeedbackType.boostAdd,
                       onApplyAction: () async {
@@ -1411,8 +1412,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
-                          title: 'Basarili',
-                          message: 'Tarla boostu baslatildi.',
+                          title: 'Başarılı',
+                          message: 'Tarla boostu başlatıldı.',
                           type: SnackbarType.success,
                         );
                       } else {
@@ -1421,7 +1422,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                           title: 'Hata',
                           message:
                               result['message'] ??
-                              'Tarla boostu baslatilamadi.',
+                              'Tarla boostu başlatılamadı.',
                           type: SnackbarType.error,
                         );
                       }
@@ -1523,7 +1524,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu tarla icin zaten devam eden bir yukseltme var.',
+        message: 'Bu tarla için zaten devam eden bir yükseltme var.',
         type: SnackbarType.info,
       );
       return;
@@ -1540,7 +1541,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Maksimum Seviye',
-        message: 'Bu ciftlik maksimum seviye ${quote.maxLevel}.',
+        message: 'Bu tarla maksimum seviye ${quote.maxLevel}.',
         type: SnackbarType.info,
       );
       return;
@@ -1557,7 +1558,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     await showBuildingUpgradeSheet(
       context: context,
-      title: 'Tarla Yukseltmesi',
+      title: 'Tarla Yükseltmesi',
       buildingName: detail.farm.name,
       icon: AppIcons.grass,
       currentLevel: detail.farm.level,
@@ -1574,7 +1575,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         ),
         BuildingUpgradeBenefit(
           icon: AppIcons.inventory2Rounded,
-          label: 'Urun kapasitesi',
+          label: 'Ürün kapasitesi',
           before: '${detail.farm.outputCapacity}',
           after: '$nextOutputCapacity',
         ),
@@ -1595,8 +1596,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           );
           AppSnackbar.show(
             context,
-            title: 'Basarili',
-            message: 'Tarla yukseltmesi baslatildi.',
+            title: 'Başarılı',
+            message: 'Tarla yükseltmesi başlatıldı.',
             type: SnackbarType.success,
           );
           return;
@@ -1622,8 +1623,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Tarla yukseltmesi tamamlandi.',
+        title: 'Başarılı',
+        message: 'Tarla yükseltmesi tamamlandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -1633,7 +1634,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Yukseltme tamamlanamadi.',
+      message: result['message'] ?? 'Yükseltme tamamlanamadı.',
       type: SnackbarType.error,
     );
   }
@@ -1648,7 +1649,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       onApplyReduction: () => ref
           .read(farmActionProvider)
           .reduceFarmUpgradeTimeWithAd(upgrade.id, syncProviders: false),
-      successMessage: 'Tarla yukseltme suresi 10 dakika kisaltildi.',
+      successMessage: 'Tarla yükseltme süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
@@ -2367,7 +2368,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
+        title: 'Başarılı',
         message: 'Yeni uretim slotu acildi.',
         type: SnackbarType.success,
       );
@@ -2520,6 +2521,21 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   ) async {
     final product = selectableProduct.product;
     final qualityLevel = selectableProduct.suggestedOutputQualityLevel;
+    final hasRawMaterials = (product.hammadde1Id != null &&
+            product.hammadde1Id!.isNotEmpty) ||
+        (product.hammadde2Id != null && product.hammadde2Id!.isNotEmpty) ||
+        (product.hammadde3Id != null && product.hammadde3Id!.isNotEmpty);
+
+    if (qualityLevel > 2 && hasRawMaterials) {
+      final confirmed = await ProductionQualityWarningDialog.show(
+        context: context,
+        product: product,
+        qualityLevel: qualityLevel,
+        requiredInputQuality: qualityLevel - 1,
+      );
+      if (!confirmed || !context.mounted) return;
+    }
+
     final action = ref.read(farmActionProvider);
     final result = slot.isEmpty
         ? await action.assignProductionSlotProduct(
@@ -2552,7 +2568,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
       final cleanupNote = deletedObsoleteCount > 0
-          ? ' Eski bos kayitlardan $deletedObsoleteCount adet temizlendi.'
+          ? ' Eski boş kayıtlardan $deletedObsoleteCount adet temizlendi.'
           : '';
       final isBranded = selectableProduct.hasPreferredBrand;
       final productName =
@@ -2560,7 +2576,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
       AppSnackbar.show(
         context,
-        title: 'Basarili',
+        title: 'Başarılı',
         message: slot.isEmpty
             ? '$productName kalite $qualityLevel ile eklendi.'
             : '$productName kalite $qualityLevel olarak degistirildi.$cleanupNote',
@@ -2572,7 +2588,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: sanitizeUserFacingError(result['message'] ?? 'Urun secilemedi.'),
+      message: sanitizeUserFacingError(result['message'] ?? 'Ürün seçilemedi.'),
       type: SnackbarType.error,
     );
   }
@@ -2589,7 +2605,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu tarlada aktif hammadde girdisi bulunamadi.',
+        message: 'Bu tarlada aktif hammadde girdisi bulunamadı.',
         type: SnackbarType.info,
       );
       return;
@@ -2707,7 +2723,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         context,
         title: 'Bilgi',
         message:
-            'Bu tarlanin kullandigi hammaddeler icin uygun depo stogu bulunamadi.',
+            'Bu tarlanın kullandığı hammaddeler için uygun depo stoğu bulunamadı.',
         type: SnackbarType.info,
       );
       return;
@@ -3416,7 +3432,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Tarla Bos: $remainingInputCapacity / ${detail.farm.inputCapacity} adet',
+                                'Tarla Boş: $remainingInputCapacity / ${detail.farm.inputCapacity} adet',
                                 style: AppTextStyles.body.standardCopyWith(
                                   color: AppColors.textMuted,
                                   fontSize: AppTypography.bodySmall,
@@ -3517,7 +3533,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                         ),
                         SizedBox(height: 6.h),
                         Text(
-                          'Secilen: $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3',
+                          'Seçilen: $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3',
                           style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textMuted,
                             fontSize: AppTypography.bodySmall,
@@ -3528,7 +3544,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
+                    '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 seçildi',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.body,
@@ -3740,7 +3756,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           title: 'Hata',
           message: result.message.isNotEmpty
               ? result.message
-              : 'Transfer basarisiz oldu.',
+              : 'Transfer başarısız oldu.',
           type: SnackbarType.error,
         );
         return;
@@ -3754,8 +3770,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Secilen hammaddeler tarlaya aktarildi.',
+        title: 'Başarılı',
+        message: 'Seçilen hammaddeler tarlaya aktarıldı.',
         type: SnackbarType.success,
       );
       return;
@@ -3781,10 +3797,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     vehicleResult = const TransferVehicleOptionsResult(
       options: [],
       unavailableReason: null,
-    );
-    final totalQuantity = items.fold<int>(
-      0,
-      (sum, item) => sum + item.quantity,
     );
     final totalVolume = items.fold<double>(
       0,
@@ -3817,7 +3829,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         title: 'Bilgi',
         message:
             vehicleResult.unavailableReason ??
-            'Bu transfer icin uygun arac bulunamadi.',
+            'Bu transfer için uygun araç bulunamadı.',
         type: SnackbarType.info,
       );
       return;
@@ -3825,8 +3837,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     _showProductionVehicleOptionsSheet(
       context: context,
-      title: 'Hammadde Lojistigi',
-      subtitle: '$totalQuantity adet hammadde icin uygun araci secin',
+      title: 'Hammadde Lojistiği',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
@@ -3856,7 +3867,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
-            message: 'Secilen hammadde transferi icin arac yola cikti.',
+            message: 'Seçilen hammadde transferi için araç yola çıktı.',
             type: SnackbarType.success,
           );
           return;
@@ -4403,7 +4414,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  'Bos: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
+                                  'Boş: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
                                   style: AppTextStyles.body.standardCopyWith(
                                     color: AppColors.textMuted,
                                     fontSize: AppTypography.bodySmall,
@@ -4503,7 +4514,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                           ),
                           SizedBox(height: 6.h),
                           Text(
-                            'Secilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
+                            'Seçilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
                             style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.textMuted,
                               fontSize: AppTypography.bodySmall,
@@ -4515,7 +4526,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    '${selectedItems.length} stok | $totalQuantity adet secildi',
+                    '${selectedItems.length} stok | $totalQuantity adet seçildi',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.body,
@@ -4623,9 +4634,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                   if (!context.mounted) return;
                                   AppSnackbar.show(
                                     context,
-                                    title: 'Basarili',
+                                    title: 'Başarılı',
                                     message:
-                                        'Secilen stoklar depoya gonderildi.',
+                                        'Seçilen stoklar depoya gönderildi.',
                                     type: SnackbarType.success,
                                   );
                                   return;
@@ -4635,7 +4646,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                   title: 'Hata',
                                   message: result.message.isNotEmpty
                                       ? result.message
-                                      : 'Transfer basarisiz oldu.',
+                                      : 'Transfer başarısız oldu.',
                                   type: SnackbarType.error,
                                 );
                                 return;
@@ -4674,10 +4685,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       options: [],
       unavailableReason: null,
     );
-    final totalQuantity = items.fold<int>(
-      0,
-      (sum, item) => sum + item.quantity,
-    );
     final totalVolume = items.fold<double>(
       0,
       (sum, item) =>
@@ -4711,7 +4718,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         title: 'Bilgi',
         message:
             vehicleResult.unavailableReason ??
-            'Bu transfer icin uygun arac bulunamadi.',
+            'Bu transfer için uygun araç bulunamadı.',
         type: SnackbarType.info,
       );
       return;
@@ -4720,11 +4727,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     _showProductionVehicleOptionsSheet(
       context: context,
       title: items.first.inventory.isInput
-          ? 'Hammadde Geri Gonderim Lojistigi'
-          : 'Uretilen Urun Lojistigi',
-      subtitle: items.first.inventory.isInput
-          ? '$totalQuantity adet hammaddeyi depoya geri gondermek icin uygun araci secin'
-          : '$totalQuantity adet uretilen urunu depoya gondermek icin uygun araci secin',
+          ? 'Hammadde Geri Gönderim Lojistiği'
+          : 'Üretilen Ürün Lojistiği',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
@@ -4756,8 +4760,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             context,
             title: 'Transfer Baslatildi',
             message: items.first.inventory.isInput
-                ? 'Hammaddeyi depoya geri goturen arac yola cikti.'
-                : 'Uretilen urunu depoya goturen arac yola cikti.',
+                ? 'Hammaddeyi depoya geri götüren araç yola çıktı.'
+                : 'Üretilen ürünü depoya götüren araç yola çıktı.',
             type: SnackbarType.success,
           );
           return;
@@ -4774,94 +4778,29 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     );
   }
 
-  void _showProductionVehicleOptionsSheet({
+  Future<void> _showProductionVehicleOptionsSheet({
     required BuildContext context,
     required String title,
-    required String subtitle,
     required List<ProductionLogisticsVehicleOption> options,
-    required Future<void> Function(String? vehicleId) onSelected,
-  }) {
-    showModalBottomSheet(
+    required Future<void> Function(String vehicleId) onSelected,
+  }) async {
+    final selectedVehicleId = await showTransferVehicleSelectionSheet(
       context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: AppTextStyles.h2.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.headline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              subtitle,
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodyLarge,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Expanded(
-              child: ListView.separated(
-                itemCount: options.length,
-                separatorBuilder: (context, index) => SizedBox(height: 10.h),
-                itemBuilder: (_, index) {
-                  final option = options[index];
-                  return TransferVehicleOptionCard(
-                    vehicleName: option.vehicleName,
-                    isRental: option.isRental,
-                    capacity: option.capacity,
-                    speedKmh: option.speedKmh,
-                    distanceKm: option.distanceKm,
-                    durationLabel: _formatTransferDuration(
-                      option.estimatedDurationSeconds,
-                    ),
-                    transportCost: option.totalPrice,
-                    rentalCost: option.rentalCost,
-                    fuelCost: option.fuelCost,
-                    fuelNeeded: option.fuelNeeded,
-                    conditionNeeded: option.conditionNeeded,
-                    canSelect: option.canSelect,
-                    isSelected: false,
-                    disabledReason: option.disabledReason,
-                    onTap: () async {
-                      Navigator.pop(sheetContext);
-                      await onSelected(option.vehicleId);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      title: title,
+      sourceCityName: 'Çiftlik',
+      targetCityName: 'Depo',
+      options: options.map(TransferVehicleOptionItem.fromProduction).toList(),
     );
+
+    if (selectedVehicleId != null && context.mounted) {
+      await onSelected(selectedVehicleId);
+    }
   }
 
   bool _isSameCity(String warehouseCityId, String productionCityId) {
     return warehouseCityId.isNotEmpty &&
         productionCityId.isNotEmpty &&
         warehouseCityId == productionCityId;
-  }
-
-  String _formatTransferDuration(int seconds) {
-    final duration = Duration(seconds: seconds);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours}s ${minutes}dk';
-    return '${duration.inMinutes}dk';
   }
 
   Widget _buildOutboundCategoryHeader({
@@ -5254,7 +5193,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.background,
         title: Text(
-          'Tarlayi Sat',
+          'Tarlayı Sat',
           style: AppTextStyles.h2.standardCopyWith(
             color: AppColors.red,
             fontSize: AppTypography.headline,
@@ -5311,7 +5250,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text(
-              'Tarlayi Sat',
+              'Tarlayı Sat',
               style: AppTextStyles.button.standardCopyWith(
                 color: AppColors.textOnAccent,
               ),
@@ -5332,8 +5271,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Tarla satildi. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
+        title: 'Başarılı',
+        message: 'Tarla satıldı. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
         type: SnackbarType.success,
       );
       context.go('/farms');
@@ -5343,7 +5282,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Tarla satilamadi.',
+      message: result['message'] ?? 'Tarla satılamadı.',
       type: SnackbarType.error,
     );
   }
@@ -5609,7 +5548,7 @@ class _ActiveFarmUpgradeCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tarla Yukseltmesi Devam Ediyor',
+                      'Tarla Yükseltmesi Devam Ediyor',
                       style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textPrimary,
                         fontSize: AppTypography.title,
@@ -5667,7 +5606,7 @@ class _ActiveFarmUpgradeCard extends ConsumerWidget {
             RewardedTimeReduceButton(
               onPressed: () => onReduceTimeWithAd!.call(),
               caption:
-                  'Bir reklam odulu al ve tarla yukseltme suresini 10 dakika kisalt.',
+                  'Bir reklam ödülü al ve tarla yükseltme süresini 10 dakika kısalt.',
             ),
           ],
         ],
@@ -5677,7 +5616,7 @@ class _ActiveFarmUpgradeCard extends ConsumerWidget {
 }
 
 String _formatCountdownLabel(Duration remaining) {
-  if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+  if (remaining.inSeconds <= 0) return 'Tamamlanıyor';
   final hours = remaining.inHours;
   final minutes = remaining.inMinutes % 60;
   if (hours > 0) {

@@ -37,7 +37,7 @@ class CityModel {
     return CityModel(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
-      population: json['population'] as int? ?? 0,
+      population: (json['population'] as num?)?.toInt() ?? 0,
       taxRate: parseDouble(json['tax_rate']),
       mapPositionX: parseDouble(json['map_position_x']),
       mapPositionY: parseDouble(json['map_position_y']),

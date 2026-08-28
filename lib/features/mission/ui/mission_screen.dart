@@ -190,7 +190,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
                   value: ratio,
                   diameter: 44.w,
                   strokeWidth: 4.w,
-                  semanticsLabel: 'Gorev tamamlama orani',
+                  semanticsLabel: 'Görev tamamlama oranı',
                 ),
                 Icon(
                   dashboard.claimableCount > 0

@@ -60,7 +60,7 @@ class MarketTransferVehicleOptionModel {
     return MarketTransferVehicleOptionModel(
       vehicleId: (json['vehicle_id'] ?? '').toString(),
       vehicleOwnerPlayerId: vehicleOwnerPlayerId,
-      vehicleName: (json['vehicle_name'] ?? 'Arac').toString(),
+      vehicleName: (json['vehicle_name'] ?? 'Araç').toString(),
       isRental: json['is_rental'] as bool? ??
           (vehicleOwnerPlayerId.isEmpty || rentalPrice > 0 || rentalCost > 0),
       capacity: (json['capacity'] as num?)?.toInt() ?? 0,

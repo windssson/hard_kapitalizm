@@ -106,6 +106,32 @@ class ProductionSlotModel {
           : null,
     );
   }
+
+  ProductionSlotModel copyWith({
+    String? id,
+    String? ownerKind,
+    String? ownerId,
+    int? slotIndex,
+    String? productId,
+    String? brandId,
+    int? qualityLevel,
+    double? boostMultiplier,
+    bool? isActive,
+    ProductModel? product,
+  }) {
+    return ProductionSlotModel(
+      id: id ?? this.id,
+      ownerKind: ownerKind ?? this.ownerKind,
+      ownerId: ownerId ?? this.ownerId,
+      slotIndex: slotIndex ?? this.slotIndex,
+      productId: productId ?? this.productId,
+      brandId: brandId ?? this.brandId,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      boostMultiplier: boostMultiplier ?? this.boostMultiplier,
+      isActive: isActive ?? this.isActive,
+      product: product ?? this.product,
+    );
+  }
 }
 
 class ProductionInventoryModel {
@@ -184,21 +210,36 @@ class FieldDetailModel {
     required this.inventories,
   });
 
-  Set<String> get _activeInputProductIds {
-    final ids = <String>{};
-    for (final slot in slots) {
+  FieldDetailModel copyWith({
+    FieldModel? field,
+    FieldTypeDetailModel? fieldType,
+    String? cityName,
+    List<ProductionSlotModel>? slots,
+    List<ProductionInventoryModel>? inventories,
+  }) {
+    return FieldDetailModel(
+      field: field ?? this.field,
+      fieldType: fieldType ?? this.fieldType,
+      cityName: cityName ?? this.cityName,
+      slots: slots ?? this.slots,
+      inventories: inventories ?? this.inventories,
+    );
+  }
+
+  bool _isInventoryActiveInput(ProductionInventoryModel e) {
+    if (!e.isInput) return false;
+    return slots.any((slot) {
       final product = slot.product;
-      if (slot.isEmpty || product == null) continue;
-      ids.addAll(product.inputProductIds);
-    }
-    return ids;
+      if (slot.isEmpty || product == null) return false;
+      final requiredQuality = slot.qualityLevel <= 2 ? 1 : slot.qualityLevel - 1;
+      return product.inputProductIds.contains(e.productId) &&
+          e.qualityLevel == requiredQuality;
+    });
   }
 
   List<ProductionInventoryModel> get inputInventories =>
       inventories
-          .where(
-            (e) => e.isInput && _activeInputProductIds.contains(e.productId),
-          )
+          .where(_isInventoryActiveInput)
           .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));
 
@@ -207,7 +248,7 @@ class FieldDetailModel {
           .where(
             (e) =>
                 e.isInput &&
-                !_activeInputProductIds.contains(e.productId) &&
+                !_isInventoryActiveInput(e) &&
                 (e.quantity > 0 || e.pendingQuantity > 0),
           )
           .toList()

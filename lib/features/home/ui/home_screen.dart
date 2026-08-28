@@ -817,7 +817,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 .clamp(0.0, 1.0)
                 .toDouble();
 
-            final accentColor = isClaimable ? AppColors.gold : const Color(0xFF00E5FF);
+            final accentColor = isClaimable
+                ? AppColors.gold
+                : const Color(0xFF00E5FF);
 
             return Container(
               decoration: BoxDecoration(
@@ -859,7 +861,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   onTap: () => context.push('/missions'),
                   borderRadius: BorderRadius.circular(16.r),
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 10.h,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -867,14 +872,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         Row(
                           children: [
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.5.h),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 7.w,
+                                vertical: 2.5.h,
+                              ),
                               decoration: BoxDecoration(
-                                color: (isClaimable ? AppColors.gold : AppColors.blue)
-                                    .withValues(alpha: 0.18),
+                                color:
+                                    (isClaimable
+                                            ? AppColors.gold
+                                            : AppColors.blue)
+                                        .withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(6.r),
                                 border: Border.all(
-                                  color: (isClaimable ? AppColors.gold : AppColors.blue)
-                                      .withValues(alpha: 0.4),
+                                  color:
+                                      (isClaimable
+                                              ? AppColors.gold
+                                              : AppColors.blue)
+                                          .withValues(alpha: 0.4),
                                   width: 0.7,
                                 ),
                               ),
@@ -885,14 +899,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     isClaimable
                                         ? Icons.workspace_premium_rounded
                                         : Icons.flag_rounded,
-                                    color: isClaimable ? AppColors.gold : AppColors.blue,
+                                    color: isClaimable
+                                        ? AppColors.gold
+                                        : AppColors.blue,
                                     size: 11.sp,
                                   ),
                                   SizedBox(width: 4.w),
                                   Text(
-                                    isClaimable ? 'ÖDÜL HAZIR' : 'ÖNCELİKLİ GÖREV',
+                                    isClaimable
+                                        ? 'ÖDÜL HAZIR'
+                                        : 'ÖNCELİKLİ GÖREV',
                                     style: TextStyle(
-                                      color: isClaimable ? AppColors.gold : AppColors.blue,
+                                      color: isClaimable
+                                          ? AppColors.gold
+                                          : AppColors.blue,
                                       fontSize: 9.5.sp,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 0.4,
@@ -903,12 +923,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                             const Spacer(),
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.5.h),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 7.w,
+                                vertical: 2.5.h,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.green.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6.r),
                                 border: Border.all(
-                                  color: AppColors.green.withValues(alpha: 0.35),
+                                  color: AppColors.green.withValues(
+                                    alpha: 0.35,
+                                  ),
                                   width: 0.7,
                                 ),
                               ),
@@ -950,15 +975,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                   colors: isClaimable
-                                      ? [AppColors.goldLight, AppColors.goldDark]
-                                      : [const Color(0xFF00E5FF), const Color(0xFF0D47A1)],
+                                      ? [
+                                          AppColors.goldLight,
+                                          AppColors.goldDark,
+                                        ]
+                                      : [
+                                          const Color(0xFF00E5FF),
+                                          const Color(0xFF0D47A1),
+                                        ],
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (isClaimable
-                                            ? AppColors.gold
-                                            : const Color(0xFF00E5FF))
-                                        .withValues(alpha: 0.35),
+                                    color:
+                                        (isClaimable
+                                                ? AppColors.gold
+                                                : const Color(0xFF00E5FF))
+                                            .withValues(alpha: 0.35),
                                     blurRadius: 8,
                                   ),
                                 ],
@@ -1009,14 +1041,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       children: [
                                         Expanded(
                                           child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(4.r),
+                                            borderRadius: BorderRadius.circular(
+                                              4.r,
+                                            ),
                                             child: LinearProgressIndicator(
                                               value: progress,
                                               minHeight: 5.h,
-                                              backgroundColor:
-                                                  Colors.white.withValues(alpha: 0.08),
+                                              backgroundColor: Colors.white
+                                                  .withValues(alpha: 0.08),
                                               valueColor:
-                                                  AlwaysStoppedAnimation<Color>(accentColor),
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    accentColor,
+                                                  ),
                                             ),
                                           ),
                                         ),
@@ -1040,7 +1076,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             // Sağ Aksiyon Butonu / İlerleme Yüzdesi
                             if (isClaimable)
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w,
+                                  vertical: 7.h,
+                                ),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(10.r),
                                   gradient: LinearGradient(
@@ -1051,7 +1090,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.gold.withValues(alpha: 0.35),
+                                      color: AppColors.gold.withValues(
+                                        alpha: 0.35,
+                                      ),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
@@ -1080,12 +1121,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               )
                             else
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8.w,
+                                  vertical: 5.h,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppColors.blue.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(8.r),
                                   border: Border.all(
-                                    color: AppColors.blue.withValues(alpha: 0.3),
+                                    color: AppColors.blue.withValues(
+                                      alpha: 0.3,
+                                    ),
                                     width: 0.8,
                                   ),
                                 ),
@@ -1150,6 +1196,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         module.title == 'AR-GE' ||
         module.title == 'Madenler' ||
         module.title == 'Tarlalar' ||
+        module.title == 'Çiftlikler' ||
         module.title == 'Ciftlikler') {
       final val = module.primaryValue;
       if (val != '0' && val != '0/0' && !val.startsWith('0/')) {
@@ -1171,7 +1218,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }) {
     return [
       _HomeModuleCardData(
-        title: 'Magazalar',
+        title: 'Mağazalar',
         image: 'magazalar.webp',
         accentColor: AppColors.green,
         primaryLabel: 'Aktif',
@@ -1180,7 +1227,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         secondaryLabel: 'Stok',
         secondaryValue: _formatRatio(modules?.stores.stockRatio ?? 0),
         badgeText: (modules?.stores.warningCount ?? 0) > 0
-            ? '${modules!.stores.warningCount} uyari'
+            ? '${modules!.stores.warningCount} uyarı'
             : 'Stabil',
         hasAlert:
             alertedModules.contains('stores') ||
@@ -1196,8 +1243,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         secondaryLabel: 'Doluluk',
         secondaryValue: _formatRatio(modules?.warehouses.capacityRatio ?? 0),
         badgeText: (modules?.warehouses.warningCount ?? 0) > 0
-            ? '${modules!.warehouses.warningCount} uyari'
-            : 'Hazir',
+            ? '${modules!.warehouses.warningCount} uyarı'
+            : 'Hazır',
         hasAlert:
             alertedModules.contains('warehouses') ||
             (modules?.warehouses.warningCount ?? 0) > 0,
@@ -1205,7 +1252,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       _HomeModuleCardData(
         title: 'Tarlalar',
-        image: 'tarlalar.webp',
+        image: 'tarladeneme.webp',
         accentColor: AppColors.green,
         primaryLabel: 'Aktif',
         primaryValue:
@@ -1213,10 +1260,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         secondaryLabel: 'Doluluk',
         secondaryValue: _formatRatio(modules?.farms.productionRatio ?? 0),
         badgeText: (modules?.farms.warningCount ?? 0) > 0
-            ? '${modules!.farms.warningCount} uyari'
+            ? '${modules!.farms.warningCount} uyarı'
             : (modules?.farms.count ?? 0) > 0
             ? 'Hasat'
-            : 'Bos',
+            : 'Boş',
         hasAlert:
             alertedModules.contains('farms') ||
             (modules?.farms.warningCount ?? 0) > 0,
@@ -1226,20 +1273,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         title: 'Nakliye',
         image: 'nakliyeler.webp',
         accentColor: AppColors.info,
-        primaryLabel: 'Arac',
+        primaryLabel: 'Araç',
         primaryValue: '${modules?.logistics.vehicleCount ?? 0}',
         secondaryLabel: 'Sefer',
         secondaryValue: '${modules?.logistics.activeTripCount ?? 0}',
         badgeText: (modules?.logistics.warningCount ?? 0) > 0
-            ? '${modules!.logistics.warningCount} uyari'
-            : 'Akista',
+            ? '${modules!.logistics.warningCount} uyarı'
+            : 'Akışta',
         hasAlert:
             alertedModules.contains('logistics') ||
             (modules?.logistics.warningCount ?? 0) > 0,
         requiredLevel: 3,
       ),
       _HomeModuleCardData(
-        title: 'Ciftlikler',
+        title: 'Çiftlikler',
         image: 'ciftlikler.webp',
         accentColor: AppColors.green,
         primaryLabel: 'Aktif',
@@ -1248,10 +1295,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         secondaryLabel: 'Doluluk',
         secondaryValue: _formatRatio(modules?.fields.productionRatio ?? 0),
         badgeText: (modules?.fields.warningCount ?? 0) > 0
-            ? '${modules!.fields.warningCount} uyari'
+            ? '${modules!.fields.warningCount} uyarı'
             : (modules?.fields.count ?? 0) > 0
             ? 'Calisiyor'
-            : 'Bos',
+            : 'Boş',
         hasAlert:
             alertedModules.contains('fields') ||
             (modules?.fields.warningCount ?? 0) > 0,
@@ -1261,17 +1308,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         title: 'AR-GE',
         image: 'arge.webp',
         accentColor: AppColors.info,
-        primaryLabel: 'Arastirma',
+        primaryLabel: 'Araştırma',
         primaryValue: '${modules?.arge.activeResearchCount ?? 0}',
         secondaryLabel: 'Kalan',
         secondaryValue: _formatRemainingTime(
           modules?.arge.remainingSeconds ?? 0,
         ),
         badgeText: (modules?.arge.warningCount ?? 0) > 0
-            ? '${modules!.arge.warningCount} uyari'
+            ? '${modules!.arge.warningCount} uyarı'
             : (modules?.arge.activeResearchCount ?? 0) > 0
             ? 'Devam ediyor'
-            : 'Hazir',
+            : 'Hazır',
         hasAlert:
             alertedModules.contains('arge') ||
             (modules?.arge.warningCount ?? 0) > 0,
@@ -1290,7 +1337,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ? AppMoney.compact(activeDepositTotal)
             : 'Yok',
         badgeText: activeLoanDebt > 0
-            ? 'Borc var'
+            ? 'Borç var'
             : (activeDepositTotal > 0 ? 'Mevduat' : 'Bos'),
         hasAlert: activeLoanDebt > 0,
         requiredLevel: 6,
@@ -1302,8 +1349,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         primaryLabel: 'Borç',
         primaryValue: taxDebt > 0 ? AppMoney.compact(taxDebt) : '0',
         secondaryLabel: 'Durum',
-        secondaryValue: taxDebt > 0 ? 'Odenmemis' : 'Temiz',
-        badgeText: taxDebt > 0 ? 'Borc var' : 'Stabil',
+        secondaryValue: taxDebt > 0 ? 'Ödenmemiş' : 'Temiz',
+        badgeText: taxDebt > 0 ? 'Borç var' : 'Stabil',
         hasAlert: taxDebt > 0,
         requiredLevel: 7,
       ),
@@ -1318,22 +1365,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         secondaryValue: _formatRatio(modules?.factories.productionRatio ?? 0),
         badgeText: (modules?.factories.blockedCount ?? 0) > 0
             ? '${modules!.factories.blockedCount} sorun'
-            : 'Uretimde',
+            : 'Üretimde',
         hasAlert:
             alertedModules.contains('factories') ||
             (modules?.factories.blockedCount ?? 0) > 0,
         requiredLevel: 8,
       ),
       _HomeModuleCardData(
-        title: 'Ihale',
+        title: 'İhale',
         image: 'ihale.webp',
         accentColor: openTenders > 0 ? AppColors.gold : AppColors.blue,
-        primaryLabel: 'Acik',
+        primaryLabel: 'Açık',
         primaryValue: '$openTenders',
         secondaryLabel: 'Aktif',
         secondaryValue: '$activeTenders',
-        badgeText: openTenders > 0 ? 'Ihale' : 'Yok',
-        hasAlert: openTenders > 0,
+        badgeText: activeTenders > 0
+            ? 'Aktif'
+            : (openTenders > 0 ? 'Açık' : 'Yok'),
+        hasAlert: alertedModules.contains('tenders'),
         requiredLevel: 10,
       ),
       _HomeModuleCardData(
@@ -1363,7 +1412,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ? '${modules!.mines.warningCount} uyari'
             : (modules?.mines.count ?? 0) > 0
             ? 'Kazida'
-            : 'Bos',
+            : 'Boş',
         hasAlert:
             alertedModules.contains('mines') ||
             (modules?.mines.warningCount ?? 0) > 0,
@@ -1406,6 +1455,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         case 'arge':
           alertedModules.add('arge');
           break;
+        case 'tender':
+        case 'player_tender':
+          alertedModules.add('tenders');
+          break;
       }
     }
 
@@ -1418,7 +1471,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         final dashboard = ref.watch(homeDashboardProvider).value;
         final tutorial = ref.watch(tutorialProvider);
         if (dashboard != null && tutorial.isLoaded) {
-          final isBrandNewPlayer = dashboard.player.level == 1 &&
+          final isBrandNewPlayer =
+              dashboard.player.level == 1 &&
               dashboard.player.currentLevelExperience == 0 &&
               dashboard.modules.stores.count == 0;
 
@@ -1495,7 +1549,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             final isLocked = playerLevel < module.requiredLevel;
             final isWorking = !isLocked && _isModuleWorking(module);
 
-            final isStoreModuleTutorialTarget = module.title == 'Magazalar' &&
+            final isStoreModuleTutorialTarget =
+                (module.title == 'Mağazalar' || module.title == 'Magazalar') &&
                 (ref.watch(tutorialProvider).step ==
                         TutorialStep.clickFirstStore ||
                     ref.watch(tutorialProvider).step ==
@@ -1724,7 +1779,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _handleModuleTap(String moduleTitle) async {
-    if (moduleTitle == 'Magazalar') {
+    if (moduleTitle == 'Mağazalar' || moduleTitle == 'Magazalar') {
       if (ref.read(tutorialProvider).step == TutorialStep.clickFirstStore) {
         ref
             .read(tutorialProvider.notifier)
@@ -1737,6 +1792,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
     }
     switch (moduleTitle) {
+      case 'Mağazalar':
       case 'Magazalar':
         context.go('/store');
         return;
@@ -1746,6 +1802,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case 'Tarlalar':
         context.go('/farms');
         return;
+      case 'Çiftlikler':
       case 'Ciftlikler':
         context.go('/fields');
         return;
@@ -1773,6 +1830,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case 'Banka':
         context.push('/bank');
         return;
+      case 'İhale':
       case 'Ihale':
         context.push('/tenders');
         return;
@@ -2875,7 +2933,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case 'market_sale':
         return 'Satış';
       case 'construction_completed':
-        return 'Insaat';
+        return 'İnşaat';
       case 'upgrade_completed':
         return 'Yukseltme';
       case 'transfer_completed':

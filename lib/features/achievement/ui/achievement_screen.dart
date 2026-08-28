@@ -172,17 +172,17 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                           ),
                           SizedBox(height: 10.h),
                           if (activeItems.isEmpty)
-                            _buildEmptyState('Bu filtre icin aktif basari yok.')
+                            _buildEmptyState('Bu filtre için aktif başarı yok.')
                           else
                             ...activeItems.map(_buildAchievementCard),
                           SizedBox(height: 20.h),
                           _buildSectionTitle(
-                            'Acilan Rozetler',
-                            'Su ana kadar kazandigin kalici basarilar',
+                            'Açılan Rozetler',
+                            'Şu ana kadar kazandığın kalıcı başarılar',
                           ),
                           SizedBox(height: 10.h),
                           if (unlockedItems.isEmpty)
-                            _buildEmptyState('Henuz bu filtre icin rozet yok.')
+                            _buildEmptyState('Henüz bu filtre için rozet yok.')
                           else
                             ...unlockedItems.map(
                               (badge) =>
@@ -198,7 +198,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
                       ),
                     ),
                     error: (error, _) =>
-                        _buildEmptyState('Basarilar yuklenemedi: $error'),
+                        _buildEmptyState('Başarılar yüklenemedi: $error'),
                   ),
                 ),
               ),
@@ -619,7 +619,7 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
       case 'logistics':
         return 'Lojistik';
       case 'research':
-        return 'Arastirma';
+        return 'Araştırma';
       case 'mastery':
       default:
         return 'Ustalik';

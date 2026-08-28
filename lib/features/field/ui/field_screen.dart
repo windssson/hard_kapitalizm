@@ -26,7 +26,6 @@ class FieldScreen extends ConsumerStatefulWidget {
 class _FieldScreenState extends ConsumerState<FieldScreen>
     with RouteRefreshMixin<FieldScreen> {
   final int _selectedIndex = -1;
-  String _selectedFilter = 'Tumu';
 
   @override
   void initState() {
@@ -80,7 +79,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: result['message'] ?? 'Ciftlik insaati tamamlanamadi.',
+        message: result['message'] ?? 'Çiftlik inşaatı tamamlanamadı.',
         type: SnackbarType.error,
       );
       return;
@@ -101,8 +100,8 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Tamamlandi',
-        message: 'Insaat aninda tamamlandi.',
+        title: 'Tamamlandı',
+        message: 'İnşaat anında tamamlandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -112,7 +111,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Yildiz ile bitirme basarisiz oldu.',
+      message: result['message'] ?? 'Yıldız ile bitirme başarısız oldu.',
       type: SnackbarType.error,
     );
   }
@@ -125,8 +124,14 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       onApplyReduction: () => ref
           .read(fieldActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
-      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+      successMessage: 'İnşaat süresi 10 dakika kısaltıldı.',
     );
+  }
+
+  int _calculateStarCost(DateTime finishAt) {
+    final remaining = finishAt.difference(DateTime.now());
+    if (remaining.inSeconds <= 0) return 0;
+    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
   }
 
   @override
@@ -143,7 +148,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         extendedPadding: EdgeInsets.symmetric(horizontal: 14.w),
         icon: Icon(AppIcons.add, size: AppIconSizes.compact),
         label: Text(
-          'YENI CIFTLIK',
+          'YENİ ÇİFTLİK',
           style: AppTextStyles.caption.standardCopyWith(
             fontWeight: FontWeight.bold,
             fontSize: AppTypography.bodySmall,
@@ -157,12 +162,11 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Ciftliklerim'),
+            const SecondaryTopBar(title: 'Çiftliklerim'),
             Expanded(
               child: fieldsAsync.when(
                 data: (fields) => constructionAsync.when(
                   data: (construction) {
-                    final filteredFields = _getFilteredFields(fields);
                     return RefreshIndicator(
                       onRefresh: _refreshAll,
                       child: CustomScrollView(
@@ -173,10 +177,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                             sliver: SliverToBoxAdapter(
                               child: _buildStatsHeader(fields),
                             ),
-                          ),
-                          SliverPadding(
-                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
-                            sliver: SliverToBoxAdapter(child: _buildFilters()),
                           ),
                           if (construction != null)
                             SliverPadding(
@@ -192,17 +192,17 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                               10.w,
                               80.h,
                             ),
-                            sliver: filteredFields.isEmpty
+                            sliver: fields.isEmpty
                                 ? SliverToBoxAdapter(
                                     child: construction == null
                                         ? _buildEmptyState()
                                         : const SizedBox.shrink(),
                                   )
                                 : SliverList.builder(
-                                    itemCount: filteredFields.length,
+                                    itemCount: fields.length,
                                     itemBuilder: (context, index) {
                                       return _buildAdvancedFieldCard(
-                                        filteredFields[index],
+                                        fields[index],
                                       );
                                     },
                                   ),
@@ -247,8 +247,8 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
     return Column(
       children: [
         ConstructionCountdownCard(
-          title: name?.isNotEmpty == true ? name! : 'Yeni Ciftlik',
-          subtitle: 'Ciftlik insaati devam ediyor',
+          title: name?.isNotEmpty == true ? name! : 'Yeni Çiftlik',
+          subtitle: 'Çiftlik inşaatı devam ediyor',
           finishAt: finishAt.toLocal(),
           icon: AppIcons.grass,
           onFinished: () => _completeConstruction(constructionId),
@@ -265,20 +265,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
           ),
       ],
     );
-  }
-
-  int _calculateStarCost(DateTime finishAt) {
-    final remaining = finishAt.difference(DateTime.now());
-    if (remaining.inSeconds <= 0) return 0;
-    return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
-  }
-
-  List<FieldListItemModel> _getFilteredFields(List<FieldListItemModel> fields) {
-    return fields.where((item) {
-      if (_selectedFilter == 'Aktif') return item.field.isActive;
-      if (_selectedFilter == 'Pasif') return !item.field.isActive;
-      return true;
-    }).toList();
   }
 
   Widget _buildStatsHeader(List<FieldListItemModel> fields) {
@@ -304,7 +290,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             _buildStatItem(
               AppIcons.grass,
               AppColors.gold,
-              'Ciftlik',
+              'Çiftlik',
               fields.length.toString(),
             ),
             SizedBox(width: 14.w),
@@ -331,7 +317,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
             _buildStatItem(
               AppIcons.inventory2,
               AppColors.gold,
-              'Urun',
+              'Ürün',
               _formatCompact(totalOutputStock),
             ),
           ],
@@ -378,92 +364,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildFilters() {
-    return Row(
-      children: [
-        _buildFilterChip('Tümü', null),
-        SizedBox(width: 8.w),
-        _buildFilterChip('Aktif', AppColors.green),
-        SizedBox(width: 8.w),
-        _buildFilterChip('Pasif', AppColors.red),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(String label, Color? dotColor) {
-    final isSelected =
-        _selectedFilter == label ||
-        (label == 'Tümü' && _selectedFilter == 'Tumu');
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (label == 'Tümü') {
-            _selectedFilter = 'Tumu';
-          } else {
-            _selectedFilter = label;
-          }
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.gold.withValues(alpha: 0.15)
-              : AppColors.cardBg.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.gold
-                : AppColors.border.withValues(alpha: 0.5),
-            width: isSelected ? 1.5 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.gold.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            if (dotColor != null) ...[
-              Container(
-                width: 6.w,
-                height: 6.w,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: dotColor.withValues(alpha: 0.6),
-                      blurRadius: 4,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 8.w),
-            ],
-            Text(
-              label,
-              style: AppTextStyles.body.standardCopyWith(
-                color: isSelected
-                    ? AppColors.goldLight
-                    : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: AppTypography.body,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -744,7 +644,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
                     SizedBox(width: 5.w),
                     Expanded(
                       child: Text(
-                        'Urun Deposu',
+                        'Ürün Deposu',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.caption.standardCopyWith(

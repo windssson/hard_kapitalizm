@@ -19,7 +19,7 @@ final playerLoansProvider = FutureProvider<List<LoanModel>>((ref) async {
         .map((json) => LoanModel.fromJson(Map<String, dynamic>.from(json as Map)))
         .toList();
   } catch (e, stackTrace) {
-    Error.throwWithStackTrace(Exception('Krediler alinamadi: $e'), stackTrace);
+    Error.throwWithStackTrace(Exception('Krediler alınamadı: $e'), stackTrace);
   }
 });
 
@@ -38,7 +38,7 @@ final playerDepositsProvider = FutureProvider<List<DepositModel>>((ref) async {
         .map((json) => DepositModel.fromJson(Map<String, dynamic>.from(json as Map)))
         .toList();
   } catch (e, stackTrace) {
-    Error.throwWithStackTrace(Exception('Mevduatlar alinamadi: $e'), stackTrace);
+    Error.throwWithStackTrace(Exception('Mevduatlar alınamadı: $e'), stackTrace);
   }
 });
 
@@ -54,7 +54,7 @@ final loanLimitProvider = FutureProvider<double>((ref) async {
     );
     return (response as num).toDouble();
   } catch (e, stackTrace) {
-    Error.throwWithStackTrace(Exception('Kredi limiti alinamadi: $e'), stackTrace);
+    Error.throwWithStackTrace(Exception('Kredi limiti alınamadı: $e'), stackTrace);
   }
 });
 
@@ -70,7 +70,7 @@ final maxDepositLimitProvider = FutureProvider<double>((ref) async {
     );
     return (response as num).toDouble();
   } catch (e, stackTrace) {
-    Error.throwWithStackTrace(Exception('Mevduat limiti alinamadi: $e'), stackTrace);
+    Error.throwWithStackTrace(Exception('Mevduat limiti alınamadı: $e'), stackTrace);
   }
 });
 

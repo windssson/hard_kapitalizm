@@ -12,7 +12,7 @@ class TransferHistoryProductModel {
   factory TransferHistoryProductModel.fromJson(Map<String, dynamic> json) {
     return TransferHistoryProductModel(
       id: (json['id'] ?? '').toString(),
-      name: (json['urun_adi'] ?? 'Urun').toString(),
+      name: (json['urun_adi'] ?? 'Ürün').toString(),
       icon: (json['urun_iconu'] ?? 'default.webp').toString(),
     );
   }
@@ -30,7 +30,7 @@ class TransferHistoryCityModel {
   factory TransferHistoryCityModel.fromJson(Map<String, dynamic> json) {
     return TransferHistoryCityModel(
       id: (json['id'] ?? '').toString(),
-      name: (json['name'] ?? 'Bilinmeyen Sehir').toString(),
+      name: (json['name'] ?? 'Bilinmeyen Şehir').toString(),
     );
   }
 }
@@ -56,7 +56,7 @@ class TransferHistoryEndpointModel {
     final resolvedKind = (json['kind'] ?? defaultKind).toString();
     final fallbackName = switch (resolvedKind) {
       'production' || 'production_inventory' => 'Uretim',
-      'store' || 'store_slot' => 'Magaza',
+      'store' || 'store_slot' => 'Mağaza',
       _ => 'Depo',
     };
 
@@ -158,19 +158,19 @@ class TransferHistoryItemModel {
         ? TransferHistoryCityModel.fromJson(buyerCityJson)
         : null;
 
-    if (sellerCity == null || sellerCity.id.isEmpty || sellerCity.name == 'Bilinmeyen Sehir') {
-      if (buyerCity != null && buyerCity.id.isNotEmpty && buyerCity.name != 'Bilinmeyen Sehir') {
+    if (sellerCity == null || sellerCity.id.isEmpty || sellerCity.name == 'Bilinmeyen Şehir') {
+      if (buyerCity != null && buyerCity.id.isNotEmpty && buyerCity.name != 'Bilinmeyen Şehir') {
         sellerCity = buyerCity;
       }
     }
-    if (buyerCity == null || buyerCity.id.isEmpty || buyerCity.name == 'Bilinmeyen Sehir') {
-      if (sellerCity != null && sellerCity.id.isNotEmpty && sellerCity.name != 'Bilinmeyen Sehir') {
+    if (buyerCity == null || buyerCity.id.isEmpty || buyerCity.name == 'Bilinmeyen Şehir') {
+      if (sellerCity != null && sellerCity.id.isNotEmpty && sellerCity.name != 'Bilinmeyen Şehir') {
         buyerCity = sellerCity;
       }
     }
 
-    final finalSellerCity = sellerCity ?? const TransferHistoryCityModel(id: '', name: 'Bilinmeyen Sehir');
-    final finalBuyerCity = buyerCity ?? const TransferHistoryCityModel(id: '', name: 'Bilinmeyen Sehir');
+    final finalSellerCity = sellerCity ?? const TransferHistoryCityModel(id: '', name: 'Bilinmeyen Şehir');
+    final finalBuyerCity = buyerCity ?? const TransferHistoryCityModel(id: '', name: 'Bilinmeyen Şehir');
 
     return TransferHistoryItemModel(
       id: (json['id'] ?? '').toString(),
@@ -238,7 +238,7 @@ String _historyKindLabel(String kind) {
   switch (kind) {
     case 'store':
     case 'store_slot':
-      return 'Magaza';
+      return 'Mağaza';
     case 'production':
     case 'production_inventory':
       return 'Uretim';

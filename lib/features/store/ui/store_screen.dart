@@ -74,7 +74,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         backgroundColor: AppColors.gold,
         icon: Icon(AppIcons.addBusiness, color: AppColors.textOnAccent),
         label: Text(
-          'Magaza Kur',
+          'Mağaza Kur',
           style: AppTextStyles.button.standardCopyWith(
             color: AppColors.textOnAccent,
             fontWeight: FontWeight.bold,
@@ -84,7 +84,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Magazalarim'),
+            const SecondaryTopBar(title: 'Mağazalarım'),
             Expanded(
               child: storesAsync.when(
                 data: (stores) {
@@ -1055,7 +1055,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           ),
           SizedBox(height: 16.h),
           Text(
-            'Henuz bir magazan yok.',
+            'Henüz bir mağazan yok.',
             style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textPrimary,
             ),
@@ -1108,7 +1108,7 @@ class _ConstructionCountdownState
             widget.onFinish?.call();
           });
         }
-        return 'Tamamlaniyor...';
+        return 'Tamamlanıyor...';
       }
       final minutes = remaining.inMinutes;
       final seconds = (remaining.inSeconds % 60).toString().padLeft(2, '0');

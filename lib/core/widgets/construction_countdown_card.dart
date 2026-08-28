@@ -80,7 +80,7 @@ class _ConstructionCountdownCardState
                 Text(widget.subtitle, style: AppTextStyles.body),
                 SizedBox(height: 8.h),
                 Text(
-                  safe.inSeconds <= 0 ? 'Tamamlaniyor...' : 'Kalan Sure: $h:$m:$s',
+                  safe.inSeconds <= 0 ? 'Tamamlanıyor...' : 'Kalan Süre: $h:$m:$s',
                   style: AppTextStyles.title.standardCopyWith(
                     color: AppColors.gold,
                     fontSize: AppTypography.bodyLarge,
@@ -91,8 +91,8 @@ class _ConstructionCountdownCardState
                   SizedBox(height: 10.h),
                   RewardedTimeReduceButton(
                     onPressed: () => widget.onReduceTimeWithAd!.call(),
-                    label: 'Reklam izle -10 dk',
-                    caption: 'Bir reklam odulu al ve insaat suresini 10 dakika kisalt.',
+                    label: 'Reklam İzle -10 Dk',
+                    caption: 'Bir reklam ödülü al ve inşaat süresini 10 dakika kısalt.',
                   ),
                 ],
               ],

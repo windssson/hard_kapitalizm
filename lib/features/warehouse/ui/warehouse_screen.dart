@@ -77,7 +77,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Depolarim'),
+            const SecondaryTopBar(title: 'Depolarım'),
             Expanded(
               child: warehousesAsync.when(
                 data: (warehouses) {
@@ -353,7 +353,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                   SizedBox(height: 12.h),
                   filledSlots.isEmpty
                       ? Text(
-                          'Bos Depo',
+                          'Boş Depo',
                           style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
                             fontSize: AppTypography.label,
@@ -436,7 +436,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Kapasite Kullanimi',
+              'Kapasite Kullanımı',
               style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.caption,
@@ -532,7 +532,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                       ),
                     ),
                     Text(
-                      warehouse.cityName ?? 'Bilinmeyen Sehir',
+                      warehouse.cityName ?? 'Bilinmeyen Şehir',
                       style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.gold,
                         fontSize: AppTypography.bodySmall,
@@ -561,7 +561,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                       )
                     else
                       Text(
-                        'Insaat verisi guncelleniyor...',
+                        'İnşaat verisi güncelleniyor...',
                         style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
                           fontSize: AppTypography.bodySmall,
@@ -573,7 +573,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                         onPressed: () =>
                             _handleReduceConstructionTimeWithAd(warehouse.id),
                         caption:
-                            'Bir reklam odulu al ve depo insaat suresini 10 dakika kisalt.',
+                            'Bir reklam ödülü al ve depo inşaat süresini 10 dakika kısalt.',
                       ),
                     ],
                   ],
@@ -610,7 +610,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
           side: BorderSide(color: AppColors.borderGold),
         ),
         title: Text(
-          'Depo Insaatini Bitir',
+          'Depo İnşaatını Bitir',
           style: AppTextStyles.title.standardCopyWith(
             color: AppColors.goldLight,
             fontSize: AppTypography.titleLarge,
@@ -618,7 +618,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
           ),
         ),
         content: Text(
-          '$starCost yildiz kullanarak depo insaatini aninda tamamlamak istiyor musunuz?',
+          '$starCost yıldız kullanarak depo inşaatını anında tamamlamak istiyor musunuz?',
           style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textSecondary,
             fontSize: AppTypography.bodyLarge,
@@ -628,7 +628,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
-              'Iptal',
+              'İptal',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.bodyLarge,
@@ -667,8 +667,8 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
       if (mounted) {
         AppSnackbar.show(
           context,
-          title: 'Basarili',
-          message: 'Depo insaati aninda tamamlandi!',
+          title: 'Başarılı',
+          message: 'Depo inşaatı anında tamamlandı!',
           type: SnackbarType.success,
         );
         await showExperienceFeedbackFromResult(context, result);
@@ -677,7 +677,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: result['message'] ?? 'Altin ile bitirme islemi basarisiz.',
+        message: result['message'] ?? 'Altın ile bitirme işlemi başarısız.',
         type: SnackbarType.error,
       );
     }
@@ -693,7 +693,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
       onApplyReduction: () => ref
           .read(warehouseActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
-      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+      successMessage: 'İnşaat süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
@@ -704,7 +704,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
 
   Widget _buildEmptyState({required bool hasAnyWarehouse}) {
     final title = hasAnyWarehouse
-        ? 'Secili filtreye uygun depo bulunamadi.'
+        ? 'Seçili filtreye uygun depo bulunamadı.'
         : 'Henuz deponuz bulunmuyor.';
 
     return Center(
@@ -743,7 +743,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             ),
             SizedBox(height: 12.h),
             Text(
-              'Depo listesi yuklenemedi.',
+              'Depo listesi yüklenemedi.',
               textAlign: TextAlign.center,
               style: AppTextStyles.title.standardCopyWith(
                 color: AppColors.textPrimary,
@@ -804,7 +804,7 @@ class _ConstructionCountdownState
           widget.onFinish();
         });
       }
-      return const Text('Tamamlaniyor...');
+      return const Text('Tamamlanıyor...');
     }
 
     final h = timeLeft.inHours.toString().padLeft(2, '0');
@@ -812,7 +812,7 @@ class _ConstructionCountdownState
     final s = (timeLeft.inSeconds % 60).toString().padLeft(2, '0');
 
     return Text(
-      'Kalan Sure: $h:$m:$s',
+      'Kalan Süre: $h:$m:$s',
       style: AppTextStyles.body.standardCopyWith(
         color: AppColors.gold,
         fontSize: AppTypography.body,

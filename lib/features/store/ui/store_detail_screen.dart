@@ -382,7 +382,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             ),
                           ),
                           Text(
-                            'Gecen Sure: ${_formatElapsedSalesDuration(result.elapsedMinutes)}',
+                            'Geçen Süre: ${_formatElapsedSalesDuration(result.elapsedMinutes)}',
                             style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textMuted,
                               fontSize: AppTypography.label,
@@ -457,7 +457,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                               ),
                               SizedBox(width: 6.w),
                               Text(
-                                '+${result.experience!.amount} XP Kazandin!',
+                                '+${result.experience!.amount} XP Kazandın!',
                                 style: AppTextStyles.label.standardCopyWith(
                                   color: AppColors.white,
                                   fontSize: AppTypography.bodySmall,
@@ -474,7 +474,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 SizedBox(height: 14.h),
                 if (result.items.isNotEmpty) ...[
                   Text(
-                    'Urunler',
+                    'Ürünler',
                     style: AppTextStyles.title.standardCopyWith(
                       color: AppColors.white.withValues(alpha: 0.70),
                       fontSize: AppTypography.bodyLarge,
@@ -686,7 +686,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Tebrikler, sirket seviyen yukseldi.',
+              'Tebrikler, şirket seviyen yükseldi.',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textPrimary,
                 fontSize: AppTypography.bodyLarge,
@@ -1023,7 +1023,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
     return Column(
       children: [
-        SecondaryTopBar(title: 'Magaza Yonetimi'),
+        SecondaryTopBar(title: 'Mağaza Yönetimi'),
         Consumer(
           builder: (context, ref, _) {
             final listAsync = ref.watch(storesListProvider);
@@ -1057,7 +1057,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         color: AppColors.gold,
                       ),
                       items: list.map((item) {
-                        final displayCity = item.cityName ?? 'Bilinmeyen Sehir';
+                        final displayCity = item.cityName ?? 'Bilinmeyen Şehir';
                         return DropdownMenuItem<String>(
                           value: item.id,
                           child: Row(
@@ -1394,7 +1394,15 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               .read(tutorialProvider.notifier)
               .setStep(TutorialStep.clickGoToMarket);
         }
-        await _refreshStorePageAndSync(store.id, performanceDirty: true);
+        final newSlot = StoreSlotModel.fromJson(result);
+        ref.read(storeDetailPageProvider(store.id).notifier).addSlot(newSlot);
+        ref.read(storesListProvider.notifier).replaceStore(
+          store.copyWith(
+            currentSlotCount: (result['current_slot_count'] as num?)?.toInt() ?? (store.currentSlotCount + 1),
+            slots: [...store.slots, newSlot],
+          ),
+        );
+        ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
         if (!context.mounted) return;
         _showSuccess(context, 'Yeni raf başarıyla oluşturuldu!');
       } else {
@@ -1434,7 +1442,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
       _showSuccess(
         context,
-        nextActive ? 'Magaza aktif edildi.' : 'Magaza pasife alindi.',
+        nextActive ? 'Mağaza aktif edildi.' : 'Mağaza pasife alındı.',
       );
       return;
     }
@@ -1442,7 +1450,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     _showError(
       context,
       _buildGuidedError(
-        'Magaza durumu guncellenemedi.',
+        'Mağaza durumu güncellenemedi.',
         detail: result['message']?.toString(),
         suggestion:
             'Aktif transfer, vergi veya isletme kisitlarini kontrol edip tekrar dene.',
@@ -1468,7 +1476,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           'Satis teklifi hazirlanamadi.',
           detail: quote['message']?.toString(),
           suggestion:
-              'Magaza deposunda veya transferlerinde bekleyen bir islem varsa once onu tamamla.',
+              'Mağaza deposunda veya transferlerinde bekleyen bir işlem varsa önce onu tamamla.',
         ),
       );
       return;
@@ -1484,7 +1492,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.background,
         title: Text(
-          'Magazayi Sat',
+          'Mağazayı Sat',
           style: AppTextStyles.h2.standardCopyWith(
             color: AppColors.red,
             fontSize: AppTypography.headline,
@@ -1535,7 +1543,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             ),
             SizedBox(height: 10.h),
             Text(
-              'Aktif transfer varsa satis engellenir. Magaza deposu ve icindeki stoklar iade hesabina dahildir; satis sonrasi depo kapanir.',
+              'Aktif transfer varsa satış engellenir. Mağaza deposu ve içindeki stoklar iade hesabına dahildir; satış sonrası depo kapanır.',
               style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.bodySmall,
@@ -1553,7 +1561,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text(
-              'Magazayi Sat',
+              'Mağazayı Sat',
               style: AppTextStyles.button.standardCopyWith(
                 color: AppColors.textOnAccent,
               ),
@@ -1575,7 +1583,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       ref.read(storesListProvider.notifier).removeStore(store.id);
       _showSuccess(
         context,
-        'Magaza satildi. ${((result['total_refund'] as num?)?.toDouble() ?? totalRefund).toStringAsFixed(1)} TL eklendi.',
+        'Mağaza satıldı. ${((result['total_refund'] as num?)?.toDouble() ?? totalRefund).toStringAsFixed(1)} TL eklendi.',
       );
       context.go('/store');
       return;
@@ -1584,10 +1592,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     _showError(
       context,
       _buildGuidedError(
-        'Magaza satilamadi.',
+        'Mağaza satılamadı.',
         detail: result['message']?.toString(),
         suggestion:
-            'Aktif transferleri, magaza deposunu ve devam eden yukseltmeleri kontrol edip tekrar dene.',
+            'Aktif transferleri, mağaza deposunu ve devam eden yükseltmeleri kontrol edip tekrar dene.',
       ),
     );
   }
@@ -1652,7 +1660,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   }
 
   String _formatCountdown(Duration remaining) {
-    if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+    if (remaining.inSeconds <= 0) return 'Tamamlanıyor';
     final hours = remaining.inHours;
     final minutes = remaining.inMinutes % 60;
     if (hours > 0) {
@@ -1836,10 +1844,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             .startStoreBoostWithAdReward(storeId: store.id);
 
                         if (result['success'] == true) {
-                          await _refreshStorePageAndSync(
-                            store.id,
-                            refreshPlayer: true,
-                          );
+                          final boost = BuildingBoostModel.fromJson(result);
+                          ref.read(storeDetailPageProvider(store.id).notifier).patchActiveBoost(boost);
                         }
                         return result;
                       },
@@ -1983,10 +1989,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         if (!context.mounted) return;
 
                         if (result['success'] == true) {
-                          await _refreshStorePageAndSync(
-                            store.id,
-                            refreshPlayer: true,
-                          );
+                          final boost = BuildingBoostModel.fromJson(result);
+                          ref.read(storeDetailPageProvider(store.id).notifier).patchActiveBoost(boost);
+                          ref.read(storeDetailPageProvider(store.id).notifier).applyMutation(result);
                           if (!context.mounted) return;
                           _showSuccess(
                             context,
@@ -2180,7 +2185,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           ),
         ),
         content: Text(
-          '$starCost yildiz kullanarak yukseltmeyi aninda tamamlamak istiyor musunuz?',
+          '$starCost yıldız kullanarak yükseltmeyi anında tamamlamak istiyor musunuz?',
           style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textSecondary,
             fontSize: AppTypography.bodyLarge,
@@ -2190,7 +2195,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
-              'Iptal',
+              'İptal',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.bodyLarge,
@@ -2227,15 +2232,18 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (!mounted) return;
 
     if (result['success'] == true) {
-      await _refreshStorePageAndSync(widget.storeId, refreshPlayer: true);
+      ref.read(storeDetailPageProvider(widget.storeId).notifier).patchActiveUpgrade(null);
+      ref.read(storeDetailPageProvider(widget.storeId).notifier).patchStoreLevel(upgrade.targetLevel);
+      ref.read(storesListProvider.notifier).patchStoreLevel(storeId: widget.storeId, level: upgrade.targetLevel);
+      ref.read(storeDetailPageProvider(widget.storeId).notifier).applyMutation(result);
       if (!mounted) return;
-      _showSuccess(context, 'Magaza yukseltmesi tamamlandi!');
+      _showSuccess(context, 'Mağaza yükseltmesi tamamlandı!');
       await showExperienceFeedbackFromResult(context, result);
     } else {
       _showError(
         context,
         _buildGuidedError(
-          'Yildiz ile aninda tamamlama basarisiz oldu.',
+          'Yıldız ile anında tamamlama başarısız oldu.',
           detail: result['message']?.toString(),
           suggestion:
               'Yeterli yildizin oldugundan emin ol ve islemi biraz sonra tekrar dene.',
@@ -2254,11 +2262,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       onApplyReduction: () => ref
           .read(storeActionProvider)
           .reduceStoreUpgradeTimeWithAd(upgrade.id),
-      successMessage: 'Magaza yukseltme suresi 10 dakika kisaltildi.',
+      successMessage: 'Mağaza yükseltme süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
-      await _refreshStorePageAndSync(widget.storeId, refreshPlayer: true);
+      final reducedFinishAt = upgrade.finishAt.subtract(const Duration(minutes: 10));
+      ref.read(storeDetailPageProvider(widget.storeId).notifier).patchActiveUpgrade(
+        upgrade.copyWith(finishAt: reducedFinishAt),
+      );
     }
   }
 
@@ -2271,7 +2282,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (activeUpgrade != null) {
       _showError(
         context,
-        'Su anda oyun genelinde baska bir yukseltme devam ediyor. Once o yukseltmenin tamamlanmasini bekle.',
+        'Şu anda oyun genelinde başka bir yükseltme devam ediyor. Önce o yükseltmenin tamamlanmasını bekle.',
       );
       return;
     }
@@ -2285,7 +2296,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (quote.isMaximumLevel) {
       _showError(
         context,
-        'Bu magaza zaten maksimum seviye ${quote.maxLevel}. Yeni yukseltme acmak icin once farkli bir magaza gelistirmen gerekir.',
+        'Bu mağaza zaten maksimum seviye ${quote.maxLevel}. Yeni yükseltme açmak için önce farklı bir mağaza geliştirmen gerekir.',
       );
       return;
     }
@@ -2299,7 +2310,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
     await showBuildingUpgradeSheet(
       context: context,
-      title: 'Magaza Yukseltmesi',
+      title: 'Mağaza Yükseltmesi',
       buildingName: store.name,
       icon: AppIcons.storefrontRounded,
       currentLevel: store.level,
@@ -2328,19 +2339,21 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             .startStoreUpgrade(store.id);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          await _refreshStorePageAndSync(store.id, refreshPlayer: true);
+          final newUpgrade = BuildingUpgradeModel.fromJson(result);
+          ref.read(storeDetailPageProvider(store.id).notifier).patchActiveUpgrade(newUpgrade);
+          ref.read(storeDetailPageProvider(store.id).notifier).applyMutation(result);
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
             amount: upgradeCost,
             type: FloatingFeedbackType.cashRemove,
           );
-          _showSuccess(context, 'Magaza yukseltmesi baslatildi.');
+          _showSuccess(context, 'Mağaza yükseltmesi başlatıldı.');
         } else {
           _showError(
             context,
             _buildGuidedError(
-              'Magaza yukseltmesi baslatilamadi.',
+              'Mağaza yükseltmesi başlatılamadı.',
               detail: result['message']?.toString(),
               suggestion:
                   'Nakit durumunu, seviye gereksinimini ve acik yukseltme durumunu kontrol edip tekrar dene.',
@@ -3219,12 +3232,20 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       if (!context.mounted) return;
 
       if (result['success'] == true) {
-        await _refreshStorePageAndSync(
-          store.id,
-          refreshPlayer: true,
-          historyDirty: true,
-          performanceDirty: true,
-        );
+        final updatedStoreSlots = result['updated_store_slots'] as List<dynamic>?;
+        if (updatedStoreSlots != null && updatedStoreSlots.isNotEmpty) {
+          ref
+              .read(storeDetailPageProvider(store.id).notifier)
+              .bulkPatchSlotQuantities(updatedStoreSlots);
+        }
+        final updatedWhSlots = result['updated_warehouse_slots'] as List<dynamic>?;
+        if (updatedWhSlots != null && updatedWhSlots.isNotEmpty) {
+          ref
+              .read(storeDetailPageProvider(store.id).notifier)
+              .bulkPatchStoreWarehouseSlots(updatedWhSlots);
+        }
+        ref.read(storeHistoryDirtyProvider(store.id).notifier).state = true;
+        ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
         if (!context.mounted) return;
 
         final transferredQuantity =
@@ -3234,7 +3255,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         final message =
             result['message']?.toString() ??
             (transferredQuantity > 0
-                ? 'Magaza raflari dolduruldu.'
+                ? 'Mağaza rafları dolduruldu.'
                 : 'Doldurulacak uygun depo stogu bulunamadi.');
 
         if (transferredQuantity > 0) {
@@ -3254,7 +3275,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           'Raflar otomatik doldurulamadi.',
           detail: result['message']?.toString(),
           suggestion:
-              'Magaza deposunda uygun stok oldugunu ve raflarda secili urun bulundugunu kontrol et.',
+              'Mağaza deposunda uygun stok olduğunu ve raflarda seçili ürün bulunduğunu kontrol et.',
         ),
       );
     } finally {
@@ -3713,12 +3734,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       if (!context.mounted) return;
 
       if (result['success'] == true) {
-        await _refreshStorePageAndSync(
-          store.id,
-          refreshPlayer: false,
-          historyDirty: false,
-          performanceDirty: true,
-        );
+        final updatedSlots = result['updated_slots'] as List<dynamic>?;
+        if (updatedSlots != null && updatedSlots.isNotEmpty) {
+          ref
+              .read(storeDetailPageProvider(store.id).notifier)
+              .bulkPatchSlotPrices(updatedSlots);
+          ref
+              .read(storesListProvider.notifier)
+              .bulkPatchSlotPrices(storeId: store.id, updatedSlots: updatedSlots);
+        }
+        ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
         if (!context.mounted) return;
 
         final updatedSlotCount =
@@ -3726,7 +3751,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         final message =
             result['message']?.toString() ??
             (updatedSlotCount > 0
-                ? 'Toplu fiyat guncellemesi tamamlandi.'
+                ? 'Toplu fiyat güncellemesi tamamlandı.'
                 : 'Guncellenecek uygun raf bulunamadi.');
 
         if (updatedSlotCount > 0) {
@@ -3743,7 +3768,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           'Toplu fiyat guncellenemedi.',
           detail: result['message']?.toString(),
           suggestion:
-              'Aktif raf ve gecerli maliyet bilgisi oldugundan emin olup tekrar dene.',
+              'Aktif raf ve geçerli maliyet bilgisi olduğundan emin olup tekrar dene.',
         ),
       );
     } finally {
@@ -3828,7 +3853,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Iptal'),
+            child: const Text('İptal'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -3858,7 +3883,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           .read(storesListProvider.notifier)
           .patchSlotCleared(storeId: store.id, slotId: slot.id);
       ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
-      _showSuccess(context, 'Slot urun secimi temizlendi.');
+      _showSuccess(context, 'Slot ürün seçimi temizlendi.');
       return;
     }
 
@@ -3974,7 +3999,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       final parsedPrice = double.tryParse(controller.text.replaceAll(',', '.'));
 
       if (parsedPrice == null || parsedPrice <= 0) {
-        _showWarning(context, 'Gecerli bir fiyat girin.');
+        _showWarning(context, 'Geçerli bir fiyat girin.');
         return;
       }
 
@@ -4035,7 +4060,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           'Satis fiyati kaydedilemedi.',
           detail: result['message']?.toString(),
           suggestion:
-              'Gecerli bir fiyat girdiginden emin ol ve rafi tekrar kaydet.',
+              'Geçerli bir fiyat girdiğinden emin ol ve rafı tekrar kaydet.',
         ),
       );
     }
@@ -4100,7 +4125,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                               ),
                               SizedBox(height: 2.h),
                               Text(
-                                (slot.productName ?? 'Urun') +
+                                (slot.productName ?? 'Ürün') +
                                     (slot.brandId != _defaultBrandId
                                         ? ' (${ref.read(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})'
                                         : ''),
@@ -4225,7 +4250,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => Navigator.of(dialogContext).pop(),
-                            child: const Text('Iptal'),
+                            child: const Text('İptal'),
                           ),
                         ),
                         SizedBox(width: 10.w),
@@ -4279,10 +4304,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         _showError(
           context,
           _buildGuidedError(
-            'Secilebilir urunler yuklenemedi.',
+            'Seçilebilir ürünler yüklenemedi.',
             detail: e.toString(),
             suggestion:
-                'Baglantiyi ve magaza deposundaki stoklari kontrol edip tekrar dene.',
+                'Bağlantıyı ve mağaza deposundaki stokları kontrol edip tekrar dene.',
           ),
         );
       }
@@ -4296,10 +4321,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         _showError(
           context,
           _buildGuidedError(
-            'Secilebilir urunler getirilemedi.',
+            'Seçilebilir ürünler getirilemedi.',
             detail: result['message']?.toString(),
             suggestion:
-                'Magaza deposunda uygun urun oldugundan emin olup tekrar dene.',
+                'Mağaza deposunda uygun ürün olduğundan emin olup tekrar dene.',
           ),
         );
       }
@@ -4334,7 +4359,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       if (context.mounted) {
         _showInfo(
           context,
-          'Magaza deposunda secilebilir yeni urun-kalite-brand kombinasyonu bulunamadi.',
+          'Mağaza deposunda seçilebilir yeni ürün-kalite-marka kombinasyonu bulunamadı.',
         );
       }
       return;
@@ -4353,10 +4378,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       final quantity = (product['quantity'] as num?)?.toInt() ?? 0;
       return ProductSelectionOption(
         id: product['warehouse_slot_id']?.toString() ?? '',
-        title: (product['name'] ?? 'Bilinmeyen Urun').toString(),
+        title: (product['name'] ?? 'Bilinmeyen Ürün').toString(),
         subtitle: 'Kalite $qualityLevel | Stok: $quantity',
         iconPath: (product['icon'] ?? 'default').toString(),
-        badgeText: 'Magaza Deposu',
+        badgeText: 'Mağaza Deposu',
         trailingWidget: isProduced
             ? Container(
                 margin: EdgeInsets.only(top: 4.h),
@@ -4450,16 +4475,16 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               .read(tutorialProvider.notifier)
               .setStep(TutorialStep.clickAddStock);
         }
-        _showSuccess(parentContext, '${product['name']} basariyla eklendi!');
+        _showSuccess(parentContext, '${product['name']} başarıyla eklendi!');
       } else {
         if (!parentContext.mounted) return;
         _showError(
           parentContext,
           _buildGuidedError(
-            'Urun rafa eklenemedi.',
+            'Ürün rafa eklenemedi.',
             detail: result['message']?.toString(),
             suggestion:
-                'Secilen urunun depo stokta oldugunu ve rafin uygun kaliteye ayarlandigini kontrol et.',
+                'Seçilen ürünün depo stokta olduğunu ve rafın uygun kaliteye ayarlandığını kontrol et.',
           ),
         );
       }
@@ -4509,7 +4534,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (productId == null || productId.isEmpty) {
       _showError(
         context,
-        'Bu islem icin once rafta gecerli bir urun secmelisin.',
+        'Bu işlem için önce rafta geçerli bir ürün seçmelisin.',
       );
       return;
     }
@@ -4517,7 +4542,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (storeWarehouse == null) {
       _showError(
         context,
-        'Bu magazaya bagli depo bulunamadi. Depo olusmus mu kontrol et ve tekrar dene.',
+        'Bu mağazaya bağlı depo bulunamadı. Depo oluşmuş mu kontrol et ve tekrar dene.',
       );
       return;
     }
@@ -4546,8 +4571,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       _showInfo(
         context,
         shouldLockQuality
-            ? 'Magaza deposunda bu urunun secili urun-kalite-brand standardina uygun stogu yok.'
-            : 'Magaza deposunda bu urune ait uygun stok bulunamadi.',
+            ? 'Mağaza deposunda bu ürünün seçili ürün-kalite-marka standardına uygun stoğu yok.'
+            : 'Mağaza deposunda bu ürüne ait uygun stok bulunamadı.',
       );
       return;
     }
@@ -4633,7 +4658,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       children: [
                         Expanded(
                           child: Text(
-                            'Magaza Deposundan Cek',
+                            'Mağaza Deposundan Çek',
                             style: AppTextStyles.h1.standardCopyWith(
                               fontSize: AppTypography.displaySmall,
                             ),
@@ -4729,7 +4754,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                           if (qty <= 0 || qty > limit) {
                             _showWarning(
                               context,
-                              'Gecersiz miktar. 1 ile mevcut stok arasinda bir deger gir.',
+                              'Geçersiz miktar. 1 ile mevcut stok arasında bir değer gir.',
                             );
                             return;
                           }
@@ -4800,7 +4825,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             'Raf hazirlanamadi.',
             detail: setupResult['message']?.toString(),
             suggestion:
-                'Raf urun eslesmesini kontrol edip transferi tekrar baslat.',
+                'Raf ürün eşleşmesini kontrol edip transferi tekrar başlat.',
           ),
         );
         return;
@@ -4818,14 +4843,22 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      await _refreshStorePageAndSync(
-        store.id,
-        refreshPlayer: true,
-        historyDirty: true,
-        performanceDirty: true,
-      );
+      final newStoreQty = (result['store_slot_quantity'] as num?)?.toInt() ?? (slot.quantity + quantity);
+      final remainingWhQty = (result['remaining_warehouse_quantity'] as num?)?.toInt() ?? (warehouseSlot.quantity - quantity);
+
+      ref
+          .read(storeDetailPageProvider(store.id).notifier)
+          .patchSlotQuantity(slotId: slot.id, quantity: newStoreQty);
+      ref
+          .read(storeDetailPageProvider(store.id).notifier)
+          .patchStoreWarehouseSlotQuantity(
+            warehouseSlotId: warehouseSlot.id,
+            quantity: remainingWhQty,
+          );
+      ref.read(storeHistoryDirtyProvider(store.id).notifier).state = true;
+      ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
       if (!context.mounted) return;
-      _showSuccess(context, 'Stok magazaya tasindi.');
+      _showSuccess(context, 'Stok mağazaya taşındı.');
       return;
     }
 
@@ -4835,7 +4868,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         'Depodan rafa stok tasinamadi.',
         detail: result['message']?.toString(),
         suggestion:
-            'Depoda yeterli stok ve rafta bos kapasite oldugunu kontrol edip tekrar dene.',
+            'Depoda yeterli stok ve rafta boş kapasite olduğunu kontrol edip tekrar dene.',
       ),
     );
   }
@@ -4871,7 +4904,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (slot.quantity <= 0) {
       _showError(
         context,
-        'Depoya gonderecek stok yok. Once rafta urun oldugundan emin ol.',
+        'Depoya gönderecek stok yok. Önce rafta ürün olduğundan emin ol.',
       );
       return;
     }
@@ -4879,7 +4912,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (storeWarehouse == null) {
       _showError(
         context,
-        'Bu magazaya bagli depo bulunamadi. Depo baglantisini kontrol edip tekrar dene.',
+        'Bu mağazaya bağlı depo bulunamadı. Depo bağlantısını kontrol edip tekrar dene.',
       );
       return;
     }
@@ -4910,7 +4943,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           backgroundColor: AppColors.background,
           insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
           title: Text(
-            'Magaza Deposuna Gonder',
+            'Mağaza Deposuna Gönder',
             style: AppTextStyles.h2.standardCopyWith(
               color: AppColors.textPrimary,
               fontSize: AppTypography.headline,
@@ -4935,7 +4968,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        (slot.productName ?? 'Urun') +
+                        (slot.productName ?? 'Ürün') +
                             (slot.brandId != _defaultBrandId
                                 ? ' (${ref.read(playerBrandCompanyProvider).value?.brandName ?? 'Markali'})'
                                 : ''),
@@ -4977,7 +5010,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   ),
                   decoration: InputDecoration(
                     labelText: 'Miktar',
-                    helperText: 'Depoya gonderilecek urun adedi',
+                    helperText: 'Depoya gönderilecek ürün adedi',
                     labelStyle: AppTextStyles.body.standardCopyWith(
                       color: AppColors.gold,
                     ),
@@ -5029,7 +5062,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Iptal'),
+              child: const Text('İptal'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
@@ -5038,7 +5071,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 if (qty <= 0 || qty > limit) {
                   _showWarning(
                     context,
-                    'Gecersiz miktar. 1 ile mevcut stok arasinda bir deger gir.',
+                    'Geçersiz miktar. 1 ile mevcut stok arasında bir değer gir.',
                   );
                   return;
                 }
@@ -5108,21 +5141,36 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (!context.mounted) return;
 
     if (result['success'] == true) {
-      await _refreshStorePageAndSync(
-        store.id,
-        refreshPlayer: true,
-        historyDirty: true,
-        performanceDirty: true,
-      );
+      final remainingStoreQty = (result['remaining_store_slot_quantity'] as num?)?.toInt() ?? (slot.quantity - quantity);
+      final whSlotId = result['warehouse_slot_id']?.toString();
+
+      ref
+          .read(storeDetailPageProvider(store.id).notifier)
+          .patchSlotQuantity(slotId: slot.id, quantity: remainingStoreQty);
+
+      if (whSlotId != null) {
+        final currentWhSlots = ref.read(storeDetailPageProvider(store.id)).value?.storeWarehouse?.slots;
+        final existingWhSlot = currentWhSlots?.where((s) => s.id == whSlotId).firstOrNull;
+        if (existingWhSlot != null) {
+          ref
+              .read(storeDetailPageProvider(store.id).notifier)
+              .patchStoreWarehouseSlotQuantity(
+                warehouseSlotId: whSlotId,
+                quantity: existingWhSlot.quantity + quantity,
+              );
+        }
+      }
+      ref.read(storeHistoryDirtyProvider(store.id).notifier).state = true;
+      ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
       if (!context.mounted) return;
-      _showSuccess(context, 'Stok magaza deposuna gonderildi.');
+      _showSuccess(context, 'Stok mağaza deposuna gönderildi.');
       return;
     }
 
     _showError(
       context,
       _buildGuidedError(
-        'Stok magaza deposuna gonderilemedi.',
+        'Stok mağaza deposuna gönderilemedi.',
         detail: result['message']?.toString(),
         suggestion:
             'Raftaki miktari ve depodaki uygun alan durumunu kontrol edip tekrar dene.',
@@ -5533,7 +5581,7 @@ class _ActiveUpgradeCard extends ConsumerWidget {
 }
 
 String _formatCountdownLabel(Duration remaining) {
-  if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+  if (remaining.inSeconds <= 0) return 'Tamamlanıyor';
   final hours = remaining.inHours;
   final minutes = remaining.inMinutes % 60;
   if (hours > 0) {

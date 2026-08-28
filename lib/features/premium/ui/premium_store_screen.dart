@@ -152,7 +152,7 @@ class PremiumStoreScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'PREMIUM MAGAZA',
+                  'PREMIUM MAĞAZA',
                   style: AppTextStyles.h2.standardCopyWith(
                     color: AppColors.textPrimary,
                     fontSize: AppTypography.titleLarge,
@@ -462,7 +462,7 @@ class PremiumStoreScreen extends ConsumerWidget {
                 ),
                 SizedBox(height: 16.h),
                 Text(
-                  'SATIN ALMA ISLEMI',
+                  'SATIN ALMA İŞLEMİ',
                   style: AppTextStyles.h2.standardCopyWith(
                     color: AppColors.textPrimary,
                     fontSize: AppTypography.titleLarge,

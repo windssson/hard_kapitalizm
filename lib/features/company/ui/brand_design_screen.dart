@@ -36,8 +36,8 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
     final success = result['success'] == true;
     AppSnackbar.show(
       context,
-      title: success ? 'Basarili' : 'Hata',
-      message: (result['message'] ?? 'Islem tamamlanamadi.').toString(),
+      title: success ? 'Başarılı' : 'Hata',
+      message: (result['message'] ?? 'İşlem tamamlanamadı.').toString(),
       type: success ? SnackbarType.success : SnackbarType.error,
     );
     if (success) {
@@ -77,7 +77,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Marka Tasarimi'),
+            const SecondaryTopBar(title: 'Marka Tasarımı'),
             Expanded(
               child: companyAsync.when(
                 loading: () => Center(
@@ -87,7 +87,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                 data: (company) {
                   if (company == null) {
                     return _buildErrorState(
-                      'Duzenlenecek aktif marka bulunamadi.',
+                      'Düzenlenecek aktif marka bulunamadı.',
                     );
                   }
 
@@ -211,7 +211,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                       ),
                       SizedBox(height: 20.h),
                       _buildInfoCard(
-                        'Logonu ve rengini diledigin gibi degistirebilirsin. Kaydettiginde tum markali urunlerinde ve arayuzde yeni tasarimin gecerli olacaktir.',
+                        'Logonu ve rengini dilediğin gibi değiştirebilirsin. Kaydettiğinde tüm markalı ürünlerinde ve arayüzde yeni tasarımın geçerli olacaktır.',
                       ),
                       SizedBox(height: 20.h),
                       SizedBox(

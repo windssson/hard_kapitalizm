@@ -9,6 +9,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/app_network_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/chat/data/chat_service.dart';
@@ -101,7 +102,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       AppSnackbar.show(
         context,
         title: 'Oyuncu Bulunamadi',
-        message: 'Urun baglamak icin once oyuncu verisi yuklenmeli.',
+        message: 'Ürün bağlamak için önce oyuncu verisi yüklenmeli.',
         type: SnackbarType.warning,
       );
       return;
@@ -150,7 +151,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         AppSnackbar.show(
           context,
           title: 'Kopyalandi',
-          message: 'Mesaj panoya kopyalandi.',
+          message: 'Mesaj panoya kopyalandı.',
           type: SnackbarType.success,
         );
         return;
@@ -370,8 +371,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         message: (result['message']?.toString().trim().isNotEmpty ?? false)
             ? result['message'].toString()
             : alreadyReported
-            ? 'Bu mesaj zaten raporlanmis.'
-            : 'Mesaj moderasyon ekibine gonderildi.',
+            ? 'Bu mesaj zaten raporlanmış.'
+            : 'Mesaj moderasyon ekibine gönderildi.',
         type: alreadyReported ? SnackbarType.warning : SnackbarType.success,
       );
     } catch (e) {
@@ -857,10 +858,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       child: ClipOval(
         child: isUrl
-            ? Image.network(
-                msg.avatarId,
+            ? AppNetworkImage(
+                imageUrl: msg.avatarId,
+                width: 28.w,
+                height: 28.w,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Icon(
+                errorWidget: Icon(
                   AppIcons.person,
                   color: AppColors.textMuted,
                   size: AppIconSizes.compact,
@@ -1252,14 +1255,14 @@ class _ChatProductPickerSheet extends ConsumerWidget {
             ),
             SizedBox(height: 14.h),
             Text(
-              'Satisa Acik Urun Sec',
+              'Satışa Açık Ürün Seç',
               style: AppTextStyles.title.standardCopyWith(
                 color: AppColors.textPrimary,
               ),
             ),
             SizedBox(height: 4.h),
             Text(
-              'Mesajina bir urun ilani ekleyebilirsin.',
+              'Mesajına bir ürün ilanı ekleyebilirsin.',
               style: AppTextStyles.body,
             ),
             SizedBox(height: 14.h),
@@ -1269,7 +1272,7 @@ class _ChatProductPickerSheet extends ConsumerWidget {
                     Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (error, _) => Center(
                   child: Text(
-                    'Urunler yuklenemedi: $error',
+                    'Ürünler yüklenemedi: $error',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.red,
                     ),
@@ -1286,7 +1289,7 @@ class _ChatProductPickerSheet extends ConsumerWidget {
                   if (saleListings.isEmpty) {
                     return Center(
                       child: Text(
-                        'Su anda satisa acik urunun yok.',
+                        'Şu anda satışa açık ürünün yok.',
                         style: AppTextStyles.body,
                       ),
                     );
@@ -1476,7 +1479,7 @@ class _ChatMessageActionsSheet extends StatelessWidget {
             ),
             SizedBox(height: 4.h),
             Text(
-              message.content.isEmpty ? 'Bagli urun mesaji' : message.content,
+              message.content.isEmpty ? 'Bağlı ürün mesajı' : message.content,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.body.standardCopyWith(
@@ -1653,7 +1656,7 @@ class _ChatReportSheetState extends State<_ChatReportSheet> {
             SizedBox(height: 6.h),
             Text(
               widget.message.content.isEmpty
-                  ? 'Bagli urun mesaji'
+                  ? 'Bağlı ürün mesajı'
                   : widget.message.content,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
@@ -1722,7 +1725,7 @@ class _ChatReportSheetState extends State<_ChatReportSheet> {
                 color: AppColors.textPrimary,
               ),
               decoration: const InputDecoration(
-                hintText: 'Istersen kisa bir aciklama ekle...',
+                hintText: 'İstersen kısa bir açıklama ekle...',
                 counterText: '',
               ),
             ),

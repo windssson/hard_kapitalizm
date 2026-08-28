@@ -65,7 +65,7 @@ Future<StoreDetailPageModel> _fetchStoreDetailPage(String storeId) async {
   final user = supabase.auth.currentUser;
 
   if (user == null) {
-    throw Exception('Kullanici girisi yapilmamis.');
+    throw Exception('Kullanıcı girişi yapılmamış.');
   }
 
   final response = await supabase.rpc(
@@ -78,7 +78,7 @@ Future<StoreDetailPageModel> _fetchStoreDetailPage(String storeId) async {
   final json = Map<String, dynamic>.from(response as Map);
   if (json['success'] != true) {
     throw Exception(
-      json['message'] ?? 'Magaza detay sayfasi acilirken hata olustu.',
+      json['message'] ?? 'Mağaza detay sayfası açılırken hata oluştu.',
     );
   }
 
@@ -150,6 +150,40 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
       slotId: slotId,
       patcher: (slot) => slot.copyWith(price: price),
     );
+  }
+
+  void bulkPatchSlotPrices({
+    required String storeId,
+    required List<dynamic> updatedSlots,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final priceMap = <String, double>{};
+    for (final item in updatedSlots) {
+      if (item is Map) {
+        final id = (item['slot_id'] ?? item['id'])?.toString();
+        final price = (item['price'] as num?)?.toDouble();
+        if (id != null && price != null) {
+          priceMap[id] = price;
+        }
+      }
+    }
+    if (priceMap.isEmpty) return;
+
+    final storeIndex = current.indexWhere((item) => item.id == storeId);
+    if (storeIndex < 0) return;
+
+    final store = current[storeIndex];
+    final slots = store.slots.map((slot) {
+      if (priceMap.containsKey(slot.id)) {
+        return slot.copyWith(price: priceMap[slot.id]);
+      }
+      return slot;
+    }).toList();
+
+    final next = [...current];
+    next[storeIndex] = store.copyWith(slots: slots);
+    state = AsyncData(next);
   }
 
   void patchSlotCleared({
@@ -226,6 +260,17 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
     next[storeIndex] = store.copyWith(slots: slots);
     state = AsyncData(next);
   }
+
+  void patchStoreLevel({required String storeId, required int level}) {
+    final current = state.value;
+    if (current == null) return;
+    final storeIndex = current.indexWhere((item) => item.id == storeId);
+    if (storeIndex < 0) return;
+    final store = current[storeIndex];
+    final next = [...current];
+    next[storeIndex] = store.copyWith(level: level);
+    state = AsyncData(next);
+  }
 }
 
 final storesListProvider =
@@ -298,7 +343,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
     if (user == null) {
-      throw Exception('Kullanici girisi yapilmamis.');
+      throw Exception('Kullanıcı girişi yapılmamış.');
     }
 
     final response = await supabase.rpc(
@@ -484,6 +529,104 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     );
   }
 
+  /// bulkPatchSlotPrices: Toplu kâr marjı sonrasında slot fiyatlarını günceller.
+  void bulkPatchSlotPrices(List<dynamic> updatedSlots) {
+    final current = state.value;
+    if (current == null) return;
+    final priceMap = <String, double>{};
+    for (final item in updatedSlots) {
+      if (item is Map) {
+        final id = (item['slot_id'] ?? item['id'])?.toString();
+        final price = (item['price'] as num?)?.toDouble();
+        if (id != null && price != null) {
+          priceMap[id] = price;
+        }
+      }
+    }
+    if (priceMap.isEmpty) return;
+    final updatedSlotsList = current.store.slots.map((slot) {
+      if (priceMap.containsKey(slot.id)) {
+        return slot.copyWith(price: priceMap[slot.id]);
+      }
+      return slot;
+    }).toList();
+    state = AsyncData(
+      current.copyWith(store: current.store.copyWith(slots: updatedSlotsList)),
+    );
+  }
+
+  /// bulkPatchSlotQuantities: Rafları doldurma sonrası slot stok ve maliyetlerini günceller.
+  void bulkPatchSlotQuantities(List<dynamic> updatedStoreSlots) {
+    final current = state.value;
+    if (current == null) return;
+    final qtyMap = <String, Map<String, dynamic>>{};
+    for (final item in updatedStoreSlots) {
+      if (item is Map) {
+        final id = item['id']?.toString();
+        if (id != null) {
+          qtyMap[id] = Map<String, dynamic>.from(item);
+        }
+      }
+    }
+    if (qtyMap.isEmpty) return;
+    final updatedSlotsList = current.store.slots.map((slot) {
+      if (qtyMap.containsKey(slot.id)) {
+        final data = qtyMap[slot.id]!;
+        final qty = (data['quantity'] as num?)?.toInt() ?? slot.quantity;
+        final cost = (data['cost'] as num?)?.toDouble() ?? slot.cost;
+        return slot.copyWith(quantity: qty, cost: cost);
+      }
+      return slot;
+    }).toList();
+    state = AsyncData(
+      current.copyWith(store: current.store.copyWith(slots: updatedSlotsList)),
+    );
+  }
+
+  /// bulkPatchStoreWarehouseSlots: Mağaza deposu slot stoklarını günceller.
+  void bulkPatchStoreWarehouseSlots(List<dynamic> updatedWarehouseSlots) {
+    final current = state.value;
+    if (current == null || current.storeWarehouse == null) return;
+    final qtyMap = <String, int>{};
+    for (final item in updatedWarehouseSlots) {
+      if (item is Map) {
+        final id = item['id']?.toString();
+        final qty = (item['quantity'] as num?)?.toInt();
+        if (id != null && qty != null) {
+          qtyMap[id] = qty;
+        }
+      }
+    }
+    if (qtyMap.isEmpty) return;
+    final updatedSlotsList = current.storeWarehouse!.slots.map((slot) {
+      if (qtyMap.containsKey(slot.id)) {
+        return slot.copyWith(quantity: qtyMap[slot.id]!);
+      }
+      return slot;
+    }).where((slot) => slot.quantity > 0).toList();
+    state = AsyncData(current.copyWith(
+      storeWarehouse: current.storeWarehouse!.copyWith(slots: updatedSlotsList),
+    ));
+  }
+
+  /// patchStoreWarehouseSlotQuantity: Tekil mağaza deposu slot miktarını günceller.
+  void patchStoreWarehouseSlotQuantity({
+    required String warehouseSlotId,
+    required int quantity,
+  }) {
+    final current = state.value;
+    if (current == null || current.storeWarehouse == null) return;
+    final updatedSlotsList = current.storeWarehouse!.slots.map((slot) {
+      if (slot.id == warehouseSlotId) {
+        return slot.copyWith(quantity: quantity);
+      }
+      return slot;
+    }).where((slot) => slot.quantity > 0).toList();
+    state = AsyncData(current.copyWith(
+      storeWarehouse: current.storeWarehouse!.copyWith(slots: updatedSlotsList),
+    ));
+  }
+
   /// applyMutation: Ham RPC response map'ini uygular.
   /// Player ve common dirty flagleri MutationSyncService üzerinden sync eder.
   void applyMutation(Map<String, dynamic> response) {
@@ -506,7 +649,7 @@ final storePerformanceProvider =
       final user = supabase.auth.currentUser;
 
       if (user == null) {
-        throw Exception('Kullanici girisi yapilmamis.');
+        throw Exception('Kullanıcı girişi yapılmamış.');
       }
 
       final response = await supabase.rpc(
@@ -523,7 +666,7 @@ final storePerformanceProvider =
       );
 
       if (!model.success) {
-        throw Exception(model.message ?? 'Magaza performansi alinamadi.');
+        throw Exception(model.message ?? 'Mağaza performansı alınamadı.');
       }
 
       return model;
@@ -535,7 +678,7 @@ final storeHistoryProvider =
       final user = supabase.auth.currentUser;
 
       if (user == null) {
-        throw Exception('Kullanici girisi yapilmamis.');
+        throw Exception('Kullanıcı girişi yapılmamış.');
       }
 
       final response = await supabase.rpc(
@@ -553,7 +696,7 @@ final storeHistoryProvider =
               DateTime.now(),
           title: (json['title'] ?? '').toString(),
           subtitle: (json['subtitle'] ?? '').toString(),
-          productName: (json['product_name'] ?? 'Urun').toString(),
+          productName: (json['product_name'] ?? 'Ürün').toString(),
           quantity: (json['quantity'] as num?)?.toInt() ?? 0,
           amount: (json['amount'] as num?)?.toDouble() ?? 0,
           secondaryAmount: (json['secondary_amount'] as num?)?.toDouble(),
@@ -853,7 +996,7 @@ class StoreActionNotifier {
         return {
           'success': false,
           'message':
-              'Magaza slotu urunu sadece magazaya bagli depo slotundan secilebilir.',
+              'Mağaza slotu ürünü sadece mağazaya bağlı depo slotundan seçilebilir.',
         };
       }
 

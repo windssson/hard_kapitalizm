@@ -6,8 +6,8 @@ class RewardedTimeReduceButton extends StatelessWidget {
   const RewardedTimeReduceButton({
     super.key,
     required this.onPressed,
-    this.label = 'Reklam izle -10 dk',
-    this.caption = 'Bir reklam odulu al ve sureyi 10 dakika kisalt.',
+    this.label = 'Reklam İzle -10 Dk',
+    this.caption = 'Bir reklam ödülü al ve süreyi 10 dakika kısalt.',
     this.compact = false,
   });
 

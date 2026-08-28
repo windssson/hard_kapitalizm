@@ -181,21 +181,20 @@ class FarmDetailModel {
     required this.inventories,
   });
 
-  Set<String> get _activeInputProductIds {
-    final ids = <String>{};
-    for (final slot in slots) {
+  bool _isInventoryActiveInput(FarmProductionInventoryModel e) {
+    if (!e.isInput) return false;
+    return slots.any((slot) {
       final product = slot.product;
-      if (slot.isEmpty || product == null) continue;
-      ids.addAll(product.inputProductIds);
-    }
-    return ids;
+      if (slot.isEmpty || product == null) return false;
+      final requiredQuality = slot.qualityLevel <= 2 ? 1 : slot.qualityLevel - 1;
+      return product.inputProductIds.contains(e.productId) &&
+          e.qualityLevel == requiredQuality;
+    });
   }
 
   List<FarmProductionInventoryModel> get inputInventories =>
       inventories
-          .where(
-            (e) => e.isInput && _activeInputProductIds.contains(e.productId),
-          )
+          .where(_isInventoryActiveInput)
           .toList()
         ..sort((a, b) => a.productId.compareTo(b.productId));
 
@@ -204,7 +203,7 @@ class FarmDetailModel {
           .where(
             (e) =>
                 e.isInput &&
-                !_activeInputProductIds.contains(e.productId) &&
+                !_isInventoryActiveInput(e) &&
                 (e.quantity > 0 || e.pendingQuantity > 0),
           )
           .toList()

@@ -45,7 +45,7 @@ final tenderDetailProvider =
       );
       if (!detail.success) {
         throw Exception(
-          detail.message.isNotEmpty ? detail.message : 'Ihale detayi alinamadi.',
+          detail.message.isNotEmpty ? detail.message : 'İhale detayı alınamadı.',
         );
       }
       return detail;
@@ -71,7 +71,7 @@ final playerTenderDetailProvider =
         throw Exception(
           detail.message.isNotEmpty
               ? detail.message
-              : 'Oyuncu ihalesi detayi alinamadi.',
+              : 'Oyuncu ihalesi detayı alınamadı.',
         );
       }
       return detail;

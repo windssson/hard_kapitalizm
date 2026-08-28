@@ -1425,7 +1425,7 @@ class _LogisticsManagementScreenState
                   SizedBox(height: 12.h),
                 ],
                 _buildMiniProgress(
-                  'YAKIT REZERVI',
+                  'YAKIT REZERVİ',
                   fuelRatio,
                   fuelRatio < 0.2 ? AppColors.red : AppColors.gold,
                   AppIcons.bolt,
@@ -1841,7 +1841,7 @@ class _LogisticsManagementScreenState
             ),
             SizedBox(width: 12.w),
             Text(
-              isFull ? 'FILO KAPASITESI DOLU' : 'YENI ARAC SATIN AL',
+              isFull ? 'FİLO KAPASİTESİ DOLU' : 'YENİ ARAÇ SATIN AL',
               style: AppTextStyles.body.standardCopyWith(
                 color: isFull ? AppColors.textMuted : AppColors.gold,
                 fontWeight: FontWeight.bold,
@@ -1926,7 +1926,7 @@ class _LogisticsManagementScreenState
               constructionId,
             ),
             caption:
-                'Bir reklam odulu al ve lojistik firma insaat suresini 10 dakika kisalt.',
+                'Bir reklam ödülü al ve lojistik firma inşaat süresini 10 dakika kısalt.',
           ),
         ],
       ],
@@ -2581,7 +2581,7 @@ class _LogisticsManagementScreenState
       onApplyReduction: () => ref
           .read(logisticsActionProvider)
           .reduceConstructionTimeWithAd(constructionId, syncProviders: false),
-      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+      successMessage: 'İnşaat süresi 10 dakika kısaltıldı.',
     );
 
     if (!context.mounted) return;
@@ -2888,7 +2888,7 @@ class _PurchaseVehicleTypeCard extends StatelessWidget {
               child: Text(
                 isFleetFull
                     ? 'FILO DOLU'
-                    : (canAfford ? 'SATIN AL' : 'NAKIT YETERSIZ'),
+                    : (canAfford ? 'SATIN AL' : 'NAKİT YETERSİZ'),
                 style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textOnAccent,
                   fontWeight: FontWeight.bold,

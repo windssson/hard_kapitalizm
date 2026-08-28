@@ -34,7 +34,7 @@ final taxDebtProvider = FutureProvider<double>((ref) async {
     return (response as num).toDouble();
   } catch (error, stackTrace) {
     Error.throwWithStackTrace(
-      Exception('Vergi borcu alinamadi: $error'),
+      Exception('Vergi borcu alınamadı: $error'),
       stackTrace,
     );
   }
@@ -56,7 +56,7 @@ final playerTaxProvider = FutureProvider<PlayerTaxModel>((ref) async {
     return PlayerTaxModel.fromJson(Map<String, dynamic>.from(response as Map));
   } catch (error, stackTrace) {
     Error.throwWithStackTrace(
-      Exception('Vergi durumu alinamadi: $error'),
+      Exception('Vergi durumu alınamadı: $error'),
       stackTrace,
     );
   }
@@ -84,7 +84,7 @@ class TaxActionNotifier {
     } catch (e) {
       return {
         'success': false,
-        'message': 'Vergi odeme islemi basarisiz: ${e.toString()}',
+        'message': 'Vergi ödeme işlemi başarısız: ${e.toString()}',
       };
     }
   }

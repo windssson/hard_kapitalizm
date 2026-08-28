@@ -53,8 +53,8 @@ class LeaderboardEntryModel {
       avatarId: json['avatar_id'] as String? ?? 'ae1.webp',
       headquartersCityId: json['headquarters_city_id'] as String?,
       headquartersCityName: json['headquarters_city_name'] as String?,
-      level: json['level'] as int? ?? 1,
-      experience: json['experience'] as int? ?? 0,
+      level: (json['level'] as num?)?.toInt() ?? 1,
+      experience: (json['experience'] as num?)?.toInt() ?? 0,
       cash: double.tryParse(json['cash']?.toString() ?? '0') ?? 0.0,
       gold: double.tryParse(json['gold']?.toString() ?? '0') ?? 0.0,
       companyValue:
@@ -84,8 +84,8 @@ class LeaderboardEntryModel {
             json['production_inventory_value']?.toString() ?? '0',
           ) ??
           0.0,
-      achievementUnlockedCount: json['achievement_unlocked_count'] as int? ?? 0,
-      achievementTotalCount: json['achievement_total_count'] as int? ?? 0,
+      achievementUnlockedCount: (json['achievement_unlocked_count'] as num?)?.toInt() ?? 0,
+      achievementTotalCount: (json['achievement_total_count'] as num?)?.toInt() ?? 0,
     );
   }
 }

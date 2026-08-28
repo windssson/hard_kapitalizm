@@ -1046,7 +1046,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   ),
                 ),
                 icon: const Icon(AppIcons.paletteOutlined),
-                label: const Text('Marka Tasarimini Duzelt'),
+                label: const Text('Marka Tasarımını Düzenle'),
               ),
             ),
           ),

@@ -37,7 +37,7 @@ Future<List<FactoryListItemModel>> _fetchFactoryList() async {
       factory: FactoryModel.fromJson(
         Map<String, dynamic>.from(map['factory'] as Map),
       ),
-      cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+      cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
       factoryTypeName:
           (map['factory_type_name'] ?? 'Bilinmeyen Fabrika').toString(),
       factoryTypeIcon: (map['factory_type_icon'] ?? 'factory.webp').toString(),
@@ -56,7 +56,7 @@ Future<List<FactoryListItemModel>> _fetchFactoryList() async {
 Future<FactoryDetailModel> _fetchFactoryDetail(String factoryId) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
-  if (user == null) throw Exception('Kullanici girisi yapilmamis.');
+  if (user == null) throw Exception('Kullanıcı girişi yapılmamış.');
 
   await processProductionEntry(
     supabase: supabase,
@@ -77,7 +77,7 @@ Future<FactoryDetailModel> _fetchFactoryDetail(String factoryId) async {
     factoryType: FactoryTypeDetailModel.fromJson(
       Map<String, dynamic>.from(map['factory_type'] as Map),
     ),
-    cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+    cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
     product: map['product'] == null
         ? null
         : ProductModel.fromJson(

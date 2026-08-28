@@ -380,17 +380,6 @@ class AppSnackbar {
     required String rawMessage,
     required String displayMessage,
     String? title,
-  }) {
-    final typeLabel = type.name.toUpperCase();
-    final titleLabel = title == null || title.trim().isEmpty
-        ? ''
-        : ' [$title]';
-
-    debugPrint('[SNACKBAR][$typeLabel]$titleLabel shown="$displayMessage"');
-
-    if (rawMessage != displayMessage) {
-      debugPrint('[SNACKBAR][$typeLabel]$titleLabel raw="$rawMessage"');
-    }
-  }
+  }) {}
 }
 

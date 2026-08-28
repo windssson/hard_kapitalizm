@@ -108,7 +108,7 @@ class TenderListItemModel {
   factory TenderListItemModel.fromJson(Map<String, dynamic> json) {
     return TenderListItemModel(
       tenderId: (json['tender_id'] ?? '').toString(),
-      title: (json['title'] ?? 'Ihale').toString(),
+      title: (json['title'] ?? 'İhale').toString(),
       cityId: (json['city_id'] ?? '').toString(),
       cityName: (json['city_name'] ?? '-').toString(),
       productId: (json['product_id'] ?? '').toString(),
@@ -166,7 +166,7 @@ class TenderBidSummaryModel {
   factory TenderBidSummaryModel.fromJson(Map<String, dynamic> json) {
     return TenderBidSummaryModel(
       tenderId: (json['tender_id'] ?? '').toString(),
-      title: (json['title'] ?? 'Ihale').toString(),
+      title: (json['title'] ?? 'İhale').toString(),
       cityName: (json['city_name'] ?? '-').toString(),
       productName: (json['product_name'] ?? '-').toString(),
       productIcon: (json['product_icon'] ?? '').toString(),
@@ -225,7 +225,7 @@ class PlayerTenderSummaryModel {
     return PlayerTenderSummaryModel(
       playerTenderId: (json['player_tender_id'] ?? '').toString(),
       tenderId: (json['tender_id'] ?? '').toString(),
-      title: (json['title'] ?? 'Ihale').toString(),
+      title: (json['title'] ?? 'İhale').toString(),
       cityName: (json['city_name'] ?? '-').toString(),
       productId: (json['product_id'] ?? '').toString(),
       productName: (json['product_name'] ?? '-').toString(),

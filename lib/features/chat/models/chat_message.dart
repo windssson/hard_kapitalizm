@@ -21,7 +21,7 @@ class ChatLinkedProduct {
     return ChatLinkedProduct(
       slotId: (json['linked_listing_slot_id'] ?? '').toString(),
       productId: (json['linked_product_id'] ?? '').toString(),
-      productName: (json['linked_product_name'] ?? 'Urun').toString(),
+      productName: (json['linked_product_name'] ?? 'Ürün').toString(),
       productIcon: (json['linked_product_icon'] ?? 'default.webp').toString(),
       qualityLevel: (json['linked_product_quality_level'] as num?)?.toInt() ?? 1,
       quantity: (json['linked_product_quantity'] as num?)?.toInt() ?? 0,

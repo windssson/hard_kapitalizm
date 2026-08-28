@@ -346,31 +346,31 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                               _buildDialogDetailRow(
                                 'Brand',
                                 transfer.hasBrand
-                                    ? 'Brandli Urun'
+                                    ? 'Markalı Ürün'
                                     : 'Standart Brand',
                               ),
                             ],
                             if (transfer.isMultiItem)
                               _buildDialogDetailRow(
                                 'Kalem Sayisi',
-                                '${transfer.itemCount} farkli urun',
+                                '${transfer.itemCount} farklı ürün',
                               ),
                             _buildDialogDetailRow(
                               'Nakliye Tipi',
-                              transfer.isRental ? 'Kiralik Arac' : 'Ozmal Arac',
+                              transfer.isRental ? 'Kiralık Araç' : 'Özmal Araç',
                             ),
                             _buildDialogDetailRow(
                               'Rota',
                               _isSameCityTransfer(transfer)
-                                  ? 'Ayni Sehir'
-                                  : 'Sehirler Arasi',
+                                  ? 'Aynı Şehir'
+                                  : 'Şehirler Arası',
                             ),
                             _buildDialogDetailRow(
                               'Mesafe',
                               '${routeDistanceKm.toStringAsFixed(0)} km',
                             ),
                             _buildDialogDetailRow(
-                              'Urun Bedeli',
+                              'Ürün Bedeli',
                               _formatCurrency(transfer.totalPrice),
                             ),
                             _buildDialogDetailRow(
@@ -411,7 +411,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                   SizedBox(width: 8.w),
                                   Flexible(
                                     child: Text(
-                                      'Kalan Sure: ${_formatRemaining(remaining)}',
+                                      'Kalan Süre: ${_formatRemaining(remaining)}',
                                       textAlign: TextAlign.center,
                                       style: AppTextStyles.body
                                           .standardCopyWith(
@@ -665,9 +665,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     if (!_canFinishWithRewardedAd(remaining)) {
       AppSnackbar.show(
         context,
-        title: 'Reklamla Hizli Bitir Kilitli',
+        title: 'Reklamla Hızlı Bitir Kilitli',
         message:
-            'Bu ozellik sadece transferin bitmesine 10 dakika veya daha az kaldiysa kullanilabilir.',
+            'Bu özellik sadece transferin bitmesine 10 dakika veya daha az kaldıysa kullanılabilir.',
         type: SnackbarType.warning,
       );
       return;
@@ -677,9 +677,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       context,
       rewardKind: 'transfer_finish',
       resourceId: transfer.id,
-      loadingMessage: 'Google AdMob test reklami yukleniyor.',
-      successTitle: 'Transfer Tamamlandi',
-      successMessage: 'Reklam odulu kullanildi ve transfer aninda tamamlandi.',
+      loadingMessage: 'Google AdMob test reklamı yükleniyor.',
+      successTitle: 'Transfer Tamamlandı',
+      successMessage: 'Reklam ödülü kullanıldı ve transfer anında tamamlandı.',
       onApplyAction: () async {
         final result = await ref
             .read(warehouseActionProvider)
@@ -997,7 +997,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           SizedBox(width: 6.w),
           Expanded(
             child: Text(
-              '$dueCount transfer teslimata hazir. Otomatik tamamlanacak.',
+              '$dueCount transfer teslimata hazır. Otomatik tamamlanacak.',
               style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textPrimary,
                 fontSize: AppTypography.label,
@@ -2168,9 +2168,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   String _statusLabel(String status) {
     switch (status) {
       case 'completed':
-        return 'Tamamlandi';
+        return 'Tamamlandı';
       case 'cancelled':
-        return 'Iptal';
+        return 'İptal';
       default:
         return status;
     }
@@ -2232,7 +2232,7 @@ class _TransferLiveMeta extends ConsumerWidget {
         SizedBox(width: 8.w),
         Expanded(
           child: Text(
-            'Kalan Sure: ${formatRemaining(remaining)}',
+            'Kalan Süre: ${formatRemaining(remaining)}',
             style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textPrimary,
               fontSize: AppTypography.body,

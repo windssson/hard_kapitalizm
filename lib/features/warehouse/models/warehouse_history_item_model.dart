@@ -82,7 +82,7 @@ class WarehouseHistoryItemModel {
           ? null
           : DateTime.tryParse(json['completed_at'].toString()),
       productId: (json['product_id'] ?? '').toString(),
-      productName: (json['product_name'] ?? 'Urun').toString(),
+      productName: (json['product_name'] ?? 'Ürün').toString(),
       productIcon: (json['product_icon'] ?? 'default.webp').toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
       brandId: (json['brand_id'] ?? defaultBrandId).toString(),

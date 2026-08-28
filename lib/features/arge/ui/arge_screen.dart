@@ -39,7 +39,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     ('TUMU', 'Tumu'),
     ('FABRIKA', 'Fabrika'),
     ('TARLA', 'Tarla'),
-    ('CIFTLIK', 'Ciftlik'),
+    ('CIFTLIK', 'Çiftlik'),
     ('MADEN', 'Maden'),
   ];
 
@@ -1130,8 +1130,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       _refreshCenterEcosystem(ref.read(playerArgeCenterProvider).value?.id);
       AppSnackbar.show(
         context,
-        title: 'Arastirma Basladi',
-        message: '${result['product_name']} icin gelistirme baslatildi.',
+        title: 'Araştırma Başladı',
+        message: '${result['product_name']} için geliştirme başlatıldı.',
         type: SnackbarType.success,
       );
     } else {
@@ -1156,7 +1156,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       _refreshCenterEcosystem(ref.read(playerArgeCenterProvider).value?.id);
       AppSnackbar.show(
         context,
-        title: 'Gelistirme Tamamlandi!',
+        title: 'Geliştirme Tamamlandı!',
         message:
             '${result['product_name']} kalite ${result['new_quality_level']} seviyesine ulasti.',
         type: SnackbarType.success,
@@ -1182,7 +1182,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           side: BorderSide(color: AppColors.borderGold),
         ),
         title: Text(
-          'Aninda Tamamla',
+          'Anında Tamamla',
           style: AppTextStyles.h2.standardCopyWith(
             color: AppColors.goldLight,
             fontSize: AppTypography.titleLarge,
@@ -1190,7 +1190,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           ),
         ),
         content: Text(
-          '$goldCost yildiz kullanarak arastirmayi aninda tamamlamak istiyor musunuz?',
+          '$goldCost yıldız kullanarak araştırmayı anında tamamlamak istiyor musunuz?',
           style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textSecondary,
             fontSize: AppTypography.bodyLarge,
@@ -1200,7 +1200,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
-              'Iptal',
+              'İptal',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.bodyLarge,
@@ -1241,9 +1241,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       _refreshCenterEcosystem(ref.read(playerArgeCenterProvider).value?.id);
       AppSnackbar.show(
         context,
-        title: 'Tamamlandi!',
+        title: 'Tamamlandı!',
         message:
-            '${result['product_name']} gelistirmesi tamamlandi. ${result['gold_spent']} yildiz harcandi.',
+            '${result['product_name']} geliştirmesi tamamlandı. ${result['gold_spent']} yıldız harcandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -1321,14 +1321,14 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               SizedBox(height: 14.h),
               _buildSetupRow('Seviye', '${center.level} -> $nextLevel'),
               _buildSetupRow(
-                'Arastirma Slotu',
+                'Araştırma Slotu',
                 '${center.maxConcurrentResearches} -> $nextSlots',
               ),
               _buildSetupRow(
-                'Sure Bonusu',
+                'Süre Bonusu',
                 '%${center.durationReductionPct.toStringAsFixed(0)} -> %${nextDurationReduction.toStringAsFixed(0)}',
               ),
-              _buildSetupRow('Yukseltme Suresi', '$durationMinutes dakika'),
+              _buildSetupRow('Yükseltme Süresi', '$durationMinutes dakika'),
               _buildSetupRow('Maliyet', _formatMoney(upgradeCost)),
               SizedBox(height: 18.h),
               SizedBox(
@@ -1404,9 +1404,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       _refreshCenterEcosystem(upgrade.entityId);
       AppSnackbar.show(
         context,
-        title: 'Yukseltme Tamamlandi',
+        title: 'Yükseltme Tamamlandı',
         message:
-            'AR-GE merkezi aninda tamamlandi. ${result['gold_spent']} yildiz harcandi.',
+            'AR-GE merkezi anında tamamlandı. ${result['gold_spent']} yıldız harcandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -1430,7 +1430,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       onApplyReduction: () => ref
           .read(argeActionProvider)
           .reduceCenterUpgradeTimeWithAd(upgrade.id),
-      successMessage: 'Merkez yukseltme suresi 10 dakika kisaltildi.',
+      successMessage: 'Merkez yükseltme süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
@@ -1493,7 +1493,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                       ),
                       SizedBox(height: 4.h),
                       Text(
-                        'Kalite gelistirmelerini baslatmak icin once arastirma merkezinizi faaliyete gecirin.',
+                        'Kalite geliştirmelerini başlatmak için önce araştırma merkezinizi faaliyete geçirin.',
                         style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
                           height: 1.4,
@@ -1526,9 +1526,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 ),
                 SizedBox(height: 12.h),
                 _buildSetupRow('Kurulum Maliyeti', _formatMoney(setupCost)),
-                _buildSetupRow('Insaat Suresi', '$setupDurationMinutes dakika'),
-                _buildSetupRow('Baslangic Slotu', '1 arastirma'),
-                _buildSetupRow('Sure Bonusu', '%0'),
+                _buildSetupRow('İnşaat Süresi', '$setupDurationMinutes dakika'),
+                _buildSetupRow('Başlangıç Slotu', '1 Araştırma'),
+                _buildSetupRow('Süre Bonusu', '%0'),
               ],
             ),
           ),
@@ -1676,7 +1676,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                       ),
                       SizedBox(height: 4.h),
                       Text(
-                        'Merkez kurulumu devam ediyor. Insaat tamamlaninca arastirmalar aktif olacak.',
+                        'Merkez kurulumu devam ediyor. İnşaat tamamlanınca araştırmalar aktif olacak.',
                         style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
                           height: 1.4,
@@ -1700,7 +1700,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildSetupRow(
-                  'Kalan Sure',
+                  'Kalan Süre',
                   isDone ? 'Hazir' : _formatRemaining(remaining),
                 ),
                 _buildSetupRow(
@@ -1735,7 +1735,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 ),
               ),
               child: Text(
-                isDone ? 'KURULUMU TAMAMLA' : 'KURULUM DEVAM EDIYOR',
+                isDone ? 'KURULUMU TAMAMLA' : 'KURULUM DEVAM EDİYOR',
                 style: AppTextStyles.body.standardCopyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: AppTypography.bodyLarge,
@@ -1847,7 +1847,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       _refreshCenterEcosystem();
       AppSnackbar.show(
         context,
-        title: 'Kurulum Tamamlandi',
+        title: 'Kurulum Tamamlandı',
         message: 'AR-GE merkeziniz kullanima acildi.',
         type: SnackbarType.success,
       );
@@ -1893,7 +1893,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
-              'Iptal',
+              'İptal',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.bodyLarge,
@@ -1931,7 +1931,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       _refreshCenterEcosystem();
       AppSnackbar.show(
         context,
-        title: 'Kurulum Tamamlandi',
+        title: 'Kurulum Tamamlandı',
         message:
             'AR-GE merkeziniz acildi. ${result['gold_spent'] ?? goldCost} yildiz harcandi.',
         type: SnackbarType.success,
@@ -2163,14 +2163,14 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
             children: [
               Expanded(
                 child: _ArgeUpgradeMeta(
-                  label: 'Arastirma Slotu',
+                  label: 'Araştırma Slotu',
                   value: '$prevSlots -> $nextSlots',
                 ),
               ),
               SizedBox(width: 10.w),
               Expanded(
                 child: _ArgeUpgradeMeta(
-                  label: 'Sure Bonusu',
+                  label: 'Süre Bonusu',
                   value:
                       '%${prevReduction.toStringAsFixed(0)} -> %${nextReduction.toStringAsFixed(0)}',
                 ),
@@ -2210,7 +2210,7 @@ class _ActiveArgeUpgradeCard extends ConsumerWidget {
             RewardedTimeReduceButton(
               onPressed: () => onReduceTimeWithAd!.call(),
               caption:
-                  'Bir reklam odulu al ve merkez yukseltme suresini 10 dakika kisalt.',
+                  'Bir reklam ödülü al ve merkez yükseltme süresini 10 dakika kısalt.',
             ),
           ],
         ],

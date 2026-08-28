@@ -40,27 +40,27 @@ class PlayerMissionModel {
     if (reward.xp > 0) parts.add('+${reward.xp} XP');
     if (reward.cash > 0) parts.add('+${reward.cash.toStringAsFixed(0)} Nakit');
     if (reward.gold > 0) parts.add('+${reward.gold} Altin');
-    return parts.isEmpty ? 'Odul yok' : parts.join(' | ');
+    return parts.isEmpty ? 'Ödül yok' : parts.join(' | ');
   }
 
   String get compactStatusText {
-    if (claimable) return 'Odul Hazir | $compactRewardText';
-    if (isClaimed) return 'Tamamlandi';
+    if (claimable) return 'Ödül Hazır | $compactRewardText';
+    if (isClaimed) return 'Tamamlandı';
     return '$progressCount/$targetCount | $compactRewardText';
   }
 
   String get missionTypeLabel {
     switch (missionType) {
       case 'main':
-        return 'Ana Gorev';
+        return 'Ana Görev';
       case 'side':
-        return 'Yan Gorev';
+        return 'Yan Görev';
       case 'achievement':
-        return 'Basari';
+        return 'Başarı';
       case 'daily':
-        return 'Gunluk Gorev';
+        return 'Günlük Görev';
       default:
-        return 'Gorev';
+        return 'Görev';
     }
   }
 
@@ -69,7 +69,7 @@ class PlayerMissionModel {
     return PlayerMissionModel(
       id: (json['id'] ?? '').toString(),
       missionType: (json['mission_type'] ?? 'side').toString(),
-      title: (json['title'] ?? 'Gorev').toString(),
+      title: (json['title'] ?? 'Görev').toString(),
       description: (json['description'] ?? '').toString(),
       eventKey: (json['event_key'] ?? '').toString(),
       iconKey: json['icon_key']?.toString(),

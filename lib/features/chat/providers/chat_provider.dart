@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/features/chat/data/chat_service.dart';
 import 'package:hard_kapitalizm/features/chat/models/chat_message.dart';
@@ -167,11 +166,7 @@ class ChatNotifier extends Notifier<ChatState> {
       );
       state = state.copyWith(isSending: false, clearReply: true);
       return true;
-    } catch (e, st) {
-      debugPrint(
-        '[CHAT][PROVIDER][SEND][ERROR] type=${e.runtimeType} error=$e',
-      );
-      debugPrint('[CHAT][PROVIDER][SEND][STACK] $st');
+    } catch (e) {
       state = state.copyWith(isSending: false, error: e.toString());
       return false;
     }

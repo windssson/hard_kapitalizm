@@ -24,6 +24,32 @@ class BuildingBoostModel {
   });
 
   bool get isInProgress => status == 'in_progress';
+
+  BuildingBoostModel copyWith({
+    String? id,
+    String? buildingKind,
+    String? entityId,
+    int? durationHours,
+    int? starCost,
+    double? multiplier,
+    String? status,
+    DateTime? startedAt,
+    DateTime? finishAt,
+    DateTime? completedAt,
+  }) {
+    return BuildingBoostModel(
+      id: id ?? this.id,
+      buildingKind: buildingKind ?? this.buildingKind,
+      entityId: entityId ?? this.entityId,
+      durationHours: durationHours ?? this.durationHours,
+      starCost: starCost ?? this.starCost,
+      multiplier: multiplier ?? this.multiplier,
+      status: status ?? this.status,
+      startedAt: startedAt ?? this.startedAt,
+      finishAt: finishAt ?? this.finishAt,
+      completedAt: completedAt ?? this.completedAt,
+    );
+  }
   Duration get totalDuration => finishAt.difference(startedAt);
   int get durationMinutes {
     final derived = totalDuration.inMinutes;
@@ -45,7 +71,7 @@ class BuildingBoostModel {
 
   factory BuildingBoostModel.fromJson(Map<String, dynamic> json) {
     return BuildingBoostModel(
-      id: (json['id'] ?? '').toString(),
+      id: (json['id'] ?? json['boost_id'] ?? '').toString(),
       buildingKind: (json['building_kind'] ?? '').toString(),
       entityId: (json['entity_id'] ?? '').toString(),
       durationHours: (json['duration_hours'] as num?)?.toInt() ?? 0,

@@ -25,7 +25,7 @@ import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
@@ -111,7 +111,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         child: Column(
           children: [
             SecondaryTopBar(
-              title: 'Maden Yonetimi',
+              title: 'Maden Yönetimi',
               actions: [
                 PopupMenuButton<String>(
                   padding: EdgeInsets.zero,
@@ -304,7 +304,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       SizedBox(height: 14.h),
                       _buildSectionHeader(
                         'Uretim Hatti',
-                        'Madende secili kaynagi, stok durumunu ve depoya sevkleri buradan yonetebilirsin.',
+                        'Madende seçili kaynağı, stok durumunu ve depoya sevkleri buradan yönetebilirsin.',
                         icon: AppIcons.hardwareRounded,
                         color: AppColors.gold,
                       ),
@@ -544,7 +544,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             children: [
               Expanded(
                 child: _buildActionButton(
-                  'Urun Gonder',
+                  'Ürün Gönder',
                   AppIcons.localShippingRounded,
                   AppColors.blue,
                   () => _startMineSendFlow(context, ref, detail),
@@ -565,7 +565,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             context,
                             title: 'Bilgi',
                             message:
-                                'Uretimi baslatmadan once madene bir kaynak atamalisin.',
+                                'Üretimi başlatmadan önce madene bir kaynak atamalısın.',
                             type: SnackbarType.info,
                           );
                         },
@@ -593,8 +593,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             context,
                             title: 'Bilgi',
                             message: hasProduct
-                                ? 'Boost baslatmak icin madenin aktif olmasi gerekir.'
-                                : 'Boost baslatmadan once madene bir kaynak atamalisin.',
+                                ? 'Boost başlatmak için madenin aktif olması gerekir.'
+                                : 'Boost başlatmadan önce madene bir kaynak atamalısın.',
                             type: SnackbarType.info,
                           );
                         },
@@ -618,7 +618,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             context,
                             title: 'Bilgi',
                             message:
-                                'Yukseltme baslatmak icin madenin aktif olmasi gerekir.',
+                                'Yükseltme başlatmak için madenin aktif olması gerekir.',
                             type: SnackbarType.info,
                           );
                         },
@@ -776,7 +776,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   ) {
     if (detail.product == null) {
       return _buildEmptyCard(
-        'Madende henuz secili bir kaynak yok. Once kaynak secerek uretimi baslat.',
+        'Madende henüz seçili bir kaynak yok. Önce kaynak seçerek üretimi başlat.',
         action: Align(
           alignment: Alignment.centerLeft,
           child: FilledButton.icon(
@@ -1411,7 +1411,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   }
 
   String _formatCountdown(Duration remaining) {
-    if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+    if (remaining.inSeconds <= 0) return 'Tamamlanıyor';
     final hours = remaining.inHours;
     final minutes = remaining.inMinutes % 60;
     if (hours > 0) {
@@ -1449,8 +1449,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             SizedBox(height: 8.h),
             Text(
               activeBoost != null
-                  ? 'Bu madende zaten aktif bir boost var. Sure dolana kadar uretim x${activeBoost.multiplier.toStringAsFixed(1)} hizla calisir.'
-                  : 'Boost basladiginda madenin uretim hizi sure boyunca 2 katina cikar.',
+                  ? 'Bu madende zaten aktif bir boost var. Süre dolana kadar üretim x${activeBoost.multiplier.toStringAsFixed(1)} hızla çalışır.'
+                  : 'Boost başladığında madenin üretim hızı süre boyunca 2 katına çıkar.',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.body,
@@ -1468,9 +1468,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       context,
                       rewardKind: 'building_boost_start',
                       resourceId: 'mine:${detail.mine.id}',
-                      loadingMessage: '30 dakikalik boost reklami yukleniyor.',
+                      loadingMessage: '30 dakikalık boost reklamı yükleniyor.',
                       successTitle: 'Boost Baslatildi',
-                      successMessage: 'Maden boostu 30 dakika icin baslatildi.',
+                      successMessage: 'Maden boostu 30 dakika için başlatıldı.',
                       feedbackAmount: 30,
                       feedbackType: FloatingFeedbackType.boostAdd,
                       onApplyAction: () async {
@@ -1562,8 +1562,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
-                          title: 'Basarili',
-                          message: 'Maden boostu baslatildi.',
+                          title: 'Başarılı',
+                          message: 'Maden boostu başlatıldı.',
                           type: SnackbarType.success,
                         );
                       } else {
@@ -1573,7 +1573,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           title: 'Hata',
                           message:
                               result['message'] ??
-                              'Maden boostu baslatilamadi.',
+                              'Maden boostu başlatılamadı.',
                           type: SnackbarType.error,
                         );
                       }
@@ -1700,7 +1700,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
 
     await showBuildingUpgradeSheet(
       context: context,
-      title: 'Maden Yukseltmesi',
+      title: 'Maden Yükseltmesi',
       buildingName: detail.mine.name,
       icon: AppIcons.landscapeRounded,
       currentLevel: detail.mine.level,
@@ -1732,8 +1732,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           );
           AppSnackbar.show(
             context,
-            title: 'Basarili',
-            message: 'Maden yukseltmesi baslatildi.',
+            title: 'Başarılı',
+            message: 'Maden yükseltmesi başlatıldı.',
             type: SnackbarType.success,
           );
         } else {
@@ -1741,7 +1741,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           AppSnackbar.show(
             context,
             title: 'Hata',
-            message: result['message'] ?? 'Maden yukseltmesi baslatilamadi.',
+            message: result['message'] ?? 'Maden yükseltmesi başlatılamadı.',
             type: SnackbarType.error,
           );
         }
@@ -1759,8 +1759,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Maden yukseltmesi tamamlandi.',
+        title: 'Başarılı',
+        message: 'Maden yükseltmesi tamamlandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -1771,7 +1771,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Yukseltme tamamlanamadi.',
+      message: result['message'] ?? 'Yükseltme tamamlanamadı.',
       type: SnackbarType.error,
     );
   }
@@ -1786,7 +1786,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       onApplyReduction: () => ref
           .read(mineActionProvider)
           .reduceMineUpgradeTimeWithAd(upgrade.id, syncProviders: false),
-      successMessage: 'Maden yukseltme suresi 10 dakika kisaltildi.',
+      successMessage: 'Maden yükseltme süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
@@ -1896,8 +1896,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Kaynak basariyla secildi.',
+        title: 'Başarılı',
+        message: 'Kaynak başarıyla seçildi.',
         type: SnackbarType.success,
       );
       return;
@@ -1906,7 +1906,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Kaynak secilemedi.',
+      message: result['message'] ?? 'Kaynak seçilemedi.',
       type: SnackbarType.error,
     );
   }
@@ -1930,9 +1930,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
+        title: 'Başarılı',
         message: detail.mine.isActive
-            ? 'Maden pasif moda alindi.'
+            ? 'Maden pasif moda alındı.'
             : 'Maden aktif edildi.',
         type: SnackbarType.success,
       );
@@ -1942,7 +1942,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Maden durumu guncellenemedi.',
+      message: result['message'] ?? 'Maden durumu güncellenemedi.',
       type: SnackbarType.error,
     );
   }
@@ -2601,7 +2601,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  'Bos: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
+                                  'Boş: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
                                   style: AppTextStyles.caption.standardCopyWith(
                                     color: AppColors.textMuted,
                                     fontSize: AppTypography.bodySmall,
@@ -2701,7 +2701,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           ),
                           SizedBox(height: 6.h),
                           Text(
-                            'Secilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
+                            'Seçilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
                             style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textMuted,
                               fontSize: AppTypography.bodySmall,
@@ -2713,7 +2713,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    '${selectedItems.length} stok | $totalQuantity adet secildi',
+                    '${selectedItems.length} stok | $totalQuantity adet seçildi',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.body,
@@ -2911,9 +2911,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   if (!context.mounted) return;
                                   AppSnackbar.show(
                                     context,
-                                    title: 'Basarili',
+                                    title: 'Başarılı',
                                     message:
-                                        'Secilen stoklar depoya gonderildi.',
+                                        'Seçilen stoklar depoya gönderildi.',
                                     type: SnackbarType.success,
                                   );
                                   return;
@@ -2923,7 +2923,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   title: 'Hata',
                                   message: result.message.isNotEmpty
                                       ? result.message
-                                      : 'Transfer basarisiz oldu.',
+                                      : 'Transfer başarısız oldu.',
                                   type: SnackbarType.error,
                                 );
                                 return;
@@ -2962,10 +2962,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       options: [],
       unavailableReason: null,
     );
-    final totalQuantity = items.fold<int>(
-      0,
-      (sum, item) => sum + item.quantity,
-    );
     final totalVolume = items.fold<double>(
       0,
       (sum, item) =>
@@ -2999,7 +2995,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         title: 'Bilgi',
         message:
             vehicleResult.unavailableReason ??
-            'Bu transfer icin uygun arac bulunamadi.',
+            'Bu transfer için uygun araç bulunamadı.',
         type: SnackbarType.info,
       );
       return;
@@ -3007,8 +3003,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
 
     _showProductionVehicleOptionsSheet(
       context: context,
-      title: 'Maden Lojistigi',
-      subtitle: '$totalQuantity adet urun icin uygun araci secin',
+      title: 'Maden Lojistiği',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
@@ -3039,7 +3034,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
-            message: 'Maden urunleri icin arac yola cikti.',
+            message: 'Maden ürünleri için araç yola çıktı.',
             type: SnackbarType.success,
           );
           return;
@@ -3056,88 +3051,23 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
   }
 
-  void _showProductionVehicleOptionsSheet({
+  Future<void> _showProductionVehicleOptionsSheet({
     required BuildContext context,
     required String title,
-    required String subtitle,
     required List<ProductionLogisticsVehicleOption> options,
     required Future<void> Function(String vehicleId) onSelected,
-  }) {
-    showModalBottomSheet(
+  }) async {
+    final selectedVehicleId = await showTransferVehicleSelectionSheet(
       context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: AppTextStyles.h2.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.headline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              subtitle,
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodyLarge,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Expanded(
-              child: ListView.separated(
-                itemCount: options.length,
-                separatorBuilder: (context, index) => SizedBox(height: 10.h),
-                itemBuilder: (_, index) {
-                  final option = options[index];
-                  return TransferVehicleOptionCard(
-                    vehicleName: option.vehicleName,
-                    isRental: option.isRental,
-                    capacity: option.capacity,
-                    speedKmh: option.speedKmh,
-                    distanceKm: option.distanceKm,
-                    durationLabel: _formatTransferDuration(
-                      option.estimatedDurationSeconds,
-                    ),
-                    transportCost: option.totalPrice,
-                    rentalCost: option.rentalCost,
-                    fuelCost: option.fuelCost,
-                    fuelNeeded: option.fuelNeeded,
-                    conditionNeeded: option.conditionNeeded,
-                    canSelect: option.canSelect,
-                    isSelected: false,
-                    disabledReason: option.disabledReason,
-                    onTap: () async {
-                      Navigator.pop(sheetContext);
-                      await onSelected(option.vehicleId);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      title: title,
+      sourceCityName: 'Maden',
+      targetCityName: 'Depo',
+      options: options.map(TransferVehicleOptionItem.fromProduction).toList(),
     );
-  }
 
-  String _formatTransferDuration(int seconds) {
-    final duration = Duration(seconds: seconds);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours}s ${minutes}dk';
-    return '${duration.inMinutes}dk';
+    if (selectedVehicleId != null && context.mounted) {
+      await onSelected(selectedVehicleId);
+    }
   }
 
   Future<void> _showSellMineDialog(BuildContext context) async {
@@ -3249,8 +3179,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Maden satildi. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
+        title: 'Başarılı',
+        message: 'Maden satıldı. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
         type: SnackbarType.success,
       );
       context.go('/mines');
@@ -3260,7 +3190,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Maden satilamadi.',
+      message: result['message'] ?? 'Maden satılamadı.',
       type: SnackbarType.error,
     );
   }
@@ -3466,7 +3396,7 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Maden Yukseltmesi Devam Ediyor',
+                      'Maden Yükseltmesi Devam Ediyor',
                       style: AppTextStyles.title.standardCopyWith(
                         color: AppColors.textPrimary,
                         fontSize: AppTypography.title,
@@ -3524,7 +3454,7 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
             RewardedTimeReduceButton(
               onPressed: () => onReduceTimeWithAd!.call(),
               caption:
-                  'Bir reklam odulu al ve maden yukseltme suresini 10 dakika kisalt.',
+                  'Bir reklam ödülü al ve maden yükseltme süresini 10 dakika kısalt.',
             ),
           ],
         ],
@@ -3534,7 +3464,7 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
 }
 
 String _formatCountdownLabel(Duration remaining) {
-  if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+  if (remaining.inSeconds <= 0) return 'Tamamlanıyor';
   final hours = remaining.inHours;
   final minutes = remaining.inMinutes % 60;
   if (hours > 0) {

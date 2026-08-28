@@ -10,6 +10,7 @@ import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/app_network_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
@@ -33,33 +34,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final int _selectedIndex = 4;
   int _activeTab = 0; // 0: Genel Bakış & Varlıklar, 1: Hesap & Güvenlik
-  StreamSubscription<AuthState>? _authSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
-      data,
-    ) async {
-      final event = data.event;
-      if (event != AuthChangeEvent.signedIn &&
-          event != AuthChangeEvent.userUpdated &&
-          event != AuthChangeEvent.tokenRefreshed) {
-        return;
-      }
-
-      try {
-        await SessionManager.bootstrapAndRefreshAll(ref);
-      } catch (_) {}
-    });
-  }
-
-  @override
-  void dispose() {
-    _authSubscription?.cancel();
-    super.dispose();
-  }
 
   void _onNavSelected(int index) {
     if (index == _selectedIndex) return;
@@ -240,10 +214,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     child: ClipOval(
                       child: isUrl
-                          ? Image.network(
-                              player.avatarId,
+                          ? AppNetworkImage(
+                              imageUrl: player.avatarId,
+                              width: 80.r,
+                              height: 80.r,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => CachedAssetImage(
+                              errorWidget: CachedAssetImage(
                                 fileName: 'ae1.webp',
                                 fit: BoxFit.cover,
                               ),
@@ -1904,7 +1880,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (hasGoogle)
         {
           'id': googleAvatarUrl,
-          'widget': Image.network(googleAvatarUrl, fit: BoxFit.cover),
+          'widget': AppNetworkImage(
+            imageUrl: googleAvatarUrl,
+            fit: BoxFit.cover,
+          ),
         },
       ...avatars.map(
         (av) => {
@@ -2080,7 +2059,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         try {
           await ref.read(pushNotificationServiceProvider).unregisterToken();
         } catch (_) {}
-        ref.invalidate(playerProvider);
+        SessionManager.invalidateAllGameProviders(ref);
         await supabase.auth.signOut();
         if (mounted) {
           context.go('/');

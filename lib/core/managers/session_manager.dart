@@ -63,6 +63,7 @@ class SessionManager {
     ref.invalidate(playerLoansProvider);
     ref.invalidate(playerDepositsProvider);
     ref.invalidate(loanLimitProvider);
+    ref.invalidate(anyActiveWarehouseUpgradeProvider);
   }
 
   /// Oturum degistiginde veya Google ile giris yapildiginda oturumu bootstrap eder
@@ -84,7 +85,7 @@ class SessionManager {
 
     // Ana verileri onceden cek
     try {
-      await Future.wait([
+      await Future.wait<dynamic>([
         ref.refresh(playerProvider.future),
         ref.refresh(homeDashboardProvider.future),
         ref.refresh(authIdentityProvider.future),

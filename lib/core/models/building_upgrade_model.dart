@@ -61,6 +61,68 @@ class BuildingUpgradeModel {
 
   bool get isInProgress => status == 'in_progress';
 
+  BuildingUpgradeModel copyWith({
+    String? id,
+    String? buildingKind,
+    String? entityId,
+    int? currentLevel,
+    int? targetLevel,
+    String? status,
+    DateTime? startedAt,
+    DateTime? finishAt,
+    DateTime? completedAt,
+    String? name,
+    int? durationMinutes,
+    double? upgradeCost,
+    int? slotCapacityIncrease,
+    int? maxSlotIncrease,
+    int? previousSlotCapacity,
+    int? nextSlotCapacity,
+    int? previousMaxSlotCount,
+    int? nextMaxSlotCount,
+    int? inputCapacityIncrease,
+    int? outputCapacityIncrease,
+    int? previousInputCapacity,
+    int? nextInputCapacity,
+    int? previousOutputCapacity,
+    int? nextOutputCapacity,
+    double? capacityIncrease,
+    double? previousCapacity,
+    double? nextCapacity,
+    Map<String, dynamic>? params,
+  }) {
+    return BuildingUpgradeModel(
+      id: id ?? this.id,
+      buildingKind: buildingKind ?? this.buildingKind,
+      entityId: entityId ?? this.entityId,
+      currentLevel: currentLevel ?? this.currentLevel,
+      targetLevel: targetLevel ?? this.targetLevel,
+      status: status ?? this.status,
+      startedAt: startedAt ?? this.startedAt,
+      finishAt: finishAt ?? this.finishAt,
+      completedAt: completedAt ?? this.completedAt,
+      name: name ?? this.name,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      upgradeCost: upgradeCost ?? this.upgradeCost,
+      slotCapacityIncrease: slotCapacityIncrease ?? this.slotCapacityIncrease,
+      maxSlotIncrease: maxSlotIncrease ?? this.maxSlotIncrease,
+      previousSlotCapacity: previousSlotCapacity ?? this.previousSlotCapacity,
+      nextSlotCapacity: nextSlotCapacity ?? this.nextSlotCapacity,
+      previousMaxSlotCount: previousMaxSlotCount ?? this.previousMaxSlotCount,
+      nextMaxSlotCount: nextMaxSlotCount ?? this.nextMaxSlotCount,
+      inputCapacityIncrease: inputCapacityIncrease ?? this.inputCapacityIncrease,
+      outputCapacityIncrease: outputCapacityIncrease ?? this.outputCapacityIncrease,
+      previousInputCapacity: previousInputCapacity ?? this.previousInputCapacity,
+      nextInputCapacity: nextInputCapacity ?? this.nextInputCapacity,
+      previousOutputCapacity: previousOutputCapacity ?? this.previousOutputCapacity,
+      nextOutputCapacity: nextOutputCapacity ?? this.nextOutputCapacity,
+      capacityIncrease: capacityIncrease ?? this.capacityIncrease,
+      previousCapacity: previousCapacity ?? this.previousCapacity,
+      nextCapacity: nextCapacity ?? this.nextCapacity,
+      params: params ?? this.params,
+    );
+  }
+
   factory BuildingUpgradeModel.fromJson(Map<String, dynamic> json) {
     final params = (json['params'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};

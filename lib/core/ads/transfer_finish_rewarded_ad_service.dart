@@ -45,7 +45,7 @@ class RewardedAdService {
     if (_requestInFlight) {
       return const RewardedAdResult(
         rewardEarned: false,
-        message: 'Baska bir reklam islemi zaten devam ediyor.',
+        message: 'Başka bir reklam işlemi zaten devam ediyor.',
       );
     }
 
@@ -53,7 +53,7 @@ class RewardedAdService {
     if (adUnitId == null) {
       return const RewardedAdResult(
         rewardEarned: false,
-        message: 'Bu platformda odullu reklam desteklenmiyor.',
+        message: 'Bu platformda ödüllü reklam desteklenmiyor.',
       );
     }
 
@@ -94,8 +94,8 @@ class RewardedAdService {
                 RewardedAdResult(
                   rewardEarned: rewardEarned,
                   message: rewardEarned
-                      ? 'Reklam odulu alindi.'
-                      : 'Odul almak icin reklami kapanana kadar izlemeniz gerekiyor.',
+                      ? 'Reklam ödülü alındı.'
+                      : 'Ödül almak için reklamı kapanana kadar izlemeniz gerekiyor.',
                 ),
               );
             },
@@ -105,7 +105,7 @@ class RewardedAdService {
                 RewardedAdResult(
                   rewardEarned: false,
                   message:
-                      'Reklam gosterilemedi. Lutfen birazdan tekrar deneyin. (${error.code})',
+                      'Reklam gösterilemedi. Lütfen birazdan tekrar deneyin. (${error.code})',
                 ),
               );
             },
@@ -122,7 +122,7 @@ class RewardedAdService {
             RewardedAdResult(
               rewardEarned: false,
               message:
-                  'Test reklami su anda yuklenemedi. Lutfen internet baglantinizi kontrol edip tekrar deneyin. (${error.code})',
+                  'Test reklamı şu anda yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin. (${error.code})',
             ),
           );
         },
@@ -136,7 +136,7 @@ class RewardedAdService {
           disposeAd();
           return const RewardedAdResult(
             rewardEarned: false,
-            message: 'Reklam yaniti zamaninda gelmedi. Lutfen tekrar deneyin.',
+            message: 'Reklam yanıtı zamanında gelmedi. Lütfen tekrar deneyin.',
           );
         },
       );

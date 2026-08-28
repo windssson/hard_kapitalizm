@@ -73,8 +73,8 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Tamamlandi',
-        message: 'Tarla insaati tamamlandi.',
+        title: 'Tamamlandı',
+        message: 'Tarla inşaatı tamamlandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -85,7 +85,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: result['message'] ?? 'Tarla insaati tamamlanamadi.',
+        message: result['message'] ?? 'Tarla inşaatı tamamlanamadı.',
         type: SnackbarType.error,
       );
     }
@@ -103,8 +103,8 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Tamamlandi',
-        message: 'Insaat aninda tamamlandi.',
+        title: 'Tamamlandı',
+        message: 'İnşaat anında tamamlandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -114,7 +114,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Yildiz ile bitirme basarisiz oldu.',
+      message: result['message'] ?? 'Yıldız ile bitirme başarısız oldu.',
       type: SnackbarType.error,
     );
   }
@@ -127,7 +127,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
       onApplyReduction: () => ref
           .read(farmActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
-      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+      successMessage: 'İnşaat süresi 10 dakika kısaltıldı.',
     );
   }
 
@@ -145,7 +145,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
         extendedPadding: EdgeInsets.symmetric(horizontal: 14.w),
         icon: Icon(AppIcons.add, size: AppIconSizes.compact),
         label: Text(
-          'YENI TARLA',
+          'YENİ TARLA',
           style: AppTextStyles.caption.standardCopyWith(
             fontWeight: FontWeight.bold,
             fontSize: AppTypography.bodySmall,
@@ -159,7 +159,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Tarlalarim'),
+            const SecondaryTopBar(title: 'Tarlalarım'),
             Expanded(
               child: farmsAsync.when(
                 data: (farms) => constructionAsync.when(
@@ -243,7 +243,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
       children: [
         ConstructionCountdownCard(
           title: name?.isNotEmpty == true ? name! : 'Yeni Tarla',
-          subtitle: 'Tarla insaati devam ediyor',
+          subtitle: 'Tarla inşaatı devam ediyor',
           finishAt: finishAt.toLocal(),
           icon: AppIcons.agriculture,
           onFinished: () => _completeConstruction(constructionId),
@@ -318,7 +318,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
             _buildStatItem(
               AppIcons.inventory2,
               AppColors.gold,
-              'Urun',
+              'Ürün',
               _formatCompact(totalOutputStock),
             ),
           ],
@@ -380,7 +380,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
           ),
           SizedBox(height: 16.h),
           Text(
-            'Henuz bir tarlan yok.',
+            'Henüz bir tarlan yok.',
             style: AppTextStyles.h2.standardCopyWith(
               color: AppColors.textMuted,
             ),
@@ -393,7 +393,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
               side: BorderSide(color: AppColors.gold),
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
             ),
-            child: Text('ILK TARLANI KUR', style: AppTextStyles.titleGold),
+            child: Text('İLK TARLANI KUR', style: AppTextStyles.titleGold),
           ),
         ],
       ),
@@ -622,7 +622,7 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
                     SizedBox(width: 5.w),
                     Expanded(
                       child: Text(
-                        'Urun Deposu',
+                        'Ürün Deposu',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.caption.standardCopyWith(

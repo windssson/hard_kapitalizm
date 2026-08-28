@@ -157,7 +157,7 @@ class _WarehouseHistoryScreenState
         Padding(
           padding: EdgeInsets.only(left: 18.w, right: 18.w, bottom: 6.h),
           child: Text(
-            'Depoya giren ve depodan cikan urun hareketleri burada listelenir.',
+            'Depoya giren ve depodan çıkan ürün hareketleri burada listelenir.',
             style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
               fontSize: AppTypography.bodySmall,
@@ -213,7 +213,7 @@ class _WarehouseHistoryScreenState
           ),
           SizedBox(height: 4.h),
           Text(
-            '${items.length} kayit icin hizli ozet',
+            '${items.length} kayıt için hızlı özet',
             style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
               fontSize: AppTypography.bodySmall,
@@ -286,7 +286,7 @@ class _WarehouseHistoryScreenState
   Widget _buildEmptyState() {
     final description = switch (_selectedFilter) {
       _WarehouseHistoryFilter.all =>
-        'Pazar, magaza, uretim ve depolar arasi hareketler burada gorunecek.',
+        'Pazar, mağaza, üretim ve depolar arası hareketler burada görünecek.',
       _WarehouseHistoryFilter.incoming =>
         'Bu depoya gelen hareket kaydi henuz yok.',
       _WarehouseHistoryFilter.outgoing =>
@@ -486,9 +486,9 @@ class _WarehouseHistoryScreenState
       case 'in_transit':
         return 'Yolda';
       case 'completed':
-        return 'Tamamlandi';
+        return 'Tamamlandı';
       case 'cancelled':
-        return 'Iptal';
+        return 'İptal';
       default:
         return status;
     }

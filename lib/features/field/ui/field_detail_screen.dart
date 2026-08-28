@@ -26,12 +26,13 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
+import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
     show warehouseCapacityStatusProvider;
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
@@ -39,6 +40,7 @@ import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/production_quality_warning_dialog.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -116,7 +118,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         child: Column(
           children: [
             SecondaryTopBar(
-              title: 'Ciftlik Yonetimi',
+              title: 'Çiftlik Yönetimi',
               actions: [
                 PopupMenuButton<String>(
                   padding: EdgeInsets.zero,
@@ -145,7 +147,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           ),
                           SizedBox(width: 8.w),
                           Text(
-                            'Ciftligi Sat',
+                            'Çiftliği Sat',
                             style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.textPrimary,
                             ),
@@ -310,15 +312,15 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                       _buildSharedOutputCapacityCard(detail),
                       SizedBox(height: 14.h),
                       _buildSectionHeader(
-                        'Ciftlikler',
-                        'Her ciftlikte ekili urunu, kaliteyi ve uretim akislarini buradan yonetebilirsin.',
+                        'Çiftlikler',
+                        'Her çiftlikte ekili ürünü, kaliteyi ve üretim akışlarını buradan yönetebilirsin.',
                         icon: AppIcons.tuneRounded,
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
                       if (detail.slots.isEmpty)
                         _buildEmptyCard(
-                          'Bu ciftlikte henuz aktif uretim slotu yok.',
+                          'Bu çiftlikte henüz aktif üretim slotu yok.',
                         )
                       else
                         ...detail.slots.map(
@@ -334,7 +336,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                         SizedBox(height: 16.h),
                         _buildSectionHeader(
                           'Bagli Olmayan Hammaddeler',
-                          'Urun degisikligi sonrasinda elde kalan hammaddeleri burada depoya geri aktarabilirsin.',
+                          'Ürün değişikliği sonrasında elde kalan hammaddeleri burada depoya geri aktarabilirsin.',
                           icon: AppIcons.inventory2Outlined,
                           color: AppColors.blue,
                         ),
@@ -487,7 +489,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
               SizedBox(width: 10.w),
               Expanded(
                 child: _buildHeroStat(
-                  'Uretilen urun',
+                  'Üretilen ürün',
                   '${_calculateUsedCapacity(detail.outputInventories)}/${detail.field.outputCapacity}',
                   AppColors.green,
                   ratio: _inventoryRatio(
@@ -588,7 +590,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             children: [
               Expanded(
                 child: _buildActionButton(
-                  'Urun Al',
+                  'Ürün Al',
                   AppIcons.downloadRounded,
                   AppColors.gold,
                   () => _startFieldReceiveFlow(context, ref, detail),
@@ -597,7 +599,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
               SizedBox(width: 8.w),
               Expanded(
                 child: _buildActionButton(
-                  'Urun Gonder',
+                  'Ürün Gönder',
                   AppIcons.localShippingRounded,
                   AppColors.blue,
                   () => _startFieldSendFlow(context, ref, detail),
@@ -803,7 +805,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     final isBranded =
         slot.brandId != SelectableProductionProductModel.defaultBrandId;
     final slotTitle = slot.isEmpty
-        ? 'Bos Slot ${slot.slotIndex}'
+        ? 'Boş Slot ${slot.slotIndex}'
         : '${slot.product?.urunAdi ?? slot.productId ?? 'Bilinmeyen Urun'}${isBranded ? ' (${_currentBrandName ?? 'Markali'})' : ''}';
     final outputInventory = slot.isEmpty
         ? null
@@ -958,7 +960,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                   ),
                                   SizedBox(width: 8.w),
                                   Text(
-                                    slot.isEmpty ? 'Urun Sec' : 'Urun Degistir',
+                                    slot.isEmpty ? 'Ürün Seç' : 'Ürün Değiştir',
                                     style: AppTextStyles.body.standardCopyWith(
                                       color: AppColors.textPrimary,
                                       fontSize: AppTypography.bodyLarge,
@@ -1000,7 +1002,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                     SizedBox(height: 6.h),
                     if (slot.isEmpty)
                       Text(
-                        'Slot bostur. Urun secerek ekimi ve uretimi baslatin.',
+                        'Slot boştur. Ürün seçerek üretimi başlatın.',
                         style: AppTextStyles.caption.standardCopyWith(
                           color: AppColors.textMuted,
                           fontSize: AppTypography.bodySmall,
@@ -1241,7 +1243,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   }
 
   String _formatCountdown(Duration remaining) {
-    if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+    if (remaining.inSeconds <= 0) return 'Tamamlanıyor';
     final hours = remaining.inHours;
     final minutes = remaining.inMinutes % 60;
     if (hours > 0) {
@@ -1400,7 +1402,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ciftlik Boostu',
+              'Çiftlik Boostu',
               style: AppTextStyles.h2.standardCopyWith(
                 color: AppColors.textPrimary,
                 fontSize: AppTypography.headline,
@@ -1410,8 +1412,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             SizedBox(height: 8.h),
             Text(
               activeBoost != null
-                  ? 'Bu ciftlikte zaten aktif bir boost var. Sure dolana kadar tum slotlar x${activeBoost.multiplier.toStringAsFixed(1)} hizla calisir.'
-                  : 'Boost basladiginda tum ciftlik slotlarinin boost katsayisi 2 olur. Uretim hizi sure boyunca artar.',
+                  ? 'Bu çiftlikte zaten aktif bir boost var. Süre dolana kadar tüm slotlar x${activeBoost.multiplier.toStringAsFixed(1)} hızla çalışır.'
+                  : 'Boost başladığında tüm çiftlik slotlarının boost katsayısı 2 olur. Üretim hızı süre boyunca artar.',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.body,
@@ -1429,9 +1431,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                       context,
                       rewardKind: 'building_boost_start',
                       resourceId: 'field:${detail.field.id}',
-                      loadingMessage: '30 dakikalik boost reklami yukleniyor.',
+                      loadingMessage: '30 dakikalık boost reklamı yükleniyor.',
                       successTitle: 'Boost Baslatildi',
-                      successMessage: 'Tarla boostu 30 dakika icin baslatildi.',
+                      successMessage: 'Çiftlik boostu 30 dakika için başlatıldı.',
                       feedbackAmount: 30,
                       feedbackType: FloatingFeedbackType.boostAdd,
                       onApplyAction: () async {
@@ -1442,7 +1444,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                               syncProviders: false,
                             );
                         if (result['success'] == true) {
-                          await _refreshFieldEcosystem();
+                          ref
+                              .read(activeFieldBoostProvider(widget.fieldId).notifier)
+                              .setBoost(BuildingBoostModel.fromJson(result));
                         }
                         return result;
                       },
@@ -1519,12 +1523,14 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           );
                       if (!context.mounted) return;
                       if (result['success'] == true) {
-                        await _refreshFieldEcosystem();
+                        ref
+                            .read(activeFieldBoostProvider(widget.fieldId).notifier)
+                            .setBoost(BuildingBoostModel.fromJson(result));
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
-                          title: 'Basarili',
-                          message: 'Ciftlik boostu baslatildi.',
+                          title: 'Başarılı',
+                          message: 'Çiftlik boostu başlatıldı.',
                           type: SnackbarType.success,
                         );
                       } else {
@@ -1533,7 +1539,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           title: 'Hata',
                           message:
                               result['message'] ??
-                              'Ciftlik boostu baslatilamadi.',
+                              'Çiftlik boostu başlatılamadı.',
                           type: SnackbarType.error,
                         );
                       }
@@ -1635,7 +1641,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu ciftlik icin zaten devam eden bir yukseltme var.',
+        message: 'Bu çiftlik için zaten devam eden bir yükseltme var.',
         type: SnackbarType.info,
       );
       return;
@@ -1669,7 +1675,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     await showBuildingUpgradeSheet(
       context: context,
-      title: 'Ciftlik Yukseltmesi',
+      title: 'Çiftlik Yükseltmesi',
       buildingName: detail.field.name,
       icon: AppIcons.agricultureRounded,
       currentLevel: detail.field.level,
@@ -1686,7 +1692,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         ),
         BuildingUpgradeBenefit(
           icon: AppIcons.inventory2Rounded,
-          label: 'Urun kapasitesi',
+          label: 'Ürün kapasitesi',
           before: '${detail.field.outputCapacity}',
           after: '$nextOutputCapacity',
         ),
@@ -1698,7 +1704,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             .startFieldUpgrade(detail.field.id, syncProviders: false);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          await _refreshFieldEcosystem();
+          ref
+              .read(activeFieldUpgradeProvider(widget.fieldId).notifier)
+              .setUpgrade(BuildingUpgradeModel.fromJson(result));
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
@@ -1707,8 +1715,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           );
           AppSnackbar.show(
             context,
-            title: 'Basarili',
-            message: 'Ciftlik yukseltmesi baslatildi.',
+            title: 'Başarılı',
+            message: 'Çiftlik yükseltmesi başlatıldı.',
             type: SnackbarType.success,
           );
           return;
@@ -1730,12 +1738,35 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     if (!mounted) return;
     if (result['success'] == true) {
-      await _refreshFieldEcosystem(includePlayer: false);
+      final targetLevel = (result['target_level'] as num?)?.toInt() ?? upgrade.targetLevel;
+      final outputIncrease = (result['output_capacity_increase'] as num?)?.toInt() ?? 0;
+      final inputIncrease = (result['input_capacity_increase'] as num?)?.toInt() ?? 0;
+      final currentDetail = ref.read(fieldDetailProvider(widget.fieldId)).value;
+      final newOutput = (currentDetail?.field.outputCapacity ?? 0) + outputIncrease;
+      final newInput = (currentDetail?.field.inputCapacity ?? 0) + inputIncrease;
+
+      ref.read(activeFieldUpgradeProvider(widget.fieldId).notifier).clear();
+      ref
+          .read(fieldDetailProvider(widget.fieldId).notifier)
+          .patchFieldLevelAndCapacity(
+            level: targetLevel,
+            outputCapacity: newOutput,
+            inputCapacity: newInput,
+          );
+      ref
+          .read(fieldListProvider.notifier)
+          .patchFieldLevelAndCapacity(
+            fieldId: widget.fieldId,
+            level: targetLevel,
+            outputCapacity: newOutput,
+            inputCapacity: newInput,
+          );
+
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Ciftlik yukseltmesi tamamlandi.',
+        title: 'Başarılı',
+        message: 'Çiftlik yükseltmesi tamamlandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -1745,7 +1776,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Yukseltme tamamlanamadi.',
+      message: result['message'] ?? 'Yükseltme tamamlanamadı.',
       type: SnackbarType.error,
     );
   }
@@ -1760,11 +1791,13 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       onApplyReduction: () => ref
           .read(fieldActionProvider)
           .reduceFieldUpgradeTimeWithAd(upgrade.id, syncProviders: false),
-      successMessage: 'Ciftlik yukseltme suresi 10 dakika kisaltildi.',
+      successMessage: 'Çiftlik yükseltme süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
-      await _refreshFieldEcosystem(includePlayer: false);
+      ref
+          .read(activeFieldUpgradeProvider(widget.fieldId).notifier)
+          .reduceTime(const Duration(minutes: 10));
     }
   }
 
@@ -2473,11 +2506,29 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshFieldEcosystem(includePlayer: false);
+      final slotJson = result['slot'] as Map<String, dynamic>?;
+      if (slotJson != null) {
+        final newSlot = ProductionSlotModel.fromJson(slotJson);
+        ref
+            .read(fieldDetailProvider(widget.fieldId).notifier)
+            .addSlot(newSlot);
+        ref
+            .read(fieldListProvider.notifier)
+            .addSlot(
+              fieldId: widget.fieldId,
+              slot: FieldSlotPreviewModel(
+                id: newSlot.id,
+                slotIndex: newSlot.slotIndex,
+                isActive: newSlot.isActive,
+                productId: null,
+                product: null,
+              ),
+            );
+      }
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
+        title: 'Başarılı',
         message: 'Yeni uretim slotu acildi.',
         type: SnackbarType.success,
       );
@@ -2498,17 +2549,23 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     FieldDetailModel detail,
     ProductionSlotModel slot,
   ) async {
+    final nextActive = !slot.isActive;
     final result = await ref
         .read(fieldActionProvider)
         .setProductionSlotActive(
           slotId: slot.id,
-          isActive: !slot.isActive,
+          isActive: nextActive,
           syncProviders: false,
         );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshFieldEcosystem(includePlayer: false);
+      ref
+          .read(fieldDetailProvider(widget.fieldId).notifier)
+          .patchSlotActive(slotId: slot.id, isActive: nextActive);
+      ref
+          .read(fieldListProvider.notifier)
+          .patchSlotActive(fieldId: widget.fieldId, slotId: slot.id, isActive: nextActive);
       return;
     }
 
@@ -2633,6 +2690,21 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
   ) async {
     final product = selectableProduct.product;
     final qualityLevel = selectableProduct.suggestedOutputQualityLevel;
+    final hasRawMaterials = (product.hammadde1Id != null &&
+            product.hammadde1Id!.isNotEmpty) ||
+        (product.hammadde2Id != null && product.hammadde2Id!.isNotEmpty) ||
+        (product.hammadde3Id != null && product.hammadde3Id!.isNotEmpty);
+
+    if (qualityLevel > 2 && hasRawMaterials) {
+      final confirmed = await ProductionQualityWarningDialog.show(
+        context: context,
+        product: product,
+        qualityLevel: qualityLevel,
+        requiredInputQuality: qualityLevel - 1,
+      );
+      if (!confirmed || !context.mounted) return;
+    }
+
     final action = ref.read(fieldActionProvider);
     final result = slot.isEmpty
         ? await action.assignProductionSlotProduct(
@@ -2660,12 +2732,24 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             resultMessage.contains('hata'));
 
     if (isSuccess && !hasErrorLikeMessage) {
-      await _refreshFieldEcosystem();
+      final slotsRaw = result['slots'] as List<dynamic>?;
+      final inventoriesRaw = result['inventories'] as List<dynamic>?;
+      if (slotsRaw != null && inventoriesRaw != null) {
+        final newSlots = slotsRaw
+            .map((s) => ProductionSlotModel.fromJson(Map<String, dynamic>.from(s as Map)))
+            .toList();
+        final newInventories = inventoriesRaw
+            .map((i) => ProductionInventoryModel.fromJson(Map<String, dynamic>.from(i as Map)))
+            .toList();
+        ref
+            .read(fieldDetailProvider(widget.fieldId).notifier)
+            .patchSlotsAndInventories(slots: newSlots, inventories: newInventories);
+      }
       if (!context.mounted) return;
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
       final cleanupNote = deletedObsoleteCount > 0
-          ? ' Eski bos kayitlardan $deletedObsoleteCount adet temizlendi.'
+          ? ' Eski boş kayıtlardan $deletedObsoleteCount adet temizlendi.'
           : '';
       final isBranded = selectableProduct.hasPreferredBrand;
       final productName =
@@ -2673,7 +2757,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           (isBranded ? ' (${_currentBrandName ?? 'Markali'})' : '');
       AppSnackbar.show(
         context,
-        title: 'Basarili',
+        title: 'Başarılı',
         message: slot.isEmpty
             ? '$productName kalite $qualityLevel ile eklendi.'
             : '$productName kalite $qualityLevel olarak degistirildi.$cleanupNote',
@@ -2685,7 +2769,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: sanitizeUserFacingError(result['message'] ?? 'Urun secilemedi.'),
+      message: sanitizeUserFacingError(result['message'] ?? 'Ürün seçilemedi.'),
       type: SnackbarType.error,
     );
   }
@@ -2702,7 +2786,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu ciftlikte aktif hammadde girdisi bulunamadi.',
+        message: 'Bu çiftlikte aktif hammadde girdisi bulunamadı.',
         type: SnackbarType.info,
       );
       return;
@@ -3515,7 +3599,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                           ),
                                           SizedBox(height: 5.h),
                                           _buildInlineMetaChip(
-                                            'Hedef Ciftlik',
+                                            'Hedef Çiftlik',
                                             AppColors.green,
                                           ),
                                         ],
@@ -3532,7 +3616,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Ciftlik Bos: $remainingInputCapacity / ${detail.field.inputCapacity} adet',
+                                'Çiftlik Boş: $remainingInputCapacity / ${detail.field.inputCapacity} adet',
                                 style: AppTextStyles.caption.standardCopyWith(
                                   color: AppColors.textMuted,
                                   fontSize: AppTypography.bodySmall,
@@ -3633,7 +3717,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                         ),
                         SizedBox(height: 6.h),
                         Text(
-                          'Secilen: $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3',
+                          'Seçilen: $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3',
                           style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
                             fontSize: AppTypography.bodySmall,
@@ -3644,7 +3728,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
+                    '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 seçildi',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.body,
@@ -3856,7 +3940,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           title: 'Hata',
           message: result.message.isNotEmpty
               ? result.message
-              : 'Transfer basarisiz oldu.',
+              : 'Transfer başarısız oldu.',
           type: SnackbarType.error,
         );
         return;
@@ -3870,8 +3954,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Secilen hammaddeler ciftlige aktarildi.',
+        title: 'Başarılı',
+        message: 'Seçilen hammaddeler çiftliğe aktarıldı.',
         type: SnackbarType.success,
       );
       return;
@@ -3897,10 +3981,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     vehicleResult = const TransferVehicleOptionsResult(
       options: [],
       unavailableReason: null,
-    );
-    final totalQuantity = items.fold<int>(
-      0,
-      (sum, item) => sum + item.quantity,
     );
     final totalVolume = items.fold<double>(
       0,
@@ -3933,7 +4013,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         title: 'Bilgi',
         message:
             vehicleResult.unavailableReason ??
-            'Bu transfer icin uygun arac bulunamadi.',
+            'Bu transfer için uygun araç bulunamadı.',
         type: SnackbarType.info,
       );
       return;
@@ -3941,8 +4021,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     _showProductionVehicleOptionsSheet(
       context: context,
-      title: 'Hammadde Lojistigi',
-      subtitle: '$totalQuantity adet hammadde icin uygun araci secin',
+      title: 'Hammadde Lojistiği',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
@@ -3972,7 +4051,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
           AppSnackbar.show(
             context,
             title: 'Transfer Baslatildi',
-            message: 'Secilen hammadde transferi icin arac yola cikti.',
+            message: 'Seçilen hammadde transferi için araç yola çıktı.',
             type: SnackbarType.success,
           );
           return;
@@ -4410,7 +4489,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                           ),
                                           SizedBox(height: 5.h),
                                           _buildInlineMetaChip(
-                                            'Kaynak Ciftlik',
+                                            'Kaynak Çiftlik',
                                             AppColors.blue,
                                           ),
                                         ],
@@ -4521,7 +4600,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  'Bos: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
+                                  'Boş: ${targetCapacityStatus.availableCapacity.toStringAsFixed(1)} / ${targetCapacityStatus.totalCapacity.toStringAsFixed(1)} m3',
                                   style: AppTextStyles.caption.standardCopyWith(
                                     color: AppColors.textMuted,
                                     fontSize: AppTypography.bodySmall,
@@ -4621,7 +4700,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           ),
                           SizedBox(height: 6.h),
                           Text(
-                            'Secilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
+                            'Seçilen Hacim: ${totalVolume.toStringAsFixed(1)} m3',
                             style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textMuted,
                               fontSize: AppTypography.bodySmall,
@@ -4633,7 +4712,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 secildi',
+                    '${selectedItems.length} stok | $totalQuantity adet | ${totalVolume.toStringAsFixed(1)} m3 seçildi',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.body,
@@ -4741,9 +4820,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                   if (!context.mounted) return;
                                   AppSnackbar.show(
                                     context,
-                                    title: 'Basarili',
+                                    title: 'Başarılı',
                                     message:
-                                        'Secilen stoklar depoya gonderildi.',
+                                        'Seçilen stoklar depoya gönderildi.',
                                     type: SnackbarType.success,
                                   );
                                   return;
@@ -4753,7 +4832,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                                   title: 'Hata',
                                   message: result.message.isNotEmpty
                                       ? result.message
-                                      : 'Transfer basarisiz oldu.',
+                                      : 'Transfer başarısız oldu.',
                                   type: SnackbarType.error,
                                 );
                                 return;
@@ -4792,10 +4871,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       options: [],
       unavailableReason: null,
     );
-    final totalQuantity = items.fold<int>(
-      0,
-      (sum, item) => sum + item.quantity,
-    );
     final totalVolume = items.fold<double>(
       0,
       (sum, item) =>
@@ -4829,7 +4904,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         title: 'Bilgi',
         message:
             vehicleResult.unavailableReason ??
-            'Bu transfer icin uygun arac bulunamadi.',
+            'Bu transfer için uygun araç bulunamadı.',
         type: SnackbarType.info,
       );
       return;
@@ -4838,11 +4913,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     _showProductionVehicleOptionsSheet(
       context: context,
       title: items.first.inventory.isInput
-          ? 'Hammadde Geri Gonderim Lojistigi'
-          : 'Uretilen Urun Lojistigi',
-      subtitle: items.first.inventory.isInput
-          ? '$totalQuantity adet hammaddeyi depoya geri gondermek icin uygun araci secin'
-          : '$totalQuantity adet uretilen urunu depoya gondermek icin uygun araci secin',
+          ? 'Hammadde Geri Gönderim Lojistiği'
+          : 'Üretilen Ürün Lojistiği',
       options: vehicleResult.options,
       onSelected: (vehicleId) async {
         final result = await ref
@@ -4874,8 +4946,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             context,
             title: 'Transfer Baslatildi',
             message: items.first.inventory.isInput
-                ? 'Hammaddeyi depoya geri goturen arac yola cikti.'
-                : 'Uretilen urunu depoya goturen arac yola cikti.',
+                ? 'Hammaddeyi depoya geri götüren araç yola çıktı.'
+                : 'Üretilen ürünü depoya götüren araç yola çıktı.',
             type: SnackbarType.success,
           );
           return;
@@ -4892,75 +4964,23 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
   }
 
-  void _showProductionVehicleOptionsSheet({
+  Future<void> _showProductionVehicleOptionsSheet({
     required BuildContext context,
     required String title,
-    required String subtitle,
     required List<ProductionLogisticsVehicleOption> options,
     required Future<void> Function(String vehicleId) onSelected,
-  }) {
-    showModalBottomSheet(
+  }) async {
+    final selectedVehicleId = await showTransferVehicleSelectionSheet(
       context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.75,
-        ),
-        child: ListView(
-          children: [
-            Text(
-              title,
-              style: AppTextStyles.h2.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.headline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              subtitle,
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.body,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            ...options.map(
-              (option) => Padding(
-                padding: EdgeInsets.only(bottom: 10.h),
-                child: TransferVehicleOptionCard(
-                  vehicleName: option.vehicleName,
-                  isRental: option.isRental,
-                  capacity: option.capacity,
-                  speedKmh: option.speedKmh,
-                  distanceKm: option.distanceKm,
-                  durationLabel: _formatTransferDuration(
-                    option.estimatedDurationSeconds,
-                  ),
-                  transportCost: option.totalPrice,
-                  rentalCost: option.rentalCost,
-                  fuelCost: option.fuelCost,
-                  fuelNeeded: option.fuelNeeded,
-                  conditionNeeded: option.conditionNeeded,
-                  canSelect: option.canSelect,
-                  isSelected: false,
-                  disabledReason: option.disabledReason,
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    await onSelected(option.vehicleId);
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      title: title,
+      sourceCityName: 'Tarla',
+      targetCityName: 'Depo',
+      options: options.map(TransferVehicleOptionItem.fromProduction).toList(),
     );
+
+    if (selectedVehicleId != null && context.mounted) {
+      await onSelected(selectedVehicleId);
+    }
   }
 
   int _calculateUsedCapacity(List<ProductionInventoryModel> inventories) {
@@ -5294,14 +5314,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     );
   }
 
-  String _formatTransferDuration(int seconds) {
-    final duration = Duration(seconds: seconds);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours}s ${minutes}dk';
-    return '${duration.inMinutes}dk';
-  }
-
   double _getCityProductBonus(String cityId, String? productCategory) {
     if (productCategory == null || productCategory.isEmpty) return 1.0;
     final cities = ref.watch(citiesProvider).value;
@@ -5365,7 +5377,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.background,
         title: Text(
-          'Ciftligi Sat',
+          'Çiftliği Sat',
           style: AppTextStyles.h2.standardCopyWith(
             color: AppColors.red,
             fontSize: AppTypography.headline,
@@ -5422,7 +5434,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.red),
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text(
-              'Ciftligi Sat',
+              'Çiftliği Sat',
               style: AppTextStyles.button.standardCopyWith(
                 color: AppColors.textOnAccent,
               ),
@@ -5443,8 +5455,8 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Ciftlik satildi. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
+        title: 'Başarılı',
+        message: 'Çiftlik satıldı. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
         type: SnackbarType.success,
       );
       context.go('/fields');
@@ -5454,7 +5466,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Ciftlik satilamadi.',
+      message: result['message'] ?? 'Çiftlik satılamadı.',
       type: SnackbarType.error,
     );
   }
@@ -5720,7 +5732,7 @@ class _ActiveFieldUpgradeCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Ciftlik Yukseltmesi Devam Ediyor',
+                      'Çiftlik Yükseltmesi Devam Ediyor',
                       style: AppTextStyles.title.standardCopyWith(
                         color: AppColors.textPrimary,
                         fontSize: AppTypography.title,
@@ -5778,7 +5790,7 @@ class _ActiveFieldUpgradeCard extends ConsumerWidget {
             RewardedTimeReduceButton(
               onPressed: () => onReduceTimeWithAd!.call(),
               caption:
-                  'Bir reklam odulu al ve ciftlik yukseltme suresini 10 dakika kisalt.',
+                  'Bir reklam ödülü al ve çiftlik yükseltme süresini 10 dakika kısalt.',
             ),
           ],
         ],
@@ -5788,7 +5800,7 @@ class _ActiveFieldUpgradeCard extends ConsumerWidget {
 }
 
 String _formatCountdownLabel(Duration remaining) {
-  if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+  if (remaining.inSeconds <= 0) return 'Tamamlanıyor';
   final hours = remaining.inHours;
   final minutes = remaining.inMinutes % 60;
   if (hours > 0) {

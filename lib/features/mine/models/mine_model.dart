@@ -38,13 +38,13 @@ class MineModel {
       mineTypeId: json['mine_type_id'] as String,
       cityId: json['city_id'] as String,
       name: json['name'] as String,
-      level: json['level'] as int? ?? 1,
+      level: (json['level'] as num?)?.toInt() ?? 1,
       productId: json['product_id'] as String?,
       brandId:
           (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
               .toString(),
-      qualityLevel: json['quality_level'] as int? ?? 0,
-      outputCapacity: json['output_capacity'] as int? ?? 0,
+      qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
+      outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
       boostMultiplier: (json['boost_multiplier'] as num?)?.toDouble() ?? 1.0,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),

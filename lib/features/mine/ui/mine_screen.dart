@@ -27,7 +27,6 @@ class MineScreen extends ConsumerStatefulWidget {
 class _MineScreenState extends ConsumerState<MineScreen>
     with RouteRefreshMixin<MineScreen> {
   final int _selectedIndex = -1;
-  String _selectedFilter = 'Tumu';
 
   @override
   void initState() {
@@ -86,7 +85,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: result['message'] ?? 'Maden insaati tamamlanamadi.',
+        message: result['message'] ?? 'Maden inşaatı tamamlanamadı.',
         type: SnackbarType.error,
       );
       return;
@@ -107,8 +106,8 @@ class _MineScreenState extends ConsumerState<MineScreen>
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Tamamlandi',
-        message: 'Insaat aninda tamamlandi.',
+        title: 'Tamamlandı',
+        message: 'İnşaat anında tamamlandı.',
         type: SnackbarType.success,
       );
       await showExperienceFeedbackFromResult(context, result);
@@ -118,7 +117,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Yildiz ile bitirme basarisiz oldu.',
+      message: result['message'] ?? 'Yıldız ile bitirme başarısız oldu.',
       type: SnackbarType.error,
     );
   }
@@ -131,7 +130,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
       onApplyReduction: () => ref
           .read(mineActionProvider)
           .reduceConstructionTimeWithAd(constructionId),
-      successMessage: 'Insaat suresi 10 dakika kisaltildi.',
+      successMessage: 'İnşaat süresi 10 dakika kısaltıldı.',
     );
   }
 
@@ -139,14 +138,6 @@ class _MineScreenState extends ConsumerState<MineScreen>
     final remaining = finishAt.difference(DateTime.now());
     if (remaining.inSeconds <= 0) return 0;
     return (remaining.inMinutes / 10).ceil().clamp(1, 999999);
-  }
-
-  List<MineListItemModel> _getFilteredMines(List<MineListItemModel> mines) {
-    return mines.where((item) {
-      if (_selectedFilter == 'Aktif') return item.mine.isActive;
-      if (_selectedFilter == 'Pasif') return !item.mine.isActive;
-      return true;
-    }).toList();
   }
 
   @override
@@ -163,7 +154,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
         extendedPadding: EdgeInsets.symmetric(horizontal: 14.w),
         icon: Icon(AppIcons.add, size: AppIconSizes.compact),
         label: Text(
-          'YENI MADEN',
+          'YENİ MADEN',
           style: AppTextStyles.button.standardCopyWith(
             fontWeight: FontWeight.bold,
             fontSize: AppTypography.bodySmall,
@@ -182,7 +173,6 @@ class _MineScreenState extends ConsumerState<MineScreen>
               child: minesAsync.when(
                 data: (mines) => constructionAsync.when(
                   data: (construction) {
-                    final filteredMines = _getFilteredMines(mines);
                     return RefreshIndicator(
                       onRefresh: _refreshAll,
                       child: CustomScrollView(
@@ -193,10 +183,6 @@ class _MineScreenState extends ConsumerState<MineScreen>
                             sliver: SliverToBoxAdapter(
                               child: _buildStatsHeader(mines),
                             ),
-                          ),
-                          SliverPadding(
-                            padding: EdgeInsets.fromLTRB(10.w, 16.h, 10.w, 0),
-                            sliver: SliverToBoxAdapter(child: _buildFilters()),
                           ),
                           if (construction != null)
                             SliverPadding(
@@ -212,17 +198,17 @@ class _MineScreenState extends ConsumerState<MineScreen>
                               10.w,
                               80.h,
                             ),
-                            sliver: filteredMines.isEmpty
+                            sliver: mines.isEmpty
                                 ? SliverToBoxAdapter(
                                     child: construction == null
                                         ? _buildEmptyState()
                                         : const SizedBox.shrink(),
                                   )
                                 : SliverList.builder(
-                                    itemCount: filteredMines.length,
+                                    itemCount: mines.length,
                                     itemBuilder: (context, index) {
                                       return _buildMineCard(
-                                        filteredMines[index],
+                                        mines[index],
                                       );
                                     },
                                   ),
@@ -268,7 +254,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
       children: [
         ConstructionCountdownCard(
           title: name?.isNotEmpty == true ? name! : 'Yeni Maden',
-          subtitle: 'Maden insaati devam ediyor',
+          subtitle: 'Maden inşaatı devam ediyor',
           finishAt: finishAt.toLocal(),
           icon: AppIcons.diamondOutlined,
           onFinished: () => _completeConstruction(constructionId),
@@ -384,73 +370,6 @@ class _MineScreenState extends ConsumerState<MineScreen>
     );
   }
 
-  Widget _buildFilters() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildFilterChip('Tümü', null),
-          SizedBox(width: 8.w),
-          _buildFilterChip('Aktif', AppColors.green),
-          SizedBox(width: 8.w),
-          _buildFilterChip('Pasif', AppColors.red),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, Color? dotColor) {
-    final isSelected = _selectedFilter == label;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFilter = label;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.gold.withValues(alpha: 0.15)
-              : AppColors.cardBg.withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.gold
-                : AppColors.border.withValues(alpha: 0.5),
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            if (dotColor != null) ...[
-              Container(
-                width: 6.w,
-                height: 6.w,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              SizedBox(width: 8.w),
-            ],
-            Text(
-              label,
-              style: AppTextStyles.body.standardCopyWith(
-                color: isSelected
-                    ? AppColors.goldLight
-                    : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: AppTypography.body,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -463,7 +382,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
           ),
           SizedBox(height: 16.h),
           Text(
-            'Henuz bir madenin yok.',
+            'Henüz bir madenin yok.',
             style: AppTextStyles.h2.standardCopyWith(
               color: AppColors.textMuted,
             ),
@@ -476,7 +395,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
               side: BorderSide(color: AppColors.gold),
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
             ),
-            child: Text('ILK MADENINI KUR', style: AppTextStyles.titleGold),
+            child: Text('İLK MADENİNİ KUR', style: AppTextStyles.titleGold),
           ),
         ],
       ),
@@ -736,7 +655,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
                   ),
                   SizedBox(height: 2.h),
                   Text(
-                    'Detay ekranindan ürün seçerek madeni baslat.',
+                    'Detay ekranından ürün seçerek madeni başlat.',
                     style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.label,

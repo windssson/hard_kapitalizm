@@ -12,12 +12,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
+import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
+import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_model.dart';
 
-final fieldListProvider =
-    FutureProvider<List<FieldListItemModel>>((ref) async {
+Future<List<FieldListItemModel>> _fetchFieldList() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -37,9 +38,9 @@ final fieldListProvider =
       field: FieldModel.fromJson(
         Map<String, dynamic>.from(map['field'] as Map),
       ),
-      cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+      cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
       fieldTypeName:
-          (map['field_type_name'] ?? 'Bilinmeyen Ciftlik').toString(),
+          (map['field_type_name'] ?? 'Bilinmeyen Çiftlik').toString(),
       fieldTypeIcon: (map['field_type_icon'] ?? 'field.webp').toString(),
       outputStockQuantity:
           (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
@@ -54,7 +55,91 @@ final fieldListProvider =
           .toList(),
     );
   }).toList();
-});
+}
+
+class FieldListNotifier extends AsyncNotifier<List<FieldListItemModel>> {
+  @override
+  Future<List<FieldListItemModel>> build() => _fetchFieldList();
+
+  Future<List<FieldListItemModel>> refresh() async {
+    final list = await _fetchFieldList();
+    state = AsyncData(list);
+    return list;
+  }
+
+  void patchFieldLevelAndCapacity({
+    required String fieldId,
+    required int level,
+    required int outputCapacity,
+    int? inputCapacity,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere((item) => item.field.id == fieldId);
+    if (index < 0) return;
+    final item = current[index];
+    final updatedField = item.field.copyWith(
+      level: level,
+      outputCapacity: outputCapacity,
+      inputCapacity: inputCapacity ?? item.field.inputCapacity,
+    );
+    final next = [...current];
+    next[index] = item.copyWith(field: updatedField);
+    state = AsyncData(next);
+  }
+
+  void patchSlotActive({
+    required String fieldId,
+    required String slotId,
+    required bool isActive,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere((item) => item.field.id == fieldId);
+    if (index < 0) return;
+    final item = current[index];
+    final updatedSlots = item.slots.map((s) {
+      if (s.id == slotId) {
+        return FieldSlotPreviewModel(
+          id: s.id,
+          slotIndex: s.slotIndex,
+          isActive: isActive,
+          productId: s.productId,
+          product: s.product,
+        );
+      }
+      return s;
+    }).toList();
+    final next = [...current];
+    next[index] = item.copyWith(slots: updatedSlots);
+    state = AsyncData(next);
+  }
+
+  void addSlot({
+    required String fieldId,
+    required FieldSlotPreviewModel slot,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere((item) => item.field.id == fieldId);
+    if (index < 0) return;
+    final item = current[index];
+    final updatedSlots = [...item.slots, slot];
+    final next = [...current];
+    next[index] = item.copyWith(
+      field: item.field.copyWith(
+        currentSlotCount: item.field.currentSlotCount + 1,
+      ),
+      slots: updatedSlots,
+    );
+    state = AsyncData(next);
+  }
+}
+
+final fieldListProvider =
+    AsyncNotifierProvider<FieldListNotifier, List<FieldListItemModel>>(
+      FieldListNotifier.new,
+    );
 
 final fieldTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   final catalogs = await ref.watch(staticCatalogsProvider.future);
@@ -81,15 +166,12 @@ final fieldConstructionProvider =
       return Map<String, dynamic>.from(rows.first as Map);
     });
 
-final fieldDetailProvider = FutureProvider.family<FieldDetailModel, String>((
-  ref,
-  fieldId,
-) async {
+Future<FieldDetailModel> _fetchFieldDetail(String fieldId) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
   if (user == null) {
-    throw Exception('Kullanici girisi yapilmamis.');
+    throw Exception('Kullanıcı girişi yapılmamış.');
   }
 
   await processProductionEntry(
@@ -111,7 +193,7 @@ final fieldDetailProvider = FutureProvider.family<FieldDetailModel, String>((
     fieldType: FieldTypeDetailModel.fromJson(
       Map<String, dynamic>.from(map['field_type'] as Map),
     ),
-    cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+    cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
     slots: (map['slots'] as List<dynamic>? ?? const [])
         .map(
           (slot) => ProductionSlotModel.fromJson(
@@ -127,59 +209,186 @@ final fieldDetailProvider = FutureProvider.family<FieldDetailModel, String>((
         )
         .toList(),
   );
-});
+}
 
-final activeFieldUpgradeProvider =
-    FutureProvider.family<BuildingUpgradeModel?, String>((ref, fieldId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
+  FieldDetailNotifier(this._fieldId);
 
-      if (user == null) {
-        return null;
+  final String _fieldId;
+
+  @override
+  Future<FieldDetailModel> build() => _fetchFieldDetail(_fieldId);
+
+  Future<FieldDetailModel> refresh() async {
+    final detail = await _fetchFieldDetail(_fieldId);
+    state = AsyncData(detail);
+    return detail;
+  }
+
+  void patchFieldLevelAndCapacity({
+    required int level,
+    required int outputCapacity,
+    int? inputCapacity,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        field: current.field.copyWith(
+          level: level,
+          outputCapacity: outputCapacity,
+          inputCapacity: inputCapacity ?? current.field.inputCapacity,
+        ),
+      ),
+    );
+  }
+
+  void patchSlotActive({
+    required String slotId,
+    required bool isActive,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedSlots = current.slots.map((slot) {
+      if (slot.id == slotId) {
+        return slot.copyWith(isActive: isActive);
       }
+      return slot;
+    }).toList();
+    state = AsyncData(current.copyWith(slots: updatedSlots));
+  }
 
-      final response = await supabase.rpc(
-        'get_player_active_building_upgrade',
-        params: {
-          'p_building_kind': 'field',
-          'p_entity_id': fieldId,
-        },
-      );
+  void addSlot(ProductionSlotModel slot) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedSlots = [...current.slots, slot];
+    state = AsyncData(
+      current.copyWith(
+        field: current.field.copyWith(
+          currentSlotCount: current.field.currentSlotCount + 1,
+        ),
+        slots: updatedSlots,
+      ),
+    );
+  }
 
-      if (response == null) {
-        return null;
-      }
+  void patchSlotsAndInventories({
+    required List<ProductionSlotModel> slots,
+    required List<ProductionInventoryModel> inventories,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        slots: slots,
+        inventories: inventories,
+      ),
+    );
+  }
+}
 
-      return BuildingUpgradeModel.fromJsonNullable(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
+final fieldDetailProvider = AsyncNotifierProvider.family<
+    FieldDetailNotifier,
+    FieldDetailModel,
+    String
+>(FieldDetailNotifier.new);
 
-final activeFieldBoostProvider =
-    FutureProvider.family<BuildingBoostModel?, String>((ref, fieldId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+class ActiveFieldUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
+  ActiveFieldUpgradeNotifier(this._fieldId);
 
-      if (user == null) {
-        return null;
-      }
+  final String _fieldId;
 
-      final response = await supabase.rpc(
-        'get_player_active_building_boost',
-        params: {
-          'p_building_kind': 'field',
-          'p_entity_id': fieldId,
-        },
-      );
+  @override
+  Future<BuildingUpgradeModel?> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
 
-      if (response == null) {
-        return null;
-      }
+    if (user == null) {
+      return null;
+    }
 
-      return BuildingBoostModel.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
+    final response = await supabase.rpc(
+      'get_player_active_building_upgrade',
+      params: {
+        'p_building_kind': 'field',
+        'p_entity_id': _fieldId,
+      },
+    );
+
+    if (response == null) {
+      return null;
+    }
+
+    return BuildingUpgradeModel.fromJsonNullable(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  void setUpgrade(BuildingUpgradeModel? upgrade) {
+    state = AsyncData(upgrade);
+  }
+
+  void reduceTime(Duration duration) {
+    final current = state.value;
+    if (current == null) return;
+    final reducedFinishAt = current.finishAt.subtract(duration);
+    state = AsyncData(current.copyWith(finishAt: reducedFinishAt));
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final activeFieldUpgradeProvider = AsyncNotifierProvider.autoDispose
+    .family<ActiveFieldUpgradeNotifier, BuildingUpgradeModel?, String>(
+      ActiveFieldUpgradeNotifier.new,
+    );
+
+class ActiveFieldBoostNotifier extends AsyncNotifier<BuildingBoostModel?> {
+  ActiveFieldBoostNotifier(this._fieldId);
+
+  final String _fieldId;
+
+  @override
+  Future<BuildingBoostModel?> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      return null;
+    }
+
+    final response = await supabase.rpc(
+      'get_player_active_building_boost',
+      params: {
+        'p_building_kind': 'field',
+        'p_entity_id': _fieldId,
+      },
+    );
+
+    if (response == null) {
+      return null;
+    }
+
+    return BuildingBoostModel.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  void setBoost(BuildingBoostModel? boost) {
+    state = AsyncData(boost);
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final activeFieldBoostProvider = AsyncNotifierProvider.autoDispose
+    .family<ActiveFieldBoostNotifier, BuildingBoostModel?, String>(
+      ActiveFieldBoostNotifier.new,
+    );
 
 class FieldActionNotifier {
   final Ref _ref;
@@ -193,6 +402,16 @@ class FieldActionNotifier {
     final result = Map<String, dynamic>.from(response as Map);
     _ref.read(mutationSyncServiceProvider).applyRaw(result);
     return result;
+  }
+
+  Future<void> _refreshAttentionNotifications() async {
+    try {
+      await _supabase.rpc('refresh_player_attention_notifications');
+    } catch (_) {
+      // Ignore attention refresh errors; primary action already succeeded.
+    }
+    _ref.invalidate(playerNotificationDashboardProvider);
+    _ref.invalidate(homeDashboardProvider);
   }
 
   Future<Map<String, dynamic>> createField({
@@ -542,6 +761,7 @@ class FieldActionNotifier {
         if (ownerId != null && ownerId.isNotEmpty) {
           _ref.invalidate(fieldDetailProvider(ownerId));
         }
+        await _refreshAttentionNotifications();
       }
       return responseMap;
     } catch (e) {
@@ -577,6 +797,7 @@ class FieldActionNotifier {
         if (ownerId != null && ownerId.isNotEmpty) {
           _ref.invalidate(fieldDetailProvider(ownerId));
         }
+        await _refreshAttentionNotifications();
       }
       return responseMap;
     } catch (e) {
@@ -610,6 +831,7 @@ class FieldActionNotifier {
         if (ownerId != null && ownerId.isNotEmpty) {
           _ref.invalidate(fieldDetailProvider(ownerId));
         }
+        await _refreshAttentionNotifications();
       }
       return responseMap;
     } catch (e) {
@@ -779,6 +1001,7 @@ class FieldActionNotifier {
       _ref.invalidate(fieldDetailProvider);
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(warehouseDetailProvider(sourceWarehouseId));
+      await _refreshAttentionNotifications();
     }
     return result;
   }

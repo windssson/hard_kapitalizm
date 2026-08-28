@@ -78,4 +78,24 @@ class FieldListItemModel {
   }
 
   bool get hasWarning => warningReason != null;
+
+  FieldListItemModel copyWith({
+    FieldModel? field,
+    String? cityName,
+    String? fieldTypeName,
+    String? fieldTypeIcon,
+    int? outputStockQuantity,
+    int? inputStockQuantity,
+    List<FieldSlotPreviewModel>? slots,
+  }) {
+    return FieldListItemModel(
+      field: field ?? this.field,
+      cityName: cityName ?? this.cityName,
+      fieldTypeName: fieldTypeName ?? this.fieldTypeName,
+      fieldTypeIcon: fieldTypeIcon ?? this.fieldTypeIcon,
+      outputStockQuantity: outputStockQuantity ?? this.outputStockQuantity,
+      inputStockQuantity: inputStockQuantity ?? this.inputStockQuantity,
+      slots: slots ?? this.slots,
+    );
+  }
 }

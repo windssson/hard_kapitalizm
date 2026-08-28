@@ -6,6 +6,7 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/app_network_image.dart';
 import 'package:hard_kapitalizm/core/widgets/animated_count_text.dart';
 import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -189,10 +190,12 @@ class AppTopBar extends ConsumerWidget {
               ),
               child: ClipOval(
                 child: isUrl
-                    ? Image.network(
-                        avatarId,
+                    ? AppNetworkImage(
+                        imageUrl: avatarId,
+                        width: compact ? 34.r : 44.r,
+                        height: compact ? 34.r : 44.r,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => CachedAssetImage(
+                        errorWidget: CachedAssetImage(
                           fileName: 'ae1.webp',
                           fit: BoxFit.cover,
                           placeholder: Icon(
@@ -394,7 +397,7 @@ class AppTopBar extends ConsumerWidget {
                 if (!compact) ...[
                   SizedBox(height: 2.h),
                   Text(
-                    'Gorev',
+                    'Görev',
                     style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,

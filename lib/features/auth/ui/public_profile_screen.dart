@@ -7,6 +7,7 @@ import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/app_network_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
@@ -15,7 +16,7 @@ import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
-import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 
 class PublicProfileScreen extends ConsumerStatefulWidget {
@@ -89,7 +90,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                           _buildFeaturedBadges(player),
                           SizedBox(height: 24.h),
                           Text(
-                            'Satistaki Urunleri 📦',
+                            'Satıştaki Ürünleri 📦',
                             style: AppTextStyles.h2.standardCopyWith(
                               color: AppColors.gold,
                             ),
@@ -105,7 +106,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                               ),
                             ),
                             error: (err, _) => Text(
-                              'Urun listesi alinamadi: $err',
+                              'Ürün listesi alınamadı: $err',
                               style: AppTextStyles.body.standardCopyWith(
                                 color: AppColors.red,
                               ),
@@ -165,14 +166,15 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
             ),
             child: ClipOval(
               child: player.avatarId.startsWith('http')
-                  ? Image.network(
-                      player.avatarId,
+                  ? AppNetworkImage(
+                      imageUrl: player.avatarId,
+                      width: 70.w,
+                      height: 70.w,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          CachedAssetImage(
-                            fileName: 'ae1.webp',
-                            fit: BoxFit.cover,
-                          ),
+                      errorWidget: CachedAssetImage(
+                        fileName: 'ae1.webp',
+                        fit: BoxFit.cover,
+                      ),
                     )
                   : CachedAssetImage(
                       fileName: player.avatarId,
@@ -270,7 +272,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Sirket Degeri', style: AppTextStyles.caption),
+              Text('Şirket Değeri', style: AppTextStyles.caption),
               SizedBox(height: 2.h),
               Text(
                 AppMoney.compact(player.companyValue),
@@ -389,7 +391,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Oyuncunun satista aktif urunu bulunmuyor.',
+            'Oyuncunun satışta aktif ürünü bulunmuyor.',
             style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
             ),
@@ -541,7 +543,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                   ),
                 ),
                 child: Text(
-                  'Satin Al',
+                  'Satın Al',
                   style: AppTextStyles.button.standardCopyWith(
                     fontSize: AppTypography.label,
                     fontWeight: FontWeight.bold,
@@ -641,7 +643,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Urun Satin Al', style: AppTextStyles.h1),
+                  Text('Ürün Satın Al', style: AppTextStyles.h1),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: Icon(
@@ -712,7 +714,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                 loading: () =>
                     Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (err, _) => Text(
-                  'Depolar yuklenemedi: $err',
+                  'Depolar yüklenemedi: $err',
                   style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.red,
                   ),
@@ -720,7 +722,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                 data: (warehouses) {
                   if (warehouses.isEmpty) {
                     return Text(
-                      'Satin alinan urunu koyacak bir deponuz bulunmuyor!',
+                      'Satın alınan ürünü koyacak bir deponuz bulunmuyor!',
                       style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.red,
                       ),
@@ -769,7 +771,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                                   )
                                 else
                                   Text(
-                                    'Farkli Sehir',
+                                    'Farklı Şehir',
                                     style: AppTextStyles.caption
                                         .standardCopyWith(
                                           color: AppColors.gold,
@@ -931,89 +933,25 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
         if (!mounted) return;
         AppSnackbar.show(
           context,
-          title: 'Arac Yok',
-          message: 'Sehirler arasi alim icin bosta arac bulunamadi.',
+          title: 'Araç Yok',
+          message: 'Şehirler arası alım için boşta araç bulunamadı.',
           type: SnackbarType.warning,
         );
         return;
       }
 
       if (!mounted) return;
-      await showModalBottomSheet<void>(
+      final selectedVehicleId = await showTransferVehicleSelectionSheet(
         context: context,
-        backgroundColor: AppColors.background,
-        isScrollControlled: true,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-        ),
-        builder: (sheetContext) => Container(
-          padding: EdgeInsets.all(16.w),
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(sheetContext).size.height * 0.8,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Arac Secin', style: AppTextStyles.h1),
-                  IconButton(
-                    onPressed: () => Navigator.pop(sheetContext),
-                    icon: Icon(
-                      AppIcons.close,
-                      color: AppColors.textMuted,
-                      size: AppIconSizes.medium,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 6.h),
-              Text(
-                '${widget.listing.cityName} -> ${targetWarehouse.cityName} | ${totalVolume.toStringAsFixed(1)} m3',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.bodyLarge,
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: options.length,
-                  separatorBuilder: (context, index) => SizedBox(height: 10.h),
-                  itemBuilder: (_, index) {
-                    final option = options[index];
-                    return TransferVehicleOptionCard(
-                      vehicleName: option.vehicleName,
-                      isRental: option.isRental,
-                      capacity: option.capacity,
-                      speedKmh: option.speedKmh,
-                      distanceKm: option.distanceKm,
-                      durationLabel: _formatTransferDuration(
-                        option.estimatedDurationSeconds,
-                      ),
-                      transportCost: option.transportCost,
-                      rentalCost: option.rentalCost,
-                      fuelCost: option.fuelCost,
-                      fuelNeeded: option.fuelNeeded,
-                      conditionNeeded: option.conditionNeeded,
-                      canSelect: option.canSelect,
-                      isSelected: false,
-                      disabledReason: option.disabledReason,
-                      onTap: option.canSelect
-                          ? () async {
-                              Navigator.pop(sheetContext);
-                              await _executePurchaseTransfer(option.vehicleId);
-                            }
-                          : null,
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+        sourceCityName: widget.listing.cityName,
+        targetCityName: targetWarehouse.cityName ?? '',
+        totalVolume: totalVolume,
+        options: options.map(TransferVehicleOptionItem.fromMarket).toList(),
       );
+
+      if (selectedVehicleId != null && mounted) {
+        await _executePurchaseTransfer(selectedVehicleId);
+      }
     } catch (e) {
       setState(() {
         _loading = false;
@@ -1022,7 +960,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: 'Arac secenekleri alinamadi: $e',
+        message: 'Araç seçenekleri alınamadı: $e',
         type: SnackbarType.error,
       );
     }
@@ -1080,7 +1018,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
             title: 'Hata',
             message:
                 completeResult['message']?.toString() ??
-                'Anlik market transferi tamamlanamadi.',
+                'Anlık market transferi tamamlanamadı.',
             type: SnackbarType.error,
           );
           setState(() {
@@ -1099,10 +1037,10 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
       );
       AppSnackbar.show(
         context,
-        title: 'Basarili',
+        title: 'Başarılı',
         message: isInstant
-            ? 'Satin alma islemi aninda tamamlandi!'
-            : 'Satin alma islemi baslatildi. Arac yola cikti!',
+            ? 'Satın alma işlemi anında tamamlandı!'
+            : 'Satın alma işlemi başlatıldı. Araç yola çıktı!',
         type: SnackbarType.success,
       );
       widget.ref.invalidate(warehouseListProvider);
@@ -1119,13 +1057,5 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
         _loading = false;
       });
     }
-  }
-
-  String _formatTransferDuration(int seconds) {
-    final duration = Duration(seconds: seconds);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours}s ${minutes}dk';
-    return '${minutes}dk';
   }
 }

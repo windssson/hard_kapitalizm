@@ -39,7 +39,7 @@ final farmListProvider =
       farm: FarmModel.fromJson(
         Map<String, dynamic>.from(map['farm'] as Map),
       ),
-      cityName: (map['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+      cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
       farmTypeName: (map['farm_type_name'] ?? 'Bilinmeyen Tarla').toString(),
       farmTypeIcon: (map['farm_type_icon'] ?? 'farm.webp').toString(),
       outputStockQuantity:
@@ -90,7 +90,7 @@ final farmDetailProvider = FutureProvider.family<FarmDetailModel, String>((
   final user = supabase.auth.currentUser;
 
   if (user == null) {
-    throw Exception('Kullanici girisi yapilmamis.');
+    throw Exception('Kullanıcı girişi yapılmamış.');
   }
 
   await processProductionEntry(
@@ -134,7 +134,7 @@ final farmDetailProvider = FutureProvider.family<FarmDetailModel, String>((
   return FarmDetailModel(
     farm: farm,
     farmType: farmType,
-    cityName: (farmPayload['city_name'] ?? 'Bilinmeyen Sehir').toString(),
+    cityName: (farmPayload['city_name'] ?? 'Bilinmeyen Şehir').toString(),
     slots: slotRows.map(FarmProductionSlotModel.fromJson).toList(),
     inventories: inventoryRows
         .map(FarmProductionInventoryModel.fromJson)

@@ -13,10 +13,11 @@ import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/app_network_image.dart';
 import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/price_sparkline.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
@@ -171,7 +172,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: 'Urun bilgisi yuklenmeden satin alma acilamaz.',
+        message: 'Ürün bilgisi yüklenmeden satın alma açılamaz.',
         type: SnackbarType.error,
       );
       return;
@@ -222,9 +223,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Sehir Kilidi',
+        title: 'Şehir Kilidi',
         message:
-            'Sepetteki urunlerle ayni sehirden devam etmelisiniz: ${_resolveLockedCityName()}.',
+            'Sepetteki ürünlerle aynı şehirden devam etmelisiniz: ${_resolveLockedCityName()}.',
         type: SnackbarType.warning,
       );
       return;
@@ -523,17 +524,17 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
     final available = capacity?.availableCapacity ?? 0;
     if (available <= 0) {
-      return 'Secili depoda hic bos kapasite kalmadi. Yeni alim baslatilamaz.';
+      return 'Seçili depoda hiç boş kapasite kalmadı. Yeni alım başlatılamaz.';
     }
 
     final unitVolume = product?.birimHacim ?? 0;
     if (unitVolume > 0) {
       final maxUnits = (available / unitVolume).floor();
       if (maxUnits <= 0) {
-        return 'Bu urun icin secili depoda yeterli yer yok. En az ${unitVolume.toStringAsFixed(1)} m3 bos alan gerekli.';
+        return 'Bu ürün için seçili depoda yeterli yer yok. En az ${unitVolume.toStringAsFixed(1)} m3 boş alan gerekli.';
       }
       if (maxUnits < 5) {
-        return 'Dikkat: secili depoda bu urunden en fazla $maxUnits adet yer var.';
+        return 'Dikkat: seçili depoda bu üründen en fazla $maxUnits adet yer var.';
       }
     }
 
@@ -549,7 +550,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         ? listing.unitVolume
         : (product?.birimHacim ?? 0);
     final available = capacity?.availableCapacity ?? 0;
-    return 'Bu ilan sepete eklenemiyor. Gereken en az hacim: ${unitVolume.toStringAsFixed(1)} m3, mevcut bos kapasite: ${available.toStringAsFixed(1)} m3.';
+    return 'Bu ilan sepete eklenemiyor. Gereken en az hacim: ${unitVolume.toStringAsFixed(1)} m3, mevcut boş kapasite: ${available.toStringAsFixed(1)} m3.';
   }
 
   void _onNavSelected(int index) {
@@ -1661,7 +1662,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       SizedBox(height: 4.h),
                       _buildTypeBadge(
                         selectedWarehouse.warehouseKind == 'store'
-                            ? 'Magaza Deposu'
+                            ? 'Mağaza Deposu'
                             : 'Normal Depo',
                         selectedWarehouse.warehouseKind == 'store'
                             ? AppColors.blue
@@ -1689,7 +1690,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           ),
                           SizedBox(width: 8.w),
                           Text(
-                            '${availableCapacity.toStringAsFixed(0)} m3 bos',
+                            '${availableCapacity.toStringAsFixed(0)} m3 boş',
                             style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textSecondary,
                               fontSize: AppTypography.caption,
@@ -2434,7 +2435,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                         ),
                                         loading: _buildLoadingCard,
                                         error: (e, s) => _buildErrorCard(
-                                          'Magaza listesi alinamadi.',
+                                          'Mağaza listesi alınamadı.',
                                         ),
                                       ),
                                       loading: _buildLoadingCard,
@@ -2443,7 +2444,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                     ),
                                     loading: _buildLoadingCard,
                                     error: (e, s) =>
-                                        _buildErrorCard('Urun listesi alinamadi.'),
+                                        _buildErrorCard('Ürün listesi alınamadı.'),
                                   ),
                                   SizedBox(height: 8.h),
                                 ],
@@ -2550,7 +2551,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                               loading: () =>
                                   SliverToBoxAdapter(child: _buildLoadingCard()),
                               error: (e, s) => SliverToBoxAdapter(
-                                child: _buildErrorCard('Pazar verileri alinamadi.'),
+                                child: _buildErrorCard('Pazar verileri alınamadı.'),
                               ),
                             ),
                           ),
@@ -2715,10 +2716,13 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                                             listing.sellerGoogleAvatarUrl!
                                                 .trim()
                                                 .isNotEmpty
-                                        ? Image.network(
-                                            listing.sellerGoogleAvatarUrl!,
+                                        ? AppNetworkImage(
+                                            imageUrl:
+                                                listing.sellerGoogleAvatarUrl!,
+                                            width: 32.w,
+                                            height: 32.w,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (_, _, _) => Padding(
+                                            errorWidget: Padding(
                                               padding: EdgeInsets.all(5.w),
                                               child: CachedAssetImage(
                                                 fileName:
@@ -3086,7 +3090,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           ),
           SizedBox(height: 8.h),
           Text(
-            'Bu urun icin su anda fiyat girilmis aktif satis listesi bulunmuyor.',
+            'Bu ürün için şu anda fiyat girilmiş aktif satış listesi bulunmuyor.',
             style: AppTextStyles.body,
             textAlign: TextAlign.center,
           ),
@@ -3506,7 +3510,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         context,
         title: 'Kapasite Yetersiz',
         message:
-            'Sepet hacmi hedef depo kapasitesini asiyor. Sepeti kucultmeden alim tamamlanamaz.',
+            'Sepet hacmi hedef depo kapasitesini aşıyor. Sepeti küçültmeden alım tamamlanamaz.',
         type: SnackbarType.warning,
       );
       return;
@@ -3528,8 +3532,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Sehir Verisi Eksik',
-        message: 'Arac secimi icin sehir bilgileri okunamadi.',
+        title: 'Şehir Verisi Eksik',
+        message: 'Araç seçimi için şehir bilgileri okunamadı.',
         type: SnackbarType.error,
       );
       return;
@@ -3549,8 +3553,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Arac Secim Hatasi',
-        message: 'Arac secenekleri alinamadi: ${e.toString()}',
+        title: 'Araç Seçim Hatası',
+        message: 'Araç seçenekleri alınamadı: ${e.toString()}',
         type: SnackbarType.error,
       );
       return;
@@ -3561,10 +3565,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Arac Yok',
+        title: 'Araç Yok',
         message:
             vehicleResult.unavailableReason ??
-            'Sehirler arasi alim icin uygun arac bulunamadi.',
+            'Şehirler arası alım için uygun araç bulunamadı.',
         type: SnackbarType.warning,
       );
       return;
@@ -3572,75 +3576,22 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
     if (!mounted) return;
 
-    showModalBottomSheet(
+    final selectedVehicleId = await showTransferVehicleSelectionSheet(
       context: context,
-      backgroundColor: AppColors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 20.h),
-        decoration: AppDecorations.panelGlass(20.r),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.8,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Araç Seçin',
-              style: AppTextStyles.h1.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.headline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              '${sourceCity.name} -> ${targetCity.name} | ${_cartTotalVolume.toStringAsFixed(1)} m³',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodyLarge,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Expanded(
-              child: ListView.separated(
-                itemCount: options.length,
-                separatorBuilder: (context, index) => SizedBox(height: 10.h),
-                itemBuilder: (_, index) {
-                  final option = options[index];
-                  return TransferVehicleOptionCard(
-                    vehicleName: option.vehicleName,
-                    isRental: option.isRental,
-                    capacity: option.capacity,
-                    speedKmh: option.speedKmh,
-                    distanceKm: option.distanceKm,
-                    durationLabel: _formatTransferDuration(
-                      option.estimatedDurationSeconds,
-                    ),
-                    transportCost: option.transportCost,
-                    rentalCost: option.rentalCost,
-                    fuelCost: option.fuelCost,
-                    fuelNeeded: option.fuelNeeded,
-                    conditionNeeded: option.conditionNeeded,
-                    canSelect: option.canSelect,
-                    isSelected: false,
-                    disabledReason: option.disabledReason,
-                    onTap: option.canSelect
-                        ? () async {
-                            Navigator.of(sheetContext).pop();
-                            await _submitMultiMarketTransfer(
-                              vehicleId: option.vehicleId,
-                            );
-                          }
-                        : null,
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      sourceCityName: sourceCity.name,
+      targetCityName: targetCity.name,
+      totalVolume: _cartTotalVolume,
+      options: options.map(TransferVehicleOptionItem.fromMarket).toList(),
+      unavailableReason: !vehicleResult.hasSelectableOptions
+          ? vehicleResult.unavailableReason
+          : null,
     );
+
+    if (selectedVehicleId != null && mounted) {
+      await _submitMultiMarketTransfer(
+        vehicleId: selectedVehicleId,
+      );
+    }
   }
 
   Future<void> _submitMultiMarketTransfer({String? vehicleId}) async {
@@ -3694,7 +3645,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           title: 'Hata',
           message:
               completeResult['message']?.toString() ??
-              'Anlik market transferi tamamlanamadi.',
+              'Anlık market transferi tamamlanamadı.',
           type: SnackbarType.error,
         );
         return;
@@ -3727,14 +3678,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       if (city.id == cityId) return city;
     }
     return null;
-  }
-
-  String _formatTransferDuration(int seconds) {
-    final duration = Duration(seconds: seconds);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours}s ${minutes}dk';
-    return '${duration.inMinutes}dk';
   }
 
   Widget _buildMarketTabBar() {
@@ -6405,7 +6348,7 @@ class _PurchaseSheetState extends ConsumerState<_PurchaseSheet> {
             ),
             SizedBox(height: 8.h),
             Text(
-              'Eski tekli market satin alma akisi devre disi birakildi. Yeni sistemde alimlar coklu sepet akisi uzerinden ilerliyor.',
+              'Eski tekli market satın alma akışı devre dışı bırakıldı. Yeni sistemde alımlar çoklu sepet akışı üzerinden ilerliyor.',
               style: AppTextStyles.body,
             ),
             SizedBox(height: 14.h),

@@ -47,7 +47,7 @@ class ProductionLogisticsWarehouseOption {
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? 'Depo').toString(),
       cityId: cityId,
-      cityName: (json['city']?['name'] ?? 'Bilinmeyen Sehir').toString(),
+      cityName: (json['city']?['name'] ?? 'Bilinmeyen Şehir').toString(),
       isSameCity: cityId.isNotEmpty && cityId == productionCityId,
       slots: slotsRaw.map((s) => WarehouseSlotModel.fromJson(s)).toList(),
       capacity: capacity,
@@ -112,7 +112,7 @@ class ProductionLogisticsVehicleOption {
     return ProductionLogisticsVehicleOption(
       vehicleId: (json['vehicle_id'] ?? '').toString(),
       vehicleOwnerPlayerId: vehicleOwnerPlayerId,
-      vehicleName: (json['vehicle_name'] ?? 'Arac').toString(),
+      vehicleName: (json['vehicle_name'] ?? 'Araç').toString(),
       isRental: json['is_rental'] as bool? ??
           (vehicleOwnerPlayerId.isEmpty || rentalPrice > 0 || rentalCost > 0),
       capacity: (json['capacity'] as num?)?.toInt() ?? 0,

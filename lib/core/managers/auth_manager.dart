@@ -92,7 +92,7 @@ class AuthManager {
       }
     } catch (e) {
       throw Exception(
-        'Giris islemi basarisiz: $e\nLutfen Supabase Dashboard -> Authentication -> Providers -> Email ayarinin acik (ve Confirm email seceneginin kapali) oldugundan emin olun.',
+        'Giriş işlemi başarısız: $e\nLütfen Supabase Dashboard -> Authentication -> Providers -> Email ayarının açık (ve Confirm email seçeneğinin kapalı) olduğundan emin olun.',
       );
     }
   }

@@ -14,7 +14,7 @@ class RewardedAdActionFlow {
     required String successTitle,
     required String successMessage,
     String? resourceId,
-    String loadingMessage = 'Google AdMob test reklami yukleniyor.',
+    String loadingMessage = 'Google AdMob test reklamı yükleniyor.',
     double? feedbackAmount,
     FloatingFeedbackType? feedbackType,
   }) async {
@@ -27,10 +27,10 @@ class RewardedAdActionFlow {
     if (eligibility['allowed'] != true) {
       AppSnackbar.show(
         context,
-        title: 'Reklam Hakki Kullanilamiyor',
+        title: 'Reklam Hakkı Kullanılamıyor',
         message:
             eligibility['message']?.toString() ??
-            'Reklam odulu su anda kullanilamiyor.',
+            'Reklam ödülü şu anda kullanılamıyor.',
         type: SnackbarType.warning,
       );
       return false;
@@ -38,7 +38,7 @@ class RewardedAdActionFlow {
 
     AppSnackbar.show(
       context,
-      title: 'Test Reklami Hazirlaniyor',
+      title: 'Test Reklamı Hazırlanıyor',
       message: loadingMessage,
       type: SnackbarType.info,
     );
@@ -49,7 +49,7 @@ class RewardedAdActionFlow {
     if (!adResult.rewardEarned) {
       AppSnackbar.show(
         context,
-        title: 'Odul Alinamadi',
+        title: 'Ödül Alınamadı',
         message: adResult.message,
         type: SnackbarType.warning,
       );
@@ -87,7 +87,7 @@ class RewardedAdActionFlow {
           final dailyUsage = (result['reward_daily_usage'] as num?)?.toInt();
           final dailyLimit = (result['reward_daily_limit'] as num?)?.toInt();
           final usageText = dailyUsage != null && dailyLimit != null
-              ? ' Bugunku kullanim: $dailyUsage/$dailyLimit.'
+              ? ' Bugünkü kullanım: $dailyUsage/$dailyLimit.'
               : '';
           AppSnackbar.show(
             context,
@@ -103,9 +103,9 @@ class RewardedAdActionFlow {
       if (context.mounted) {
         AppSnackbar.show(
           context,
-          title: 'Islem Basarisiz',
+          title: 'İşlem Başarısız',
           message:
-              result['message']?.toString() ?? 'Reklam odulu uygulanamadi.',
+              result['message']?.toString() ?? 'Reklam ödülü uygulanamadı.',
           type: SnackbarType.error,
         );
       }
@@ -131,7 +131,7 @@ class RewardedAdActionFlow {
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
     if (user == null) {
-      return {'allowed': false, 'message': 'Oturum acilmamis.'};
+      return {'allowed': false, 'message': 'Oturum açılmamış.'};
     }
 
     try {
@@ -147,7 +147,7 @@ class RewardedAdActionFlow {
     } catch (e) {
       return {
         'allowed': false,
-        'message': 'Reklam haklari kontrol edilemedi. Lutfen tekrar dene: $e',
+        'message': 'Reklam hakları kontrol edilemedi. Lütfen tekrar dene: $e',
       };
     }
   }

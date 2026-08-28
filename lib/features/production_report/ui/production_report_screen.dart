@@ -105,7 +105,7 @@ class ProductionReportScreen extends ConsumerWidget {
           ),
           SizedBox(height: 4.h),
           Text(
-            '${_ownerKindLabel(ownerKind)} icin son 7 gunluk ozet',
+            '${_ownerKindLabel(ownerKind)} için son 7 günlük özet',
             style: AppTextStyles.body.standardCopyWith(
               color: AppColors.textMuted,
               fontSize: AppTypography.bodySmall,
@@ -172,7 +172,7 @@ class ProductionReportScreen extends ConsumerWidget {
         SizedBox(width: 8.w),
         Expanded(
           child: _buildMetricCard(
-            'En Karli Urun',
+            'En Kârlı Ürün',
             topProduct?.name ?? '-',
             AppColors.blue,
             subtitle: topProduct == null
@@ -264,7 +264,7 @@ class ProductionReportScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'One Cikan Urunler',
+            'Öne Çıkan Ürünler',
             style: AppTextStyles.h2.standardCopyWith(
               color: AppColors.textPrimary,
               fontSize: AppTypography.title,
@@ -333,7 +333,7 @@ class ProductionReportScreen extends ConsumerWidget {
                         ),
                         SizedBox(height: 2.h),
                         Text(
-                          '${item.total} adet uretildi',
+                          '${item.total} adet üretildi',
                           style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
                             fontSize: AppTypography.caption,
@@ -541,7 +541,7 @@ class ProductionReportScreen extends ConsumerWidget {
       case 'farm':
         return 'Tarla';
       case 'field':
-        return 'Ciftlik';
+        return 'Çiftlik';
       case 'mine':
         return 'Maden';
       default:

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:hard_kapitalizm/features/chat/models/chat_message.dart';
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -77,22 +76,9 @@ class ChatService {
       'p_reply_to_message_id': replyToMessageId,
     };
 
-    debugPrint(
-      '[CHAT][SEND] channel=$channel content="${content.trim()}" '
-      'slot=${params['p_linked_listing_slot_id']} '
-      'replyTo=$replyToMessageId',
-    );
-
-    try {
-      final res = await _db.rpc('send_chat_message', params: params);
-      if (res is Map && res['success'] == false) {
-        throw Exception(res['message'] ?? 'Mesaj gönderilemedi.');
-      }
-      debugPrint('[CHAT][SEND] rpc send_chat_message success');
-    } catch (e, st) {
-      debugPrint('[CHAT][SEND][ERROR] type=${e.runtimeType} error=$e');
-      debugPrint('[CHAT][SEND][STACK] $st');
-      rethrow;
+    final res = await _db.rpc('send_chat_message', params: params);
+    if (res is Map && res['success'] == false) {
+      throw Exception(res['message'] ?? 'Mesaj gönderilemedi.');
     }
   }
 

@@ -29,13 +29,35 @@ class StoreWarehouseSlotSummaryModel {
     return StoreWarehouseSlotSummaryModel(
       id: (json['id'] ?? '').toString(),
       productId: (json['product_id'] ?? '').toString(),
-      productName: (json['product_name'] ?? 'Urun').toString(),
+      productName: (json['product_name'] ?? 'Ürün').toString(),
       productIcon: json['product_icon']?.toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       brandId: (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
           .toString(),
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       cost: (json['cost'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  StoreWarehouseSlotSummaryModel copyWith({
+    String? id,
+    String? productId,
+    String? productName,
+    String? productIcon,
+    int? qualityLevel,
+    String? brandId,
+    int? quantity,
+    double? cost,
+  }) {
+    return StoreWarehouseSlotSummaryModel(
+      id: id ?? this.id,
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      productIcon: productIcon ?? this.productIcon,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      brandId: brandId ?? this.brandId,
+      quantity: quantity ?? this.quantity,
+      cost: cost ?? this.cost,
     );
   }
 }
@@ -55,11 +77,27 @@ class StoreWarehouseSummaryModel {
     required this.slots,
   });
 
+  StoreWarehouseSummaryModel copyWith({
+    String? id,
+    String? name,
+    double? capacity,
+    double? usedCapacity,
+    List<StoreWarehouseSlotSummaryModel>? slots,
+  }) {
+    return StoreWarehouseSummaryModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      capacity: capacity ?? this.capacity,
+      usedCapacity: usedCapacity ?? this.usedCapacity,
+      slots: slots ?? this.slots,
+    );
+  }
+
   factory StoreWarehouseSummaryModel.fromJson(Map<String, dynamic> json) {
     final slotsJson = (json['slots'] as List? ?? const []);
     return StoreWarehouseSummaryModel(
       id: (json['id'] ?? json['store_warehouse_id'] ?? '').toString(),
-      name: (json['name'] ?? json['store_warehouse_name'] ?? 'Magaza Deposu')
+      name: (json['name'] ?? json['store_warehouse_name'] ?? 'Mağaza Deposu')
           .toString(),
       capacity: (json['capacity'] as num?)?.toDouble() ??
           (json['store_warehouse_capacity'] as num?)?.toDouble() ??

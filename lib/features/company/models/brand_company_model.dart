@@ -32,9 +32,9 @@ class BrandCompanyModel {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
-      brandLevel: json['brand_level'] as int? ?? 1,
+      brandLevel: (json['brand_level'] as num?)?.toInt() ?? 1,
       brandXp: (json['brand_xp'] ?? 0) is int
-          ? json['brand_xp'] as int
+          ? (json['brand_xp'] as num?)?.toInt() ?? 0
           : int.tryParse(json['brand_xp'].toString()) ?? 0,
       logoId: json['logo_id'] as String? ?? defaultBrandLogoId,
       themeColor: json['theme_color'] as String? ?? '#E5C05C',

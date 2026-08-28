@@ -22,10 +22,10 @@ class LogisticsCompanyTypeModel {
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
       cost: (json['cost'] as num?)?.toDouble() ?? 0,
-      requiredLevel: json['required_level'] as int? ?? 1,
-      constructionTimeMinutes: json['construction_time_minutes'] as int? ?? 0,
-      maxVehicleCount: json['max_vehicle_count'] as int? ?? 0,
-      fuelCapacity: json['fuel_capacity'] as int? ?? 0,
+      requiredLevel: (json['required_level'] as num?)?.toInt() ?? 1,
+      constructionTimeMinutes: (json['construction_time_minutes'] as num?)?.toInt() ?? 0,
+      maxVehicleCount: (json['max_vehicle_count'] as num?)?.toInt() ?? 0,
+      fuelCapacity: (json['fuel_capacity'] as num?)?.toInt() ?? 0,
     );
   }
 }

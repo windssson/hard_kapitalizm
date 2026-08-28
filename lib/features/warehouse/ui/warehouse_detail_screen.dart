@@ -14,7 +14,7 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_option_card.dart';
+import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
@@ -97,7 +97,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           backgroundColor: AppColors.gold,
           icon: Icon(AppIcons.addShoppingCart, color: AppColors.textOnAccent),
           label: Text(
-            'Urun Ekle',
+            'Ürün Ekle',
             style: AppTextStyles.button.standardCopyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -111,7 +111,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             children: [
               SecondaryTopBar(
                 title: '${warehouse.name} Yonetimi',
-                actions: (warehouse.storeId != null || warehouse.warehouseKind == 'store')
+                actions:
+                    (warehouse.storeId != null ||
+                        warehouse.warehouseKind == 'store')
                     ? []
                     : [
                         PopupMenuButton<String>(
@@ -121,7 +123,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12.r),
                             side: BorderSide(
-                              color: AppColors.borderGold.withValues(alpha: 0.3),
+                              color: AppColors.borderGold.withValues(
+                                alpha: 0.3,
+                              ),
                             ),
                           ),
                           onSelected: (value) {
@@ -161,7 +165,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                             ),
                             child: Icon(
                               AppIcons.moreVert,
-                              color: AppColors.textPrimary.withValues(alpha: 0.7),
+                              color: AppColors.textPrimary.withValues(
+                                alpha: 0.7,
+                              ),
                               size: AppIconSizes.medium,
                             ),
                           ),
@@ -255,7 +261,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 color: AppColors.gold,
               ),
               items: warehouses.map((w) {
-                final displayCity = w.cityName ?? 'Bilinmeyen Sehir';
+                final displayCity = w.cityName ?? 'Bilinmeyen Şehir';
                 return DropdownMenuItem<String>(
                   value: w.id,
                   child: Row(
@@ -311,8 +317,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     ref.invalidate(warehouseListProvider);
     ref.invalidate(buyerTransferMapProvider);
     ref.invalidate(buyerTransferHistoryProvider);
-    if (refreshPlayer) {
-    }
+    if (refreshPlayer) {}
     await ref.read(warehouseDetailProvider(widget.warehouseId).future);
     await ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).future);
   }
@@ -396,7 +401,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       if (!context.mounted) return;
       await ProductSelectionSheet.show(
         context: context,
-        title: 'Deponun Alabildigi Urunler',
+        title: 'Deponun Alabildiği Ürünler',
         options: options,
       );
     } catch (e) {
@@ -404,7 +409,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         AppSnackbar.show(
           context,
           title: 'Hata',
-          message: 'Urun listesi yuklenemedi: $e',
+          message: 'Ürün listesi yüklenemedi: $e',
           type: SnackbarType.error,
         );
       }
@@ -452,8 +457,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (productId == null || productId.isEmpty) {
       AppSnackbar.show(
         context,
-        title: 'Urun Yok',
-        message: 'Bu slot icin pazar acilamadi.',
+        title: 'Ürün Yok',
+        message: 'Bu slot için pazar açılamadı.',
         type: SnackbarType.warning,
       );
       return;
@@ -717,7 +722,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               SizedBox(width: 6.w),
               Expanded(
                 child: Text(
-                  'Kapasite Dagilimi',
+                  'Kapasite Dağılımı',
                   style: AppTextStyles.label.standardCopyWith(
                     color: AppColors.textPrimary,
                     fontSize: AppTypography.bodySmall,
@@ -784,7 +789,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   icon: AppIcons.localShippingOutlined,
                 ),
               _buildCapacityLegend(
-                'Bos Alan',
+                'Boş Alan',
                 formatVolume(availableCapacity),
                 AppColors.textMuted,
                 icon: Icons.storage_rounded,
@@ -900,7 +905,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               size: AppIconSizes.displayLarge,
             ),
             SizedBox(height: 12.h),
-            Text('Bu depoda henuz urun yok.', style: AppTextStyles.body),
+            Text('Bu depoda henüz ürün yok.', style: AppTextStyles.body),
           ],
         ),
       );
@@ -924,7 +929,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       },
     );
   }
-
 
   Widget _buildMetaChip({required String label, required Color color}) {
     return Container(
@@ -1064,7 +1068,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Bos Slot',
+                    'Boş Slot',
                     style: AppTextStyles.title.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: AppTypography.titleLarge,
@@ -1073,7 +1077,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    'Bu slot su an bos. Urun ekleyebilirsiniz.',
+                    'Bu slot şu an boş. Ürün ekleyebilirsiniz.',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.bodySmall,
@@ -1087,7 +1091,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             SizedBox(
               width: 100.w,
               child: _buildQuickActionButton(
-                label: 'Urun Ekle',
+                label: 'Ürün Ekle',
                 icon: AppIcons.addShoppingCartOutlined,
                 onPressed: () => _showProductSelection(context, warehouse),
                 filled: true,
@@ -1137,7 +1141,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      slot.productName ?? 'Urun',
+                      slot.productName ?? 'Ürün',
                       style: AppTextStyles.title.standardCopyWith(
                         color: AppColors.textPrimary,
                         fontSize: AppTypography.titleLarge,
@@ -1152,21 +1156,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       children: [
                         _buildQualityStars(slot.qualityLevel),
                         SizedBox(width: 6.w),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
-                          decoration: BoxDecoration(
-                            color: AppColors.gold.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(4.r),
-                          ),
-                          child: Text(
-                            'K${slot.qualityLevel}',
-                            style: AppTextStyles.caption.standardCopyWith(
-                              color: AppColors.gold,
-                              fontSize: AppTypography.micro,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                     SizedBox(height: 4.h),
@@ -1175,7 +1164,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       runSpacing: 4.h,
                       children: [
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 5.w,
+                            vertical: 1.5.h,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.blue.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(5.r),
@@ -1195,7 +1187,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                         ),
                         if (hasBrand)
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 5.w,
+                              vertical: 1.5.h,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.gold.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(5.r),
@@ -1251,8 +1246,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (slot.quantity > 0 ? AppColors.blue : AppColors.red)
-                          .withValues(alpha: 0.08),
+                      color:
+                          (slot.quantity > 0 ? AppColors.blue : AppColors.red)
+                              .withValues(alpha: 0.08),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -1339,7 +1335,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           ),
                         ),
                         Text(
-                          slot.cost > 0 ? '₺${AppMoney.compact(slot.cost)}' : '-',
+                          slot.cost > 0
+                              ? AppMoney.compact(slot.cost)
+                              : '-',
                           style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textSecondary,
                             fontSize: 11.sp,
@@ -1351,7 +1349,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   ],
                 ),
                 SizedBox(width: 12.w),
-                Container(width: 1, height: 22.h, color: AppColors.border.withValues(alpha: 0.3)),
+                Container(
+                  width: 1,
+                  height: 22.h,
+                  color: AppColors.border.withValues(alpha: 0.3),
+                ),
                 SizedBox(width: 12.w),
                 // Toplam Stok Değeri
                 Expanded(
@@ -1378,7 +1380,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           ),
                           Text(
                             slot.quantity > 0 && slot.cost > 0
-                                ? '₺${AppMoney.compact(slot.quantity * slot.cost)}'
+                                ? AppMoney.compact(slot.quantity * slot.cost)
                                 : '-',
                             style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.textPrimary,
@@ -1403,11 +1405,16 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     ),
                     borderRadius: BorderRadius.circular(8.r),
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 5.h,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.gold.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8.r),
-                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1459,6 +1466,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           warehouse,
                           slot,
                         );
+                      } else if (value == 'discard') {
+                        _discardWarehouseSlot(context, ref, slot);
                       } else if (value == 'delete') {
                         _deleteWarehouseSlot(context, ref, slot);
                       }
@@ -1473,9 +1482,16 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       _buildSlotMenuItem(
                         value: 'transfer',
                         icon: AppIcons.localShippingOutlined,
-                        label: 'Baska Depoya Gonder',
+                        label: 'Başka Depoya Gönder',
                         color: AppColors.textPrimary,
                       ),
+                      if (slot.quantity > 0)
+                        _buildSlotMenuItem(
+                          value: 'discard',
+                          icon: AppIcons.deleteOutline,
+                          label: 'Çöpe At',
+                          color: AppColors.red,
+                        ),
                       if (slot.quantity <= 0)
                         _buildSlotMenuItem(
                           value: 'delete',
@@ -1494,6 +1510,79 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
+  Future<void> _discardWarehouseSlot(
+    BuildContext context,
+    WidgetRef ref,
+    WarehouseSlotModel slot,
+  ) async {
+    final productName = slot.productName ?? 'Ürün';
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        title: Text(
+          'Ürünü Çöpe At',
+          style: AppTextStyles.h1.standardCopyWith(
+            color: AppColors.textPrimary,
+            fontSize: AppTypography.headline,
+          ),
+        ),
+        content: Text(
+          'Bu slottaki ${slot.quantity} adet "$productName" çöpe atılacak ve kalıcı olarak silinecektir.\n\nDevam etmek istediğinize emin misiniz?',
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textMuted,
+            fontSize: AppTypography.title,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.red,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Çöpe At'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    final actionResult = await ref
+        .read(warehouseActionProvider)
+        .discardWarehouseSlot(warehouseSlotId: slot.id);
+
+    if (!context.mounted) return;
+
+    if (actionResult['success'] == true) {
+      ref
+          .read(warehouseDetailProvider(widget.warehouseId).notifier)
+          .removeSlot(slot.id);
+      ref
+          .read(warehouseListProvider.notifier)
+          .removeSlot(warehouseId: widget.warehouseId, slotId: slot.id);
+      if (!context.mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Başarılı',
+        message: '$productName çöpe atıldı.',
+        type: SnackbarType.info,
+      );
+      return;
+    }
+
+    AppSnackbar.show(
+      context,
+      title: 'Hata',
+      message: actionResult['message'] ?? 'Ürün çöpe atılamadı.',
+      type: SnackbarType.error,
+    );
+  }
 
   Future<void> _deleteWarehouseSlot(
     BuildContext context,
@@ -1512,7 +1601,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           ),
         ),
         content: Text(
-          'Bu bos depo slotunu silmek istediginize emin misiniz?',
+          'Bu boş depo slotunu silmek istediğinize emin misiniz?',
           style: AppTextStyles.body.standardCopyWith(
             color: AppColors.textMuted,
             fontSize: AppTypography.title,
@@ -1521,7 +1610,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Iptal'),
+            child: const Text('İptal'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -1554,13 +1643,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Slot Silindi',
-        message: 'Depo slotu basariyla silindi.',
+        message: 'Depo slotu başarıyla silindi.',
         type: SnackbarType.success,
       );
     } else {
       AppSnackbar.show(
         context,
-        title: 'Islem Basarisiz',
+        title: 'İşlem Başarısız',
         message: actionResult['message']?.toString() ?? 'Slot silinemedi.',
         type: SnackbarType.error,
       );
@@ -1606,8 +1695,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (initialProductId == null || initialProductId.isEmpty) {
       AppSnackbar.show(
         context,
-        title: 'Urun Yok',
-        message: 'Secili slotta gecerli urun bilgisi yok.',
+        title: 'Ürün Yok',
+        message: 'Seçili slotta geçerli ürün bilgisi yok.',
         type: SnackbarType.warning,
       );
       return;
@@ -1631,7 +1720,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Hedef Depo Yok',
-        message: 'Secilen urunu kabul eden baska aktif deponuz bulunmuyor.',
+        message: 'Seçilen ürünü kabul eden başka aktif deponuz bulunmuyor.',
         type: SnackbarType.info,
       );
       return;
@@ -1666,27 +1755,38 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         totalCapacity,
       );
 
-      final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
-      final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
+      final double capacityRatio = totalCapacity > 0
+          ? (reservedCapacity / totalCapacity)
+          : 0.0;
+      final capacityLabel =
+          '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
 
       final slotsRaw = target['warehouse_slots'] as List<dynamic>? ?? [];
-      final previews = slotsRaw.map((s) {
-        final qty = (s['quantity'] as num?)?.toDouble() ?? 0.0;
-        final qual = (s['quality_level'] as num?)?.toInt() ?? 0;
-        final icon = (s['product'] as Map?)?['urun_iconu']?.toString() ?? '';
-        return WarehouseSelectionProductPreview(
-          icon: icon,
-          quantity: qty,
-          quality: qual,
-        );
-      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
+      final previews = slotsRaw
+          .map((s) {
+            final qty = (s['quantity'] as num?)?.toDouble() ?? 0.0;
+            final qual = (s['quality_level'] as num?)?.toInt() ?? 0;
+            final icon =
+                (s['product'] as Map?)?['urun_iconu']?.toString() ?? '';
+            return WarehouseSelectionProductPreview(
+              icon: icon,
+              quantity: qty,
+              quality: qual,
+            );
+          })
+          .where((p) => p.quantity > 0 && p.icon.isNotEmpty)
+          .toList();
 
       final double freeCapacity = roughAvailable;
       final freeCapacityLabel = '🟢 ${_formatValue(freeCapacity)} m³ Boş Alan';
-      final isStore = target['warehouse_type']?['code'] == 'store_warehouse' ||
-          (target['name']?.toString().toLowerCase().contains('mağaza') ?? false) ||
-          (target['name']?.toString().toLowerCase().contains('magaza') ?? false) ||
-          (target['name']?.toString().toLowerCase().contains('bakkal') ?? false);
+      final isStore =
+          target['warehouse_type']?['code'] == 'store_warehouse' ||
+          (target['name']?.toString().toLowerCase().contains('mağaza') ??
+              false) ||
+          (target['name']?.toString().toLowerCase().contains('magaza') ??
+              false) ||
+          (target['name']?.toString().toLowerCase().contains('bakkal') ??
+              false);
 
       return WarehouseSelectionOption(
         id: target['id'].toString(),
@@ -1716,7 +1816,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     WarehouseSelectionSheet.show(
       context: context,
-      title: 'Hedef Depo Secin',
+      title: 'Hedef Depo Seçin',
       options: options,
     );
   }
@@ -1732,8 +1832,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (targetWarehouseId.isEmpty) {
       AppSnackbar.show(
         context,
-        title: 'Hedef Gecersiz',
-        message: 'Hedef depo bilgisi okunamadi.',
+        title: 'Hedef Geçersiz',
+        message: 'Hedef depo bilgisi okunamadı.',
         type: SnackbarType.error,
       );
       return;
@@ -1748,7 +1848,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Kapasite Alinamadi',
+        title: 'Kapasite Alınamadı',
         message: e.toString(),
         type: SnackbarType.error,
       );
@@ -1778,8 +1878,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Uygun Urun Yok',
-        message: 'Bu hedef depo kaynak depodaki uygun urunleri kabul etmiyor.',
+        title: 'Uygun Ürün Yok',
+        message: 'Bu hedef depo kaynak depodaki uygun ürünleri kabul etmiyor.',
         type: SnackbarType.info,
       );
       return;
@@ -1848,9 +1948,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (!anySelectable) {
       AppSnackbar.show(
         context,
-        title: 'Bos Kapasite Yok',
+        title: 'Boş Kapasite Yok',
         message:
-            'Hedef depoda secilebilir urunler icin yeterli bos kapasite yok.',
+            'Hedef depoda seçilebilir ürünler için yeterli boş kapasite yok.',
         type: SnackbarType.warning,
       );
       return;
@@ -1866,8 +1966,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       if (limit <= 0 && currentQuantity <= 0) {
         AppSnackbar.show(
           sheetContext,
-          title: 'Bos Kapasite Yok',
-          message: 'Hedef depoda bu urun icin yeterli bos kapasite kalmadi.',
+          title: 'Boş Kapasite Yok',
+          message: 'Hedef depoda bu ürün için yeterli boş kapasite kalmadı.',
           type: SnackbarType.warning,
         );
         return;
@@ -1894,7 +1994,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    (slot.productName ?? 'Urun') +
+                    (slot.productName ?? 'Ürün') +
                         (slot.brandId != _defaultBrandId
                             ? ' (${currentBrandName ?? 'Markali'})'
                             : ''),
@@ -2082,7 +2182,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           ),
                           onPressed: () => Navigator.pop(dialogContext),
                           child: Text(
-                            'Iptal',
+                            'İptal',
                             style: AppTextStyles.button.standardCopyWith(
                               fontSize: AppTypography.body,
                               fontWeight: FontWeight.bold,
@@ -2142,7 +2242,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                               if (quantity <= 0 || quantity > effectiveLimit) {
                                 AppSnackbar.show(
                                   dialogContext,
-                                  title: 'Gecersiz Miktar',
+                                  title: 'Geçersiz Miktar',
                                   message:
                                       '1 ile $effectiveLimit arasinda bir miktar girin.',
                                   type: SnackbarType.warning,
@@ -2242,7 +2342,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Gonderilecek Urunleri Secin',
+                    'Gönderilecek Ürünleri Seçin',
                     style: AppTextStyles.h1.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: AppTypography.headline,
@@ -2446,7 +2546,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Hedef Bos: ${_formatValue(remainingCapacity)} / ${_formatValue(availableCapacity)} m3',
+                                'Hedef Boş: ${_formatValue(remainingCapacity)} / ${_formatValue(availableCapacity)} m3',
                                 style: AppTextStyles.body.standardCopyWith(
                                   color: AppColors.textMuted,
                                   fontSize: AppTypography.bodySmall,
@@ -2538,7 +2638,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                         ),
                         SizedBox(height: 6.h),
                         Text(
-                          'Secilen Hacim: ${_formatValue(selectedVolume)} m3',
+                          'Seçilen Hacim: ${_formatValue(selectedVolume)} m3',
                           style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textMuted,
                             fontSize: AppTypography.bodySmall,
@@ -2549,7 +2649,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    '${selectedItems.length} urun cesidi | $selectedQuantityTotal adet | ${_formatValue(selectedVolume)} m3 secildi',
+                    '${selectedItems.length} ürün çeşidi | $selectedQuantityTotal adet | ${_formatValue(selectedVolume)} m3 seçildi',
                     style: AppTextStyles.body.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: AppTypography.body,
@@ -2626,7 +2726,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      (slot.productName ?? 'Urun') +
+                                      (slot.productName ?? 'Ürün') +
                                           (slot.brandId != _defaultBrandId
                                               ? ' (${currentBrandName ?? 'Markali'})'
                                               : ''),
@@ -2671,7 +2771,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                                     Text(
                                       isDisabled
                                           ? 'Kapasite dolu'
-                                          : 'Bu hedef icin max: $maxForSlot',
+                                          : 'Bu hedef için maks: $maxForSlot',
                                       style: AppTextStyles.caption
                                           .standardCopyWith(
                                             color: isDisabled
@@ -2789,8 +2889,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (targetWarehouseId.isEmpty) {
       AppSnackbar.show(
         context,
-        title: 'Hedef Gecersiz',
-        message: 'Hedef depo bilgisi okunamadi.',
+        title: 'Hedef Geçersiz',
+        message: 'Hedef depo bilgisi okunamadı.',
         type: SnackbarType.error,
       );
       return;
@@ -2883,24 +2983,38 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             context,
             title: 'Transfer Baslatildi',
             message:
-                'Transfer kaydi olustu ama otomatik tamamlama sirasinda hata alindi: ${completionResult['message'] ?? 'Bilinmeyen hata'}',
+                'Transfer kaydı oluştu ama otomatik tamamlama sırasında hata alındı: ${completionResult['message'] ?? 'Bilinmeyen hata'}',
             type: SnackbarType.warning,
           );
           return;
         }
       }
 
-      await _refreshWarehouseEcosystem();
+      final slotQuantities = <String, int>{};
+      for (final item in items) {
+        final remaining = item.slot.quantity - item.quantity;
+        slotQuantities[item.slot.id] = remaining;
+      }
+      ref
+          .read(warehouseDetailProvider(sourceWarehouse.id).notifier)
+          .patchSlotQuantities(slotQuantities);
+      ref
+          .read(warehouseListProvider.notifier)
+          .patchSlotQuantities(
+            warehouseId: sourceWarehouse.id,
+            slotQuantities: slotQuantities,
+          );
       ref.invalidate(warehouseDetailProvider(targetWarehouseId));
-      await ref.read(warehouseDetailProvider(targetWarehouseId).future);
+      ref.invalidate(buyerTransferMapProvider);
+      ref.invalidate(buyerTransferHistoryProvider);
 
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Transfer Basarili',
+        title: 'Transfer Başarılı',
         message: isInstant
-            ? '${items.length} urun cesidi, toplam $totalQuantity adet hedef depoya aktarildi.'
-            : 'Depolar arasi transfer baslatildi. Arac yola cikti.',
+            ? '${items.length} ürün çeşidi, toplam $totalQuantity adet hedef depoya aktarıldı.'
+            : 'Depolar arası transfer başlatıldı. Araç yola çıktı.',
         type: SnackbarType.success,
       );
       return;
@@ -2908,7 +3022,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     AppSnackbar.show(
       context,
-      title: 'Transfer Basarisiz',
+      title: 'Transfer Başarısız',
       message: result['message']?.toString() ?? 'Transfer baslatilamadi.',
       type: SnackbarType.error,
     );
@@ -2944,7 +3058,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             ),
             SizedBox(height: 12.h),
             Text(
-              'Depo detayi yuklenemedi.',
+              'Depo detayı yüklenemedi.',
               textAlign: TextAlign.center,
               style: AppTextStyles.title.standardCopyWith(
                 color: AppColors.textPrimary,
@@ -2980,14 +3094,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     return value.toStringAsFixed(0);
   }
 
-  String _formatTransferDuration(int seconds) {
-    final duration = Duration(seconds: seconds);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    if (hours > 0) return '${hours}s ${minutes}dk';
-    return '${duration.inMinutes}dk';
-  }
-
   int _calculateUpgradeStarCost(DateTime finishAt) {
     final remaining = finishAt.difference(DateTime.now());
     if (remaining.inSeconds <= 0) return 0;
@@ -2995,7 +3101,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
   }
 
   String _formatCountdown(Duration remaining) {
-    if (remaining.inSeconds <= 0) return 'Tamamlaniyor';
+    if (remaining.inSeconds <= 0) return 'Tamamlanıyor';
     final hours = remaining.inHours;
     final minutes = remaining.inMinutes % 60;
     if (hours > 0) {
@@ -3062,7 +3168,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
               ),
               SizedBox(height: 8.h),
               Text(
-                'Her yukseltmede depo kapasitesi, tipin baslangic kapasitesi kadar artar.',
+                'Her yükseltmede depo kapasitesi, tipin başlangıç kapasitesi kadar artar.',
                 style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textMuted,
                   fontSize: AppTypography.body,
@@ -3108,7 +3214,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     ),
                     SizedBox(height: 6.h),
                     Text(
-                      'Sure: $durationMinutes dk',
+                      'Süre: $durationMinutes dk',
                       style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textMuted,
                         fontSize: AppTypography.body,
@@ -3138,7 +3244,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           if (!context.mounted) return;
 
                           if (result['success'] == true) {
-                            await _refreshWarehouseEcosystem();
+                            final newUpgrade = BuildingUpgradeModel.fromJson(result);
+                            ref
+                                .read(activeWarehouseUpgradeProvider(warehouse.id).notifier)
+                                .setUpgrade(newUpgrade);
                             if (!context.mounted) return;
                             FloatingFeedback.show(
                               context,
@@ -3147,8 +3256,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                             );
                             AppSnackbar.show(
                               context,
-                              title: 'Basarili',
-                              message: 'Depo yukseltmesi baslatildi.',
+                              title: 'Başarılı',
+                              message: 'Depo yükseltmesi başlatıldı.',
                               type: SnackbarType.success,
                             );
                           } else {
@@ -3186,12 +3295,24 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (!mounted) return;
 
     if (result['success'] == true) {
-      await _refreshWarehouseEcosystem();
+      final targetLevel = (result['target_level'] as num?)?.toInt() ?? upgrade.targetLevel;
+      final capacityIncrease = (result['capacity_increase'] as num?)?.toDouble() ?? 0.0;
+      final currentWarehouse = ref.read(warehouseDetailProvider(widget.warehouseId)).value;
+      final newCapacity = (currentWarehouse?.capacity ?? 0.0) + capacityIncrease;
+
+      ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).notifier).clear();
+      ref
+          .read(warehouseDetailProvider(widget.warehouseId).notifier)
+          .patchLevelAndCapacity(level: targetLevel, capacity: newCapacity);
+      ref
+          .read(warehouseListProvider.notifier)
+          .patchLevelAndCapacity(warehouseId: widget.warehouseId, level: targetLevel, capacity: newCapacity);
+
       if (!mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Depo yukseltmesi tamamlandi.',
+        title: 'Başarılı',
+        message: 'Depo yükseltmesi tamamlandı.',
         type: SnackbarType.success,
       );
       return;
@@ -3200,7 +3321,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     AppSnackbar.show(
       context,
       title: 'Hata',
-      message: result['message'] ?? 'Yukseltme tamamlanamadi.',
+      message: result['message'] ?? 'Yükseltme tamamlanamadı.',
       type: SnackbarType.error,
     );
   }
@@ -3215,11 +3336,13 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       onApplyReduction: () => ref
           .read(warehouseActionProvider)
           .reduceWarehouseUpgradeTimeWithAd(upgrade.id, syncProviders: false),
-      successMessage: 'Depo yukseltme suresi 10 dakika kisaltildi.',
+      successMessage: 'Depo yükseltme süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
-      await _refreshWarehouseEcosystem();
+      ref
+          .read(activeWarehouseUpgradeProvider(widget.warehouseId).notifier)
+          .reduceTime(const Duration(minutes: 10));
     }
   }
 
@@ -3235,8 +3358,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (targetWarehouseId.isEmpty || targetCityId.isEmpty) {
       AppSnackbar.show(
         context,
-        title: 'Hedef Gecersiz',
-        message: 'Hedef depo veya sehir bilgisi okunamadi.',
+        title: 'Hedef Geçersiz',
+        message: 'Hedef depo veya şehir bilgisi okunamadı.',
         type: SnackbarType.error,
       );
       return;
@@ -3250,8 +3373,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Sehir Verisi Eksik',
-        message: 'Mesafe hesabi icin sehir verileri okunamadi.',
+        title: 'Şehir Verisi Eksik',
+        message: 'Mesafe hesabı için şehir verileri okunamadı.',
         type: SnackbarType.error,
       );
       return;
@@ -3275,8 +3398,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Arac Secim Hatasi',
-        message: 'Arac secenekleri alinamadi: ${e.toString()}',
+        title: 'Araç Seçim Hatası',
+        message: 'Araç seçenekleri alınamadı: ${e.toString()}',
         type: SnackbarType.error,
       );
       return;
@@ -3287,90 +3410,38 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
-        title: 'Arac Yok',
+        title: 'Araç Yok',
         message:
             vehicleResult.unavailableReason ??
-            'Sehirler arasi transfer icin uygun arac bulunamadi.',
+            'Şehirler arası transfer için uygun araç bulunamadı.',
         type: SnackbarType.warning,
       );
       return;
     }
 
     if (!context.mounted) return;
-    await showModalBottomSheet<void>(
+    final selectedVehicleId = await showTransferVehicleSelectionSheet(
       context: context,
-      backgroundColor: AppColors.background,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-      ),
-      builder: (sheetContext) => Container(
-        padding: EdgeInsets.all(16.w),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(sheetContext).size.height * 0.8,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Arac Secin',
-              style: AppTextStyles.h1.standardCopyWith(
-                color: AppColors.textPrimary,
-                fontSize: AppTypography.headline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Text(
-              '${sourceWarehouse.cityName ?? '-'} -> ${(targetWarehouse['city'] as Map?)?['name']?.toString() ?? '-'} | ${_formatValue(totalVolume)} m3',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodyLarge,
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Expanded(
-              child: ListView.separated(
-                itemCount: options.length,
-                separatorBuilder: (context, index) => SizedBox(height: 10.h),
-                itemBuilder: (_, index) {
-                  final option = options[index];
-                  return TransferVehicleOptionCard(
-                    vehicleName: option.vehicleName,
-                    isRental: option.isRental,
-                    capacity: option.capacity,
-                    speedKmh: option.speedKmh,
-                    distanceKm: option.distanceKm,
-                    durationLabel: _formatTransferDuration(
-                      option.estimatedDurationSeconds,
-                    ),
-                    transportCost: option.transportCost,
-                    rentalCost: option.rentalCost,
-                    fuelCost: option.fuelCost,
-                    fuelNeeded: option.fuelNeeded,
-                    conditionNeeded: option.conditionNeeded,
-                    canSelect: option.canSelect,
-                    isSelected: false,
-                    disabledReason: option.disabledReason,
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      _submitWarehouseOutboundTransfer(
-                        context,
-                        ref,
-                        sourceWarehouse,
-                        items,
-                        targetWarehouse,
-                        vehicleId: option.vehicleId,
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      sourceCityName: sourceWarehouse.cityName ?? '-',
+      targetCityName:
+          (targetWarehouse['city'] as Map?)?['name']?.toString() ?? '-',
+      totalVolume: totalVolume,
+      options: options.map(TransferVehicleOptionItem.fromMarket).toList(),
+      unavailableReason: !vehicleResult.hasSelectableOptions
+          ? vehicleResult.unavailableReason
+          : null,
     );
+
+    if (selectedVehicleId != null && context.mounted) {
+      _submitWarehouseOutboundTransfer(
+        context,
+        ref,
+        sourceWarehouse,
+        items,
+        targetWarehouse,
+        vehicleId: selectedVehicleId,
+      );
+    }
   }
 
   double _pow1p1(int exponent) {
@@ -3462,7 +3533,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   _buildSalesSummaryRow('Kurulus Iadesi', constructionRefund),
                   _buildSalesSummaryRow('Stok Iadesi', stockRefund),
                   Divider(color: AppColors.border, height: 12.h),
-                  _buildSalesSummaryRow('Toplam Odeme', totalRefund, valueColor: AppColors.green),
+                  _buildSalesSummaryRow(
+                    'Toplam Odeme',
+                    totalRefund,
+                    valueColor: AppColors.green,
+                  ),
                 ],
               ),
             ),
@@ -3507,8 +3582,9 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Basarili',
-        message: 'Depo satildi. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
+        title: 'Başarılı',
+        message:
+            'Depo satildi. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
         type: SnackbarType.success,
       );
       context.go('/warehouses');
@@ -3523,7 +3599,11 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildSalesSummaryRow(String label, double value, {Color? valueColor}) {
+  Widget _buildSalesSummaryRow(
+    String label,
+    double value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4.h),
       child: Row(
@@ -3676,7 +3756,7 @@ class _ActiveWarehouseUpgradeCard extends ConsumerWidget {
             RewardedTimeReduceButton(
               onPressed: () => onReduceTimeWithAd!.call(),
               caption:
-                  'Bir reklam odulu al ve depo yukseltme suresini 10 dakika kisalt.',
+                  'Bir reklam ödülü al ve depo yükseltme süresini 10 dakika kısalt.',
             ),
           ],
         ],

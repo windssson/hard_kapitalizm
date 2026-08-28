@@ -63,13 +63,13 @@ class TransferVehicleOptionsService {
 class TransferVehicleOptionsResult<T> {
   final List<T> options;
   final String? unavailableReason;
+  final bool hasSelectableOptions;
 
   const TransferVehicleOptionsResult({
     required this.options,
     required this.unavailableReason,
+    this.hasSelectableOptions = true,
   });
-
-  bool get hasSelectableOptions => options.isNotEmpty;
 }
 
 TransferVehicleOptionsResult<T> mapTransferVehicleOptions<T>({
@@ -78,6 +78,10 @@ TransferVehicleOptionsResult<T> mapTransferVehicleOptions<T>({
 }) {
   String? unavailableReason;
   final options = <T>[];
+  int maxCapacity = 0;
+  bool hasAnySelectable = false;
+
+  final validRows = <Map<String, dynamic>>[];
 
   for (final row in rows) {
     final rawVehicleId = row['vehicle_id']?.toString();
@@ -85,11 +89,61 @@ TransferVehicleOptionsResult<T> mapTransferVehicleOptions<T>({
       unavailableReason ??= row['disabled_reason']?.toString();
       continue;
     }
+    final canSelect = row['can_select'] as bool? ?? false;
+    if (canSelect) {
+      hasAnySelectable = true;
+    }
+    final cap = (row['capacity'] as num?)?.toInt() ?? 0;
+    if (cap > maxCapacity) {
+      maxCapacity = cap;
+    }
+    validRows.add(row);
+  }
+
+  // Fiyata ve uygunluk durumuna göre sıralama:
+  // 1) Seçilebilir araçlar (can_select == true) en üstte
+  // 2) Toplam maliyete göre artan sırada (en uygun fiyatlı araç en başta)
+  // 3) Fiyat eşitse sefer süresine göre artan sırada (en hızlı araç önce)
+  validRows.sort((a, b) {
+    final canSelectA = a['can_select'] as bool? ?? false;
+    final canSelectB = b['can_select'] as bool? ?? false;
+    if (canSelectA != canSelectB) {
+      return canSelectA ? -1 : 1;
+    }
+
+    double getEffectivePrice(Map<String, dynamic> r) {
+      final tp = (r['total_price'] as num?)?.toDouble() ?? 0.0;
+      if (tp > 0) return tp;
+      final rc = (r['rental_cost'] as num?)?.toDouble() ?? 0.0;
+      final fc = (r['fuel_cost'] as num?)?.toDouble() ?? 0.0;
+      return rc + fc;
+    }
+
+    final priceA = getEffectivePrice(a);
+    final priceB = getEffectivePrice(b);
+    if ((priceA - priceB).abs() > 0.01) {
+      return priceA.compareTo(priceB);
+    }
+
+    final durA = (a['estimated_duration_seconds'] as num?)?.toInt() ??
+        ((a['duration_minutes'] as num?)?.toInt() ?? 0) * 60;
+    final durB = (b['estimated_duration_seconds'] as num?)?.toInt() ??
+        ((b['duration_minutes'] as num?)?.toInt() ?? 0) * 60;
+    return durA.compareTo(durB);
+  });
+
+  for (final row in validRows.take(8)) {
     options.add(mapper(row));
+  }
+
+  if (options.isNotEmpty && !hasAnySelectable && unavailableReason == null) {
+    unavailableReason =
+        'Bu yükü tek seferde taşıyacak araç bulunmuyor (Maksimum araç kapasitesi: $maxCapacity m³). Lütfen miktarı azaltarak parça parça transfer edin.';
   }
 
   return TransferVehicleOptionsResult<T>(
     options: options,
     unavailableReason: unavailableReason,
+    hasSelectableOptions: hasAnySelectable,
   );
 }

@@ -33,7 +33,7 @@ class ProductionDailyStatModel {
       ownerKind: (json['owner_kind'] ?? '').toString(),
       ownerId: (json['owner_id'] ?? '').toString(),
       productId: (json['product_id'] ?? '').toString(),
-      productName: (json['product_name'] ?? 'Urun').toString(),
+      productName: (json['product_name'] ?? 'Ürün').toString(),
       productIcon: (json['product_icon'] ?? '').toString(),
       baseSalePrice: (json['base_sale_price'] as num?)?.toDouble() ?? 0,
       producedQuantity: (json['produced_quantity'] as num?)?.toInt() ?? 0,

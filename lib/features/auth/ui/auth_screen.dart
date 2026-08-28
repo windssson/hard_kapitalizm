@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
+import 'package:hard_kapitalizm/core/managers/session_manager.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
@@ -96,11 +97,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         _loginPasswordController.text,
       );
 
-      // Session bootstrap
-      await Supabase.instance.client
-          .rpc('bootstrap_game_session')
-          .then((_) {})
-          .catchError((_) {});
+      // Session bootstrap and wipe old user cached providers
+      await SessionManager.bootstrapAndRefreshAll(ref);
 
       if (!mounted) return;
       AppSnackbar.show(
@@ -146,6 +144,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           )
           .then((_) {})
           .catchError((_) {});
+
+      // Invalidate old providers and refresh state for new user
+      await SessionManager.bootstrapAndRefreshAll(ref);
 
       if (!mounted) return;
       AppSnackbar.show(
@@ -222,6 +223,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           )
           .then((_) {})
           .catchError((_) {});
+
+      // Wipe old user cached providers and refresh core providers for new account
+      await SessionManager.bootstrapAndRefreshAll(ref);
 
       if (!mounted) return;
       AppSnackbar.show(

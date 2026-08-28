@@ -196,7 +196,7 @@ final playerLogisticsFuelWarehouseSourcesProvider =
         final warehouseId = warehouse['id']?.toString() ?? '';
         final warehouseName = warehouse['name']?.toString() ?? 'Depo';
         final city = warehouse['city'] as Map<String, dynamic>?;
-        final cityName = city?['name']?.toString() ?? 'Bilinmeyen Sehir';
+        final cityName = city?['name']?.toString() ?? 'Bilinmeyen Şehir';
         final slots =
             (warehouse['warehouse_slots'] as List<dynamic>? ?? const []);
 
@@ -486,7 +486,7 @@ class LogisticsActionNotifier {
     if (cityAId == cityBId) {
       return {
         'success': false,
-        'message': 'Bir arac icin iki farkli sehir secmelisiniz.',
+        'message': 'Bir araç için iki farklı şehir seçmelisiniz.',
       };
     }
 
@@ -505,12 +505,12 @@ class LogisticsActionNotifier {
 
       return {
         'success': true,
-        'message': result['message'] ?? 'Arac rotasi guncellendi.',
+        'message': result['message'] ?? 'Araç rotası güncellendi.',
       };
     } on PostgrestException catch (e) {
       final message =
           e.message.toLowerCase().contains('set_logistics_vehicle_route')
-          ? 'Rota guncelleme islemi su anda tamamlanamadi.'
+          ? 'Rota güncelleme işlemi şu anda tamamlanamadı.'
           : e.message;
       return {'success': false, 'message': message};
     } catch (e) {

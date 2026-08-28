@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/widgets/app_network_image.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/leaderboard/data/leaderboard_provider.dart';
 import 'package:hard_kapitalizm/features/leaderboard/models/leaderboard_entry_model.dart';
@@ -484,10 +485,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
               ),
               child: ClipOval(
                 child: entry.avatarId.startsWith('http')
-                    ? Image.network(
-                        entry.avatarId,
+                    ? AppNetworkImage(
+                        imageUrl: entry.avatarId,
+                        width: isFirst ? 56.r : 44.r,
+                        height: isFirst ? 56.r : 44.r,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.large),
+                        errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.large),
                       )
                     : CachedAssetImage(
                         fileName: entry.avatarId,
@@ -661,10 +664,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             ),
             child: ClipOval(
               child: entry.avatarId.startsWith('http')
-                  ? Image.network(
-                      entry.avatarId,
+                  ? AppNetworkImage(
+                      imageUrl: entry.avatarId,
+                      width: 36.w,
+                      height: 36.w,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.regular),
+                      errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.regular),
                     )
                   : CachedAssetImage(
                       fileName: entry.avatarId,
@@ -823,10 +828,12 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             ),
             child: ClipOval(
               child: entry.avatarId.startsWith('http')
-                  ? Image.network(
-                      entry.avatarId,
+                  ? AppNetworkImage(
+                      imageUrl: entry.avatarId,
+                      width: 40.r,
+                      height: 40.r,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.medium),
+                      errorWidget: Icon(AppIcons.person, color: AppColors.gold, size: AppIconSizes.medium),
                     )
                   : CachedAssetImage(
                       fileName: entry.avatarId,

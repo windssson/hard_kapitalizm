@@ -20,7 +20,7 @@ class TransferMapCityModel {
 
     return TransferMapCityModel(
       id: (json['id'] ?? '').toString(),
-      name: (json['name'] ?? 'Sehir').toString(),
+      name: (json['name'] ?? 'Şehir').toString(),
       x: parseNum(json['map_position_x']),
       y: parseNum(json['map_position_y']),
     );
@@ -79,7 +79,7 @@ class TransferMapEndpointModel {
       kind: resolvedKind,
       city: TransferMapCityModel(
         id: (json[cityIdKey] ?? '').toString(),
-        name: (json[cityNameKey] ?? 'Sehir').toString(),
+        name: (json[cityNameKey] ?? 'Şehir').toString(),
         x: _parseNum(json[cityXKey]),
         y: _parseNum(json[cityYKey]),
       ),
@@ -101,7 +101,7 @@ class TransferMapProductModel {
   factory TransferMapProductModel.fromJson(Map<String, dynamic> json) {
     return TransferMapProductModel(
       id: (json['id'] ?? '').toString(),
-      name: (json['urun_adi'] ?? 'Urun').toString(),
+      name: (json['urun_adi'] ?? 'Ürün').toString(),
       icon: (json['urun_iconu'] ?? 'default.webp').toString(),
     );
   }
@@ -235,7 +235,7 @@ class TransferMapItemModel {
       finishAt: DateTime.parse(json['finish_at'].toString()),
       product: TransferMapProductModel(
         id: (json['product_id'] ?? '').toString(),
-        name: (json['product_name'] ?? 'Urun').toString(),
+        name: (json['product_name'] ?? 'Ürün').toString(),
         icon: (json['product_icon'] ?? 'default.webp').toString(),
       ),
       sellerEndpoint: TransferMapEndpointModel.fromFlatJson(
@@ -283,7 +283,7 @@ String _kindLabel(String kind) {
   switch (kind) {
     case 'store':
     case 'store_slot':
-      return 'Magaza';
+      return 'Mağaza';
     case 'production':
     case 'production_inventory':
       return 'Uretim';
@@ -346,7 +346,7 @@ class TransferItemDetail {
     return TransferItemDetail(
       id: json['id']?.toString() ?? '',
       productId: json['product_id']?.toString() ?? '',
-      productName: json['product_name']?.toString() ?? 'Urun',
+      productName: json['product_name']?.toString() ?? 'Ürün',
       productIcon: json['product_icon']?.toString() ?? 'default.webp',
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
       brandId: json['brand_id']?.toString() ?? '00000000-0000-0000-0000-000000000000',
