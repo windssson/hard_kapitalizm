@@ -141,11 +141,13 @@ class ProductionLogisticsStartResult {
   final bool success;
   final String message;
   final String? transferId;
+  final Map<String, dynamic>? raw;
 
   const ProductionLogisticsStartResult({
     required this.success,
     required this.message,
     this.transferId,
+    this.raw,
   });
 
   factory ProductionLogisticsStartResult.fromJson(Map<String, dynamic> json) {
@@ -153,6 +155,7 @@ class ProductionLogisticsStartResult {
       success: json['success'] == true,
       message: (json['message'] ?? '').toString(),
       transferId: json['transfer_id']?.toString(),
+      raw: json,
     );
   }
 }

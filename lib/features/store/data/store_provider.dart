@@ -706,6 +706,45 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     ));
   }
 
+  /// patchOrAddStoreWarehouseSlot: Mağaza deposu slotunu günceller veya ekler.
+  void patchOrAddStoreWarehouseSlot({
+    required String warehouseSlotId,
+    required String productId,
+    required String productName,
+    String? productIcon,
+    required int qualityLevel,
+    required String brandId,
+    required int quantity,
+    required double cost,
+  }) {
+    final current = state.value;
+    if (current == null || current.storeWarehouse == null) return;
+    final slots =
+        List<StoreWarehouseSlotSummaryModel>.from(current.storeWarehouse!.slots);
+    final idx = slots.indexWhere((s) => s.id == warehouseSlotId);
+    if (idx >= 0) {
+      if (quantity > 0) {
+        slots[idx] = slots[idx].copyWith(quantity: quantity, cost: cost);
+      } else {
+        slots.removeAt(idx);
+      }
+    } else if (quantity > 0) {
+      slots.add(StoreWarehouseSlotSummaryModel(
+        id: warehouseSlotId,
+        productId: productId,
+        productName: productName,
+        productIcon: productIcon,
+        qualityLevel: qualityLevel,
+        brandId: brandId,
+        quantity: quantity,
+        cost: cost,
+      ));
+    }
+    state = AsyncData(current.copyWith(
+      storeWarehouse: current.storeWarehouse!.copyWith(slots: slots),
+    ));
+  }
+
   /// applyMutation: Ham RPC response map'ini uygular.
   /// Player ve common dirty flagleri MutationSyncService üzerinden sync eder.
   void applyMutation(Map<String, dynamic> response) {
@@ -796,9 +835,20 @@ final storeTypesProvider = FutureProvider<List<StoreTypeModel>>((ref) async {
 });
 
 class StoreActionNotifier {
+  final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   final TransferVehicleOptionsService _vehicleOptionsService =
       TransferVehicleOptionsService();
+
+  StoreActionNotifier(this._ref);
+
+  void _sync(dynamic raw) {
+    if (raw is Map<String, dynamic>) {
+      _ref.read(mutationSyncServiceProvider).applyRaw(raw);
+    } else if (raw is Map) {
+      _ref.read(mutationSyncServiceProvider).applyRaw(Map<String, dynamic>.from(raw));
+    }
+  }
 
   Future<Map<String, dynamic>> createStore({
     required String cityId,
@@ -822,7 +872,9 @@ class StoreActionNotifier {
         },
       );
 
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -844,7 +896,9 @@ class StoreActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -866,7 +920,9 @@ class StoreActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -886,7 +942,9 @@ class StoreActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -906,7 +964,9 @@ class StoreActionNotifier {
           'p_store_id': storeId,
         },
       );
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -927,7 +987,9 @@ class StoreActionNotifier {
           'p_entity_id': storeId,
         },
       );
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -965,7 +1027,9 @@ class StoreActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -987,7 +1051,9 @@ class StoreActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1014,7 +1080,9 @@ class StoreActionNotifier {
           'p_star_cost': starCost,
         },
       );
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1039,7 +1107,9 @@ class StoreActionNotifier {
           'p_duration_minutes': durationMinutes,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      final map = Map<String, dynamic>.from(response as Map);
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1245,7 +1315,11 @@ class StoreActionNotifier {
           'p_confirm': confirm,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      final map = Map<String, dynamic>.from(response as Map);
+      if (confirm) {
+        _sync(map);
+      }
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1513,7 +1587,9 @@ class StoreActionNotifier {
           'p_store_id': storeId,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      final map = Map<String, dynamic>.from(response as Map);
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1537,7 +1613,9 @@ class StoreActionNotifier {
           'p_markup_percent': markupPercent,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      final map = Map<String, dynamic>.from(response as Map);
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1545,4 +1623,4 @@ class StoreActionNotifier {
 
 }
 
-final storeActionProvider = Provider((ref) => StoreActionNotifier());
+final storeActionProvider = Provider((ref) => StoreActionNotifier(ref));

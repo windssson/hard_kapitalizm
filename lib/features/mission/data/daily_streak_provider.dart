@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -123,13 +123,20 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
 
     try {
       // Update in database via RPC:
-      await supabase.rpc(
+      final response = await supabase.rpc(
         'claim_daily_streak_reward',
         params: {
           'p_reward_cash': rewardCash,
           'p_reward_gold': rewardGold,
         },
       );
+      if (response is Map<String, dynamic>) {
+        ref.read(mutationSyncServiceProvider).applyRaw(response);
+      } else if (response is Map) {
+        ref
+            .read(mutationSyncServiceProvider)
+            .applyRaw(Map<String, dynamic>.from(response));
+      }
     } catch (e) {
       return false;
     }
@@ -146,9 +153,6 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
       lastClaimedDate: now,
       canClaimToday: false,
     ));
-
-    // Invalidate homeDashboardProvider so cash/gold top bar updates:
-    ref.invalidate(homeDashboardProvider);
 
     return true;
   }

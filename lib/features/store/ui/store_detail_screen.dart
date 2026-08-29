@@ -5168,7 +5168,22 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             quantity: remainingStoreQty,
           );
 
-      if (whSlotId != null) {
+      if (result['target_warehouse_slot'] is Map) {
+        final slotJson =
+            Map<String, dynamic>.from(result['target_warehouse_slot'] as Map);
+        ref
+            .read(storeDetailPageProvider(store.id).notifier)
+            .patchOrAddStoreWarehouseSlot(
+              warehouseSlotId: slotJson['id']?.toString() ?? whSlotId ?? '',
+              productId: (slotJson['product_id'] ?? slot.productId ?? '').toString(),
+              productName: slot.productName ?? 'Ürün',
+              productIcon: slot.productIcon,
+              qualityLevel: (slotJson['quality_level'] as num?)?.toInt() ?? slot.qualityLevel,
+              brandId: (slotJson['brand_id'] ?? slot.brandId).toString(),
+              quantity: (slotJson['quantity'] as num?)?.toInt() ?? quantity,
+              cost: (slotJson['cost'] as num?)?.toDouble() ?? slot.cost ?? 0.0,
+            );
+      } else if (whSlotId != null) {
         final currentWhSlots = ref.read(storeDetailPageProvider(store.id)).value?.storeWarehouse?.slots;
         final existingWhSlot = currentWhSlots?.where((s) => s.id == whSlotId).firstOrNull;
         if (existingWhSlot != null) {

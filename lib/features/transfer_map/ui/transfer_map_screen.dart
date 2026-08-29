@@ -613,7 +613,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         }
 
         ref.read(buyerTransferMapProvider.notifier).patchRemoveTransfer(transfer.id);
-        ref.read(buyerTransferMapProvider.notifier).refresh();
         ref.read(buyerTransferHistoryProvider.notifier).refresh();
         ref.invalidate(warehouseListProvider);
         _invalidateAffectedTransferTargets(transfer);
@@ -688,7 +687,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
         if (result['success'] == true) {
           ref.read(buyerTransferMapProvider.notifier).patchRemoveTransfer(transfer.id);
-          ref.read(buyerTransferMapProvider.notifier).refresh();
           ref.read(buyerTransferHistoryProvider.notifier).refresh();
           ref.invalidate(warehouseListProvider);
           _invalidateAffectedTransferTargets(transfer);

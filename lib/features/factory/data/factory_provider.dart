@@ -944,8 +944,9 @@ class FactoryActionNotifier {
           vehicleId: vehicleId,
         );
     if (syncProviders) {
-      // Transfer başladı: inventory değişti → detail refresh gerekir
-      // TODO: transfer RPC'si inventory snapshot döndürürse patch'e dönüştür
+      if (result.raw != null) {
+        _ref.read(mutationSyncServiceProvider).applyRaw(result.raw!);
+      }
       _ref.invalidate(factoryDetailProvider);
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(warehouseDetailProvider(sourceWarehouseId));
@@ -971,6 +972,9 @@ class FactoryActionNotifier {
           vehicleId: vehicleId,
         );
     if (syncProviders) {
+      if (result.raw != null) {
+        _ref.read(mutationSyncServiceProvider).applyRaw(result.raw!);
+      }
       _ref.invalidate(factoryDetailProvider);
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));

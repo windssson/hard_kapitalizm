@@ -1106,6 +1106,9 @@ class FarmActionNotifier {
           vehicleId: vehicleId,
         );
     if (syncProviders) {
+      if (result.raw != null) {
+        _ref.read(mutationSyncServiceProvider).applyRaw(result.raw!);
+      }
       _ref.invalidate(farmDetailProvider);
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(warehouseDetailProvider(sourceWarehouseId));
@@ -1131,6 +1134,9 @@ class FarmActionNotifier {
           vehicleId: vehicleId,
         );
     if (syncProviders) {
+      if (result.raw != null) {
+        _ref.read(mutationSyncServiceProvider).applyRaw(result.raw!);
+      }
       _ref.invalidate(farmDetailProvider);
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));

@@ -309,19 +309,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     ref.invalidate(anyActiveWarehouseUpgradeProvider);
   }
 
-  Future<void> _refreshWarehouseEcosystem({bool refreshPlayer = true}) async {
-    await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
-    ref.read(warehouseDetailProvider(widget.warehouseId).notifier).refresh();
-    ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
-    ref.invalidate(anyActiveWarehouseUpgradeProvider);
-    ref.read(warehouseListProvider.notifier).refresh();
-    ref.invalidate(buyerTransferMapProvider);
-    ref.invalidate(buyerTransferHistoryProvider);
-    if (refreshPlayer) {}
-    await ref.read(warehouseDetailProvider(widget.warehouseId).future);
-    await ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).future);
-  }
-
   void _showProductSelection(
     BuildContext context,
     WarehouseModel warehouse,
@@ -2967,29 +2954,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     Navigator.pop(context);
 
     if (result['success'] == true) {
-      final transferId = result['transfer_id']?.toString();
       final isInstant = result['mode']?.toString() == 'instant';
-
-      if (isInstant && transferId != null && transferId.isNotEmpty) {
-        final completionResult = await ref
-            .read(warehouseActionProvider)
-            .completeLogisticsTransfer(transferId);
-
-        if (completionResult['success'] != true) {
-          await _refreshWarehouseEcosystem();
-          ref.invalidate(warehouseDetailProvider(targetWarehouseId));
-          if (!context.mounted) return;
-          AppSnackbar.show(
-            context,
-            title: 'Transfer Baslatildi',
-            message:
-                'Transfer kaydı oluştu ama otomatik tamamlama sırasında hata alındı: ${completionResult['message'] ?? 'Bilinmeyen hata'}',
-            type: SnackbarType.warning,
-          );
-          return;
-        }
-      }
-
       final slotQuantities = <String, int>{};
       for (final item in items) {
         final remaining = item.slot.quantity - item.quantity;
