@@ -61,10 +61,9 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       ref.read(playerBrandCompanyProvider).value?.brandName;
 
   void _refreshFieldDetail() {
-    ref.invalidate(fieldDetailProvider(widget.fieldId));
+    ref.read(fieldDetailProvider(widget.fieldId).notifier).refresh();
     ref.invalidate(activeFieldBoostProvider(widget.fieldId));
     ref.invalidate(activeFieldUpgradeProvider(widget.fieldId));
-    ref.read(fieldDetailProvider(widget.fieldId).future);
     ref.read(activeFieldBoostProvider(widget.fieldId).future);
     ref.read(activeFieldUpgradeProvider(widget.fieldId).future);
   }
@@ -76,7 +75,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     bool includePlayer = true,
   }) async {
     _refreshFieldDetail();
-    ref.invalidate(fieldListProvider);
+    ref.read(fieldListProvider.notifier).refresh();
     if (includePlayer) {
     }
 

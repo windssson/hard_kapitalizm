@@ -509,7 +509,15 @@ class LogisticsActionNotifier {
         params: {'p_player_id': user.id, 'p_vehicle_id': vehicleId},
       );
       final result = _sync(response);
-      _ref.read(logisticsVehicleListProvider.notifier).refresh();
+      final currentFuel = (result['current_fuel'] as num?)?.toInt();
+      if (currentFuel != null) {
+        _ref.read(logisticsVehicleListProvider.notifier).patchVehicleRefuel(
+          vehicleId: vehicleId,
+          currentFuel: currentFuel,
+        );
+      } else {
+        _ref.read(logisticsVehicleListProvider.notifier).refresh();
+      }
       _ref.invalidate(playerLogisticsCompanyProvider);
       return result;
     } catch (e) {
@@ -527,7 +535,11 @@ class LogisticsActionNotifier {
         params: {'p_player_id': user.id, 'p_vehicle_id': vehicleId},
       );
       final result = _sync(response);
-      _ref.read(logisticsVehicleListProvider.notifier).refresh();
+      final condition = (result['condition'] as num?)?.toInt() ?? 100;
+      _ref.read(logisticsVehicleListProvider.notifier).patchVehicleRepair(
+        vehicleId: vehicleId,
+        condition: condition,
+      );
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
       return result;

@@ -929,7 +929,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
                         return RefreshIndicator(
                           onRefresh: () async {
-                            ref.invalidate(buyerTransferHistoryProvider);
+                            await ref
+                                .read(buyerTransferHistoryProvider.notifier)
+                                .refresh();
                           },
                           child: sortedHistory.isEmpty
                               ? ListView(

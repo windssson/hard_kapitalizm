@@ -13,7 +13,6 @@ import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -406,7 +405,6 @@ class FactoryActionNotifier {
       // Ignore; primary action already succeeded.
     }
     _ref.invalidate(playerNotificationDashboardProvider);
-    _ref.invalidate(homeDashboardProvider);
   }
 
   Future<Map<String, dynamic>> createFactory({

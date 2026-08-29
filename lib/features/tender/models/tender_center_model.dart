@@ -247,6 +247,38 @@ class TenderBidSummaryModel {
       status: (json['status'] ?? 'active').toString(),
     );
   }
+
+  TenderBidSummaryModel copyWith({
+    String? tenderId,
+    String? title,
+    String? cityName,
+    String? productName,
+    String? productIcon,
+    int? qualityLevel,
+    String? awardType,
+    double? bidAmount,
+    double? bondPaid,
+    int? bidCount,
+    double? lowestBidAmount,
+    DateTime? acceptUntil,
+    String? status,
+  }) {
+    return TenderBidSummaryModel(
+      tenderId: tenderId ?? this.tenderId,
+      title: title ?? this.title,
+      cityName: cityName ?? this.cityName,
+      productName: productName ?? this.productName,
+      productIcon: productIcon ?? this.productIcon,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      awardType: awardType ?? this.awardType,
+      bidAmount: bidAmount ?? this.bidAmount,
+      bondPaid: bondPaid ?? this.bondPaid,
+      bidCount: bidCount ?? this.bidCount,
+      lowestBidAmount: lowestBidAmount ?? this.lowestBidAmount,
+      acceptUntil: acceptUntil ?? this.acceptUntil,
+      status: status ?? this.status,
+    );
+  }
 }
 
 class PlayerTenderSummaryModel {

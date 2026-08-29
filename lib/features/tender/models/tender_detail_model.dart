@@ -109,6 +109,24 @@ class PlayerTenderBidSummaryModel {
       updatedAt: DateTime.tryParse((json['updated_at'] ?? '').toString()),
     );
   }
+
+  PlayerTenderBidSummaryModel copyWith({
+    String? id,
+    double? bidAmount,
+    double? bondPaid,
+    String? status,
+    DateTime? submittedAt,
+    DateTime? updatedAt,
+  }) {
+    return PlayerTenderBidSummaryModel(
+      id: id ?? this.id,
+      bidAmount: bidAmount ?? this.bidAmount,
+      bondPaid: bondPaid ?? this.bondPaid,
+      status: status ?? this.status,
+      submittedAt: submittedAt ?? this.submittedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
 
 class TenderDetailTenderModel {
@@ -320,6 +338,28 @@ class PlayerTenderDetailSummaryModel {
       status: (json['status'] ?? 'active').toString(),
     );
   }
+
+  PlayerTenderDetailSummaryModel copyWith({
+    String? id,
+    DateTime? acceptedAt,
+    DateTime? deadlineAt,
+    int? requiredQuantity,
+    int? deliveredQuantity,
+    int? inTransitQuantity,
+    int? remainingQuantity,
+    String? status,
+  }) {
+    return PlayerTenderDetailSummaryModel(
+      id: id ?? this.id,
+      acceptedAt: acceptedAt ?? this.acceptedAt,
+      deadlineAt: deadlineAt ?? this.deadlineAt,
+      requiredQuantity: requiredQuantity ?? this.requiredQuantity,
+      deliveredQuantity: deliveredQuantity ?? this.deliveredQuantity,
+      inTransitQuantity: inTransitQuantity ?? this.inTransitQuantity,
+      remainingQuantity: remainingQuantity ?? this.remainingQuantity,
+      status: status ?? this.status,
+    );
+  }
 }
 
 class TenderWarehouseOptionModel {
@@ -365,6 +405,36 @@ class TenderWarehouseOptionModel {
       recommended: json['recommended'] as bool? ?? false,
     );
   }
+
+  TenderWarehouseOptionModel copyWith({
+    String? warehouseId,
+    String? warehouseName,
+    String? cityId,
+    String? cityName,
+    int? availableQuantity,
+    double? unitCost,
+    bool? sameCity,
+    double? distanceKm,
+    int? estimatedDurationMinutes,
+    bool? canDeliverBeforeDeadline,
+    bool? recommended,
+  }) {
+    return TenderWarehouseOptionModel(
+      warehouseId: warehouseId ?? this.warehouseId,
+      warehouseName: warehouseName ?? this.warehouseName,
+      cityId: cityId ?? this.cityId,
+      cityName: cityName ?? this.cityName,
+      availableQuantity: availableQuantity ?? this.availableQuantity,
+      unitCost: unitCost ?? this.unitCost,
+      sameCity: sameCity ?? this.sameCity,
+      distanceKm: distanceKm ?? this.distanceKm,
+      estimatedDurationMinutes:
+          estimatedDurationMinutes ?? this.estimatedDurationMinutes,
+      canDeliverBeforeDeadline:
+          canDeliverBeforeDeadline ?? this.canDeliverBeforeDeadline,
+      recommended: recommended ?? this.recommended,
+    );
+  }
 }
 
 class TenderActiveDeliveryModel {
@@ -401,6 +471,30 @@ class TenderActiveDeliveryModel {
       sameCity: json['same_city'] as bool? ?? false,
       startedAt: DateTime.tryParse((json['started_at'] ?? '').toString()),
       finishAt: DateTime.tryParse((json['finish_at'] ?? '').toString()),
+    );
+  }
+
+  TenderActiveDeliveryModel copyWith({
+    String? id,
+    String? sourceWarehouseId,
+    String? sourceWarehouseName,
+    String? sourceCityName,
+    int? quantity,
+    String? status,
+    bool? sameCity,
+    DateTime? startedAt,
+    DateTime? finishAt,
+  }) {
+    return TenderActiveDeliveryModel(
+      id: id ?? this.id,
+      sourceWarehouseId: sourceWarehouseId ?? this.sourceWarehouseId,
+      sourceWarehouseName: sourceWarehouseName ?? this.sourceWarehouseName,
+      sourceCityName: sourceCityName ?? this.sourceCityName,
+      quantity: quantity ?? this.quantity,
+      status: status ?? this.status,
+      sameCity: sameCity ?? this.sameCity,
+      startedAt: startedAt ?? this.startedAt,
+      finishAt: finishAt ?? this.finishAt,
     );
   }
 }

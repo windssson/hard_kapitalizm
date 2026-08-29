@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
 
@@ -170,11 +169,11 @@ class CompanyActionNotifier {
           'p_theme_color': themeColor,
         },
       );
+      final result = Map<String, dynamic>.from(response as Map);
       _ref.read(playerBrandCompanyProvider.notifier).refresh();
       _ref.read(playerBrandCompanyProductsProvider.notifier).refresh();
-      _ref.invalidate(playerProvider);
-      _ref.invalidate(homeDashboardProvider);
-      return Map<String, dynamic>.from(response as Map);
+      _ref.read(mutationSyncServiceProvider).applyRaw(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': _cleanErrorMessage(e)};
     }
@@ -197,12 +196,13 @@ class CompanyActionNotifier {
           'p_theme_color': themeColor,
         },
       );
+      final result = Map<String, dynamic>.from(response as Map);
       _ref.read(playerBrandCompanyProvider.notifier).patchDesign(
             logoId: logoId,
             themeColor: themeColor,
           );
-      _ref.read(playerBrandCompanyProvider.notifier).refresh();
-      return Map<String, dynamic>.from(response as Map);
+      _ref.read(mutationSyncServiceProvider).applyRaw(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': _cleanErrorMessage(e)};
     }
@@ -221,14 +221,12 @@ class CompanyActionNotifier {
         'patent_brand_company_product',
         params: {'p_product_id': productId},
       );
+      final result = Map<String, dynamic>.from(response as Map);
       _ref
           .read(playerBrandCompanyProductsProvider.notifier)
           .patchProductPatented(productId);
-      _ref.read(playerBrandCompanyProvider.notifier).refresh();
-      _ref.read(playerBrandCompanyProductsProvider.notifier).refresh();
-      _ref.invalidate(playerProvider);
-      _ref.invalidate(homeDashboardProvider);
-      return Map<String, dynamic>.from(response as Map);
+      _ref.read(mutationSyncServiceProvider).applyRaw(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': _cleanErrorMessage(e)};
     }
@@ -251,11 +249,12 @@ class CompanyActionNotifier {
           'p_watermark_asset_id': watermarkAssetId,
         },
       );
+      final result = Map<String, dynamic>.from(response as Map);
       _ref
           .read(playerBrandCompanyProductsProvider.notifier)
           .patchProductWatermark(productId, watermarkAssetId);
-      _ref.read(playerBrandCompanyProductsProvider.notifier).refresh();
-      return Map<String, dynamic>.from(response as Map);
+      _ref.read(mutationSyncServiceProvider).applyRaw(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': _cleanErrorMessage(e)};
     }
@@ -274,11 +273,11 @@ class CompanyActionNotifier {
         'start_marketing_campaign',
         params: {'p_campaign_type': campaignType},
       );
+      final result = Map<String, dynamic>.from(response as Map);
       _ref.read(playerBrandCompanyProvider.notifier).refresh();
       _ref.read(activeMarketingCampaignsProvider.notifier).refresh();
-      _ref.invalidate(playerProvider);
-      _ref.invalidate(homeDashboardProvider);
-      return Map<String, dynamic>.from(response as Map);
+      _ref.read(mutationSyncServiceProvider).applyRaw(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': _cleanErrorMessage(e)};
     }

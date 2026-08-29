@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
-import 'package:hard_kapitalizm/features/achievement/data/achievement_provider.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_dashboard_model.dart';
 import 'package:hard_kapitalizm/features/mission/models/player_mission_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -147,8 +146,7 @@ class MissionActionNotifier {
         _ref
             .read(playerMissionDashboardProvider.notifier)
             .patchClaimMission(missionId);
-        _ref.invalidate(homeDashboardProvider);
-        _ref.invalidate(playerAchievementDashboardProvider);
+        _ref.read(mutationSyncServiceProvider).applyRaw(result);
         // Silently refresh in background in case subsequent missions are unlocked
         _ref.read(playerMissionDashboardProvider.notifier).refresh();
       }

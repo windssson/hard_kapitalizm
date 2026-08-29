@@ -40,12 +40,10 @@ class _TenderDetailScreenState extends ConsumerState<TenderDetailScreen> {
   Future<void> _refresh() async {
     await ref.read(tenderActionProvider).refreshTenderRuntime();
     if (_isPlayerTender) {
-      ref.invalidate(playerTenderDetailProvider(widget.playerTenderId!));
-      await ref.read(playerTenderDetailProvider(widget.playerTenderId!).future);
+      await ref.read(playerTenderDetailProvider(widget.playerTenderId!).notifier).refresh();
       return;
     }
-    ref.invalidate(tenderDetailProvider(widget.tenderId!));
-    await ref.read(tenderDetailProvider(widget.tenderId!).future);
+    await ref.read(tenderDetailProvider(widget.tenderId!).notifier).refresh();
   }
 
   Future<void> _acceptTender(TenderDetailModel detail) async {

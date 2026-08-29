@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PlayerTaxModel {
@@ -141,10 +139,6 @@ class TaxActionNotifier {
         final payAmount = amount == -1 ? (currentTax?.taxDebt ?? 0.0) : amount;
         _ref.read(taxDebtProvider.notifier).patchPayment(payAmount);
         _ref.read(playerTaxProvider.notifier).patchPayment(payAmount);
-        _ref.read(taxDebtProvider.notifier).refresh();
-        _ref.read(playerTaxProvider.notifier).refresh();
-        _ref.invalidate(playerProvider);
-        _ref.invalidate(homeDashboardProvider);
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;

@@ -1,10 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
-import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/tender/models/tender_center_model.dart';
 import 'package:hard_kapitalizm/features/tender/models/tender_detail_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -65,55 +62,156 @@ final tenderCenterProvider =
   TenderCenterNotifier.new,
 );
 
+class TenderDetailNotifier extends AsyncNotifier<TenderDetailModel> {
+  TenderDetailNotifier(this._tenderId);
+
+  final String _tenderId;
+
+  @override
+  Future<TenderDetailModel> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      throw Exception('Oturum acilmamis.');
+    }
+
+    final response = await supabase.rpc(
+      'get_tender_detail',
+      params: {'p_tender_id': _tenderId},
+    );
+    final detail = TenderDetailModel.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+    if (!detail.success) {
+      throw Exception(
+        detail.message.isNotEmpty ? detail.message : 'İhale detayı alınamadı.',
+      );
+    }
+    return detail;
+  }
+
+  void patchBidSubmitted(double bidAmount) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        playerBid: PlayerTenderBidSummaryModel(
+          id: current.playerBid?.id ?? '',
+          bidAmount: bidAmount,
+          bondPaid: current.playerBid?.bondPaid ?? current.tender.bondAmount,
+          status: 'active',
+          submittedAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> refresh() async {
+    try {
+      final fresh = await build();
+      state = AsyncData(fresh);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+}
+
 final tenderDetailProvider =
-    FutureProvider.family<TenderDetailModel, String>((ref, tenderId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+    AsyncNotifierProvider.family<TenderDetailNotifier, TenderDetailModel, String>(
+  TenderDetailNotifier.new,
+);
 
-      if (user == null) {
-        throw Exception('Oturum acilmamis.');
-      }
+class PlayerTenderDetailNotifier extends AsyncNotifier<TenderDetailModel> {
+  PlayerTenderDetailNotifier(this._playerTenderId);
 
-      final response = await supabase.rpc(
-        'get_tender_detail',
-        params: {'p_tender_id': tenderId},
+  final String _playerTenderId;
+
+  @override
+  Future<TenderDetailModel> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      throw Exception('Oturum acilmamis.');
+    }
+
+    final response = await supabase.rpc(
+      'get_tender_detail',
+      params: {'p_player_tender_id': _playerTenderId},
+    );
+    final detail = TenderDetailModel.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+    if (!detail.success) {
+      throw Exception(
+        detail.message.isNotEmpty
+            ? detail.message
+            : 'Oyuncu ihalesi detayı alınamadı.',
       );
-      final detail = TenderDetailModel.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
-      if (!detail.success) {
-        throw Exception(
-          detail.message.isNotEmpty ? detail.message : 'İhale detayı alınamadı.',
+    }
+    return detail;
+  }
+
+  void patchDeliveryStarted({
+    required int quantity,
+    required String warehouseId,
+    String? vehicleId,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final currentPt = current.playerTender;
+    if (currentPt == null) return;
+
+    final updatedPt = currentPt.copyWith(
+      inTransitQuantity: currentPt.inTransitQuantity + quantity,
+      remainingQuantity: (currentPt.remainingQuantity - quantity).clamp(0, currentPt.requiredQuantity),
+    );
+
+    final updatedWarehouseOptions = current.warehouseOptions.map((wh) {
+      if (wh.warehouseId == warehouseId) {
+        return wh.copyWith(
+          availableQuantity: (wh.availableQuantity - quantity).clamp(0, wh.availableQuantity),
         );
       }
-      return detail;
-    });
+      return wh;
+    }).toList();
+
+    state = AsyncData(
+      current.copyWith(
+        playerTender: updatedPt,
+        warehouseOptions: updatedWarehouseOptions,
+      ),
+    );
+  }
+
+  void patchCancelled() {
+    final current = state.value;
+    if (current == null) return;
+    final currentPt = current.playerTender;
+    if (currentPt == null) return;
+    state = AsyncData(
+      current.copyWith(
+        playerTender: currentPt.copyWith(status: 'cancelled'),
+      ),
+    );
+  }
+
+  Future<void> refresh() async {
+    try {
+      final fresh = await build();
+      state = AsyncData(fresh);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+}
 
 final playerTenderDetailProvider =
-    FutureProvider.family<TenderDetailModel, String>((ref, playerTenderId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-
-      if (user == null) {
-        throw Exception('Oturum acilmamis.');
-      }
-
-      final response = await supabase.rpc(
-        'get_tender_detail',
-        params: {'p_player_tender_id': playerTenderId},
-      );
-      final detail = TenderDetailModel.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
-      if (!detail.success) {
-        throw Exception(
-          detail.message.isNotEmpty
-              ? detail.message
-              : 'Oyuncu ihalesi detayı alınamadı.',
-        );
-      }
-      return detail;
-    });
+    AsyncNotifierProvider.family<PlayerTenderDetailNotifier, TenderDetailModel, String>(
+  PlayerTenderDetailNotifier.new,
+);
 
 final _transferVehicleOptionsServiceProvider = Provider<
   TransferVehicleOptionsService
@@ -160,11 +258,7 @@ class TenderActionNotifier {
         params: {'p_tender_id': tenderId},
       );
       _ref.read(tenderCenterProvider.notifier).refresh();
-      _ref.invalidate(tenderDetailProvider);
-      _ref.invalidate(playerTenderDetailProvider);
-      _ref.invalidate(playerNotificationDashboardProvider);
-      _ref.invalidate(homeDashboardProvider);
-      _ref.invalidate(playerProvider);
+      _ref.read(tenderDetailProvider(tenderId).notifier).refresh();
       _ref.invalidate(warehouseListProvider);
       return _sync(response);
     } catch (e) {
@@ -185,12 +279,7 @@ class TenderActionNotifier {
         },
       );
       _ref.read(tenderCenterProvider.notifier).patchBidSubmitted(tenderId, bidAmount);
-      _ref.read(tenderCenterProvider.notifier).refresh();
-      _ref.invalidate(tenderDetailProvider);
-      _ref.invalidate(playerTenderDetailProvider);
-      _ref.invalidate(playerNotificationDashboardProvider);
-      _ref.invalidate(homeDashboardProvider);
-      _ref.invalidate(playerProvider);
+      _ref.read(tenderDetailProvider(tenderId).notifier).patchBidSubmitted(bidAmount);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -213,11 +302,12 @@ class TenderActionNotifier {
           'p_quantity': quantity,
         },
       );
+      _ref.read(playerTenderDetailProvider(playerTenderId).notifier).patchDeliveryStarted(
+        quantity: quantity,
+        warehouseId: warehouseId,
+        vehicleId: vehicleId,
+      );
       _ref.read(tenderCenterProvider.notifier).refresh();
-      _ref.invalidate(playerTenderDetailProvider(playerTenderId));
-      _ref.invalidate(playerNotificationDashboardProvider);
-      _ref.invalidate(homeDashboardProvider);
-      _ref.invalidate(playerProvider);
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(logisticsVehicleListProvider);
       return _sync(response);
@@ -232,11 +322,8 @@ class TenderActionNotifier {
         'cancel_player_tender',
         params: {'p_player_tender_id': playerTenderId},
       );
+      _ref.read(playerTenderDetailProvider(playerTenderId).notifier).patchCancelled();
       _ref.read(tenderCenterProvider.notifier).refresh();
-      _ref.invalidate(playerTenderDetailProvider(playerTenderId));
-      _ref.invalidate(playerNotificationDashboardProvider);
-      _ref.invalidate(homeDashboardProvider);
-      _ref.invalidate(playerProvider);
       _ref.invalidate(warehouseListProvider);
       return _sync(response);
     } catch (e) {
@@ -249,10 +336,12 @@ class TenderActionNotifier {
       final deliveryResponse = await _supabase.rpc('process_tender_deliveries');
       final tenderResponse = await _supabase.rpc('process_player_tenders');
       _ref.read(tenderCenterProvider.notifier).refresh();
-      _ref.invalidate(tenderDetailProvider);
-      _ref.invalidate(playerTenderDetailProvider);
-      _ref.invalidate(playerNotificationDashboardProvider);
-      _ref.invalidate(homeDashboardProvider);
+      if (deliveryResponse != null && deliveryResponse is Map) {
+        _sync(deliveryResponse);
+      }
+      if (tenderResponse != null && tenderResponse is Map) {
+        _sync(tenderResponse);
+      }
       return {
         'success': true,
         'delivery_result': deliveryResponse,

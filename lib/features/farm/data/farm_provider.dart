@@ -16,7 +16,6 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_model.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 
 Future<List<FarmListItemModel>> _fetchFarmList() async {
@@ -508,7 +507,6 @@ class FarmActionNotifier {
       // Ignore attention refresh errors; primary action already succeeded.
     }
     _ref.invalidate(playerNotificationDashboardProvider);
-    _ref.invalidate(homeDashboardProvider);
   }
 
   Future<Map<String, dynamic>> createFarm({
@@ -818,9 +816,27 @@ class FarmActionNotifier {
         },
       );
       final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(farmListProvider);
-        _ref.invalidate(farmDetailProvider(farmId));
+      if (syncProviders && result['success'] == true) {
+        final slotJson = result['slot'];
+        if (slotJson is Map) {
+          final slotModel = FarmProductionSlotModel.fromJson(
+            Map<String, dynamic>.from(slotJson),
+          );
+          _ref.read(farmDetailProvider(farmId).notifier).addSlot(slotModel);
+          _ref.read(farmListProvider.notifier).addSlot(
+            farmId: farmId,
+            slot: FarmSlotPreviewModel(
+              id: slotModel.id,
+              slotIndex: slotModel.slotIndex,
+              isActive: slotModel.isActive,
+              productId: slotModel.productId,
+              product: slotModel.product,
+            ),
+          );
+        } else {
+          _ref.invalidate(farmListProvider);
+          _ref.invalidate(farmDetailProvider(farmId));
+        }
       }
       return result;
     } catch (e) {
@@ -850,14 +866,47 @@ class FarmActionNotifier {
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref.invalidate(farmListProvider);
-        final ownerId = responseMap['owner_id']?.toString();
-        if (ownerId != null && ownerId.isNotEmpty) {
-          _ref.invalidate(farmDetailProvider(ownerId));
+      _sync(responseMap);
+      if (syncProviders && responseMap['success'] == true) {
+        final ownerId = (responseMap['owner_id'] ?? '').toString();
+        final slotsJson = responseMap['slots'] as List<dynamic>?;
+        final inventoriesJson = responseMap['inventories'] as List<dynamic>?;
+
+        if (ownerId.isNotEmpty && slotsJson != null && inventoriesJson != null) {
+          final parsedSlots = slotsJson
+              .map((s) => FarmProductionSlotModel.fromJson(
+                    Map<String, dynamic>.from(s as Map),
+                  ))
+              .toList();
+          final parsedInventories = inventoriesJson
+              .map((i) => FarmProductionInventoryModel.fromJson(
+                    Map<String, dynamic>.from(i as Map),
+                  ))
+              .toList();
+          _ref.read(farmDetailProvider(ownerId).notifier).patchSlotsAndInventories(
+            slots: parsedSlots,
+            inventories: parsedInventories,
+          );
+
+          if (parsedSlots.isNotEmpty) {
+            final updatedSlot = parsedSlots.cast<FarmProductionSlotModel?>().firstWhere(
+              (s) => s?.id == slotId,
+              orElse: () => parsedSlots.first,
+            );
+            _ref.read(farmListProvider.notifier).patchSlotProduct(
+              farmId: ownerId,
+              slotId: slotId,
+              productId: productId,
+              product: updatedSlot?.product,
+            );
+          }
+        } else {
+          _ref.invalidate(farmListProvider);
+          if (ownerId.isNotEmpty) {
+            _ref.invalidate(farmDetailProvider(ownerId));
+          }
         }
       }
-      await _refreshAttentionNotifications();
       return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -886,14 +935,47 @@ class FarmActionNotifier {
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref.invalidate(farmListProvider);
-        final ownerId = responseMap['owner_id']?.toString();
-        if (ownerId != null && ownerId.isNotEmpty) {
-          _ref.invalidate(farmDetailProvider(ownerId));
+      _sync(responseMap);
+      if (syncProviders && responseMap['success'] == true) {
+        final ownerId = (responseMap['owner_id'] ?? '').toString();
+        final slotsJson = responseMap['slots'] as List<dynamic>?;
+        final inventoriesJson = responseMap['inventories'] as List<dynamic>?;
+
+        if (ownerId.isNotEmpty && slotsJson != null && inventoriesJson != null) {
+          final parsedSlots = slotsJson
+              .map((s) => FarmProductionSlotModel.fromJson(
+                    Map<String, dynamic>.from(s as Map),
+                  ))
+              .toList();
+          final parsedInventories = inventoriesJson
+              .map((i) => FarmProductionInventoryModel.fromJson(
+                    Map<String, dynamic>.from(i as Map),
+                  ))
+              .toList();
+          _ref.read(farmDetailProvider(ownerId).notifier).patchSlotsAndInventories(
+            slots: parsedSlots,
+            inventories: parsedInventories,
+          );
+
+          if (parsedSlots.isNotEmpty) {
+            final updatedSlot = parsedSlots.cast<FarmProductionSlotModel?>().firstWhere(
+              (s) => s?.id == slotId,
+              orElse: () => parsedSlots.first,
+            );
+            _ref.read(farmListProvider.notifier).patchSlotProduct(
+              farmId: ownerId,
+              slotId: slotId,
+              productId: productId,
+              product: updatedSlot?.product,
+            );
+          }
+        } else {
+          _ref.invalidate(farmListProvider);
+          if (ownerId.isNotEmpty) {
+            _ref.invalidate(farmDetailProvider(ownerId));
+          }
         }
       }
-      await _refreshAttentionNotifications();
       return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -920,14 +1002,21 @@ class FarmActionNotifier {
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref.invalidate(farmListProvider);
-        final ownerId = responseMap['owner_id']?.toString();
-        if (ownerId != null && ownerId.isNotEmpty) {
-          _ref.invalidate(farmDetailProvider(ownerId));
+      _sync(responseMap);
+      if (syncProviders && responseMap['success'] == true) {
+        final ownerId = (responseMap['owner_id'] ?? '').toString();
+        if (ownerId.isNotEmpty) {
+          _ref.read(farmDetailProvider(ownerId).notifier).patchSlotActive(
+            slotId: slotId,
+            isActive: isActive,
+          );
+          _ref.read(farmListProvider.notifier).patchSlotActive(
+            farmId: ownerId,
+            slotId: slotId,
+            isActive: isActive,
+          );
         }
       }
-      await _refreshAttentionNotifications();
       return responseMap;
     } catch (e) {
       return {'success': false, 'message': e.toString()};

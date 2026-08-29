@@ -12,7 +12,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
@@ -478,7 +477,6 @@ class FieldActionNotifier {
       // Ignore attention refresh errors; primary action already succeeded.
     }
     _ref.invalidate(playerNotificationDashboardProvider);
-    _ref.invalidate(homeDashboardProvider);
   }
 
   Future<Map<String, dynamic>> createField({
@@ -789,9 +787,27 @@ class FieldActionNotifier {
         },
       );
       final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(fieldListProvider);
-        _ref.invalidate(fieldDetailProvider(fieldId));
+      if (syncProviders && result['success'] == true) {
+        final slotJson = result['slot'];
+        if (slotJson is Map) {
+          final slotModel = ProductionSlotModel.fromJson(
+            Map<String, dynamic>.from(slotJson),
+          );
+          _ref.read(fieldDetailProvider(fieldId).notifier).addSlot(slotModel);
+          _ref.read(fieldListProvider.notifier).addSlot(
+            fieldId: fieldId,
+            slot: FieldSlotPreviewModel(
+              id: slotModel.id,
+              slotIndex: slotModel.slotIndex,
+              isActive: slotModel.isActive,
+              productId: slotModel.productId,
+              product: slotModel.product,
+            ),
+          );
+        } else {
+          _ref.invalidate(fieldListProvider);
+          _ref.invalidate(fieldDetailProvider(fieldId));
+        }
       }
       return result;
     } catch (e) {
@@ -821,13 +837,46 @@ class FieldActionNotifier {
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref.invalidate(fieldListProvider);
-        final ownerId = responseMap['owner_id']?.toString();
-        if (ownerId != null && ownerId.isNotEmpty) {
-          _ref.invalidate(fieldDetailProvider(ownerId));
+      _sync(responseMap);
+      if (syncProviders && responseMap['success'] == true) {
+        final ownerId = (responseMap['owner_id'] ?? '').toString();
+        final slotsJson = responseMap['slots'] as List<dynamic>?;
+        final inventoriesJson = responseMap['inventories'] as List<dynamic>?;
+
+        if (ownerId.isNotEmpty && slotsJson != null && inventoriesJson != null) {
+          final parsedSlots = slotsJson
+              .map((s) => ProductionSlotModel.fromJson(
+                    Map<String, dynamic>.from(s as Map),
+                  ))
+              .toList();
+          final parsedInventories = inventoriesJson
+              .map((i) => ProductionInventoryModel.fromJson(
+                    Map<String, dynamic>.from(i as Map),
+                  ))
+              .toList();
+          _ref.read(fieldDetailProvider(ownerId).notifier).patchSlotsAndInventories(
+            slots: parsedSlots,
+            inventories: parsedInventories,
+          );
+
+          if (parsedSlots.isNotEmpty) {
+            final updatedSlot = parsedSlots.cast<ProductionSlotModel?>().firstWhere(
+              (s) => s?.id == slotId,
+              orElse: () => parsedSlots.first,
+            );
+            _ref.read(fieldListProvider.notifier).patchSlotProduct(
+              fieldId: ownerId,
+              slotId: slotId,
+              productId: productId,
+              product: updatedSlot?.product,
+            );
+          }
+        } else {
+          _ref.invalidate(fieldListProvider);
+          if (ownerId.isNotEmpty) {
+            _ref.invalidate(fieldDetailProvider(ownerId));
+          }
         }
-        await _refreshAttentionNotifications();
       }
       return responseMap;
     } catch (e) {
@@ -857,13 +906,46 @@ class FieldActionNotifier {
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref.invalidate(fieldListProvider);
-        final ownerId = responseMap['owner_id']?.toString();
-        if (ownerId != null && ownerId.isNotEmpty) {
-          _ref.invalidate(fieldDetailProvider(ownerId));
+      _sync(responseMap);
+      if (syncProviders && responseMap['success'] == true) {
+        final ownerId = (responseMap['owner_id'] ?? '').toString();
+        final slotsJson = responseMap['slots'] as List<dynamic>?;
+        final inventoriesJson = responseMap['inventories'] as List<dynamic>?;
+
+        if (ownerId.isNotEmpty && slotsJson != null && inventoriesJson != null) {
+          final parsedSlots = slotsJson
+              .map((s) => ProductionSlotModel.fromJson(
+                    Map<String, dynamic>.from(s as Map),
+                  ))
+              .toList();
+          final parsedInventories = inventoriesJson
+              .map((i) => ProductionInventoryModel.fromJson(
+                    Map<String, dynamic>.from(i as Map),
+                  ))
+              .toList();
+          _ref.read(fieldDetailProvider(ownerId).notifier).patchSlotsAndInventories(
+            slots: parsedSlots,
+            inventories: parsedInventories,
+          );
+
+          if (parsedSlots.isNotEmpty) {
+            final updatedSlot = parsedSlots.cast<ProductionSlotModel?>().firstWhere(
+              (s) => s?.id == slotId,
+              orElse: () => parsedSlots.first,
+            );
+            _ref.read(fieldListProvider.notifier).patchSlotProduct(
+              fieldId: ownerId,
+              slotId: slotId,
+              productId: productId,
+              product: updatedSlot?.product,
+            );
+          }
+        } else {
+          _ref.invalidate(fieldListProvider);
+          if (ownerId.isNotEmpty) {
+            _ref.invalidate(fieldDetailProvider(ownerId));
+          }
         }
-        await _refreshAttentionNotifications();
       }
       return responseMap;
     } catch (e) {
@@ -891,13 +973,20 @@ class FieldActionNotifier {
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref.invalidate(fieldListProvider);
-        final ownerId = responseMap['owner_id']?.toString();
-        if (ownerId != null && ownerId.isNotEmpty) {
-          _ref.invalidate(fieldDetailProvider(ownerId));
+      _sync(responseMap);
+      if (syncProviders && responseMap['success'] == true) {
+        final ownerId = (responseMap['owner_id'] ?? '').toString();
+        if (ownerId.isNotEmpty) {
+          _ref.read(fieldDetailProvider(ownerId).notifier).patchSlotActive(
+            slotId: slotId,
+            isActive: isActive,
+          );
+          _ref.read(fieldListProvider.notifier).patchSlotActive(
+            fieldId: ownerId,
+            slotId: slotId,
+            isActive: isActive,
+          );
         }
-        await _refreshAttentionNotifications();
       }
       return responseMap;
     } catch (e) {

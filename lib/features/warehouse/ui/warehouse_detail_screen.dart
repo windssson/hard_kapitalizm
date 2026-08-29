@@ -311,10 +311,10 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
   Future<void> _refreshWarehouseEcosystem({bool refreshPlayer = true}) async {
     await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
-    ref.invalidate(warehouseDetailProvider(widget.warehouseId));
+    ref.read(warehouseDetailProvider(widget.warehouseId).notifier).refresh();
     ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
     ref.invalidate(anyActiveWarehouseUpgradeProvider);
-    ref.invalidate(warehouseListProvider);
+    ref.read(warehouseListProvider.notifier).refresh();
     ref.invalidate(buyerTransferMapProvider);
     ref.invalidate(buyerTransferHistoryProvider);
     if (refreshPlayer) {}

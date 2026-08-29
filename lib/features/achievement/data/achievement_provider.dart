@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/features/achievement/models/achievement_badge_model.dart';
 import 'package:hard_kapitalizm/features/achievement/models/player_achievement_dashboard_model.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PlayerAchievementDashboardNotifier
@@ -88,9 +87,7 @@ class AchievementActionService {
       _ref
           .read(playerAchievementDashboardProvider.notifier)
           .patchClaimAchievement(achievementId);
-      _ref.invalidate(playerProvider);
-      _ref.invalidate(homeDashboardProvider);
-      _ref.read(playerAchievementDashboardProvider.notifier).refresh();
+      _ref.read(mutationSyncServiceProvider).applyRaw(resultMap);
     }
 
     return resultMap;

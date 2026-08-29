@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
-import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/bank/models/loan_model.dart';
 import 'package:hard_kapitalizm/features/bank/models/deposit_model.dart';
 
@@ -224,8 +222,6 @@ class BankActionNotifier {
       if (result['success'] == true) {
         _ref.read(playerLoansProvider.notifier).refresh();
         _ref.read(loanLimitProvider.notifier).refresh();
-        _ref.invalidate(playerProvider);
-        _ref.invalidate(homeDashboardProvider);
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;
@@ -248,10 +244,7 @@ class BankActionNotifier {
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
         _ref.read(playerLoansProvider.notifier).patchPayInstallment(loanId);
-        _ref.read(playerLoansProvider.notifier).refresh();
         _ref.read(loanLimitProvider.notifier).refresh();
-        _ref.invalidate(playerProvider);
-        _ref.invalidate(homeDashboardProvider);
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;
@@ -274,10 +267,7 @@ class BankActionNotifier {
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
         _ref.read(playerLoansProvider.notifier).patchPayFull(loanId);
-        _ref.read(playerLoansProvider.notifier).refresh();
         _ref.read(loanLimitProvider.notifier).refresh();
-        _ref.invalidate(playerProvider);
-        _ref.invalidate(homeDashboardProvider);
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;
@@ -301,8 +291,6 @@ class BankActionNotifier {
       if (result['success'] == true) {
         _ref.read(playerDepositsProvider.notifier).refresh();
         _ref.read(maxDepositLimitProvider.notifier).refresh();
-        _ref.invalidate(playerProvider);
-        _ref.invalidate(homeDashboardProvider);
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;
@@ -325,10 +313,7 @@ class BankActionNotifier {
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
         _ref.read(playerDepositsProvider.notifier).patchClaim(depositId);
-        _ref.read(playerDepositsProvider.notifier).refresh();
         _ref.read(maxDepositLimitProvider.notifier).refresh();
-        _ref.invalidate(playerProvider);
-        _ref.invalidate(homeDashboardProvider);
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;
@@ -351,10 +336,7 @@ class BankActionNotifier {
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
         _ref.read(playerDepositsProvider.notifier).patchWithdrawEarly(depositId);
-        _ref.read(playerDepositsProvider.notifier).refresh();
         _ref.read(maxDepositLimitProvider.notifier).refresh();
-        _ref.invalidate(playerProvider);
-        _ref.invalidate(homeDashboardProvider);
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;
