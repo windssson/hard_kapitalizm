@@ -103,6 +103,32 @@ class FarmProductionSlotModel {
           : null,
     );
   }
+
+  FarmProductionSlotModel copyWith({
+    String? id,
+    String? ownerKind,
+    String? ownerId,
+    int? slotIndex,
+    String? productId,
+    String? brandId,
+    int? qualityLevel,
+    double? boostMultiplier,
+    bool? isActive,
+    ProductModel? product,
+  }) {
+    return FarmProductionSlotModel(
+      id: id ?? this.id,
+      ownerKind: ownerKind ?? this.ownerKind,
+      ownerId: ownerId ?? this.ownerId,
+      slotIndex: slotIndex ?? this.slotIndex,
+      productId: productId ?? this.productId,
+      brandId: brandId ?? this.brandId,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      boostMultiplier: boostMultiplier ?? this.boostMultiplier,
+      isActive: isActive ?? this.isActive,
+      product: product ?? this.product,
+    );
+  }
 }
 
 class FarmProductionInventoryModel {
@@ -164,6 +190,36 @@ class FarmProductionInventoryModel {
           : null,
     );
   }
+
+  FarmProductionInventoryModel copyWith({
+    String? id,
+    String? ownerKind,
+    String? ownerId,
+    String? inventoryType,
+    String? productId,
+    String? brandId,
+    int? qualityLevel,
+    int? quantity,
+    double? pendingQuantity,
+    double? cost,
+    double? unitVolume,
+    ProductModel? product,
+  }) {
+    return FarmProductionInventoryModel(
+      id: id ?? this.id,
+      ownerKind: ownerKind ?? this.ownerKind,
+      ownerId: ownerId ?? this.ownerId,
+      inventoryType: inventoryType ?? this.inventoryType,
+      productId: productId ?? this.productId,
+      brandId: brandId ?? this.brandId,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      quantity: quantity ?? this.quantity,
+      pendingQuantity: pendingQuantity ?? this.pendingQuantity,
+      cost: cost ?? this.cost,
+      unitVolume: unitVolume ?? this.unitVolume,
+      product: product ?? this.product,
+    );
+  }
 }
 
 class FarmDetailModel {
@@ -180,6 +236,22 @@ class FarmDetailModel {
     required this.slots,
     required this.inventories,
   });
+
+  FarmDetailModel copyWith({
+    FarmModel? farm,
+    FarmTypeDetailModel? farmType,
+    String? cityName,
+    List<FarmProductionSlotModel>? slots,
+    List<FarmProductionInventoryModel>? inventories,
+  }) {
+    return FarmDetailModel(
+      farm: farm ?? this.farm,
+      farmType: farmType ?? this.farmType,
+      cityName: cityName ?? this.cityName,
+      slots: slots ?? this.slots,
+      inventories: inventories ?? this.inventories,
+    );
+  }
 
   bool _isInventoryActiveInput(FarmProductionInventoryModel e) {
     if (!e.isInput) return false;

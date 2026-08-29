@@ -64,4 +64,25 @@ class PlayerAchievementDashboardModel {
       totalCount: (summary['total_count'] as num?)?.toInt() ?? 0,
     );
   }
+
+  PlayerAchievementDashboardModel copyWith({
+    bool? success,
+    List<AchievementBadgeModel>? featuredBadges,
+    List<AchievementBadgeModel>? activeAchievements,
+    List<AchievementBadgeModel>? unlockedAchievements,
+    int? unlockedCount,
+    int? claimableCount,
+    int? totalCount,
+  }) {
+    return PlayerAchievementDashboardModel(
+      success: success ?? this.success,
+      featuredBadges: featuredBadges ?? this.featuredBadges,
+      activeAchievements: activeAchievements ?? this.activeAchievements,
+      unlockedAchievements:
+          unlockedAchievements ?? this.unlockedAchievements,
+      unlockedCount: unlockedCount ?? this.unlockedCount,
+      claimableCount: claimableCount ?? this.claimableCount,
+      totalCount: totalCount ?? this.totalCount,
+    );
+  }
 }

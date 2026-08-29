@@ -3237,6 +3237,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           ref
               .read(storeDetailPageProvider(store.id).notifier)
               .bulkPatchSlotQuantities(updatedStoreSlots);
+          ref
+              .read(storesListProvider.notifier)
+              .bulkPatchSlotQuantities(
+                storeId: store.id,
+                updatedStoreSlots: updatedStoreSlots,
+              );
         }
         final updatedWhSlots = result['updated_warehouse_slots'] as List<dynamic>?;
         if (updatedWhSlots != null && updatedWhSlots.isNotEmpty) {
@@ -4850,6 +4856,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           .read(storeDetailPageProvider(store.id).notifier)
           .patchSlotQuantity(slotId: slot.id, quantity: newStoreQty);
       ref
+          .read(storesListProvider.notifier)
+          .patchSlotQuantity(
+            storeId: store.id,
+            slotId: slot.id,
+            quantity: newStoreQty,
+          );
+      ref
           .read(storeDetailPageProvider(store.id).notifier)
           .patchStoreWarehouseSlotQuantity(
             warehouseSlotId: warehouseSlot.id,
@@ -5147,6 +5160,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       ref
           .read(storeDetailPageProvider(store.id).notifier)
           .patchSlotQuantity(slotId: slot.id, quantity: remainingStoreQty);
+      ref
+          .read(storesListProvider.notifier)
+          .patchSlotQuantity(
+            storeId: store.id,
+            slotId: slot.id,
+            quantity: remainingStoreQty,
+          );
 
       if (whSlotId != null) {
         final currentWhSlots = ref.read(storeDetailPageProvider(store.id)).value?.storeWarehouse?.slots;

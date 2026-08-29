@@ -42,6 +42,32 @@ class ArgeProductModel {
     );
   }
 
+  ArgeProductModel copyWith({
+    String? id,
+    String? urunAdi,
+    String? urunIconu,
+    double? bazSatisFiyati,
+    String? uretimBirimi,
+    int? currentQualityLevel,
+    bool? isProduced,
+    String? hammadde1Id,
+    String? hammadde2Id,
+    String? hammadde3Id,
+  }) {
+    return ArgeProductModel(
+      id: id ?? this.id,
+      urunAdi: urunAdi ?? this.urunAdi,
+      urunIconu: urunIconu ?? this.urunIconu,
+      bazSatisFiyati: bazSatisFiyati ?? this.bazSatisFiyati,
+      uretimBirimi: uretimBirimi ?? this.uretimBirimi,
+      currentQualityLevel: currentQualityLevel ?? this.currentQualityLevel,
+      isProduced: isProduced ?? this.isProduced,
+      hammadde1Id: hammadde1Id ?? this.hammadde1Id,
+      hammadde2Id: hammadde2Id ?? this.hammadde2Id,
+      hammadde3Id: hammadde3Id ?? this.hammadde3Id,
+    );
+  }
+
   static const int maxQualityLevel = 5;
 
   int get targetQuality => currentQualityLevel + 1;
@@ -264,5 +290,33 @@ class ArgeResearchModel {
     final mins = remaining.inMinutes;
     if (mins <= 0) return 0;
     return ((mins / 30).ceil()).clamp(1, 999999);
+  }
+
+  ArgeResearchModel copyWith({
+    String? id,
+    String? playerId,
+    String? productId,
+    String? productName,
+    int? currentQuality,
+    int? targetQuality,
+    double? costPaid,
+    String? status,
+    DateTime? startedAt,
+    DateTime? finishAt,
+    DateTime? completedAt,
+  }) {
+    return ArgeResearchModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      currentQuality: currentQuality ?? this.currentQuality,
+      targetQuality: targetQuality ?? this.targetQuality,
+      costPaid: costPaid ?? this.costPaid,
+      status: status ?? this.status,
+      startedAt: startedAt ?? this.startedAt,
+      finishAt: finishAt ?? this.finishAt,
+      completedAt: completedAt ?? this.completedAt,
+    );
   }
 }

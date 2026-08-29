@@ -53,6 +53,26 @@ class TenderCenterModel {
     );
   }
 
+  TenderCenterModel copyWith({
+    bool? success,
+    List<TenderListItemModel>? openTenders,
+    List<PlayerTenderSummaryModel>? myActiveTenders,
+    List<TenderBidSummaryModel>? myBidTenders,
+    List<PlayerTenderSummaryModel>? myRecentTenders,
+    int? deliveryCount,
+    DateTime? serverTime,
+  }) {
+    return TenderCenterModel(
+      success: success ?? this.success,
+      openTenders: openTenders ?? this.openTenders,
+      myActiveTenders: myActiveTenders ?? this.myActiveTenders,
+      myBidTenders: myBidTenders ?? this.myBidTenders,
+      myRecentTenders: myRecentTenders ?? this.myRecentTenders,
+      deliveryCount: deliveryCount ?? this.deliveryCount,
+      serverTime: serverTime ?? this.serverTime,
+    );
+  }
+
   static List<dynamic> _asList(dynamic value) {
     if (value is List<dynamic>) return value;
     if (value is List) return List<dynamic>.from(value);
@@ -128,6 +148,53 @@ class TenderListItemModel {
           (json['delivery_duration_minutes'] as num?)?.toInt() ?? 0,
       status: (json['status'] ?? 'open').toString(),
       minPlayerLevel: (json['min_player_level'] as num?)?.toInt() ?? 1,
+    );
+  }
+
+  TenderListItemModel copyWith({
+    String? tenderId,
+    String? title,
+    String? cityId,
+    String? cityName,
+    String? productId,
+    String? productName,
+    String? productIcon,
+    int? qualityLevel,
+    int? requiredQuantity,
+    double? rewardCash,
+    double? bondAmount,
+    String? awardType,
+    int? bidCount,
+    double? lowestBidAmount,
+    bool? hasPlayerBid,
+    double? playerBidAmount,
+    DateTime? acceptUntil,
+    int? deliveryDurationMinutes,
+    String? status,
+    int? minPlayerLevel,
+  }) {
+    return TenderListItemModel(
+      tenderId: tenderId ?? this.tenderId,
+      title: title ?? this.title,
+      cityId: cityId ?? this.cityId,
+      cityName: cityName ?? this.cityName,
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      productIcon: productIcon ?? this.productIcon,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      requiredQuantity: requiredQuantity ?? this.requiredQuantity,
+      rewardCash: rewardCash ?? this.rewardCash,
+      bondAmount: bondAmount ?? this.bondAmount,
+      awardType: awardType ?? this.awardType,
+      bidCount: bidCount ?? this.bidCount,
+      lowestBidAmount: lowestBidAmount ?? this.lowestBidAmount,
+      hasPlayerBid: hasPlayerBid ?? this.hasPlayerBid,
+      playerBidAmount: playerBidAmount ?? this.playerBidAmount,
+      acceptUntil: acceptUntil ?? this.acceptUntil,
+      deliveryDurationMinutes:
+          deliveryDurationMinutes ?? this.deliveryDurationMinutes,
+      status: status ?? this.status,
+      minPlayerLevel: minPlayerLevel ?? this.minPlayerLevel,
     );
   }
 }
@@ -240,6 +307,46 @@ class PlayerTenderSummaryModel {
       completedAt: DateTime.tryParse((json['completed_at'] ?? '').toString()),
       failedAt: DateTime.tryParse((json['failed_at'] ?? '').toString()),
       status: (json['status'] ?? 'active').toString(),
+    );
+  }
+
+  PlayerTenderSummaryModel copyWith({
+    String? playerTenderId,
+    String? tenderId,
+    String? title,
+    String? cityName,
+    String? productId,
+    String? productName,
+    String? productIcon,
+    int? qualityLevel,
+    int? requiredQuantity,
+    int? deliveredQuantity,
+    int? remainingQuantity,
+    double? rewardCash,
+    double? bondPaid,
+    DateTime? deadlineAt,
+    DateTime? completedAt,
+    DateTime? failedAt,
+    String? status,
+  }) {
+    return PlayerTenderSummaryModel(
+      playerTenderId: playerTenderId ?? this.playerTenderId,
+      tenderId: tenderId ?? this.tenderId,
+      title: title ?? this.title,
+      cityName: cityName ?? this.cityName,
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      productIcon: productIcon ?? this.productIcon,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      requiredQuantity: requiredQuantity ?? this.requiredQuantity,
+      deliveredQuantity: deliveredQuantity ?? this.deliveredQuantity,
+      remainingQuantity: remainingQuantity ?? this.remainingQuantity,
+      rewardCash: rewardCash ?? this.rewardCash,
+      bondPaid: bondPaid ?? this.bondPaid,
+      deadlineAt: deadlineAt ?? this.deadlineAt,
+      completedAt: completedAt ?? this.completedAt,
+      failedAt: failedAt ?? this.failedAt,
+      status: status ?? this.status,
     );
   }
 }

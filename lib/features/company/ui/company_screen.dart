@@ -957,9 +957,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(playerBrandCompanyProvider);
-        ref.invalidate(playerBrandCompanyProductsProvider);
-        ref.invalidate(activeMarketingCampaignsProvider);
+        await ref.read(playerBrandCompanyProvider.notifier).refresh();
+        await ref.read(playerBrandCompanyProductsProvider.notifier).refresh();
+        await ref.read(activeMarketingCampaignsProvider.notifier).refresh();
       },
       child: ListView(
         padding: EdgeInsets.symmetric(vertical: 8.h),

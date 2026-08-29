@@ -201,8 +201,8 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
         productId: null,
         productName: null,
         productIcon: null,
-        quantity: slot.quantity,
-        pendingQuantity: slot.pendingQuantity,
+        quantity: 0,
+        pendingQuantity: 0,
         qualityLevel: 0,
         price: 0,
         cost: 0,
@@ -211,7 +211,7 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
         pendingSale: 0,
         isActive: slot.isActive,
         isEmpty: true,
-        usedCapacityRatio: slot.usedCapacityRatio,
+        usedCapacityRatio: 0.0,
         product: null,
       ),
     );
@@ -229,15 +229,99 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
     _patchStoreSlot(
       storeId: storeId,
       slotId: slotId,
+      patcher: (slot) {
+        final isDifferentProduct = slot.productId != productId ||
+            slot.qualityLevel != qualityLevel ||
+            slot.brandId != (brandId ?? slot.brandId);
+        return slot.copyWith(
+          productId: productId,
+          productName: productName ?? slot.productName,
+          productIcon: productIcon ?? slot.productIcon,
+          brandId: brandId ?? slot.brandId,
+          qualityLevel: qualityLevel,
+          isEmpty: false,
+          quantity: isDifferentProduct ? 0 : slot.quantity,
+        );
+      },
+    );
+  }
+
+  void patchSlotQuantity({
+    required String storeId,
+    required String slotId,
+    required int quantity,
+  }) {
+    _patchStoreSlot(
+      storeId: storeId,
+      slotId: slotId,
       patcher: (slot) => slot.copyWith(
-        productId: productId,
-        productName: productName ?? slot.productName,
-        productIcon: productIcon ?? slot.productIcon,
-        brandId: brandId ?? slot.brandId,
-        qualityLevel: qualityLevel,
-        isEmpty: false,
+        quantity: quantity,
+        isEmpty: (slot.productId ?? '').isEmpty,
       ),
     );
+  }
+
+  void bulkPatchSlotQuantities({
+    required String storeId,
+    required List<dynamic> updatedStoreSlots,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final qtyMap = <String, Map<String, dynamic>>{};
+    for (final item in updatedStoreSlots) {
+      if (item is Map) {
+        final id = item['id']?.toString();
+        if (id != null) {
+          qtyMap[id] = Map<String, dynamic>.from(item);
+        }
+      }
+    }
+    if (qtyMap.isEmpty) return;
+
+    final storeIndex = current.indexWhere((item) => item.id == storeId);
+    if (storeIndex < 0) return;
+
+    final store = current[storeIndex];
+    final updatedSlots = store.slots.map((slot) {
+      if (qtyMap.containsKey(slot.id)) {
+        final data = qtyMap[slot.id]!;
+        final qty = (data['quantity'] as num?)?.toInt() ?? slot.quantity;
+        final cost = (data['cost'] as num?)?.toDouble() ?? slot.cost;
+        return slot.copyWith(quantity: qty, cost: cost);
+      }
+      return slot;
+    }).toList();
+
+    final next = [...current];
+    next[storeIndex] = store.copyWith(slots: updatedSlots);
+    state = AsyncData(next);
+  }
+
+  void patchConstructionFinishAt({
+    required String storeId,
+    required DateTime finishAt,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final storeIndex = current.indexWhere((item) => item.id == storeId);
+    if (storeIndex < 0) return;
+
+    final store = current[storeIndex];
+    final next = [...current];
+    next[storeIndex] = store.copyWith(finishAt: finishAt);
+    state = AsyncData(next);
+  }
+
+  void patchStoreLevel({required String storeId, required int level}) {
+    final current = state.value;
+    if (current == null) return;
+    final storeIndex = current.indexWhere((item) => item.id == storeId);
+    if (storeIndex < 0) return;
+    final store = current[storeIndex];
+    final next = [...current];
+    next[storeIndex] = store.copyWith(level: level);
+    state = AsyncData(next);
   }
 
   void _patchStoreSlot({
@@ -258,17 +342,6 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
 
     final next = [...current];
     next[storeIndex] = store.copyWith(slots: slots);
-    state = AsyncData(next);
-  }
-
-  void patchStoreLevel({required String storeId, required int level}) {
-    final current = state.value;
-    if (current == null) return;
-    final storeIndex = current.indexWhere((item) => item.id == storeId);
-    if (storeIndex < 0) return;
-    final store = current[storeIndex];
-    final next = [...current];
-    next[storeIndex] = store.copyWith(level: level);
     state = AsyncData(next);
   }
 }
@@ -399,8 +472,8 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         productId: null,
         productName: null,
         productIcon: null,
-        quantity: slot.quantity,
-        pendingQuantity: slot.pendingQuantity,
+        quantity: 0,
+        pendingQuantity: 0,
         qualityLevel: 0,
         price: 0,
         cost: 0,
@@ -409,7 +482,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         pendingSale: 0,
         isActive: slot.isActive,
         isEmpty: true,
-        usedCapacityRatio: slot.usedCapacityRatio,
+        usedCapacityRatio: 0.0,
         product: null,
       ),
     );
@@ -425,14 +498,20 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
   }) {
     _patchStoreSlot(
       slotId: slotId,
-      patcher: (slot) => slot.copyWith(
-        productId: productId,
-        productName: productName ?? slot.productName,
-        productIcon: productIcon ?? slot.productIcon,
-        brandId: brandId ?? slot.brandId,
-        qualityLevel: qualityLevel,
-        isEmpty: false,
-      ),
+      patcher: (slot) {
+        final isDifferentProduct = slot.productId != productId ||
+            slot.qualityLevel != qualityLevel ||
+            slot.brandId != (brandId ?? slot.brandId);
+        return slot.copyWith(
+          productId: productId,
+          productName: productName ?? slot.productName,
+          productIcon: productIcon ?? slot.productIcon,
+          brandId: brandId ?? slot.brandId,
+          qualityLevel: qualityLevel,
+          isEmpty: false,
+          quantity: isDifferentProduct ? 0 : slot.quantity,
+        );
+      },
     );
   }
 

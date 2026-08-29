@@ -54,13 +54,12 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   String? get _currentBrandName =>
       ref.read(playerBrandCompanyProvider).value?.brandName;
 
-  void _refreshFactoryDetail() {
-    ref.invalidate(factoryDetailProvider(widget.factoryId));
-    ref.invalidate(activeFactoryBoostProvider(widget.factoryId));
-    ref.invalidate(activeFactoryUpgradeProvider(widget.factoryId));
-    ref.read(factoryDetailProvider(widget.factoryId).future);
-    ref.read(activeFactoryBoostProvider(widget.factoryId).future);
-    ref.read(activeFactoryUpgradeProvider(widget.factoryId).future);
+  Future<void> _refreshFactoryDetail() async {
+    await Future.wait([
+      ref.read(factoryDetailProvider(widget.factoryId).notifier).refresh(),
+      ref.read(activeFactoryBoostProvider(widget.factoryId).future),
+      ref.read(activeFactoryUpgradeProvider(widget.factoryId).future),
+    ]);
   }
 
   Future<void> _refreshFactoryEcosystem({
@@ -1939,7 +1938,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           );
                       if (!context.mounted) return;
                       if (result['success'] == true) {
-                        await _refreshFactoryEcosystem();
+                        ref
+                            .read(activeFactoryBoostProvider(widget.factoryId).notifier)
+                            .setBoost(BuildingBoostModel.fromJson(result));
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
@@ -2112,7 +2113,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             .startFactoryUpgrade(detail.factory.id, syncProviders: false);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          await _refreshFactoryEcosystem();
+          ref
+              .read(activeFactoryUpgradeProvider(widget.factoryId).notifier)
+              .setUpgrade(BuildingUpgradeModel.fromJson(result));
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
@@ -2148,7 +2151,17 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     if (!mounted) return;
 
     if (result['success'] == true) {
-      await _refreshFactoryEcosystem(includePlayer: false);
+      final newLevel = (result['target_level'] as num?)?.toInt() ??
+          (result['new_level'] as num?)?.toInt() ??
+          upgrade.targetLevel;
+      ref.read(activeFactoryUpgradeProvider(widget.factoryId).notifier).clear();
+      ref
+          .read(factoryDetailProvider(widget.factoryId).notifier)
+          .patchFactoryLevel(newLevel);
+      ref
+          .read(factoryListProvider.notifier)
+          .patchFactoryLevel(factoryId: widget.factoryId, level: newLevel);
+
       if (!mounted) return;
       AppSnackbar.show(
         context,
@@ -2182,7 +2195,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
 
     if (success) {
-      await _refreshFactoryEcosystem(includePlayer: false);
+      ref
+          .read(activeFactoryUpgradeProvider(widget.factoryId).notifier)
+          .reduceTime(const Duration(minutes: 10));
     }
   }
 
@@ -2297,13 +2312,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           factoryId: detail.factory.id,
           productId: product.id,
           qualityLevel: qualityLevel,
-          syncProviders: false,
+          syncProviders: true,
         );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshFactoryEcosystem(includePlayer: false);
-      if (!context.mounted) return;
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
       final cleanupNote = deletedObsoleteCount > 0
@@ -2336,18 +2349,17 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     WidgetRef ref,
     FactoryDetailModel detail,
   ) async {
+    final nextActive = !detail.factory.isActive;
     final result = await ref
         .read(factoryActionProvider)
         .setFactoryActive(
           factoryId: detail.factory.id,
-          isActive: !detail.factory.isActive,
-          syncProviders: false,
+          isActive: nextActive,
+          syncProviders: true,
         );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshFactoryEcosystem();
-      if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Başarılı',

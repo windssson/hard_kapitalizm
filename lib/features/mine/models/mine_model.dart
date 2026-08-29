@@ -70,4 +70,38 @@ class MineModel {
       'updated_at': updatedAt.toIso8601String(),
     };
   }
+
+  MineModel copyWith({
+    String? id,
+    String? playerId,
+    String? mineTypeId,
+    String? cityId,
+    String? name,
+    int? level,
+    String? productId,
+    String? brandId,
+    int? qualityLevel,
+    int? outputCapacity,
+    double? boostMultiplier,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return MineModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      mineTypeId: mineTypeId ?? this.mineTypeId,
+      cityId: cityId ?? this.cityId,
+      name: name ?? this.name,
+      level: level ?? this.level,
+      productId: productId ?? this.productId,
+      brandId: brandId ?? this.brandId,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      outputCapacity: outputCapacity ?? this.outputCapacity,
+      boostMultiplier: boostMultiplier ?? this.boostMultiplier,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

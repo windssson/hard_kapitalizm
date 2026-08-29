@@ -39,4 +39,18 @@ class PlayerNotificationDashboardModel {
           (summaryMap['active_warning_count'] as num?)?.toInt() ?? 0,
     );
   }
+
+  PlayerNotificationDashboardModel copyWith({
+    bool? success,
+    List<PlayerNotificationModel>? notifications,
+    int? unreadCount,
+    int? activeWarningCount,
+  }) {
+    return PlayerNotificationDashboardModel(
+      success: success ?? this.success,
+      notifications: notifications ?? this.notifications,
+      unreadCount: unreadCount ?? this.unreadCount,
+      activeWarningCount: activeWarningCount ?? this.activeWarningCount,
+    );
+  }
 }

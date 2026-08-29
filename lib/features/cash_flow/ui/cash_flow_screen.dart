@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/cash_flow/data/cash_flow_provider.dart';
@@ -1253,11 +1254,10 @@ Widget _buildReceiptRow(String label, String value, {bool isCopyable = false, Bu
             onTap: isCopyable && context != null
                 ? () {
                     Clipboard.setData(ClipboardData(text: value));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('İşlem No kopyalandı: $value'),
-                        duration: const Duration(seconds: 2),
-                      ),
+                    AppSnackbar.info(
+                      context,
+                      'İşlem No kopyalandı: $value',
+                      duration: const Duration(seconds: 2),
                     );
                   }
                 : null,

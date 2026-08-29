@@ -52,4 +52,36 @@ class LoanModel {
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
     );
   }
+
+  LoanModel copyWith({
+    String? id,
+    String? playerId,
+    double? amount,
+    double? interestRate,
+    double? totalDue,
+    double? totalPaid,
+    int? installmentsTotal,
+    int? installmentsPaid,
+    double? installmentAmount,
+    DateTime? nextInstallmentDueAt,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return LoanModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      amount: amount ?? this.amount,
+      interestRate: interestRate ?? this.interestRate,
+      totalDue: totalDue ?? this.totalDue,
+      totalPaid: totalPaid ?? this.totalPaid,
+      installmentsTotal: installmentsTotal ?? this.installmentsTotal,
+      installmentsPaid: installmentsPaid ?? this.installmentsPaid,
+      installmentAmount: installmentAmount ?? this.installmentAmount,
+      nextInstallmentDueAt: nextInstallmentDueAt ?? this.nextInstallmentDueAt,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

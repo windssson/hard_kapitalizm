@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -267,8 +268,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
             child: GestureDetector(
               onTap: () {
                 if (userCityId == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Merkez şehriniz henüz tanımlanmamış.')),
+                  AppSnackbar.warning(
+                    context,
+                    'Merkez şehriniz henüz tanımlanmamış.',
                   );
                   return;
                 }

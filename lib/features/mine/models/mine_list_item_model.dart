@@ -36,4 +36,22 @@ class MineListItemModel {
   }
 
   bool get hasWarning => warningReason != null;
+
+  MineListItemModel copyWith({
+    MineModel? mine,
+    String? cityName,
+    String? mineTypeName,
+    String? mineTypeIcon,
+    int? outputStockQuantity,
+    ProductModel? selectedProduct,
+  }) {
+    return MineListItemModel(
+      mine: mine ?? this.mine,
+      cityName: cityName ?? this.cityName,
+      mineTypeName: mineTypeName ?? this.mineTypeName,
+      mineTypeIcon: mineTypeIcon ?? this.mineTypeIcon,
+      outputStockQuantity: outputStockQuantity ?? this.outputStockQuantity,
+      selectedProduct: selectedProduct ?? this.selectedProduct,
+    );
+  }
 }

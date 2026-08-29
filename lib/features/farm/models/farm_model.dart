@@ -64,4 +64,36 @@ class FarmModel {
       'updated_at': updatedAt.toIso8601String(),
     };
   }
+
+  FarmModel copyWith({
+    String? id,
+    String? playerId,
+    String? farmTypeId,
+    String? cityId,
+    String? name,
+    int? level,
+    int? currentSlotCount,
+    int? maxSlotCount,
+    int? inputCapacity,
+    int? outputCapacity,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return FarmModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      farmTypeId: farmTypeId ?? this.farmTypeId,
+      cityId: cityId ?? this.cityId,
+      name: name ?? this.name,
+      level: level ?? this.level,
+      currentSlotCount: currentSlotCount ?? this.currentSlotCount,
+      maxSlotCount: maxSlotCount ?? this.maxSlotCount,
+      inputCapacity: inputCapacity ?? this.inputCapacity,
+      outputCapacity: outputCapacity ?? this.outputCapacity,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

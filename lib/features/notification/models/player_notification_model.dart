@@ -55,4 +55,32 @@ class PlayerNotificationModel {
           DateTime.now(),
     );
   }
+
+  PlayerNotificationModel copyWith({
+    String? id,
+    String? kind,
+    String? category,
+    String? title,
+    String? message,
+    String? entityKind,
+    String? entityId,
+    String? severity,
+    String? status,
+    Map<String, dynamic>? meta,
+    DateTime? createdAt,
+  }) {
+    return PlayerNotificationModel(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      category: category ?? this.category,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      entityKind: entityKind ?? this.entityKind,
+      entityId: entityId ?? this.entityId,
+      severity: severity ?? this.severity,
+      status: status ?? this.status,
+      meta: meta ?? this.meta,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }

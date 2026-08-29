@@ -5,10 +5,13 @@
 -- ============================================================================
 
 -- 1. ENHANCE bulk_update_store_slot_prices
+DROP FUNCTION IF EXISTS public.bulk_update_store_slot_prices(uuid, uuid, integer);
+DROP FUNCTION IF EXISTS public.bulk_update_store_slot_prices(uuid, uuid, numeric);
+
 CREATE OR REPLACE FUNCTION public.bulk_update_store_slot_prices(
   p_player_id uuid,
   p_store_id uuid,
-  p_markup_percent integer
+  p_markup_percent numeric
 )
 RETURNS jsonb
 LANGUAGE plpgsql

@@ -96,4 +96,47 @@ class LogisticsVehicleModel {
     return (routeCityAId == fromCityId && routeCityBId == toCityId) ||
         (routeCityAId == toCityId && routeCityBId == fromCityId);
   }
+
+  LogisticsVehicleModel copyWith({
+    String? id,
+    String? playerId,
+    String? logisticsCompanyId,
+    String? logisticsVehicleTypeId,
+    String? routeCityAId,
+    String? routeCityBId,
+    int? capacity,
+    int? speedKmh,
+    int? fuelCapacity,
+    int? currentFuel,
+    double? fuelCost,
+    double? fuelRate,
+    int? condition,
+    String? status,
+    bool? isAvailableForRent,
+    double? rentalPrice,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return LogisticsVehicleModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      logisticsCompanyId: logisticsCompanyId ?? this.logisticsCompanyId,
+      logisticsVehicleTypeId:
+          logisticsVehicleTypeId ?? this.logisticsVehicleTypeId,
+      routeCityAId: routeCityAId ?? this.routeCityAId,
+      routeCityBId: routeCityBId ?? this.routeCityBId,
+      capacity: capacity ?? this.capacity,
+      speedKmh: speedKmh ?? this.speedKmh,
+      fuelCapacity: fuelCapacity ?? this.fuelCapacity,
+      currentFuel: currentFuel ?? this.currentFuel,
+      fuelCost: fuelCost ?? this.fuelCost,
+      fuelRate: fuelRate ?? this.fuelRate,
+      condition: condition ?? this.condition,
+      status: status ?? this.status,
+      isAvailableForRent: isAvailableForRent ?? this.isAvailableForRent,
+      rentalPrice: rentalPrice ?? this.rentalPrice,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

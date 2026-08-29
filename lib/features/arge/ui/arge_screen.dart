@@ -14,6 +14,7 @@ import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
+import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/arge/data/arge_provider.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_product_model.dart';
@@ -1121,13 +1122,36 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }
 
   Future<void> _onStartResearch(String productId) async {
+    final products = ref.read(argeProductsProvider).value ?? const [];
+    ArgeProductModel? targetProd;
+    for (final p in products) {
+      if (p.id == productId) {
+        targetProd = p;
+        break;
+      }
+    }
+    final cost = targetProd?.upgradeCost ?? 0.0;
+
     setState(() => _isUpgrading = true);
-    final result = await ref.read(argeActionProvider).startResearch(productId);
+    final result = await ref
+        .read(argeActionProvider)
+        .startResearch(productId, syncProviders: false);
     setState(() => _isUpgrading = false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      _refreshCenterEcosystem(ref.read(playerArgeCenterProvider).value?.id);
+      if (cost > 0) {
+        final currentCash = ref.read(playerProvider).value?.cash ?? 0.0;
+        ref
+            .read(playerProvider.notifier)
+            .patchCash((currentCash - cost).clamp(0.0, double.infinity));
+        FloatingFeedback.show(
+          context,
+          amount: cost,
+          type: FloatingFeedbackType.cashRemove,
+        );
+      }
+      ref.invalidate(activeArgeResearchesProvider);
       AppSnackbar.show(
         context,
         title: 'Araştırma Başladı',
@@ -1148,12 +1172,21 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     setState(() => _isUpgrading = true);
     final result = await ref
         .read(argeActionProvider)
-        .completeResearch(researchId);
+        .completeResearch(researchId, syncProviders: false);
     setState(() => _isUpgrading = false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      _refreshCenterEcosystem(ref.read(playerArgeCenterProvider).value?.id);
+      ref
+          .read(activeArgeResearchesProvider.notifier)
+          .removeResearch(researchId);
+      final productId = result['product_id']?.toString();
+      final newQuality = (result['new_quality_level'] as num?)?.toInt();
+      if (productId != null && newQuality != null) {
+        ref
+            .read(argeProductsProvider.notifier)
+            .patchProductQuality(productId, newQuality);
+      }
       AppSnackbar.show(
         context,
         title: 'Geliştirme Tamamlandı!',
@@ -1233,12 +1266,33 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     setState(() => _isUpgrading = true);
     final result = await ref
         .read(argeActionProvider)
-        .finishWithGold(researchId);
+        .finishWithGold(researchId, syncProviders: false);
     setState(() => _isUpgrading = false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      _refreshCenterEcosystem(ref.read(playerArgeCenterProvider).value?.id);
+      final goldSpent =
+          (result['gold_spent'] as num?)?.toDouble() ?? goldCost.toDouble();
+      final currentGold = ref.read(playerProvider).value?.gold ?? 0.0;
+      ref
+          .read(playerProvider.notifier)
+          .patchGold((currentGold - goldSpent).clamp(0.0, double.infinity));
+      FloatingFeedback.show(
+        context,
+        amount: goldSpent,
+        type: FloatingFeedbackType.gold,
+      );
+
+      ref
+          .read(activeArgeResearchesProvider.notifier)
+          .removeResearch(researchId);
+      final productId = result['product_id']?.toString();
+      final newQuality = (result['new_quality_level'] as num?)?.toInt();
+      if (productId != null && newQuality != null) {
+        ref
+            .read(argeProductsProvider.notifier)
+            .patchProductQuality(productId, newQuality);
+      }
       AppSnackbar.show(
         context,
         title: 'Tamamlandı!',
@@ -1370,12 +1424,14 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     setState(() => _isCenterSubmitting = true);
     final result = await ref
         .read(argeActionProvider)
-        .startCenterUpgrade(centerId);
+        .startCenterUpgrade(centerId, syncProviders: false);
     setState(() => _isCenterSubmitting = false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      _refreshCenterEcosystem(centerId);
+      ref
+          .read(activeArgeCenterUpgradeProvider(centerId).notifier)
+          .setUpgrade(BuildingUpgradeModel.fromJson(result));
       AppSnackbar.show(
         context,
         title: 'Yukseltme Basladi',
@@ -1397,11 +1453,20 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   ) async {
     final result = await ref
         .read(argeActionProvider)
-        .finishCenterUpgradeWithGold(upgrade.id);
+        .finishCenterUpgradeWithGold(
+          upgrade.id,
+          centerId: upgrade.entityId,
+          syncProviders: false,
+        );
 
     if (!mounted) return;
     if (result['success'] == true) {
-      _refreshCenterEcosystem(upgrade.entityId);
+      final targetLevel =
+          (result['target_level'] as num?)?.toInt() ?? upgrade.targetLevel;
+      ref
+          .read(activeArgeCenterUpgradeProvider(upgrade.entityId).notifier)
+          .clear();
+      ref.read(playerArgeCenterProvider.notifier).patchLevel(targetLevel);
       AppSnackbar.show(
         context,
         title: 'Yükseltme Tamamlandı',
@@ -1429,12 +1494,18 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       resourceId: upgrade.id,
       onApplyReduction: () => ref
           .read(argeActionProvider)
-          .reduceCenterUpgradeTimeWithAd(upgrade.id),
+          .reduceCenterUpgradeTimeWithAd(
+            upgrade.id,
+            centerId: upgrade.entityId,
+            syncProviders: false,
+          ),
       successMessage: 'Merkez yükseltme süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
-      _refreshCenterEcosystem(upgrade.entityId);
+      ref
+          .read(activeArgeCenterUpgradeProvider(upgrade.entityId).notifier)
+          .reduceTime(const Duration(minutes: 10));
     }
   }
 
@@ -1813,12 +1884,25 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
   Future<void> _onStartCenterConstruction() async {
     setState(() => _isCenterSubmitting = true);
-    final result = await ref.read(argeActionProvider).startCenterConstruction();
+    final result = await ref
+        .read(argeActionProvider)
+        .startCenterConstruction(syncProviders: false);
     setState(() => _isCenterSubmitting = false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      _refreshCenterEcosystem();
+      const setupCost = 25000.0;
+      final currentCash = ref.read(playerProvider).value?.cash ?? 0.0;
+      ref
+          .read(playerProvider.notifier)
+          .patchCash((currentCash - setupCost).clamp(0.0, double.infinity));
+      FloatingFeedback.show(
+        context,
+        amount: setupCost,
+        type: FloatingFeedbackType.cashRemove,
+      );
+
+      ref.invalidate(playerArgeConstructionProvider);
       AppSnackbar.show(
         context,
         title: 'Kurulum Basladi',
@@ -1844,7 +1928,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
     if (!mounted) return;
     if (result['success'] == true) {
-      _refreshCenterEcosystem();
+      ref.read(playerArgeConstructionProvider.notifier).clear();
+      ref.invalidate(playerArgeCenterProvider);
       AppSnackbar.show(
         context,
         title: 'Kurulum Tamamlandı',
@@ -1904,6 +1989,9 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.textOnAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(
@@ -1923,12 +2011,25 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     setState(() => _isCenterSubmitting = true);
     final result = await ref
         .read(argeActionProvider)
-        .finishConstructionWithGold(constructionId);
+        .finishConstructionWithGold(constructionId, syncProviders: false);
     setState(() => _isCenterSubmitting = false);
 
     if (!mounted) return;
     if (result['success'] == true) {
-      _refreshCenterEcosystem();
+      final goldSpent =
+          (result['gold_spent'] as num?)?.toDouble() ?? goldCost.toDouble();
+      final currentGold = ref.read(playerProvider).value?.gold ?? 0.0;
+      ref
+          .read(playerProvider.notifier)
+          .patchGold((currentGold - goldSpent).clamp(0.0, double.infinity));
+      FloatingFeedback.show(
+        context,
+        amount: goldSpent,
+        type: FloatingFeedbackType.gold,
+      );
+
+      ref.read(playerArgeConstructionProvider.notifier).clear();
+      ref.invalidate(playerArgeCenterProvider);
       AppSnackbar.show(
         context,
         title: 'Kurulum Tamamlandı',

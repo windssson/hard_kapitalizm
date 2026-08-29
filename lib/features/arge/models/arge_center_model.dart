@@ -30,4 +30,26 @@ class ArgeCenterModel {
       isActive: json['is_active'] as bool? ?? true,
     );
   }
+
+  ArgeCenterModel copyWith({
+    String? id,
+    String? playerId,
+    String? name,
+    int? level,
+    int? maxConcurrentResearches,
+    double? durationReductionPct,
+    bool? isActive,
+  }) {
+    return ArgeCenterModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      name: name ?? this.name,
+      level: level ?? this.level,
+      maxConcurrentResearches:
+          maxConcurrentResearches ?? this.maxConcurrentResearches,
+      durationReductionPct:
+          durationReductionPct ?? this.durationReductionPct,
+      isActive: isActive ?? this.isActive,
+    );
+  }
 }

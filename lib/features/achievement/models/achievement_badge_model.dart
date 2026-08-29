@@ -95,4 +95,42 @@ class AchievementBadgeModel {
       rewardGold: (rewardMap['gold'] as num?)?.toInt() ?? 0,
     );
   }
+
+  AchievementBadgeModel copyWith({
+    String? id,
+    String? category,
+    String? title,
+    String? description,
+    String? badgeKey,
+    String? badgeColor,
+    int? targetCount,
+    int? progressCount,
+    bool? isUnlocked,
+    bool? isClaimed,
+    bool? isClaimable,
+    DateTime? unlockedAt,
+    double? progressRatio,
+    int? rewardXp,
+    double? rewardCash,
+    int? rewardGold,
+  }) {
+    return AchievementBadgeModel(
+      id: id ?? this.id,
+      category: category ?? this.category,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      badgeKey: badgeKey ?? this.badgeKey,
+      badgeColor: badgeColor ?? this.badgeColor,
+      targetCount: targetCount ?? this.targetCount,
+      progressCount: progressCount ?? this.progressCount,
+      isUnlocked: isUnlocked ?? this.isUnlocked,
+      isClaimed: isClaimed ?? this.isClaimed,
+      isClaimable: isClaimable ?? this.isClaimable,
+      unlockedAt: unlockedAt ?? this.unlockedAt,
+      progressRatio: progressRatio ?? this.progressRatio,
+      rewardXp: rewardXp ?? this.rewardXp,
+      rewardCash: rewardCash ?? this.rewardCash,
+      rewardGold: rewardGold ?? this.rewardGold,
+    );
+  }
 }

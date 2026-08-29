@@ -38,7 +38,7 @@ class _TenderCenterScreenState extends ConsumerState<TenderCenterScreen> {
 
   Future<void> _refresh() async {
     await ref.read(tenderActionProvider).refreshTenderRuntime();
-    final _ = await ref.refresh(tenderCenterProvider.future);
+    await ref.read(tenderCenterProvider.notifier).refresh();
   }
 
   @override

@@ -6,40 +6,98 @@ import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_product_model.dart';
 
+Future<List<ArgeProductModel>> _fetchArgeProducts() async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+  if (user == null) return [];
+
+  final response = await supabase.rpc('get_arge_products_with_quality');
+
+  return (response as List<dynamic>)
+      .map((p) {
+        final map = Map<String, dynamic>.from(p as Map);
+        final quality =
+            (map['current_quality_level'] as num?)?.toInt() ?? 1;
+        return ArgeProductModel.fromJson(map, quality);
+      })
+      .toList();
+}
+
+class ArgeProductsNotifier extends AsyncNotifier<List<ArgeProductModel>> {
+  @override
+  Future<List<ArgeProductModel>> build() => _fetchArgeProducts();
+
+  Future<List<ArgeProductModel>> refresh() async {
+    final list = await _fetchArgeProducts();
+    state = AsyncData(list);
+    return list;
+  }
+
+  void patchProductQuality(String productId, int newQualityLevel) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((prod) {
+      if (prod.id == productId) {
+        return prod.copyWith(currentQualityLevel: newQualityLevel);
+      }
+      return prod;
+    }).toList();
+    state = AsyncData(updated);
+  }
+}
+
 final argeProductsProvider =
-    FutureProvider.autoDispose<List<ArgeProductModel>>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) return [];
+    AsyncNotifierProvider<ArgeProductsNotifier, List<ArgeProductModel>>(
+      ArgeProductsNotifier.new,
+    );
 
-      final response = await supabase.rpc('get_arge_products_with_quality');
+Future<List<ArgeResearchModel>> _fetchActiveArgeResearches() async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+  if (user == null) return [];
 
-      return (response as List<dynamic>)
-          .map((p) {
-            final map = Map<String, dynamic>.from(p as Map);
-            final quality =
-                (map['current_quality_level'] as num?)?.toInt() ?? 1;
-            return ArgeProductModel.fromJson(map, quality);
-          })
-          .toList();
-    });
+  final response = await supabase.rpc(
+    'get_active_arge_researches',
+    params: {'p_player_id': user.id},
+  );
 
-final activeArgeResearchesProvider =
-    FutureProvider<List<ArgeResearchModel>>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) return [];
+  final list = response as List<dynamic>;
+  return list
+      .map((r) => ArgeResearchModel.fromJson(Map<String, dynamic>.from(r as Map)))
+      .toList();
+}
 
-      final response = await supabase.rpc(
-        'get_active_arge_researches',
-        params: {'p_player_id': user.id},
-      );
+class ActiveArgeResearchesNotifier
+    extends AsyncNotifier<List<ArgeResearchModel>> {
+  @override
+  Future<List<ArgeResearchModel>> build() => _fetchActiveArgeResearches();
 
-      final list = response as List<dynamic>;
-      return list
-          .map((r) => ArgeResearchModel.fromJson(Map<String, dynamic>.from(r as Map)))
-          .toList();
-    });
+  Future<List<ArgeResearchModel>> refresh() async {
+    final list = await _fetchActiveArgeResearches();
+    state = AsyncData(list);
+    return list;
+  }
+
+  void addResearch(ArgeResearchModel research) {
+    final current = state.value ?? [];
+    state = AsyncData([...current, research]);
+  }
+
+  void removeResearch(String researchId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((r) => r.id != researchId).toList());
+  }
+
+  void clear() {
+    state = const AsyncData([]);
+  }
+}
+
+final activeArgeResearchesProvider = AsyncNotifierProvider<
+    ActiveArgeResearchesNotifier,
+    List<ArgeResearchModel>
+>(ActiveArgeResearchesNotifier.new);
 
 final activeArgeResearchProvider =
     Provider<AsyncValue<ArgeResearchModel?>>((ref) {
@@ -49,65 +107,154 @@ final activeArgeResearchProvider =
       );
     });
 
+Future<ArgeCenterModel?> _fetchPlayerArgeCenter() async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+  if (user == null) return null;
+
+  final response = await supabase.rpc('get_player_arge_center');
+  if (response == null) return null;
+
+  return ArgeCenterModel.fromJson(Map<String, dynamic>.from(response as Map));
+}
+
+class PlayerArgeCenterNotifier extends AsyncNotifier<ArgeCenterModel?> {
+  @override
+  Future<ArgeCenterModel?> build() => _fetchPlayerArgeCenter();
+
+  Future<ArgeCenterModel?> refresh() async {
+    final center = await _fetchPlayerArgeCenter();
+    state = AsyncData(center);
+    return center;
+  }
+
+  void setCenter(ArgeCenterModel? center) {
+    state = AsyncData(center);
+  }
+
+  void patchLevel(int newLevel) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(level: newLevel));
+  }
+}
+
 final playerArgeCenterProvider =
-    FutureProvider.autoDispose<ArgeCenterModel?>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) return null;
+    AsyncNotifierProvider<PlayerArgeCenterNotifier, ArgeCenterModel?>(
+      PlayerArgeCenterNotifier.new,
+    );
 
-      final response = await supabase.rpc('get_player_arge_center');
-      if (response == null) return null;
+Future<Map<String, dynamic>?> _fetchPlayerArgeConstruction() async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+  if (user == null) return null;
 
-      return ArgeCenterModel.fromJson(Map<String, dynamic>.from(response as Map));
+  final response = await supabase.rpc(
+    'get_player_building_constructions',
+    params: {
+      'p_building_kind': 'arge_center',
+      'p_status': 'in_progress',
+    },
+  );
+
+  final rows = response as List<dynamic>? ?? const [];
+  if (rows.isEmpty) return null;
+
+  return Map<String, dynamic>.from(rows.first as Map);
+}
+
+class PlayerArgeConstructionNotifier
+    extends AsyncNotifier<Map<String, dynamic>?> {
+  @override
+  Future<Map<String, dynamic>?> build() => _fetchPlayerArgeConstruction();
+
+  Future<Map<String, dynamic>?> refresh() async {
+    final data = await _fetchPlayerArgeConstruction();
+    state = AsyncData(data);
+    return data;
+  }
+
+  void setConstruction(Map<String, dynamic>? data) {
+    state = AsyncData(data);
+  }
+
+  void patchFinishAt(DateTime newFinishAt) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData({
+      ...current,
+      'finish_at': newFinishAt.toIso8601String(),
     });
+  }
 
-final playerArgeConstructionProvider =
-    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) return null;
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
 
-      final response = await supabase.rpc(
-        'get_player_building_constructions',
-        params: {
-          'p_building_kind': 'arge_center',
-          'p_status': 'in_progress',
-        },
-      );
+final playerArgeConstructionProvider = AsyncNotifierProvider<
+    PlayerArgeConstructionNotifier,
+    Map<String, dynamic>?
+>(PlayerArgeConstructionNotifier.new);
 
-      final rows = response as List<dynamic>? ?? const [];
-      if (rows.isEmpty) return null;
+Future<BuildingUpgradeModel?> _fetchActiveArgeCenterUpgrade(
+    String centerId) async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+  if (user == null) return null;
 
-      return Map<String, dynamic>.from(rows.first as Map);
-    });
+  final response = await supabase.rpc(
+    'get_player_active_building_upgrade',
+    params: {
+      'p_building_kind': 'arge_center',
+      'p_entity_id': centerId,
+    },
+  );
 
-final activeArgeCenterUpgradeProvider =
-    FutureProvider.autoDispose.family<BuildingUpgradeModel?, String>((
-      ref,
-      centerId,
-    ) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) {
-        return null;
-      }
+  if (response == null) return null;
 
-      final response = await supabase.rpc(
-        'get_player_active_building_upgrade',
-        params: {
-          'p_building_kind': 'arge_center',
-          'p_entity_id': centerId,
-        },
-      );
+  return BuildingUpgradeModel.fromJsonNullable(
+    Map<String, dynamic>.from(response as Map),
+  );
+}
 
-      if (response == null) {
-        return null;
-      }
+class ActiveArgeCenterUpgradeNotifier
+    extends AsyncNotifier<BuildingUpgradeModel?> {
+  ActiveArgeCenterUpgradeNotifier(this._centerId);
 
-      return BuildingUpgradeModel.fromJsonNullable(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
+  final String _centerId;
+
+  @override
+  Future<BuildingUpgradeModel?> build() =>
+      _fetchActiveArgeCenterUpgrade(_centerId);
+
+  Future<BuildingUpgradeModel?> refresh() async {
+    final data = await _fetchActiveArgeCenterUpgrade(_centerId);
+    state = AsyncData(data);
+    return data;
+  }
+
+  void setUpgrade(BuildingUpgradeModel? upgrade) {
+    state = AsyncData(upgrade);
+  }
+
+  void reduceTime(Duration duration) {
+    final current = state.value;
+    if (current == null) return;
+    final reducedFinishAt = current.finishAt.subtract(duration);
+    state = AsyncData(current.copyWith(finishAt: reducedFinishAt));
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final activeArgeCenterUpgradeProvider = AsyncNotifierProvider.family<
+    ActiveArgeCenterUpgradeNotifier,
+    BuildingUpgradeModel?,
+    String
+>(ActiveArgeCenterUpgradeNotifier.new);
 
 class ArgeActionNotifier {
   final Ref _ref;
@@ -123,6 +270,7 @@ class ArgeActionNotifier {
 
   Future<Map<String, dynamic>> startCenterConstruction({
     String name = 'AR-GE Merkezi',
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -135,15 +283,20 @@ class ArgeActionNotifier {
           'p_name': name,
         },
       );
-      _ref.invalidate(playerArgeCenterProvider);
-      _ref.invalidate(playerArgeConstructionProvider);
+      if (syncProviders) {
+        _ref.invalidate(playerArgeCenterProvider);
+        _ref.invalidate(playerArgeConstructionProvider);
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> startResearch(String productId) async {
+  Future<Map<String, dynamic>> startResearch(
+    String productId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
     try {
@@ -151,29 +304,38 @@ class ArgeActionNotifier {
         'start_arge_research',
         params: {'p_player_id': user.id, 'p_product_id': productId},
       );
-      _ref.invalidate(activeArgeResearchesProvider);
-      _ref.invalidate(argeProductsProvider);
+      if (syncProviders) {
+        _ref.invalidate(activeArgeResearchesProvider);
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> completeResearch(String researchId) async {
+  Future<Map<String, dynamic>> completeResearch(
+    String researchId, {
+    bool syncProviders = true,
+  }) async {
     try {
       final response = await _supabase.rpc(
         'complete_arge_research',
         params: {'p_research_id': researchId},
       );
-      _ref.invalidate(activeArgeResearchesProvider);
-      _ref.invalidate(argeProductsProvider);
+      if (syncProviders) {
+        _ref.invalidate(activeArgeResearchesProvider);
+        _ref.invalidate(argeProductsProvider);
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> finishWithGold(String researchId) async {
+  Future<Map<String, dynamic>> finishWithGold(
+    String researchId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
     try {
@@ -181,8 +343,10 @@ class ArgeActionNotifier {
         'finish_arge_with_gold',
         params: {'p_player_id': user.id, 'p_research_id': researchId},
       );
-      _ref.invalidate(activeArgeResearchesProvider);
-      _ref.invalidate(argeProductsProvider);
+      if (syncProviders) {
+        _ref.invalidate(activeArgeResearchesProvider);
+        _ref.invalidate(argeProductsProvider);
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -215,8 +379,9 @@ class ArgeActionNotifier {
   }
 
   Future<Map<String, dynamic>> finishConstructionWithGold(
-    String constructionId,
-  ) async {
+    String constructionId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -228,8 +393,10 @@ class ArgeActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(playerArgeCenterProvider);
-      _ref.invalidate(playerArgeConstructionProvider);
+      if (syncProviders) {
+        _ref.invalidate(playerArgeCenterProvider);
+        _ref.invalidate(playerArgeConstructionProvider);
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -237,8 +404,9 @@ class ArgeActionNotifier {
   }
 
   Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
-    String constructionId,
-  ) async {
+    String constructionId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -250,15 +418,19 @@ class ArgeActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(playerArgeCenterProvider);
-      _ref.invalidate(playerArgeConstructionProvider);
+      if (syncProviders) {
+        _ref.invalidate(playerArgeConstructionProvider);
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  Future<Map<String, dynamic>> startCenterUpgrade(String centerId) async {
+  Future<Map<String, dynamic>> startCenterUpgrade(
+    String centerId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -271,7 +443,9 @@ class ArgeActionNotifier {
           'p_entity_id': centerId,
         },
       );
-      _ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
+      if (syncProviders) {
+        _ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -293,7 +467,11 @@ class ArgeActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> finishCenterUpgradeWithGold(String upgradeId) async {
+  Future<Map<String, dynamic>> finishCenterUpgradeWithGold(
+    String upgradeId, {
+    String? centerId,
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -305,7 +483,12 @@ class ArgeActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      _ref.invalidate(playerArgeCenterProvider);
+      if (syncProviders) {
+        _ref.invalidate(playerArgeCenterProvider);
+        if (centerId != null) {
+          _ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
+        }
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -313,8 +496,10 @@ class ArgeActionNotifier {
   }
 
   Future<Map<String, dynamic>> reduceCenterUpgradeTimeWithAd(
-    String upgradeId,
-  ) async {
+    String upgradeId, {
+    String? centerId,
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -326,7 +511,9 @@ class ArgeActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      _ref.invalidate(playerArgeCenterProvider);
+      if (syncProviders && centerId != null) {
+        _ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -335,5 +522,3 @@ class ArgeActionNotifier {
 }
 
 final argeActionProvider = Provider((ref) => ArgeActionNotifier(ref));
-
-

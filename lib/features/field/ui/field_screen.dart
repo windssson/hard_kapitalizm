@@ -71,7 +71,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         .read(fieldActionProvider)
         .completeConstruction(constructionId, syncProviders: false);
 
-    ref.invalidate(fieldConstructionProvider);
+    ref.read(fieldConstructionProvider.notifier).clear();
     ref.invalidate(fieldListProvider);
 
     if (!mounted) return;
@@ -93,7 +93,7 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         .read(fieldActionProvider)
         .finishConstructionWithGold(constructionId, syncProviders: false);
 
-    ref.invalidate(fieldConstructionProvider);
+    ref.read(fieldConstructionProvider.notifier).clear();
     ref.invalidate(fieldListProvider);
 
     if (!mounted) return;
@@ -117,15 +117,33 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
   }
 
   Future<void> _reduceConstructionTimeWithAd(String constructionId) async {
-    await RewardedTimeReductionFlow.run(
+    Map<String, dynamic>? rpcResult;
+    final success = await RewardedTimeReductionFlow.run(
       context,
       rewardKind: 'construction_time_reduce',
       resourceId: constructionId,
-      onApplyReduction: () => ref
-          .read(fieldActionProvider)
-          .reduceConstructionTimeWithAd(constructionId),
+      onApplyReduction: () async {
+        final res = await ref
+            .read(fieldActionProvider)
+            .reduceConstructionTimeWithAd(
+              constructionId,
+              syncProviders: false,
+            );
+        rpcResult = res;
+        return res;
+      },
       successMessage: 'İnşaat süresi 10 dakika kısaltıldı.',
     );
+
+    if (success && rpcResult != null && rpcResult!['new_finish_at'] != null) {
+      final newFinishAt =
+          DateTime.tryParse(rpcResult!['new_finish_at'].toString());
+      if (newFinishAt != null) {
+        ref
+            .read(fieldConstructionProvider.notifier)
+            .patchFinishAt(newFinishAt);
+      }
+    }
   }
 
   int _calculateStarCost(DateTime finishAt) {

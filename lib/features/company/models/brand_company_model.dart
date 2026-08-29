@@ -40,4 +40,28 @@ class BrandCompanyModel {
       themeColor: json['theme_color'] as String? ?? '#E5C05C',
     );
   }
+
+  BrandCompanyModel copyWith({
+    String? id,
+    String? playerId,
+    String? brandName,
+    bool? isActive,
+    DateTime? createdAt,
+    int? brandLevel,
+    int? brandXp,
+    String? logoId,
+    String? themeColor,
+  }) {
+    return BrandCompanyModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      brandName: brandName ?? this.brandName,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      brandLevel: brandLevel ?? this.brandLevel,
+      brandXp: brandXp ?? this.brandXp,
+      logoId: logoId ?? this.logoId,
+      themeColor: themeColor ?? this.themeColor,
+    );
+  }
 }

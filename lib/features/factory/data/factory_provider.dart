@@ -299,46 +299,89 @@ final factoryConstructionProvider =
     });
 
 // ─── Active boost/upgrade providers ──────────────────────────────────────────
-// Fallback FutureProvider olarak tutuldu; factory detail notifier'a ek RPC
-// yapılmaması için kullanılıyor. Gerekirse detail içine entegre edilebilir.
 
-final activeFactoryUpgradeProvider =
-    FutureProvider.family<BuildingUpgradeModel?, String>((ref, factoryId) async {
-      final supabase = Supabase.instance.client;
-      if (supabase.auth.currentUser == null) return null;
+class ActiveFactoryUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
+  ActiveFactoryUpgradeNotifier(this._factoryId);
 
-      final response = await supabase.rpc(
-        'get_player_active_building_upgrade',
-        params: {
-          'p_building_kind': 'factory',
-          'p_entity_id': factoryId,
-        },
-      );
+  final String _factoryId;
 
-      if (response == null) return null;
-      return BuildingUpgradeModel.fromJsonNullable(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
+  @override
+  Future<BuildingUpgradeModel?> build() async {
+    final supabase = Supabase.instance.client;
+    if (supabase.auth.currentUser == null) return null;
 
-final activeFactoryBoostProvider =
-    FutureProvider.family<BuildingBoostModel?, String>((ref, factoryId) async {
-      final supabase = Supabase.instance.client;
-      if (supabase.auth.currentUser == null) return null;
+    final response = await supabase.rpc(
+      'get_player_active_building_upgrade',
+      params: {
+        'p_building_kind': 'factory',
+        'p_entity_id': _factoryId,
+      },
+    );
 
-      final response = await supabase.rpc(
-        'get_player_active_building_boost',
-        params: {
-          'p_building_kind': 'factory',
-          'p_entity_id': factoryId,
-        },
-      );
+    if (response == null) return null;
+    return BuildingUpgradeModel.fromJsonNullable(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
 
-      if (response == null) return null;
-      return BuildingBoostModel.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
+  void setUpgrade(BuildingUpgradeModel? upgrade) {
+    state = AsyncData(upgrade);
+  }
+
+  void reduceTime(Duration duration) {
+    final current = state.value;
+    if (current == null) return;
+    final reducedFinishAt = current.finishAt.subtract(duration);
+    state = AsyncData(current.copyWith(finishAt: reducedFinishAt));
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final activeFactoryUpgradeProvider = AsyncNotifierProvider.autoDispose
+    .family<ActiveFactoryUpgradeNotifier, BuildingUpgradeModel?, String>(
+      ActiveFactoryUpgradeNotifier.new,
+    );
+
+class ActiveFactoryBoostNotifier extends AsyncNotifier<BuildingBoostModel?> {
+  ActiveFactoryBoostNotifier(this._factoryId);
+
+  final String _factoryId;
+
+  @override
+  Future<BuildingBoostModel?> build() async {
+    final supabase = Supabase.instance.client;
+    if (supabase.auth.currentUser == null) return null;
+
+    final response = await supabase.rpc(
+      'get_player_active_building_boost',
+      params: {
+        'p_building_kind': 'factory',
+        'p_entity_id': _factoryId,
+      },
+    );
+
+    if (response == null) return null;
+    return BuildingBoostModel.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  void setBoost(BuildingBoostModel? boost) {
+    state = AsyncData(boost);
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final activeFactoryBoostProvider = AsyncNotifierProvider.autoDispose
+    .family<ActiveFactoryBoostNotifier, BuildingBoostModel?, String>(
+      ActiveFactoryBoostNotifier.new,
+    );
 
 // ─── FactoryActionNotifier ────────────────────────────────────────────────────
 
@@ -700,6 +743,18 @@ class FactoryActionNotifier {
           // Fallback: product bilgisi response'da yok
           _ref.invalidate(factoryListProvider);
           _ref.invalidate(factoryDetailProvider(factoryId));
+        }
+
+        final inventoriesRaw = result['inventories'] as List<dynamic>?;
+        if (inventoriesRaw != null) {
+          final newInventories = inventoriesRaw
+              .map((i) => FactoryProductionInventoryModel.fromJson(
+                    Map<String, dynamic>.from(i as Map),
+                  ))
+              .toList();
+          _ref
+              .read(factoryDetailProvider(factoryId).notifier)
+              .replaceInventory(newInventories);
         }
       }
       await _refreshAttentionNotifications();

@@ -612,8 +612,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           Navigator.of(context).pop(); // Pop details dialog
         }
 
-        ref.invalidate(buyerTransferMapProvider);
-        ref.invalidate(buyerTransferHistoryProvider);
+        ref.read(buyerTransferMapProvider.notifier).patchRemoveTransfer(transfer.id);
+        ref.read(buyerTransferMapProvider.notifier).refresh();
+        ref.read(buyerTransferHistoryProvider.notifier).refresh();
         ref.invalidate(warehouseListProvider);
         _invalidateAffectedTransferTargets(transfer);
 
@@ -686,8 +687,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             .finishLogisticsTransferWithAdReward(transfer.id);
 
         if (result['success'] == true) {
-          ref.invalidate(buyerTransferMapProvider);
-          ref.invalidate(buyerTransferHistoryProvider);
+          ref.read(buyerTransferMapProvider.notifier).patchRemoveTransfer(transfer.id);
+          ref.read(buyerTransferMapProvider.notifier).refresh();
+          ref.read(buyerTransferHistoryProvider.notifier).refresh();
           ref.invalidate(warehouseListProvider);
           _invalidateAffectedTransferTargets(transfer);
         }
@@ -820,8 +822,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
                         return RefreshIndicator(
                           onRefresh: () async {
-                            ref.invalidate(buyerTransferMapProvider);
-                            ref.invalidate(buyerTransferHistoryProvider);
+                            await ref.read(buyerTransferMapProvider.notifier).refresh();
+                            await ref.read(buyerTransferHistoryProvider.notifier).refresh();
                           },
                           child: transfers.isEmpty
                               ? ListView(

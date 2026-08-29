@@ -127,6 +127,7 @@ class MarketActionNotifier {
     required String sourceCityId,
     required List<Map<String, dynamic>> items,
     String? vehicleId,
+    bool syncProviders = false,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -144,8 +145,10 @@ class MarketActionNotifier {
         },
       );
 
-      _ref.invalidate(warehouseListProvider);
-      _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
+      if (syncProviders) {
+        _ref.invalidate(warehouseListProvider);
+        _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

@@ -32,4 +32,24 @@ class BrandCompanyProductModel {
       watermarkAssetId: json['watermark_asset_id']?.toString(),
     );
   }
+
+  BrandCompanyProductModel copyWith({
+    String? productId,
+    String? productName,
+    String? productIcon,
+    int? maxQualityLevel,
+    bool? isBranded,
+    DateTime? brandedAt,
+    String? watermarkAssetId,
+  }) {
+    return BrandCompanyProductModel(
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      productIcon: productIcon ?? this.productIcon,
+      maxQualityLevel: maxQualityLevel ?? this.maxQualityLevel,
+      isBranded: isBranded ?? this.isBranded,
+      brandedAt: brandedAt ?? this.brandedAt,
+      watermarkAssetId: watermarkAssetId ?? this.watermarkAssetId,
+    );
+  }
 }

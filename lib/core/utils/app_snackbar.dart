@@ -5,10 +5,40 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_error_message.dart';
 import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
+import 'package:hard_kapitalizm/main.dart';
 
 enum SnackbarType { success, error, info, warning }
 
 class AppSnackbar {
+  /// Global context kullanarak snackbar gösterme (rootNavigatorKey üzerinden)
+  static void showGlobal({
+    required String message,
+    String? title,
+    SnackbarType type = SnackbarType.info,
+    Duration duration = const Duration(seconds: 4),
+    String? actionLabel,
+    VoidCallback? onAction,
+    IconData? customIcon,
+    bool playHaptic = true,
+  }) {
+    final context = rootNavigatorKey.currentContext;
+    if (context != null && context.mounted) {
+      show(
+        context,
+        message: message,
+        title: title,
+        type: type,
+        duration: duration,
+        actionLabel: actionLabel,
+        onAction: onAction,
+        customIcon: customIcon,
+        playHaptic: playHaptic,
+      );
+    } else {
+      debugPrint('[SNACKBAR][DROPPED] Context bulunamadı (Global): $message');
+    }
+  }
+
   /// Genel snackbar gösterimi
   static void show(
     BuildContext context, {
@@ -380,6 +410,14 @@ class AppSnackbar {
     required String rawMessage,
     required String displayMessage,
     String? title,
-  }) {}
+  }) {
+    final prefix = '[SNACKBAR][${type.name.toUpperCase()}]';
+    final titlePart = (title != null && title.trim().isNotEmpty) ? ' [$title]' : '';
+    if (rawMessage != displayMessage && rawMessage.trim().isNotEmpty) {
+      debugPrint('$prefix$titlePart $displayMessage (Ham: $rawMessage)');
+    } else {
+      debugPrint('$prefix$titlePart $displayMessage');
+    }
+  }
 }
 

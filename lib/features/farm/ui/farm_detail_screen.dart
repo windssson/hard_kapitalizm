@@ -32,6 +32,7 @@ import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
+import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
     show warehouseCapacityStatusProvider;
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
@@ -59,13 +60,12 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
   String? get _currentBrandName =>
       ref.read(playerBrandCompanyProvider).value?.brandName;
 
-  void _refreshFarmDetail() {
-    ref.invalidate(farmDetailProvider(widget.farmId));
-    ref.invalidate(activeFarmBoostProvider(widget.farmId));
-    ref.invalidate(activeFarmUpgradeProvider(widget.farmId));
-    ref.read(farmDetailProvider(widget.farmId).future);
-    ref.read(activeFarmBoostProvider(widget.farmId).future);
-    ref.read(activeFarmUpgradeProvider(widget.farmId).future);
+  Future<void> _refreshFarmDetail() async {
+    await Future.wait([
+      ref.read(farmDetailProvider(widget.farmId).notifier).refresh(),
+      ref.read(activeFarmBoostProvider(widget.farmId).future),
+      ref.read(activeFarmUpgradeProvider(widget.farmId).future),
+    ]);
   }
 
   Future<void> _refreshFarmEcosystem({
@@ -1329,7 +1329,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                               syncProviders: false,
                             );
                         if (result['success'] == true) {
-                          await _refreshFarmEcosystem();
+                          ref
+                              .read(activeFarmBoostProvider(widget.farmId).notifier)
+                              .setBoost(BuildingBoostModel.fromJson(result));
                         }
                         return result;
                       },
@@ -1408,7 +1410,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                       if (!context.mounted) return;
 
                       if (result['success'] == true) {
-                        await _refreshFarmEcosystem();
+                        ref
+                            .read(activeFarmBoostProvider(widget.farmId).notifier)
+                            .setBoost(BuildingBoostModel.fromJson(result));
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
@@ -1587,7 +1591,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             .startFarmUpgrade(detail.farm.id, syncProviders: false);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          await _refreshFarmEcosystem();
+          ref
+              .read(activeFarmUpgradeProvider(widget.farmId).notifier)
+              .setUpgrade(BuildingUpgradeModel.fromJson(result));
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
@@ -1619,7 +1625,30 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     if (!mounted) return;
     if (result['success'] == true) {
-      await _refreshFarmEcosystem(includePlayer: false);
+      final targetLevel = (result['target_level'] as num?)?.toInt() ?? upgrade.targetLevel;
+      final outputIncrease = (result['output_capacity_increase'] as num?)?.toInt() ?? 0;
+      final inputIncrease = (result['input_capacity_increase'] as num?)?.toInt() ?? 0;
+      final currentDetail = ref.read(farmDetailProvider(widget.farmId)).value;
+      final newOutput = (currentDetail?.farm.outputCapacity ?? 0) + outputIncrease;
+      final newInput = (currentDetail?.farm.inputCapacity ?? 0) + inputIncrease;
+
+      ref.read(activeFarmUpgradeProvider(widget.farmId).notifier).clear();
+      ref
+          .read(farmDetailProvider(widget.farmId).notifier)
+          .patchFarmLevelAndCapacity(
+            level: targetLevel,
+            outputCapacity: newOutput,
+            inputCapacity: newInput,
+          );
+      ref
+          .read(farmListProvider.notifier)
+          .patchFarmLevelAndCapacity(
+            farmId: widget.farmId,
+            level: targetLevel,
+            outputCapacity: newOutput,
+            inputCapacity: newInput,
+          );
+
       if (!mounted) return;
       AppSnackbar.show(
         context,
@@ -1653,7 +1682,9 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     );
 
     if (success) {
-      await _refreshFarmEcosystem(includePlayer: false);
+      ref
+          .read(activeFarmUpgradeProvider(widget.farmId).notifier)
+          .reduceTime(const Duration(minutes: 10));
     }
   }
 
@@ -2364,7 +2395,25 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshFarmEcosystem(includePlayer: false);
+      final slotJson = result['slot'] as Map<String, dynamic>?;
+      if (slotJson != null) {
+        final newSlot = FarmProductionSlotModel.fromJson(slotJson);
+        ref
+            .read(farmDetailProvider(widget.farmId).notifier)
+            .addSlot(newSlot);
+        ref
+            .read(farmListProvider.notifier)
+            .addSlot(
+              farmId: widget.farmId,
+              slot: FarmSlotPreviewModel(
+                id: newSlot.id,
+                slotIndex: newSlot.slotIndex,
+                isActive: newSlot.isActive,
+                productId: null,
+                product: null,
+              ),
+            );
+      }
       if (!context.mounted) return;
       AppSnackbar.show(
         context,
@@ -2389,17 +2438,23 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     FarmDetailModel detail,
     FarmProductionSlotModel slot,
   ) async {
+    final nextActive = !slot.isActive;
     final result = await ref
         .read(farmActionProvider)
         .setProductionSlotActive(
           slotId: slot.id,
-          isActive: !slot.isActive,
+          isActive: nextActive,
           syncProviders: false,
         );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshFarmEcosystem(includePlayer: false);
+      ref
+          .read(farmDetailProvider(widget.farmId).notifier)
+          .patchSlotActive(slotId: slot.id, isActive: nextActive);
+      ref
+          .read(farmListProvider.notifier)
+          .patchSlotActive(farmId: widget.farmId, slotId: slot.id, isActive: nextActive);
       return;
     }
 
@@ -2563,7 +2618,27 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             resultMessage.contains('hata'));
 
     if (isSuccess && !hasErrorLikeMessage) {
-      await _refreshFarmEcosystem();
+      final slotsRaw = result['slots'] as List<dynamic>?;
+      final inventoriesRaw = result['inventories'] as List<dynamic>?;
+      if (slotsRaw != null && inventoriesRaw != null) {
+        final newSlots = slotsRaw
+            .map((s) => FarmProductionSlotModel.fromJson(Map<String, dynamic>.from(s as Map)))
+            .toList();
+        final newInventories = inventoriesRaw
+            .map((i) => FarmProductionInventoryModel.fromJson(Map<String, dynamic>.from(i as Map)))
+            .toList();
+        ref
+            .read(farmDetailProvider(widget.farmId).notifier)
+            .patchSlotsAndInventories(slots: newSlots, inventories: newInventories);
+      }
+      ref
+          .read(farmListProvider.notifier)
+          .patchSlotProduct(
+            farmId: widget.farmId,
+            slotId: slot.id,
+            productId: product.id,
+            product: product,
+          );
       if (!context.mounted) return;
       final deletedObsoleteCount =
           (result['deleted_obsolete_inventory_count'] as num?)?.toInt() ?? 0;
@@ -5264,11 +5339,12 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     final result = await ref
         .read(farmActionProvider)
-        .sellFarm(farmId: farm.id, confirm: true);
+        .sellFarm(farmId: farm.id, confirm: true, syncProviders: false);
 
     if (!context.mounted) return;
 
     if (result['success'] == true) {
+      ref.read(farmListProvider.notifier).removeFarm(farm.id);
       AppSnackbar.show(
         context,
         title: 'Başarılı',

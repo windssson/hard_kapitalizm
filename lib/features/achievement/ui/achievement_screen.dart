@@ -125,8 +125,9 @@ class _AchievementScreenState extends ConsumerState<AchievementScreen> {
               child: RefreshIndicator(
                 color: AppColors.gold,
                 onRefresh: () async {
-                  ref.invalidate(playerAchievementDashboardProvider);
-                  await ref.read(playerAchievementDashboardProvider.future);
+                  await ref
+                      .read(playerAchievementDashboardProvider.notifier)
+                      .refresh();
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),

@@ -17,6 +17,7 @@ import 'package:hard_kapitalizm/features/notification/data/notification_provider
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_model.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
 
 Future<List<FieldListItemModel>> _fetchFieldList() async {
   final supabase = Supabase.instance.client;
@@ -134,6 +135,40 @@ class FieldListNotifier extends AsyncNotifier<List<FieldListItemModel>> {
     );
     state = AsyncData(next);
   }
+
+  void removeField(String fieldId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((item) => item.field.id != fieldId).toList());
+  }
+
+  void patchSlotProduct({
+    required String fieldId,
+    required String slotId,
+    required String? productId,
+    ProductModel? product,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere((item) => item.field.id == fieldId);
+    if (index < 0) return;
+    final item = current[index];
+    final updatedSlots = item.slots.map((s) {
+      if (s.id == slotId) {
+        return FieldSlotPreviewModel(
+          id: s.id,
+          slotIndex: s.slotIndex,
+          isActive: s.isActive,
+          productId: productId,
+          product: product,
+        );
+      }
+      return s;
+    }).toList();
+    final next = [...current];
+    next[index] = item.copyWith(slots: updatedSlots);
+    state = AsyncData(next);
+  }
 }
 
 final fieldListProvider =
@@ -146,25 +181,57 @@ final fieldTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   return catalogs.fieldTypes;
 });
 
-final fieldConstructionProvider =
-    FutureProvider<Map<String, dynamic>?>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+Future<Map<String, dynamic>?> _fetchFieldConstruction() async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
 
-      if (user == null) return null;
+  if (user == null) return null;
 
-      final response = await supabase.rpc(
-        'get_player_building_constructions',
-        params: {
-          'p_building_kind': 'field',
-          'p_status': 'in_progress',
-        },
-      );
+  final response = await supabase.rpc(
+    'get_player_building_constructions',
+    params: {
+      'p_building_kind': 'field',
+      'p_status': 'in_progress',
+    },
+  );
 
-      final rows = response as List<dynamic>? ?? const [];
-      if (rows.isEmpty) return null;
-      return Map<String, dynamic>.from(rows.first as Map);
+  final rows = response as List<dynamic>? ?? const [];
+  if (rows.isEmpty) return null;
+  return Map<String, dynamic>.from(rows.first as Map);
+}
+
+class FieldConstructionNotifier extends AsyncNotifier<Map<String, dynamic>?> {
+  @override
+  Future<Map<String, dynamic>?> build() => _fetchFieldConstruction();
+
+  Future<Map<String, dynamic>?> refresh() async {
+    final data = await _fetchFieldConstruction();
+    state = AsyncData(data);
+    return data;
+  }
+
+  void setConstruction(Map<String, dynamic>? data) {
+    state = AsyncData(data);
+  }
+
+  void patchFinishAt(DateTime newFinishAt) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData({
+      ...current,
+      'finish_at': newFinishAt.toIso8601String(),
     });
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final fieldConstructionProvider =
+    AsyncNotifierProvider<FieldConstructionNotifier, Map<String, dynamic>?>(
+      FieldConstructionNotifier.new,
+    );
 
 Future<FieldDetailModel> _fetchFieldDetail(String fieldId) async {
   final supabase = Supabase.instance.client;
@@ -520,7 +587,6 @@ class FieldActionNotifier {
       );
       final result = _sync(response);
       if (syncProviders) {
-        _ref.invalidate(fieldListProvider);
         _ref.invalidate(fieldConstructionProvider);
       }
       return result;
@@ -1033,6 +1099,7 @@ class FieldActionNotifier {
   Future<Map<String, dynamic>> sellField({
     required String fieldId,
     required bool confirm,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -1046,8 +1113,11 @@ class FieldActionNotifier {
           'p_confirm': confirm,
         },
       );
-      _ref.invalidate(fieldListProvider);
-      return _sync(response);
+      final result = _sync(response);
+      if (confirm && syncProviders && result['success'] == true) {
+        _ref.invalidate(fieldListProvider);
+      }
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

@@ -3575,11 +3575,16 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
     final result = await ref
         .read(warehouseActionProvider)
-        .sellWarehouse(warehouseId: warehouse.id, confirm: true);
+        .sellWarehouse(
+          warehouseId: warehouse.id,
+          confirm: true,
+          syncProviders: false,
+        );
 
     if (!context.mounted) return;
 
     if (result['success'] == true) {
+      ref.read(warehouseListProvider.notifier).removeWarehouse(warehouse.id);
       AppSnackbar.show(
         context,
         title: 'Başarılı',

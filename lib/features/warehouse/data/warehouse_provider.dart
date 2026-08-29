@@ -192,6 +192,28 @@ class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
     state = AsyncData(next);
   }
 
+  void removeWarehouse(String warehouseId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((item) => item.id != warehouseId).toList());
+  }
+
+  void patchConstructionFinishAt({
+    required String warehouseId,
+    required DateTime finishAt,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+
+    final index = current.indexWhere((item) => item.id == warehouseId);
+    if (index < 0) return;
+
+    final warehouse = current[index];
+    final next = [...current];
+    next[index] = warehouse.copyWith(finishAt: finishAt);
+    state = AsyncData(next);
+  }
+
   void _patchSlot({
     required String warehouseId,
     required String slotId,
@@ -519,8 +541,9 @@ class WarehouseActionNotifier {
   }
 
   Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
-    String constructionId,
-  ) async {
+    String constructionId, {
+    bool syncProviders = true,
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
@@ -532,7 +555,9 @@ class WarehouseActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(warehouseListProvider);
+      if (syncProviders) {
+        _ref.invalidate(warehouseListProvider);
+      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -870,6 +895,7 @@ class WarehouseActionNotifier {
   Future<Map<String, dynamic>> sellWarehouse({
     required String warehouseId,
     required bool confirm,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -883,8 +909,11 @@ class WarehouseActionNotifier {
           'p_confirm': confirm,
         },
       );
-      _ref.invalidate(warehouseListProvider);
-      return _sync(response);
+      final result = _sync(response);
+      if (confirm && syncProviders && result['success'] == true) {
+        _ref.invalidate(warehouseListProvider);
+      }
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

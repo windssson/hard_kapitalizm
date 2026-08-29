@@ -34,4 +34,28 @@ class DepositModel {
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
     );
   }
+
+  DepositModel copyWith({
+    String? id,
+    String? playerId,
+    double? amount,
+    double? interestRate,
+    double? expectedPayout,
+    DateTime? lockedUntil,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return DepositModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      amount: amount ?? this.amount,
+      interestRate: interestRate ?? this.interestRate,
+      expectedPayout: expectedPayout ?? this.expectedPayout,
+      lockedUntil: lockedUntil ?? this.lockedUntil,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

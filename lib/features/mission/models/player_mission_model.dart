@@ -89,4 +89,38 @@ class PlayerMissionModel {
       progressRatio: (json['progress_ratio'] as num?)?.toDouble() ?? 0,
     );
   }
+
+  PlayerMissionModel copyWith({
+    String? id,
+    String? missionType,
+    String? title,
+    String? description,
+    String? eventKey,
+    String? iconKey,
+    int? targetCount,
+    int? progressCount,
+    bool? isCompleted,
+    bool? isClaimed,
+    bool? claimable,
+    MissionRewardModel? reward,
+    int? displayOrder,
+    double? progressRatio,
+  }) {
+    return PlayerMissionModel(
+      id: id ?? this.id,
+      missionType: missionType ?? this.missionType,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      eventKey: eventKey ?? this.eventKey,
+      iconKey: iconKey ?? this.iconKey,
+      targetCount: targetCount ?? this.targetCount,
+      progressCount: progressCount ?? this.progressCount,
+      isCompleted: isCompleted ?? this.isCompleted,
+      isClaimed: isClaimed ?? this.isClaimed,
+      claimable: claimable ?? this.claimable,
+      reward: reward ?? this.reward,
+      displayOrder: displayOrder ?? this.displayOrder,
+      progressRatio: progressRatio ?? this.progressRatio,
+    );
+  }
 }

@@ -72,27 +72,131 @@ final playerLogisticsConstructionProvider =
       return Map<String, dynamic>.from(rows.first as Map);
     });
 
+// ─── Lojistik Araç Liste Notifier ───────────────────────────────────────────
+
+class LogisticsVehicleListNotifier
+    extends AsyncNotifier<List<LogisticsVehicleModel>> {
+  @override
+  Future<List<LogisticsVehicleModel>> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return [];
+
+    final response = await supabase.rpc(
+      'get_player_logistics_vehicles',
+      params: {'p_player_id': user.id},
+    );
+
+    final list = response as List<dynamic>;
+    return list
+        .map(
+          (json) => LogisticsVehicleModel.fromJson(
+            Map<String, dynamic>.from(json as Map),
+          ),
+        )
+        .toList();
+  }
+
+  void patchVehicleRental({
+    required String vehicleId,
+    required bool isAvailableForRent,
+    required double rentalPrice,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((vehicle) {
+      if (vehicle.id == vehicleId) {
+        return vehicle.copyWith(
+          isAvailableForRent: isAvailableForRent,
+          rentalPrice: rentalPrice,
+        );
+      }
+      return vehicle;
+    }).toList();
+    state = AsyncData(updated);
+  }
+
+  void patchVehicleRefuel({
+    required String vehicleId,
+    required int currentFuel,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((vehicle) {
+      if (vehicle.id == vehicleId) {
+        return vehicle.copyWith(currentFuel: currentFuel);
+      }
+      return vehicle;
+    }).toList();
+    state = AsyncData(updated);
+  }
+
+  void patchVehicleRepair({
+    required String vehicleId,
+    required int condition,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((vehicle) {
+      if (vehicle.id == vehicleId) {
+        return vehicle.copyWith(condition: condition);
+      }
+      return vehicle;
+    }).toList();
+    state = AsyncData(updated);
+  }
+
+  void patchVehicleRoute({
+    required String vehicleId,
+    String? routeCityAId,
+    String? routeCityBId,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((vehicle) {
+      if (vehicle.id == vehicleId) {
+        return vehicle.copyWith(
+          routeCityAId: routeCityAId,
+          routeCityBId: routeCityBId,
+        );
+      }
+      return vehicle;
+    }).toList();
+    state = AsyncData(updated);
+  }
+
+  void patchVehicleActive({
+    required String vehicleId,
+    required bool isActive,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((vehicle) {
+      if (vehicle.id == vehicleId) {
+        return vehicle.copyWith(
+          status: isActive ? 'idle' : 'inactive',
+        );
+      }
+      return vehicle;
+    }).toList();
+    state = AsyncData(updated);
+  }
+
+  Future<void> refresh() async {
+    try {
+      final fresh = await build();
+      state = AsyncData(fresh);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+}
+
 final logisticsVehicleListProvider =
-    FutureProvider<List<LogisticsVehicleModel>>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-
-      if (user == null) return [];
-
-      final response = await supabase.rpc(
-        'get_player_logistics_vehicles',
-        params: {'p_player_id': user.id},
-      );
-
-      final list = response as List<dynamic>;
-      return list
-          .map(
-            (json) => LogisticsVehicleModel.fromJson(
-              Map<String, dynamic>.from(json as Map),
-            ),
-          )
-          .toList();
-    });
+    AsyncNotifierProvider<LogisticsVehicleListNotifier, List<LogisticsVehicleModel>>(
+  LogisticsVehicleListNotifier.new,
+);
 
 final logisticsVehiclePerformanceProvider =
     FutureProvider.autoDispose<Map<String, LogisticsVehiclePerformanceModel>>((
@@ -381,8 +485,15 @@ class LogisticsActionNotifier {
           'p_rental_price': rentalPrice,
         },
       );
-      _ref.invalidate(logisticsVehicleListProvider);
-      return _sync(response);
+      final result = _sync(response);
+      _ref
+          .read(logisticsVehicleListProvider.notifier)
+          .patchVehicleRental(
+            vehicleId: vehicleId,
+            isAvailableForRent: isAvailableForRent,
+            rentalPrice: rentalPrice,
+          );
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -397,9 +508,10 @@ class LogisticsActionNotifier {
         'refuel_logistics_vehicle',
         params: {'p_player_id': user.id, 'p_vehicle_id': vehicleId},
       );
-      _ref.invalidate(logisticsVehicleListProvider);
+      final result = _sync(response);
+      _ref.read(logisticsVehicleListProvider.notifier).refresh();
       _ref.invalidate(playerLogisticsCompanyProvider);
-      return _sync(response);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -414,10 +526,11 @@ class LogisticsActionNotifier {
         'repair_logistics_vehicle',
         params: {'p_player_id': user.id, 'p_vehicle_id': vehicleId},
       );
-      _ref.invalidate(logisticsVehicleListProvider);
+      final result = _sync(response);
+      _ref.read(logisticsVehicleListProvider.notifier).refresh();
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
-      return _sync(response);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -442,7 +555,7 @@ class LogisticsActionNotifier {
       );
       _ref.invalidate(playerLogisticsCompanyProvider);
       _ref.invalidate(playerLogisticsFuelWarehouseSourcesProvider);
-      _ref.invalidate(logisticsVehicleListProvider);
+      _ref.read(logisticsVehicleListProvider.notifier).refresh();
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
       _ref.invalidate(warehouseListProvider);
@@ -468,8 +581,14 @@ class LogisticsActionNotifier {
           'p_is_active': isActive,
         },
       );
-      _ref.invalidate(logisticsVehicleListProvider);
-      return _sync(response);
+      final result = _sync(response);
+      _ref
+          .read(logisticsVehicleListProvider.notifier)
+          .patchVehicleActive(
+            vehicleId: vehicleId,
+            isActive: isActive,
+          );
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -500,8 +619,14 @@ class LogisticsActionNotifier {
           'p_route_city_b_id': cityBId,
         },
       );
-      _ref.invalidate(logisticsVehicleListProvider);
       final result = _sync(response);
+      _ref
+          .read(logisticsVehicleListProvider.notifier)
+          .patchVehicleRoute(
+            vehicleId: vehicleId,
+            routeCityAId: cityAId,
+            routeCityBId: cityBId,
+          );
 
       return {
         'success': true,

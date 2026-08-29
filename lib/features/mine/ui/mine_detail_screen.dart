@@ -55,13 +55,12 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   String? get _currentBrandName =>
       ref.read(playerBrandCompanyProvider).value?.brandName;
 
-  void _refreshMineDetail() {
-    ref.invalidate(mineDetailProvider(widget.mineId));
-    ref.invalidate(activeMineBoostProvider(widget.mineId));
-    ref.invalidate(activeMineUpgradeProvider(widget.mineId));
-    ref.read(mineDetailProvider(widget.mineId).future);
-    ref.read(activeMineBoostProvider(widget.mineId).future);
-    ref.read(activeMineUpgradeProvider(widget.mineId).future);
+  Future<void> _refreshMineDetail() async {
+    await Future.wait([
+      ref.read(mineDetailProvider(widget.mineId).notifier).refresh(),
+      ref.read(activeMineBoostProvider(widget.mineId).future),
+      ref.read(activeMineUpgradeProvider(widget.mineId).future),
+    ]);
   }
 
   Future<void> _refreshMineEcosystem({
@@ -1481,7 +1480,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               syncProviders: false,
                             );
                         if (result['success'] == true) {
-                          await _refreshMineEcosystem();
+                          ref
+                              .read(activeMineBoostProvider(widget.mineId).notifier)
+                              .setBoost(BuildingBoostModel.fromJson(result));
                         }
                         return result;
                       },
@@ -1558,7 +1559,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           );
                       if (!context.mounted) return;
                       if (result['success'] == true) {
-                        await _refreshMineEcosystem();
+                        ref
+                            .read(activeMineBoostProvider(widget.mineId).notifier)
+                            .setBoost(BuildingBoostModel.fromJson(result));
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
@@ -1723,7 +1726,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             .startMineUpgrade(detail.mine.id, syncProviders: false);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          await _refreshMineEcosystem();
+          ref
+              .read(activeMineUpgradeProvider(widget.mineId).notifier)
+              .setUpgrade(BuildingUpgradeModel.fromJson(result));
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
@@ -1755,7 +1760,17 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         .finishMineUpgradeWithGold(upgrade.id, syncProviders: false);
 
     if (result['success'] == true) {
-      await _refreshMineEcosystem();
+      final newLevel = (result['target_level'] as num?)?.toInt() ??
+          (result['new_level'] as num?)?.toInt() ??
+          upgrade.targetLevel;
+      ref.read(activeMineUpgradeProvider(widget.mineId).notifier).clear();
+      ref
+          .read(mineDetailProvider(widget.mineId).notifier)
+          .patchMineLevel(newLevel);
+      ref
+          .read(mineListProvider.notifier)
+          .patchMineLevel(mineId: widget.mineId, level: newLevel);
+
       if (!mounted) return;
       AppSnackbar.show(
         context,
@@ -1790,7 +1805,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
 
     if (success) {
-      await _refreshMineEcosystem();
+      ref
+          .read(activeMineUpgradeProvider(widget.mineId).notifier)
+          .reduceTime(const Duration(minutes: 10));
     }
   }
 
@@ -1887,13 +1904,11 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         .setMineProduct(
           mineId: detail.mine.id,
           productId: product.id,
-          syncProviders: false,
+          syncProviders: true,
         );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshMineEcosystem(includePlayer: false);
-      if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Başarılı',
@@ -1916,18 +1931,17 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     WidgetRef ref,
     MineDetailModel detail,
   ) async {
+    final nextActive = !detail.mine.isActive;
     final result = await ref
         .read(mineActionProvider)
         .setMineActive(
           mineId: detail.mine.id,
-          isActive: !detail.mine.isActive,
-          syncProviders: false,
+          isActive: nextActive,
+          syncProviders: true,
         );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
-      await _refreshMineEcosystem();
-      if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Başarılı',

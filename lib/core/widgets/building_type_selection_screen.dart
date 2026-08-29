@@ -13,6 +13,7 @@ import 'package:hard_kapitalizm/core/widgets/type_product_preview.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
+import 'package:hard_kapitalizm/core/models/mutation/player_changes.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 
@@ -479,9 +480,15 @@ class _BuildingTypeSelectionScreenState
 
       if (result['success'] == true) {
         if (!mounted) return;
-        
-        // Riverpod listeleri ve oyuncu durumunu yenile
-        ref.invalidate(playerProvider);
+
+        // Player cash'ini invalidate yerine patch ile anında güncelle
+        final playerChanges = PlayerChanges.tryExtract(result);
+        if (playerChanges != null) {
+          ref.read(playerProvider.notifier).applyChanges(playerChanges);
+        } else {
+          ref.invalidate(playerProvider); // fallback: changed.player yoksa yenile
+        }
+
         switch (kind) {
           case 'farm':
             ref.invalidate(farmListProvider);

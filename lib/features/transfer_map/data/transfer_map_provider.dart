@@ -14,63 +14,105 @@ bool _looksLikeNestedTransferMapRow(Map<String, dynamic> json) {
       json['buyer_production_inventory'] is Map;
 }
 
+class BuyerTransferMapNotifier
+    extends AsyncNotifier<List<TransferMapItemModel>> {
+  @override
+  Future<List<TransferMapItemModel>> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return const [];
+
+    try {
+      final response = await supabase.rpc('get_buyer_transfer_map_items');
+
+      return (response as List<dynamic>)
+          .map(
+            (json) {
+              final map = Map<String, dynamic>.from(json as Map);
+              if (_looksLikeNestedTransferMapRow(map)) {
+                return TransferMapItemModel.fromJson(map);
+              }
+              return TransferMapItemModel.fromFlatJson(map);
+            },
+          )
+          .toList();
+    } on PostgrestException catch (e) {
+      final message = e.message.toLowerCase();
+      if (message.contains('get_buyer_transfer_map_items') ||
+          message.contains('does not exist') ||
+          message.contains('not found')) {
+        return const [];
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> refresh() async {
+    try {
+      final fresh = await build();
+      state = AsyncData(fresh);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+
+  void patchRemoveTransfer(String transferId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.where((item) => item.id != transferId).toList(),
+    );
+  }
+}
+
 final buyerTransferMapProvider =
-    FutureProvider.autoDispose<List<TransferMapItemModel>>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) return const [];
+    AsyncNotifierProvider<BuyerTransferMapNotifier, List<TransferMapItemModel>>(
+  BuyerTransferMapNotifier.new,
+);
 
-      try {
-        final response = await supabase.rpc('get_buyer_transfer_map_items');
+class BuyerTransferHistoryNotifier
+    extends AsyncNotifier<List<TransferHistoryItemModel>> {
+  @override
+  Future<List<TransferHistoryItemModel>> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return const [];
 
-        return (response as List<dynamic>)
-            .map(
-              (json) {
-                final map = Map<String, dynamic>.from(json as Map);
-                if (_looksLikeNestedTransferMapRow(map)) {
-                  return TransferMapItemModel.fromJson(map);
-                }
-                return TransferMapItemModel.fromFlatJson(map);
-              },
-            )
-            .toList();
-      } on PostgrestException catch (e) {
-        final message = e.message.toLowerCase();
-        if (message.contains('get_buyer_transfer_map_items') ||
-            message.contains('does not exist') ||
-            message.contains('not found')) {
-          return const [];
-        }
-        rethrow;
+    try {
+      final response = await supabase.rpc('get_buyer_transfer_history_items');
+
+      return (response as List<dynamic>)
+          .map(
+            (json) => TransferHistoryItemModel.fromJson(
+              Map<String, dynamic>.from(json as Map),
+            ),
+          )
+          .toList();
+    } on PostgrestException catch (e) {
+      final message = e.message.toLowerCase();
+      if (message.contains('get_buyer_transfer_history_items') ||
+          message.contains('does not exist') ||
+          message.contains('not found')) {
+        return const [];
       }
-    });
+      rethrow;
+    }
+  }
 
-final buyerTransferHistoryProvider =
-    FutureProvider.autoDispose<List<TransferHistoryItemModel>>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) return const [];
+  Future<void> refresh() async {
+    try {
+      final fresh = await build();
+      state = AsyncData(fresh);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+}
 
-      try {
-        final response = await supabase.rpc('get_buyer_transfer_history_items');
-
-        return (response as List<dynamic>)
-            .map(
-              (json) => TransferHistoryItemModel.fromJson(
-                Map<String, dynamic>.from(json as Map),
-              ),
-            )
-            .toList();
-      } on PostgrestException catch (e) {
-        final message = e.message.toLowerCase();
-        if (message.contains('get_buyer_transfer_history_items') ||
-            message.contains('does not exist') ||
-            message.contains('not found')) {
-          return const [];
-        }
-        rethrow;
-      }
-    });
+final buyerTransferHistoryProvider = AsyncNotifierProvider<
+    BuyerTransferHistoryNotifier, List<TransferHistoryItemModel>>(
+  BuyerTransferHistoryNotifier.new,
+);
 
 final transferItemsProvider =
     FutureProvider.family.autoDispose<List<TransferItemDetail>, String>((
@@ -83,7 +125,7 @@ final transferItemsProvider =
           'get_logistics_transfer_items',
           params: {'p_transfer_id': transferId},
         ).timeout(const Duration(seconds: 10));
-        
+
         final list = response as List<dynamic>;
         return list
             .map(

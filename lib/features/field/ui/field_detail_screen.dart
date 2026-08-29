@@ -2744,6 +2744,14 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         ref
             .read(fieldDetailProvider(widget.fieldId).notifier)
             .patchSlotsAndInventories(slots: newSlots, inventories: newInventories);
+        ref
+            .read(fieldListProvider.notifier)
+            .patchSlotProduct(
+              fieldId: widget.fieldId,
+              slotId: slot.id,
+              productId: product.id,
+              product: product,
+            );
       }
       if (!context.mounted) return;
       final deletedObsoleteCount =
@@ -5448,11 +5456,12 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     final result = await ref
         .read(fieldActionProvider)
-        .sellField(fieldId: field.id, confirm: true);
+        .sellField(fieldId: field.id, confirm: true, syncProviders: false);
 
     if (!context.mounted) return;
 
     if (result['success'] == true) {
+      ref.read(fieldListProvider.notifier).removeField(field.id);
       AppSnackbar.show(
         context,
         title: 'Başarılı',

@@ -39,8 +39,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
   bool _achievementClaimedExpanded = false;
 
   Future<void> _refresh() async {
-    ref.invalidate(playerMissionDashboardProvider);
-    await ref.read(playerMissionDashboardProvider.future);
+    await ref.read(playerMissionDashboardProvider.notifier).refresh();
   }
 
   Future<void> _claimMissionReward(PlayerMissionModel mission) async {

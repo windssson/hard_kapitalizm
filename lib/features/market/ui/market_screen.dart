@@ -94,12 +94,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     _selectedProductId = widget.productId;
     _selectedWarehouseId = widget.warehouseId;
     _selectedCityId = widget.cityId;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.invalidate(warehouseListProvider);
-        ref.invalidate(storesListProvider);
-      }
-    });
   }
 
   String get _activeProductId => _selectedProductId;
@@ -158,9 +152,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       ref.invalidate(marketBuyerWarehouseProvider(_activeWarehouseId));
       ref.invalidate(warehouseCapacityStatusProvider(_activeWarehouseId));
     }
-    ref.invalidate(warehouseListProvider);
-    if (_activeWarehouseId.isNotEmpty) {
-      ref.invalidate(warehouseDetailProvider(_activeWarehouseId));
+    if (isInstant) {
+      ref.invalidate(warehouseListProvider);
+      if (_activeWarehouseId.isNotEmpty) {
+        ref.invalidate(warehouseDetailProvider(_activeWarehouseId));
+      }
     }
   }
 
@@ -892,7 +888,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
     final double usedProgress = (used / total).clamp(0.0, 1.0);
     final double cartProgress = (cart / total).clamp(0.0, 1.0 - usedProgress);
-    final double remainingProgress = (1.0 - usedProgress - cartProgress).clamp(0.0, 1.0);
+
+    final int usedFlex = (usedProgress * 1000).round();
+    final int cartFlex = (cartProgress * 1000).round();
+    int remainingFlex = 1000 - usedFlex - cartFlex;
+    if (remainingFlex < 0) remainingFlex = 0;
 
     return Container(
       height: 6.h,
@@ -905,23 +905,23 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         borderRadius: BorderRadius.circular(3.r),
         child: Row(
           children: [
-            if (usedProgress > 0)
+            if (usedFlex > 0)
               Expanded(
-                flex: (usedProgress * 1000).toInt(),
+                flex: usedFlex,
                 child: Container(
                   color: AppColors.blue,
                 ),
               ),
-            if (cartProgress > 0)
+            if (cartFlex > 0)
               Expanded(
-                flex: (cartProgress * 1000).toInt(),
+                flex: cartFlex,
                 child: Container(
                   color: AppColors.gold,
                 ),
               ),
-            if (remainingProgress > 0)
+            if (remainingFlex > 0)
               Spacer(
-                flex: (remainingProgress * 1000).toInt(),
+                flex: remainingFlex,
               ),
           ],
         ),
@@ -5004,7 +5004,15 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         slotId: slot.id,
         isAvailableForSale: newStatus,
       );
-      ref.invalidate(marketListingsProvider);
+      ref.read(warehouseDetailProvider(warehouse.id).notifier).patchSlotSaleStatus(
+        slotId: slot.id,
+        isAvailableForSale: newStatus,
+      );
+      if (slot.productId != null && slot.productId!.isNotEmpty) {
+        ref.invalidate(marketListingsProvider(slot.productId!));
+      } else {
+        ref.invalidate(marketListingsProvider);
+      }
       AppHaptic.medium();
       AppSnackbar.show(
         context,
@@ -5576,6 +5584,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         slotId: slot.id,
         price: result,
       );
+      ref.read(warehouseDetailProvider(warehouse.id).notifier).patchSlotPrice(
+        slotId: slot.id,
+        price: result,
+      );
       if (!slot.isAvailableForSale) {
         final saleRes = await ref.read(warehouseActionProvider).setWarehouseSlotSaleStatus(
           warehouseSlotId: slot.id,
@@ -5587,10 +5599,18 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             slotId: slot.id,
             isAvailableForSale: true,
           );
+          ref.read(warehouseDetailProvider(warehouse.id).notifier).patchSlotSaleStatus(
+            slotId: slot.id,
+            isAvailableForSale: true,
+          );
         }
       }
       if (!mounted) return;
-      ref.invalidate(marketListingsProvider);
+      if (slot.productId != null && slot.productId!.isNotEmpty) {
+        ref.invalidate(marketListingsProvider(slot.productId!));
+      } else {
+        ref.invalidate(marketListingsProvider);
+      }
       AppHaptic.medium();
       AppSnackbar.show(
         context,
@@ -5734,8 +5754,19 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       slotId: item.slot.id,
                       isAvailableForSale: true,
                     );
+                    ref.read(warehouseDetailProvider(item.warehouse.id).notifier).patchSlotSaleStatus(
+                      slotId: item.slot.id,
+                      isAvailableForSale: true,
+                    );
                   }
-                  ref.invalidate(marketListingsProvider);
+                  final affectedProductIds = pricedInactive
+                      .map((item) => item.slot.productId)
+                      .whereType<String>()
+                      .where((id) => id.isNotEmpty)
+                      .toSet();
+                  for (final pid in affectedProductIds) {
+                    ref.invalidate(marketListingsProvider(pid));
+                  }
                   if (!mounted) return;
                   AppSnackbar.show(
                     context,
@@ -5796,8 +5827,19 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       slotId: item.slot.id,
                       isAvailableForSale: false,
                     );
+                    ref.read(warehouseDetailProvider(item.warehouse.id).notifier).patchSlotSaleStatus(
+                      slotId: item.slot.id,
+                      isAvailableForSale: false,
+                    );
                   }
-                  ref.invalidate(marketListingsProvider);
+                  final affectedProductIds = activeListings
+                      .map((item) => item.slot.productId)
+                      .whereType<String>()
+                      .where((id) => id.isNotEmpty)
+                      .toSet();
+                  for (final pid in affectedProductIds) {
+                    ref.invalidate(marketListingsProvider(pid));
+                  }
                   if (!mounted) return;
                   AppSnackbar.show(
                     context,
@@ -5907,18 +5949,53 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       ),
                       title: Text(
                         slot.productName ?? 'Ürün',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: AppTypography.bodySmall,
                         ),
                       ),
-                      subtitle: Text(
-                        '${warehouse.cityName ?? ''} • ${warehouse.name} | Stok: ${slot.quantity}',
-                        style: AppTextStyles.caption.standardCopyWith(
-                          color: AppColors.textMuted,
-                          fontSize: AppTypography.micro,
-                        ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 2.h),
+                          Row(
+                            children: [
+                              for (int i = 0; i < 5; i++)
+                                Padding(
+                                  padding: EdgeInsets.only(right: 1.w),
+                                  child: Icon(
+                                    i < slot.qualityLevel
+                                        ? AppIcons.starRounded
+                                        : AppIcons.starBorderRounded,
+                                    color: i < slot.qualityLevel
+                                        ? AppColors.gold
+                                        : AppFx.softOverlay(0.15),
+                                    size: 13.w,
+                                  ),
+                                ),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'Q${slot.qualityLevel}',
+                                style: AppTextStyles.caption.standardCopyWith(
+                                  color: AppColors.gold,
+                                  fontSize: AppTypography.micro,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            '${warehouse.cityName ?? ''} • ${warehouse.name} | Stok: ${slot.quantity} ad.',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.textMuted,
+                              fontSize: AppTypography.micro,
+                            ),
+                          ),
+                        ],
                       ),
                       trailing: ElevatedButton(
                         style: ElevatedButton.styleFrom(

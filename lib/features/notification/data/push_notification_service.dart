@@ -3,6 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,11 +12,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class PushNotificationService {
   final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
-  Timer? _heartbeatTimer;
   RealtimeChannel? _realtimeChannel;
   bool _isInitialized = false;
   bool _isInitializing = false;
   String? _lastRegisteredToken;
+  final Set<String> _recentlyShownNotificationIds = {};
 
   PushNotificationService(this._ref);
 
@@ -43,6 +45,14 @@ class PushNotificationService {
 
       debugPrint('User granted notification permission: ${settings.authorizationStatus}');
 
+      // Configure Foreground Notification Presentation
+      // Prevents system heads-up drawer alert while app is open; we display it via in-game snackbar
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: false,
+        badge: true,
+        sound: false,
+      );
+
       // Get FCM Token
       final token = await messaging.getToken();
       if (token != null) {
@@ -57,6 +67,20 @@ class PushNotificationService {
       // Handle Foreground Messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         debugPrint('Received a foreground push message: ${message.notification?.title}');
+        final title = message.notification?.title ?? message.data['title']?.toString();
+        final body = message.notification?.body ?? message.data['message']?.toString() ?? message.data['body']?.toString();
+        final notifId = message.data['notification_id']?.toString() ?? message.messageId;
+
+        if (_shouldShowInAppNotification(notifId) && body != null && body.isNotEmpty) {
+          AppSnackbar.showGlobal(
+            title: title ?? 'BİLDİRİM',
+            message: body,
+            type: SnackbarType.info,
+            customIcon: AppIcons.notificationsActiveRounded,
+            duration: const Duration(seconds: 4),
+          );
+        }
+
         _ref.invalidate(playerNotificationDashboardProvider);
         _ref.invalidate(homeDashboardProvider);
       });
@@ -68,8 +92,17 @@ class PushNotificationService {
       _isInitializing = false;
     }
 
-    _startHeartbeat();
     _subscribeRealtime();
+  }
+
+  bool _shouldShowInAppNotification(String? id) {
+    if (id == null || id.isEmpty) return true;
+    if (_recentlyShownNotificationIds.contains(id)) return false;
+    _recentlyShownNotificationIds.add(id);
+    if (_recentlyShownNotificationIds.length > 50) {
+      _recentlyShownNotificationIds.remove(_recentlyShownNotificationIds.first);
+    }
+    return true;
   }
 
   Future<void> _registerToken(String token) async {
@@ -124,6 +157,22 @@ class PushNotificationService {
           ),
           callback: (payload) {
             debugPrint('Realtime notification update received: ${payload.eventType}');
+            if (payload.eventType == PostgresChangeEvent.insert) {
+              final newRec = payload.newRecord;
+              final notifId = newRec['id']?.toString();
+              final title = newRec['title']?.toString();
+              final body = newRec['message']?.toString();
+
+              if (_shouldShowInAppNotification(notifId) && body != null && body.isNotEmpty) {
+                AppSnackbar.showGlobal(
+                  title: title ?? 'BİLDİRİM',
+                  message: body,
+                  type: SnackbarType.info,
+                  customIcon: AppIcons.notificationsActiveRounded,
+                  duration: const Duration(seconds: 4),
+                );
+              }
+            }
             _ref.invalidate(playerNotificationDashboardProvider);
             _ref.invalidate(homeDashboardProvider);
           },
@@ -131,31 +180,7 @@ class PushNotificationService {
         .subscribe();
   }
 
-  void _startHeartbeat() {
-    _heartbeatTimer?.cancel();
-    _sendHeartbeat();
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      _sendHeartbeat();
-    });
-  }
-
-  Future<void> _sendHeartbeat() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      stopTracking();
-      return;
-    }
-
-    try {
-      await _supabase.rpc('update_player_heartbeat');
-    } catch (e) {
-      debugPrint('Error sending presence heartbeat: $e');
-    }
-  }
-
   void stopTracking() {
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = null;
     _realtimeChannel?.unsubscribe();
     _realtimeChannel = null;
   }

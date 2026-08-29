@@ -28,8 +28,8 @@ class _TaxScreenState extends ConsumerState<TaxScreen> {
     super.initState();
     // Invalidate tax and player providers on screen enter to always load freshest data
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.invalidate(taxDebtProvider);
-      ref.invalidate(playerTaxProvider);
+      ref.read(taxDebtProvider.notifier).refresh();
+      ref.read(playerTaxProvider.notifier).refresh();
     });
   }
 

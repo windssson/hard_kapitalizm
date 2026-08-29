@@ -49,6 +49,26 @@ class TenderDetailModel {
     );
   }
 
+  TenderDetailModel copyWith({
+    bool? success,
+    String? message,
+    TenderDetailTenderModel? tender,
+    PlayerTenderDetailSummaryModel? playerTender,
+    PlayerTenderBidSummaryModel? playerBid,
+    List<TenderWarehouseOptionModel>? warehouseOptions,
+    List<TenderActiveDeliveryModel>? activeDeliveries,
+  }) {
+    return TenderDetailModel(
+      success: success ?? this.success,
+      message: message ?? this.message,
+      tender: tender ?? this.tender,
+      playerTender: playerTender ?? this.playerTender,
+      playerBid: playerBid ?? this.playerBid,
+      warehouseOptions: warehouseOptions ?? this.warehouseOptions,
+      activeDeliveries: activeDeliveries ?? this.activeDeliveries,
+    );
+  }
+
   static Map<String, dynamic> _asMap(dynamic value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);

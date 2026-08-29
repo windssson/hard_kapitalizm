@@ -686,19 +686,39 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   Future<void> _handleReduceConstructionTimeWithAd(
     String constructionId,
   ) async {
+    Map<String, dynamic>? rpcResult;
     final success = await RewardedTimeReductionFlow.run(
       context,
       rewardKind: 'construction_time_reduce',
       resourceId: constructionId,
-      onApplyReduction: () => ref
-          .read(warehouseActionProvider)
-          .reduceConstructionTimeWithAd(constructionId),
+      onApplyReduction: () async {
+        final res = await ref
+            .read(warehouseActionProvider)
+            .reduceConstructionTimeWithAd(
+              constructionId,
+              syncProviders: false,
+            );
+        rpcResult = res;
+        return res;
+      },
       successMessage: 'İnşaat süresi 10 dakika kısaltıldı.',
     );
 
     if (success) {
+      if (rpcResult != null && rpcResult!['new_finish_at'] != null) {
+        final newFinishAt =
+            DateTime.tryParse(rpcResult!['new_finish_at'].toString());
+        if (newFinishAt != null) {
+          ref
+              .read(warehouseListProvider.notifier)
+              .patchConstructionFinishAt(
+                warehouseId: constructionId,
+                finishAt: newFinishAt,
+              );
+          return;
+        }
+      }
       await ref.read(warehouseListProvider.notifier).refresh();
-      ref.invalidate(playerBrandCompanyProvider);
     }
   }
 

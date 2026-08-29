@@ -110,6 +110,36 @@ class MineProductionInventoryModel {
           : null,
     );
   }
+
+  MineProductionInventoryModel copyWith({
+    String? id,
+    String? ownerKind,
+    String? ownerId,
+    String? inventoryType,
+    String? productId,
+    String? brandId,
+    int? qualityLevel,
+    int? quantity,
+    double? pendingQuantity,
+    double? cost,
+    double? unitVolume,
+    ProductModel? product,
+  }) {
+    return MineProductionInventoryModel(
+      id: id ?? this.id,
+      ownerKind: ownerKind ?? this.ownerKind,
+      ownerId: ownerId ?? this.ownerId,
+      inventoryType: inventoryType ?? this.inventoryType,
+      productId: productId ?? this.productId,
+      brandId: brandId ?? this.brandId,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      quantity: quantity ?? this.quantity,
+      pendingQuantity: pendingQuantity ?? this.pendingQuantity,
+      cost: cost ?? this.cost,
+      unitVolume: unitVolume ?? this.unitVolume,
+      product: product ?? this.product,
+    );
+  }
 }
 
 class MineDetailModel {
@@ -126,6 +156,22 @@ class MineDetailModel {
     required this.product,
     required this.inventories,
   });
+
+  MineDetailModel copyWith({
+    MineModel? mine,
+    MineTypeDetailModel? mineType,
+    String? cityName,
+    ProductModel? product,
+    List<MineProductionInventoryModel>? inventories,
+  }) {
+    return MineDetailModel(
+      mine: mine ?? this.mine,
+      mineType: mineType ?? this.mineType,
+      cityName: cityName ?? this.cityName,
+      product: product ?? this.product,
+      inventories: inventories ?? this.inventories,
+    );
+  }
 
   List<MineProductionInventoryModel> get outputInventories =>
       inventories

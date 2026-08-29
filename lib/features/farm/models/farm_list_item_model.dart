@@ -81,4 +81,24 @@ class FarmListItemModel {
   }
 
   bool get hasWarning => warningReason != null;
+
+  FarmListItemModel copyWith({
+    FarmModel? farm,
+    String? cityName,
+    String? farmTypeName,
+    String? farmTypeIcon,
+    int? outputStockQuantity,
+    int? inputStockQuantity,
+    List<FarmSlotPreviewModel>? slots,
+  }) {
+    return FarmListItemModel(
+      farm: farm ?? this.farm,
+      cityName: cityName ?? this.cityName,
+      farmTypeName: farmTypeName ?? this.farmTypeName,
+      farmTypeIcon: farmTypeIcon ?? this.farmTypeIcon,
+      outputStockQuantity: outputStockQuantity ?? this.outputStockQuantity,
+      inputStockQuantity: inputStockQuantity ?? this.inputStockQuantity,
+      slots: slots ?? this.slots,
+    );
+  }
 }

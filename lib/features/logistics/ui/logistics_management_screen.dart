@@ -445,7 +445,7 @@ class _LogisticsManagementScreenState
     );
 
     if (saved == true) {
-      ref.invalidate(logisticsVehicleListProvider);
+      ref.read(logisticsVehicleListProvider.notifier).refresh();
     }
   }
 
@@ -459,7 +459,7 @@ class _LogisticsManagementScreenState
   }) {
     if (result['success'] == true) {
       if (includeVehicleList) {
-        ref.invalidate(logisticsVehicleListProvider);
+        ref.read(logisticsVehicleListProvider.notifier).refresh();
       }
       if (includeCompany) {
         ref.invalidate(playerLogisticsCompanyProvider);
@@ -2653,7 +2653,7 @@ class _LogisticsManagementScreenState
                               );
                           if (result['success'] == true) {
                             ref.invalidate(playerLogisticsCompanyProvider);
-                            ref.invalidate(logisticsVehicleListProvider);
+                            ref.read(logisticsVehicleListProvider.notifier).refresh();
                             if (context.mounted) {
                               Navigator.pop(context);
                               AppSnackbar.show(

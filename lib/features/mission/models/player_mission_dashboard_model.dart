@@ -113,4 +113,41 @@ class PlayerMissionDashboardModel {
       totalCount: (summaryMap['total_count'] as num?)?.toInt() ?? 0,
     );
   }
+
+  PlayerMissionDashboardModel copyWith({
+    bool? success,
+    PlayerMissionModel? mainMission,
+    List<PlayerMissionModel>? mainMissions,
+    List<PlayerMissionModel>? dailyMissions,
+    List<PlayerMissionModel>? achievements,
+    List<PlayerMissionModel>? weeklyMissions,
+    List<PlayerMissionModel>? sideMissions,
+    int? claimableCount,
+    int? mainClaimableCount,
+    int? dailyClaimableCount,
+    int? achievementClaimableCount,
+    int? weeklyClaimableCount,
+    int? completedCount,
+    int? dailyCompletedCount,
+    int? totalCount,
+  }) {
+    return PlayerMissionDashboardModel(
+      success: success ?? this.success,
+      mainMission: mainMission ?? this.mainMission,
+      mainMissions: mainMissions ?? this.mainMissions,
+      dailyMissions: dailyMissions ?? this.dailyMissions,
+      achievements: achievements ?? this.achievements,
+      weeklyMissions: weeklyMissions ?? this.weeklyMissions,
+      sideMissions: sideMissions ?? this.sideMissions,
+      claimableCount: claimableCount ?? this.claimableCount,
+      mainClaimableCount: mainClaimableCount ?? this.mainClaimableCount,
+      dailyClaimableCount: dailyClaimableCount ?? this.dailyClaimableCount,
+      achievementClaimableCount:
+          achievementClaimableCount ?? this.achievementClaimableCount,
+      weeklyClaimableCount: weeklyClaimableCount ?? this.weeklyClaimableCount,
+      completedCount: completedCount ?? this.completedCount,
+      dailyCompletedCount: dailyCompletedCount ?? this.dailyCompletedCount,
+      totalCount: totalCount ?? this.totalCount,
+    );
+  }
 }

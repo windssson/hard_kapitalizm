@@ -1,3 +1,4 @@
+import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
@@ -18,8 +19,7 @@ import 'package:hard_kapitalizm/features/farm/models/farm_model.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 
-final farmListProvider =
-    FutureProvider<List<FarmListItemModel>>((ref) async {
+Future<List<FarmListItemModel>> _fetchFarmList() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -55,37 +55,184 @@ final farmListProvider =
           .toList(),
     );
   }).toList();
-});
+}
+
+class FarmListNotifier extends AsyncNotifier<List<FarmListItemModel>> {
+  @override
+  Future<List<FarmListItemModel>> build() => _fetchFarmList();
+
+  Future<List<FarmListItemModel>> refresh() async {
+    final list = await _fetchFarmList();
+    state = AsyncData(list);
+    return list;
+  }
+
+  void patchFarmLevelAndCapacity({
+    required String farmId,
+    required int level,
+    required int outputCapacity,
+    int? inputCapacity,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere((item) => item.farm.id == farmId);
+    if (index < 0) return;
+    final item = current[index];
+    final updatedFarm = item.farm.copyWith(
+      level: level,
+      outputCapacity: outputCapacity,
+      inputCapacity: inputCapacity ?? item.farm.inputCapacity,
+    );
+    final next = [...current];
+    next[index] = item.copyWith(farm: updatedFarm);
+    state = AsyncData(next);
+  }
+
+  void patchSlotActive({
+    required String farmId,
+    required String slotId,
+    required bool isActive,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere((item) => item.farm.id == farmId);
+    if (index < 0) return;
+    final item = current[index];
+    final updatedSlots = item.slots.map((s) {
+      if (s.id == slotId) {
+        return FarmSlotPreviewModel(
+          id: s.id,
+          slotIndex: s.slotIndex,
+          isActive: isActive,
+          productId: s.productId,
+          product: s.product,
+        );
+      }
+      return s;
+    }).toList();
+    final next = [...current];
+    next[index] = item.copyWith(slots: updatedSlots);
+    state = AsyncData(next);
+  }
+
+  void addSlot({
+    required String farmId,
+    required FarmSlotPreviewModel slot,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere((item) => item.farm.id == farmId);
+    if (index < 0) return;
+    final item = current[index];
+    final updatedSlots = [...item.slots, slot];
+    final next = [...current];
+    next[index] = item.copyWith(
+      farm: item.farm.copyWith(
+        currentSlotCount: item.farm.currentSlotCount + 1,
+      ),
+      slots: updatedSlots,
+    );
+    state = AsyncData(next);
+  }
+
+  void removeFarm(String farmId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((item) => item.farm.id != farmId).toList());
+  }
+
+  void patchSlotProduct({
+    required String farmId,
+    required String slotId,
+    required String? productId,
+    ProductModel? product,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere((item) => item.farm.id == farmId);
+    if (index < 0) return;
+    final item = current[index];
+    final updatedSlots = item.slots.map((s) {
+      if (s.id == slotId) {
+        return FarmSlotPreviewModel(
+          id: s.id,
+          slotIndex: s.slotIndex,
+          isActive: s.isActive,
+          productId: productId,
+          product: product,
+        );
+      }
+      return s;
+    }).toList();
+    final next = [...current];
+    next[index] = item.copyWith(slots: updatedSlots);
+    state = AsyncData(next);
+  }
+}
+
+final farmListProvider =
+    AsyncNotifierProvider<FarmListNotifier, List<FarmListItemModel>>(
+      FarmListNotifier.new,
+    );
 
 final farmTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   final catalogs = await ref.watch(staticCatalogsProvider.future);
   return catalogs.farmTypes;
 });
 
-final farmConstructionProvider =
-    FutureProvider<Map<String, dynamic>?>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+Future<Map<String, dynamic>?> _fetchFarmConstruction() async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
 
-      if (user == null) return null;
+  if (user == null) return null;
 
-      final response = await supabase.rpc(
-        'get_player_building_constructions',
-        params: {
-          'p_building_kind': 'farm',
-          'p_status': 'in_progress',
-        },
-      );
+  final response = await supabase.rpc(
+    'get_player_building_constructions',
+    params: {
+      'p_building_kind': 'farm',
+      'p_status': 'in_progress',
+    },
+  );
 
-      final rows = response as List<dynamic>? ?? const [];
-      if (rows.isEmpty) return null;
-      return Map<String, dynamic>.from(rows.first as Map);
+  final rows = response as List<dynamic>? ?? const [];
+  if (rows.isEmpty) return null;
+  return Map<String, dynamic>.from(rows.first as Map);
+}
+
+class FarmConstructionNotifier extends AsyncNotifier<Map<String, dynamic>?> {
+  @override
+  Future<Map<String, dynamic>?> build() => _fetchFarmConstruction();
+
+  Future<Map<String, dynamic>?> refresh() async {
+    final data = await _fetchFarmConstruction();
+    state = AsyncData(data);
+    return data;
+  }
+
+  void setConstruction(Map<String, dynamic>? data) {
+    state = AsyncData(data);
+  }
+
+  void patchFinishAt(DateTime newFinishAt) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData({
+      ...current,
+      'finish_at': newFinishAt.toIso8601String(),
     });
+  }
 
-final farmDetailProvider = FutureProvider.family<FarmDetailModel, String>((
-  ref,
-  farmId,
-) async {
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final farmConstructionProvider =
+    AsyncNotifierProvider<FarmConstructionNotifier, Map<String, dynamic>?>(
+      FarmConstructionNotifier.new,
+    );
+
+Future<FarmDetailModel> _fetchFarmDetail(String farmId) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -140,59 +287,205 @@ final farmDetailProvider = FutureProvider.family<FarmDetailModel, String>((
         .map(FarmProductionInventoryModel.fromJson)
         .toList(),
   );
-});
+}
 
-final activeFarmUpgradeProvider =
-    FutureProvider.family<BuildingUpgradeModel?, String>((ref, farmId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
+  FarmDetailNotifier(this._farmId);
 
-      if (user == null) {
-        return null;
+  final String _farmId;
+
+  @override
+  Future<FarmDetailModel> build() => _fetchFarmDetail(_farmId);
+
+  Future<FarmDetailModel> refresh() async {
+    final detail = await _fetchFarmDetail(_farmId);
+    state = AsyncData(detail);
+    return detail;
+  }
+
+  void patchFarmLevelAndCapacity({
+    required int level,
+    required int outputCapacity,
+    int? inputCapacity,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        farm: current.farm.copyWith(
+          level: level,
+          outputCapacity: outputCapacity,
+          inputCapacity: inputCapacity ?? current.farm.inputCapacity,
+        ),
+      ),
+    );
+  }
+
+  void patchSlotActive({
+    required String slotId,
+    required bool isActive,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedSlots = current.slots.map((slot) {
+      if (slot.id == slotId) {
+        return slot.copyWith(isActive: isActive);
       }
+      return slot;
+    }).toList();
+    state = AsyncData(current.copyWith(slots: updatedSlots));
+  }
 
-      final response = await supabase.rpc(
-        'get_player_active_building_upgrade',
-        params: {
-          'p_building_kind': 'farm',
-          'p_entity_id': farmId,
-        },
-      );
+  void addSlot(FarmProductionSlotModel slot) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedSlots = [...current.slots, slot];
+    state = AsyncData(
+      current.copyWith(
+        farm: current.farm.copyWith(
+          currentSlotCount: current.farm.currentSlotCount + 1,
+        ),
+        slots: updatedSlots,
+      ),
+    );
+  }
 
-      if (response == null) {
-        return null;
+  void patchSlotsAndInventories({
+    required List<FarmProductionSlotModel> slots,
+    required List<FarmProductionInventoryModel> inventories,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        slots: slots,
+        inventories: inventories,
+      ),
+    );
+  }
+
+  void patchInventoryQuantity({
+    required String inventoryId,
+    required int quantity,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.inventories.map((inv) {
+      if (inv.id == inventoryId) {
+        return inv.copyWith(quantity: quantity);
       }
+      return inv;
+    }).toList();
+    state = AsyncData(current.copyWith(inventories: updated));
+  }
 
-      return BuildingUpgradeModel.fromJsonNullable(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
+  void applyMutation(Map<String, dynamic> response) {
+    ref.read(mutationSyncServiceProvider).applyRaw(response);
+  }
+}
 
-final activeFarmBoostProvider =
-    FutureProvider.family<BuildingBoostModel?, String>((ref, farmId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+final farmDetailProvider = AsyncNotifierProvider.family<
+    FarmDetailNotifier,
+    FarmDetailModel,
+    String
+>(FarmDetailNotifier.new);
 
-      if (user == null) {
-        return null;
-      }
+class ActiveFarmUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
+  ActiveFarmUpgradeNotifier(this._farmId);
 
-      final response = await supabase.rpc(
-        'get_player_active_building_boost',
-        params: {
-          'p_building_kind': 'farm',
-          'p_entity_id': farmId,
-        },
-      );
+  final String _farmId;
 
-      if (response == null) {
-        return null;
-      }
+  @override
+  Future<BuildingUpgradeModel?> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
 
-      return BuildingBoostModel.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
-    });
+    if (user == null) {
+      return null;
+    }
+
+    final response = await supabase.rpc(
+      'get_player_active_building_upgrade',
+      params: {
+        'p_building_kind': 'farm',
+        'p_entity_id': _farmId,
+      },
+    );
+
+    if (response == null) {
+      return null;
+    }
+
+    return BuildingUpgradeModel.fromJsonNullable(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  void setUpgrade(BuildingUpgradeModel? upgrade) {
+    state = AsyncData(upgrade);
+  }
+
+  void reduceTime(Duration duration) {
+    final current = state.value;
+    if (current == null) return;
+    final reducedFinishAt = current.finishAt.subtract(duration);
+    state = AsyncData(current.copyWith(finishAt: reducedFinishAt));
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final activeFarmUpgradeProvider = AsyncNotifierProvider.autoDispose
+    .family<ActiveFarmUpgradeNotifier, BuildingUpgradeModel?, String>(
+      ActiveFarmUpgradeNotifier.new,
+    );
+
+class ActiveFarmBoostNotifier extends AsyncNotifier<BuildingBoostModel?> {
+  ActiveFarmBoostNotifier(this._farmId);
+
+  final String _farmId;
+
+  @override
+  Future<BuildingBoostModel?> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      return null;
+    }
+
+    final response = await supabase.rpc(
+      'get_player_active_building_boost',
+      params: {
+        'p_building_kind': 'farm',
+        'p_entity_id': _farmId,
+      },
+    );
+
+    if (response == null) {
+      return null;
+    }
+
+    return BuildingBoostModel.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  void setBoost(BuildingBoostModel? boost) {
+    state = AsyncData(boost);
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final activeFarmBoostProvider = AsyncNotifierProvider.autoDispose
+    .family<ActiveFarmBoostNotifier, BuildingBoostModel?, String>(
+      ActiveFarmBoostNotifier.new,
+    );
 
 class FarmActionNotifier {
   final Ref _ref;
@@ -323,7 +616,6 @@ class FarmActionNotifier {
       );
       final result = _sync(response);
       if (syncProviders) {
-        _ref.invalidate(farmListProvider);
         _ref.invalidate(farmConstructionProvider);
       }
       return result;
@@ -761,6 +1053,7 @@ class FarmActionNotifier {
   Future<Map<String, dynamic>> sellFarm({
     required String farmId,
     required bool confirm,
+    bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -774,8 +1067,11 @@ class FarmActionNotifier {
           'p_confirm': confirm,
         },
       );
-      _ref.invalidate(farmListProvider);
-      return _sync(response);
+      final result = _sync(response);
+      if (confirm && syncProviders && result['success'] == true) {
+        _ref.invalidate(farmListProvider);
+      }
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

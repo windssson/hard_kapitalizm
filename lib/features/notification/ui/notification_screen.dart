@@ -29,7 +29,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
 
   Future<void> _refresh() async {
     await ref.read(notificationActionProvider).refreshAttention();
-    final _ = await ref.refresh(playerNotificationDashboardProvider.future);
+    await ref.read(playerNotificationDashboardProvider.notifier).refresh();
   }
 
   Future<void> _markAllRead() async {
