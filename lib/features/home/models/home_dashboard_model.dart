@@ -1,4 +1,4 @@
-import 'package:hard_kapitalizm/features/notification/models/player_notification_model.dart';
+
 
 class HomeDashboardModel {
   final bool success;
@@ -8,7 +8,7 @@ class HomeDashboardModel {
   final HomeModulesSummary modules;
   final HomeHourlyIncomeEstimate hourlyIncomeEstimate;
   final List<HomeOngoingActivity> ongoingActivities;
-  final List<PlayerNotificationModel> notifications;
+
   final List<HomeActiveProduction> activeProductions;
   final int unreadNotificationCount;
   final int activeWarningCount;
@@ -21,7 +21,7 @@ class HomeDashboardModel {
     required this.modules,
     required this.hourlyIncomeEstimate,
     required this.ongoingActivities,
-    required this.notifications,
+
     required this.activeProductions,
     required this.unreadNotificationCount,
     required this.activeWarningCount,
@@ -34,7 +34,7 @@ class HomeDashboardModel {
     final modulesMap = _asMap(json['modules']);
     final hourlyIncomeMap = _asMap(json['hourly_income_estimate']);
     final ongoingList = _asList(json['ongoing_activities']);
-    final notificationList = _asList(json['notifications']);
+
     final summaryMap = _asMap(json['notification_summary']);
     final activeProdList = _asList(json['active_productions']);
 
@@ -52,14 +52,7 @@ class HomeDashboardModel {
                 HomeOngoingActivity.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
-      notifications: notificationList
-          .whereType<Map>()
-          .map(
-            (item) => PlayerNotificationModel.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
-          )
-          .toList(),
+
       activeProductions: activeProdList
           .whereType<Map>()
           .map(

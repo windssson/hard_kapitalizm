@@ -16,7 +16,7 @@ import 'package:hard_kapitalizm/core/models/selectable_production_product_model.
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_model.dart';
-import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
+
 
 Future<List<FarmListItemModel>> _fetchFarmList() async {
   final supabase = Supabase.instance.client;
@@ -500,14 +500,7 @@ class FarmActionNotifier {
     return result;
   }
 
-  Future<void> _refreshAttentionNotifications() async {
-    try {
-      await _supabase.rpc('refresh_player_attention_notifications');
-    } catch (_) {
-      // Ignore attention refresh errors; primary action already succeeded.
-    }
-    _ref.invalidate(playerNotificationDashboardProvider);
-  }
+
 
   Future<Map<String, dynamic>> createFarm({
     required String cityId,
@@ -1113,7 +1106,6 @@ class FarmActionNotifier {
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(warehouseDetailProvider(sourceWarehouseId));
     }
-    await _refreshAttentionNotifications();
     return result;
   }
 
@@ -1141,7 +1133,6 @@ class FarmActionNotifier {
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
     }
-    await _refreshAttentionNotifications();
     return result;
   }
 

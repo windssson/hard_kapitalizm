@@ -18,7 +18,7 @@ import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart'
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/daily_streak_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
-import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
+
 import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
@@ -33,7 +33,7 @@ class SessionManager {
     ref.invalidate(authIdentityProvider);
     ref.invalidate(playerProvider);
     ref.invalidate(homeDashboardProvider);
-    ref.invalidate(playerNotificationDashboardProvider);
+
     ref.invalidate(playerAchievementDashboardProvider);
     ref.invalidate(storesListProvider);
     ref.invalidate(warehouseListProvider);

@@ -4,7 +4,7 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/achievement/data/achievement_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
-import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
+
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 
 /// Ortak mutation sync servisi.
@@ -30,10 +30,7 @@ class MutationSyncService {
       _ref.invalidate(homeDashboardProvider);
     }
 
-    // Notification dirty
-    if (mutation.notificationDirty) {
-      _ref.invalidate(playerNotificationDashboardProvider);
-    }
+
 
     // Mission dirty
     if (mutation.missionDirty) {

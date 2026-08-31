@@ -5,7 +5,6 @@ import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/core/managers/session_manager.dart';
-import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
@@ -116,7 +115,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       // Kalan ürün ikonlarını ve arka plan servislerini ana ekrana geçerken sessizce çalıştır
       assetManager.prefetchRemainingAssetsInBackground();
       ref.read(pushNotificationServiceProvider).initialize().ignore();
-      ref.read(notificationActionProvider).refreshAttention().ignore();
       ref.read(playerActiveProductsProvider.future).ignore();
 
       if (mounted) {

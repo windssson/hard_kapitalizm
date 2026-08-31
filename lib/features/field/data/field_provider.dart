@@ -12,7 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
-import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
+
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_model.dart';
@@ -470,14 +470,7 @@ class FieldActionNotifier {
     return result;
   }
 
-  Future<void> _refreshAttentionNotifications() async {
-    try {
-      await _supabase.rpc('refresh_player_attention_notifications');
-    } catch (_) {
-      // Ignore attention refresh errors; primary action already succeeded.
-    }
-    _ref.invalidate(playerNotificationDashboardProvider);
-  }
+
 
   Future<Map<String, dynamic>> createField({
     required String cityId,
@@ -1159,7 +1152,6 @@ class FieldActionNotifier {
       _ref.invalidate(fieldDetailProvider);
       _ref.invalidate(warehouseListProvider);
       _ref.invalidate(warehouseDetailProvider(sourceWarehouseId));
-      await _refreshAttentionNotifications();
     }
     return result;
   }
