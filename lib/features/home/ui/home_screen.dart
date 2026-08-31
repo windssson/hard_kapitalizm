@@ -2095,62 +2095,150 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 
 
-  Widget _buildOngoingActivitiesCard() {
+  Widget _buildOperationsSection() {
     return Consumer(
       builder: (context, ref, child) {
         final dashboard = ref.watch(homeDashboardProvider).value;
         final activities =
             dashboard?.ongoingActivities ?? const <HomeOngoingActivity>[];
-        if (activities.isEmpty) {
+        final productions =
+            dashboard?.activeProductions ?? const <HomeActiveProduction>[];
+
+        if (activities.isEmpty && productions.isEmpty) {
           return const SizedBox.shrink();
         }
 
-        return Container(
-          decoration: AppDecorations.premiumCard(
-            AppColors.borderGold.withValues(alpha: 0.34),
-            12.r,
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 12.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      AppIcons.pendingActionsRounded,
-                      color: AppColors.gold,
-                      size: AppIconSizes.regular,
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Devam Eden İşlemler',
-                      style: AppTextStyles.body.standardCopyWith(
-                        color: AppColors.textPrimary,
-                        fontSize: AppTypography.titleLarge,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10.h),
-                ...activities.map(_buildOngoingActivityRow),
-              ],
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildOngoingActivitiesCard(activities),
             ),
-          ),
+            SizedBox(width: 8.w),
+            Expanded(
+              child: _buildActiveProductionsCard(productions),
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildOperationsSection() {
-    return _buildOngoingActivitiesCard();
+  Widget _buildOngoingActivitiesCard(List<HomeOngoingActivity> activities) {
+    return Container(
+      decoration: AppDecorations.premiumCard(
+        AppColors.borderGold.withValues(alpha: 0.34),
+        12.r,
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 10.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(4.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Icon(
+                    AppIcons.pendingActionsRounded,
+                    color: AppColors.gold,
+                    size: 13.sp,
+                  ),
+                ),
+                SizedBox(width: 5.w),
+                Expanded(
+                  child: Text(
+                    'İŞLEMLER',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.gold,
+                      fontSize: 10.5.sp,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                  decoration: BoxDecoration(
+                    color: activities.isNotEmpty
+                        ? AppColors.gold.withValues(alpha: 0.18)
+                        : AppColors.cardBgLight,
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${activities.length}',
+                    style: TextStyle(
+                      color: activities.isNotEmpty
+                          ? AppColors.goldLight
+                          : AppColors.textMuted,
+                      fontSize: 9.5.sp,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8.h),
+            if (activities.isEmpty)
+              Container(
+                height: 88.h,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      AppIcons.checkCircleRounded,
+                      color: AppColors.textMuted.withValues(alpha: 0.35),
+                      size: 20.sp,
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      'İşlem Yok',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ...activities.take(3).map(_buildCompactOngoingActivityRow),
+                  if (activities.length > 3)
+                    Padding(
+                      padding: EdgeInsets.only(top: 2.h),
+                      child: Text(
+                        '+${activities.length - 3} işlem daha',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _buildOngoingActivityRow(HomeOngoingActivity activity) {
+  Widget _buildCompactOngoingActivityRow(HomeOngoingActivity activity) {
     final accent = _activityColor(activity.type);
     return Padding(
-      padding: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.only(bottom: 6.h),
       child: Material(
         color: AppColors.transparent,
         child: InkWell(
@@ -2161,80 +2249,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               context.push('/arge');
             }
           },
-          borderRadius: BorderRadius.circular(10.r),
+          borderRadius: BorderRadius.circular(8.r),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 5.h),
             decoration: BoxDecoration(
-              color: AppColors.cardBgLight.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(10.r),
-              border: Border.all(color: accent.withValues(alpha: 0.18)),
+              color: AppColors.cardBgLight.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.2),
+                width: 0.8,
+              ),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 34.w,
-                  height: 34.w,
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Icon(
-                    _activityIcon(activity.type),
-                    color: accent,
-                    size: AppIconSizes.regular,
-                  ),
-                ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              activity.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.body.standardCopyWith(
-                                color: AppColors.textPrimary,
-                                fontSize: AppTypography.bodySmall,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            _formatDuration(activity.remainingDuration),
-                            style: AppTextStyles.caption.standardCopyWith(
-                              color: accent,
-                              fontSize: AppTypography.label,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        activity.subtitle,
+                Row(
+                  children: [
+                    Icon(
+                      _activityIcon(activity.type),
+                      color: accent,
+                      size: 11.sp,
+                    ),
+                    SizedBox(width: 4.w),
+                    Expanded(
+                      child: Text(
+                        activity.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: AppTypography.caption,
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      SizedBox(height: 8.h),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999.r),
-                        child: AppProgressBar(
-                          value: activity.progressRatio,
-                          minHeight: 6.h,
-                          backgroundColor: AppColors.background,
-                          valueColor: AlwaysStoppedAnimation<Color>(accent),
-                        ),
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      _formatDuration(activity.remainingDuration),
+                      style: TextStyle(
+                        fontSize: 9.sp,
+                        fontWeight: FontWeight.w800,
+                        color: accent,
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4.h),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999.r),
+                  child: AppProgressBar(
+                    value: activity.progressRatio,
+                    minHeight: 3.5.h,
+                    backgroundColor: AppColors.background,
+                    valueColor: AlwaysStoppedAnimation<Color>(accent),
                   ),
                 ),
               ],
@@ -2243,6 +2311,251 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildActiveProductionsCard(List<HomeActiveProduction> productions) {
+    return Container(
+      decoration: AppDecorations.premiumCard(
+        AppColors.borderGold.withValues(alpha: 0.34),
+        12.r,
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 10.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(4.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Icon(
+                    AppIcons.precisionManufacturingRounded,
+                    color: AppColors.gold,
+                    size: 13.sp,
+                  ),
+                ),
+                SizedBox(width: 5.w),
+                Expanded(
+                  child: Text(
+                    'ÜRETİMLER',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.gold,
+                      fontSize: 10.5.sp,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                  decoration: BoxDecoration(
+                    color: productions.isNotEmpty
+                        ? AppColors.gold.withValues(alpha: 0.18)
+                        : AppColors.cardBgLight,
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    '${productions.length}',
+                    style: TextStyle(
+                      color: productions.isNotEmpty
+                          ? AppColors.goldLight
+                          : AppColors.textMuted,
+                      fontSize: 9.5.sp,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8.h),
+            if (productions.isEmpty)
+              Container(
+                height: 88.h,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      AppIcons.precisionManufacturingRounded,
+                      color: AppColors.textMuted.withValues(alpha: 0.35),
+                      size: 20.sp,
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      'Üretim Yok',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ...productions.take(3).map(_buildCompactProductionItem),
+                  if (productions.length > 3)
+                    Padding(
+                      padding: EdgeInsets.only(top: 2.h),
+                      child: Text(
+                        '+${productions.length - 3} ürün daha',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactProductionItem(HomeActiveProduction production) {
+    final kindInfo = _productionKindInfo(production.ownerKind);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: 6.h),
+      child: Material(
+        color: AppColors.transparent,
+        child: InkWell(
+          onTap: () {
+            context.go(kindInfo.route);
+          },
+          borderRadius: BorderRadius.circular(8.r),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: AppColors.cardBgLight.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(
+                color: kindInfo.color.withValues(alpha: 0.2),
+                width: 0.8,
+              ),
+            ),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(5.r),
+                  child: Container(
+                    width: 22.w,
+                    height: 22.w,
+                    padding: EdgeInsets.all(1.5.w),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(5.r),
+                    ),
+                    child: CachedAssetImage(
+                      fileName: production.productIcon,
+                      width: 19.w,
+                      height: 19.w,
+                      fit: BoxFit.contain,
+                      errorWidget: Icon(
+                        AppIcons.inventory2Rounded,
+                        size: 11.sp,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 5.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        production.productName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 1.5.h),
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 3.w,
+                              vertical: 0.5.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: kindInfo.color.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(3.r),
+                            ),
+                            child: Text(
+                              kindInfo.label,
+                              style: TextStyle(
+                                fontSize: 7.5.sp,
+                                fontWeight: FontWeight.w700,
+                                color: kindInfo.color,
+                              ),
+                            ),
+                          ),
+                          if (production.qualityLevel > 1) ...[
+                            SizedBox(width: 3.w),
+                            Text(
+                              'Q${production.qualityLevel}',
+                              style: TextStyle(
+                                fontSize: 8.sp,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.goldLight,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 3.w),
+                Text(
+                  '${production.activeSlots} ${production.ownerKind == 'factory' ? 'Hat' : 'Slot'}',
+                  style: TextStyle(
+                    fontSize: 8.5.sp,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  ({String label, String route, Color color}) _productionKindInfo(
+    String ownerKind,
+  ) {
+    switch (ownerKind) {
+      case 'factory':
+        return (label: 'Fabrika', route: '/factories', color: AppColors.gold);
+      case 'farm':
+        return (label: 'Tarla', route: '/farms', color: AppColors.green);
+      case 'field':
+        return (label: 'Çiftlik', route: '/fields', color: AppColors.warning);
+      case 'mine':
+        return (label: 'Maden', route: '/mines', color: AppColors.diamond);
+      default:
+        return (label: 'Tesis', route: '/home', color: AppColors.textSecondary);
+    }
   }
 
   IconData _activityIcon(String type) {
