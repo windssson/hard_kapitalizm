@@ -9,7 +9,6 @@ class MutationResponse {
   final bool historyDirty;
   final bool performanceDirty;
   final bool dashboardDirty;
-  final bool notificationDirty;
   final bool missionDirty;
   final bool achievementDirty;
   final bool taxDirty;
@@ -22,7 +21,6 @@ class MutationResponse {
     this.historyDirty = false,
     this.performanceDirty = false,
     this.dashboardDirty = false,
-    this.notificationDirty = false,
     this.missionDirty = false,
     this.achievementDirty = false,
     this.taxDirty = false,
@@ -50,7 +48,6 @@ class MutationResponse {
       historyDirty: getBool('history_dirty'),
       performanceDirty: getBool('performance_dirty'),
       dashboardDirty: getBool('dashboard_dirty'),
-      notificationDirty: getBool('notification_dirty'),
       missionDirty: getBool('mission_dirty'),
       achievementDirty: getBool('achievement_dirty'),
       taxDirty: getBool('tax_dirty'),

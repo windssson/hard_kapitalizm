@@ -58,7 +58,7 @@ class AppTopBar extends ConsumerWidget {
                       ),
                     ),
                     SizedBox(width: compact ? 4.w : 6.w),
-                    _buildNotificationAction(
+                    _buildMissionAction(
                       context: context,
                       claimableMissionCount: claimableMissionCount,
                       compact: compact,
@@ -371,7 +371,7 @@ class AppTopBar extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotificationAction({
+  Widget _buildMissionAction({
     required BuildContext context,
     required int claimableMissionCount,
     required bool compact,

@@ -10,8 +10,6 @@ class HomeDashboardModel {
   final List<HomeOngoingActivity> ongoingActivities;
 
   final List<HomeActiveProduction> activeProductions;
-  final int unreadNotificationCount;
-  final int activeWarningCount;
 
   const HomeDashboardModel({
     required this.success,
@@ -21,10 +19,7 @@ class HomeDashboardModel {
     required this.modules,
     required this.hourlyIncomeEstimate,
     required this.ongoingActivities,
-
     required this.activeProductions,
-    required this.unreadNotificationCount,
-    required this.activeWarningCount,
   });
 
   factory HomeDashboardModel.fromJson(Map<String, dynamic> json) {
@@ -34,8 +29,6 @@ class HomeDashboardModel {
     final modulesMap = _asMap(json['modules']);
     final hourlyIncomeMap = _asMap(json['hourly_income_estimate']);
     final ongoingList = _asList(json['ongoing_activities']);
-
-    final summaryMap = _asMap(json['notification_summary']);
     final activeProdList = _asList(json['active_productions']);
 
     return HomeDashboardModel(
@@ -52,7 +45,6 @@ class HomeDashboardModel {
                 HomeOngoingActivity.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
-
       activeProductions: activeProdList
           .whereType<Map>()
           .map(
@@ -60,10 +52,6 @@ class HomeDashboardModel {
                 HomeActiveProduction.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
-      unreadNotificationCount:
-          (summaryMap['unread_count'] as num?)?.toInt() ?? 0,
-      activeWarningCount:
-          (summaryMap['active_warning_count'] as num?)?.toInt() ?? 0,
     );
   }
 
