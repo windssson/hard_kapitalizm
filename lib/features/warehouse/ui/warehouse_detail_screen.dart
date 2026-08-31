@@ -619,8 +619,8 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                   label: activeUpgrade != null
                       ? 'Devam Ediyor'
                       : hasAnotherActiveUpgrade
-                      ? 'Baska Yukseltme Var'
-                      : 'Yukselt',
+                      ? 'Başka Yükseltme Var'
+                      : 'Yükselt',
                   color: activeUpgrade != null || hasAnotherActiveUpgrade
                       ? AppColors.textMuted
                       : AppColors.green,
@@ -2848,7 +2848,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                               );
                             },
                       icon: Icon(AppIcons.localShippingOutlined),
-                      label: const Text('Transferi Baslat'),
+                      label: const Text('Transferi Başlat'),
                     ),
                   ),
                 ],
@@ -3237,7 +3237,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           }
                         },
                         icon: Icon(AppIcons.upgradeRounded),
-                        label: const Text('Yukseltmeyi Baslat'),
+                        label: const Text('Yükseltmeyi Başlat'),
                       ),
                     ),
                   ],
@@ -3449,7 +3449,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: quote['message'] ?? 'Satis teklifi hazirlanamadi.',
+        message: quote['message'] ?? 'Satış teklifi hazırlanamadı.',
         type: SnackbarType.error,
       );
       return;
@@ -3508,7 +3508,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
             ),
             SizedBox(height: 10.h),
             Text(
-              'Aktif transferler varsa satis engellenir. Satis sonrasi tum depo slotlari ve stoklar silinir.',
+              'Aktif transferler varsa satış engellenir. Satış sonrası tüm depo slotları ve stoklar silinir.',
               style: AppTextStyles.caption.standardCopyWith(
                 color: AppColors.textMuted,
                 fontSize: AppTypography.bodySmall,

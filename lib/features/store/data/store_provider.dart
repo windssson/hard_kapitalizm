@@ -1157,7 +1157,9 @@ class StoreActionNotifier {
           'p_warehouse_slot_id': sourceWarehouseSlotId,
         },
       );
-      return response as Map<String, dynamic>;
+      final result = Map<String, dynamic>.from(response as Map);
+      _sync(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1245,7 +1247,9 @@ class StoreActionNotifier {
           'p_store_slot_id': slotId,
         },
       );
-      return response as Map<String, dynamic>;
+      final result = Map<String, dynamic>.from(response as Map);
+      _sync(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1269,7 +1273,9 @@ class StoreActionNotifier {
           'p_is_active': isActive,
         },
       );
-      return response as Map<String, dynamic>;
+      final result = Map<String, dynamic>.from(response as Map);
+      _sync(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1292,7 +1298,9 @@ class StoreActionNotifier {
           'p_is_active': isActive,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      final result = Map<String, dynamic>.from(response as Map);
+      _sync(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1390,7 +1398,9 @@ class StoreActionNotifier {
           'p_quantity': quantity,
         },
       );
-      return response as Map<String, dynamic>;
+      final result = Map<String, dynamic>.from(response as Map);
+      _sync(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1416,7 +1426,9 @@ class StoreActionNotifier {
           'p_quantity': quantity,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      final result = Map<String, dynamic>.from(response as Map);
+      _sync(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1486,7 +1498,9 @@ class StoreActionNotifier {
           'p_vehicle_id': vehicleId,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      final result = Map<String, dynamic>.from(response as Map);
+      _sync(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1541,7 +1555,9 @@ class StoreActionNotifier {
           'p_vehicle_id': vehicleId,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      final result = Map<String, dynamic>.from(response as Map);
+      _sync(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1565,7 +1581,9 @@ class StoreActionNotifier {
           'p_quantity': quantity,
         },
       );
-      return Map<String, dynamic>.from(response as Map);
+      final result = Map<String, dynamic>.from(response as Map);
+      _sync(result);
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

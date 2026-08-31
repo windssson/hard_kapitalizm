@@ -305,7 +305,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       ],
                       SizedBox(height: 14.h),
                       _buildSectionHeader(
-                        'Uretim Hatti',
+                        'Üretim Hattı',
                         'Fabrikanın aktif ürününü, hammadde akışını ve depoya sevklerini buradan yönetebilirsin.',
                         icon: AppIcons.precisionManufacturingRounded,
                         color: AppColors.gold,
@@ -599,7 +599,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               SizedBox(width: 8.w),
               Expanded(
                 child: _buildActionButton(
-                  detail.factory.isActive ? 'Durdur' : 'Baslat',
+                  detail.factory.isActive ? 'Durdur' : 'Başlat',
                   detail.factory.isActive
                       ? AppIcons.stopCircleOutlined
                       : AppIcons.playCircleOutline,
@@ -980,8 +980,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                                   SizedBox(width: 8.w),
                                   Text(
                                     detail.factory.isActive
-                                        ? 'Uretimi Durdur'
-                                        : 'Uretime Basla',
+                                        ? 'Üretimi Durdur'
+                                        : 'Üretime Başla',
                                     style: AppTextStyles.body.standardCopyWith(
                                       color: AppColors.textPrimary,
                                       fontSize: AppTypography.bodyLarge,
@@ -2101,7 +2101,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
         ),
         BuildingUpgradeBenefit(
           icon: AppIcons.inventory2Rounded,
-          label: 'Uretim kapasitesi',
+          label: 'Üretim kapasitesi',
           before: '${detail.factory.outputCapacity}',
           after: '$nextOutputCapacity',
         ),
@@ -2241,10 +2241,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 ? ' (${_currentBrandName ?? 'Markalı'})'
                 : ''),
         subtitle:
-            'Saatlik uretim: ${(product.uretimAdedi * (1.0 + (detail.factory.qualityLevel - 1) * 0.20)).toInt()}',
+            'Saatlik üretim: ${(product.uretimAdedi * (1.0 + (detail.factory.qualityLevel - 1) * 0.20)).toInt()}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
-            '${selectableProduct.hasPreferredBrand ? ' Ã¢â‚¬Â¢ Marka Hazir' : ''}',
+            '${selectableProduct.hasPreferredBrand ? ' • Marka Hazır' : ''}',
         iconPath: product.urunIconu,
         trailingWidget: isSelling
             ? Container(
@@ -2278,7 +2278,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     if (!context.mounted) return;
     await ProductSelectionSheet.show(
       context: context,
-      title: 'ÃƒÅ“rÃƒÂ¼n SeÃƒÂ§',
+      title: 'Ürün Seç',
       options: options,
     );
   }
@@ -2560,7 +2560,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
 
     await WarehouseSelectionSheet.show(
       context: context,
-      title: 'Kaynak Depo Sec',
+      title: 'Kaynak Depo Seç',
       options: options,
     );
   }
@@ -2694,7 +2694,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     });
     await WarehouseSelectionSheet.show(
       context: context,
-      title: 'Hedef Depo Sec',
+      title: 'Hedef Depo Seç',
       options: options,
     );
   }
@@ -3024,7 +3024,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Alinacak Hammaddeleri Sec',
+                    'Alınacak Hammaddeleri Seç',
                     style: AppTextStyles.h2.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: AppTypography.headline,
@@ -3471,7 +3471,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               );
                             },
                       icon: const Icon(AppIcons.downloadRounded),
-                      label: const Text('Transferi Baslat'),
+                      label: const Text('Transferi Başlat'),
                     ),
                   ),
                 ],
@@ -3975,7 +3975,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Depoya Gonderilecek Stoklari Sec',
+                    'Depoya Gönderilecek Stokları Seç',
                     style: AppTextStyles.h2.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: AppTypography.headline,
@@ -4409,7 +4409,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                               );
                             },
                       icon: const Icon(AppIcons.localShippingRounded),
-                      label: const Text('Transferi Baslat'),
+                      label: const Text('Transferi Başlat'),
                     ),
                   ),
                 ],
@@ -4833,7 +4833,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: quote['message'] ?? 'Satis teklifi hazirlanamadi.',
+        message: quote['message'] ?? 'Satış teklifi hazırlanamadı.',
         type: SnackbarType.error,
       );
       return;

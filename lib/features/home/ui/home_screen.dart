@@ -19,8 +19,6 @@ import 'package:hard_kapitalizm/features/mission/models/player_mission_model.dar
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/notification/models/player_notification_model.dart';
 import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
-import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
-import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:hard_kapitalizm/features/bank/data/bank_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
@@ -1297,7 +1295,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         badgeText: (modules?.fields.warningCount ?? 0) > 0
             ? '${modules!.fields.warningCount} uyarı'
             : (modules?.fields.count ?? 0) > 0
-            ? 'Calisiyor'
+            ? 'Çalışıyor'
             : 'Boş',
         hasAlert:
             alertedModules.contains('fields') ||
@@ -1338,7 +1336,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             : 'Yok',
         badgeText: activeLoanDebt > 0
             ? 'Borç var'
-            : (activeDepositTotal > 0 ? 'Mevduat' : 'Bos'),
+            : (activeDepositTotal > 0 ? 'Mevduat' : 'Boş'),
         hasAlert: activeLoanDebt > 0,
         requiredLevel: 6,
       ),
@@ -2238,7 +2236,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     SizedBox(width: 8.w),
                     Text(
-                      'Devam Eden Islemler',
+                      'Devam Eden İşlemler',
                       style: AppTextStyles.body.standardCopyWith(
                         color: AppColors.textPrimary,
                         fontSize: AppTypography.titleLarge,
@@ -2258,144 +2256,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Widget _buildOperationsSection() {
-    return Consumer(
-      builder: (context, ref, child) {
-        final dashboard = ref.watch(homeDashboardProvider).value;
-        final activities =
-            dashboard?.ongoingActivities ?? const <HomeOngoingActivity>[];
-        final transfersAsync = ref.watch(buyerTransferMapProvider);
-
-        final sections = <Widget>[];
-
-        if (activities.isNotEmpty) {
-          sections.add(_buildOngoingActivitiesCard());
-        }
-
-        transfersAsync.whenData((transfers) {
-          final activeTransfers = transfers
-              .where(
-                (item) =>
-                    item.status == 'in_transit' || item.status == 'in_progress',
-              )
-              .toList();
-          if (activeTransfers.isNotEmpty) {
-            sections.add(_buildActiveTransfersCard());
-          }
-        });
-
-        if (sections.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        return Column(
-          children: [
-            for (var i = 0; i < sections.length; i++) ...[
-              sections[i],
-              if (i != sections.length - 1) SizedBox(height: 8.h),
-            ],
-          ],
-        );
-      },
-    );
+    return _buildOngoingActivitiesCard();
   }
 
-  Widget _buildActiveTransfersCard() {
-    final transfersAsync = ref.watch(buyerTransferMapProvider);
-
-    return transfersAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (transfers) {
-        final activeTransfers =
-            transfers
-                .where(
-                  (item) =>
-                      item.status == 'in_transit' ||
-                      item.status == 'in_progress',
-                )
-                .toList()
-              ..sort((a, b) => a.finishAt.compareTo(b.finishAt));
-
-        if (activeTransfers.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 12.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                InkWell(
-                  onTap: () => context.push('/transfer-map'),
-                  child: Row(
-                    children: [
-                      Icon(
-                        AppIcons.localShippingRounded,
-                        color: AppColors.gold,
-                        size: AppIconSizes.regular,
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        'Aktif Transferler',
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.textPrimary,
-                          fontSize: AppTypography.titleLarge,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${activeTransfers.length} Yolda',
-                        style: AppTextStyles.body.standardCopyWith(
-                          color: AppColors.gold,
-                          fontSize: AppTypography.bodySmall,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(width: 4.w),
-                      Icon(
-                        AppIcons.chevronRightRounded,
-                        color: AppColors.gold,
-                        size: AppIconSizes.compact,
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 10.h),
-                ...activeTransfers.take(3).map(_buildActiveTransferRow),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildActiveTransferRow(TransferMapItemModel transfer) {
-    final progress = _transferProgressRatio(transfer);
-    final remaining = transfer.finishAt.toLocal().difference(DateTime.now());
-    final safeRemaining = remaining.isNegative ? Duration.zero : remaining;
-    final accent = transfer.isRental ? AppColors.warning : AppColors.blue;
-
+  Widget _buildOngoingActivityRow(HomeOngoingActivity activity) {
+    final accent = _activityColor(activity.type);
     return Padding(
       padding: EdgeInsets.only(bottom: 10.h),
       child: Material(
         color: AppColors.transparent,
         child: InkWell(
-          onTap: () => context.push('/transfer-map'),
+          onTap: () {
+            if (activity.type == 'logistics' || activity.type == 'transfer') {
+              context.push('/transfer-map');
+            } else if (activity.type == 'research') {
+              context.push('/arge');
+            }
+          },
           borderRadius: BorderRadius.circular(10.r),
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
             decoration: BoxDecoration(
               color: AppColors.cardBgLight.withValues(alpha: 0.72),
               borderRadius: BorderRadius.circular(10.r),
-              border: Border.all(color: accent.withValues(alpha: 0.2)),
+              border: Border.all(color: accent.withValues(alpha: 0.18)),
             ),
             child: Row(
               children: [
@@ -2407,11 +2291,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     borderRadius: BorderRadius.circular(10.r),
                   ),
                   child: Icon(
-                    transfer.isRental
-                        ? AppIcons.localShippingOutlined
-                        : AppIcons.fireTruckRounded,
+                    _activityIcon(activity.type),
                     color: accent,
-                    size: AppIconSizes.compact,
+                    size: AppIconSizes.regular,
                   ),
                 ),
                 SizedBox(width: 10.w),
@@ -2423,7 +2305,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         children: [
                           Expanded(
                             child: Text(
-                              '${transfer.sellerWarehouse.city.name} -> ${transfer.buyerWarehouse.city.name}',
+                              activity.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: AppTextStyles.body.standardCopyWith(
@@ -2435,7 +2317,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                           SizedBox(width: 8.w),
                           Text(
-                            _formatDuration(safeRemaining),
+                            _formatDuration(activity.remainingDuration),
                             style: AppTextStyles.caption.standardCopyWith(
                               color: accent,
                               fontSize: AppTypography.label,
@@ -2446,7 +2328,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                       SizedBox(height: 2.h),
                       Text(
-                        '${transfer.product.name} • ${transfer.quantity} adet',
+                        activity.subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.body.standardCopyWith(
@@ -2458,7 +2340,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ClipRRect(
                         borderRadius: BorderRadius.circular(999.r),
                         child: AppProgressBar(
-                          value: progress,
+                          value: activity.progressRatio,
                           minHeight: 6.h,
                           backgroundColor: AppColors.background,
                           valueColor: AlwaysStoppedAnimation<Color>(accent),
@@ -2475,106 +2357,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  double _transferProgressRatio(TransferMapItemModel transfer) {
-    final totalMs = transfer.finishAt
-        .difference(transfer.startedAt)
-        .inMilliseconds;
-    if (totalMs <= 0) return 1;
-    final elapsedMs = DateTime.now()
-        .toUtc()
-        .difference(transfer.startedAt.toUtc())
-        .inMilliseconds;
-    final ratio = elapsedMs / totalMs;
-    if (ratio < 0) return 0;
-    if (ratio > 1) return 1;
-    return ratio;
-  }
-
-  Widget _buildOngoingActivityRow(HomeOngoingActivity activity) {
-    final accent = _activityColor(activity.type);
-    return Padding(
-      padding: EdgeInsets.only(bottom: 10.h),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
-        decoration: BoxDecoration(
-          color: AppColors.cardBgLight.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: accent.withValues(alpha: 0.18)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34.w,
-              height: 34.w,
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-              child: Icon(
-                _activityIcon(activity.type),
-                color: accent,
-                size: AppIconSizes.regular,
-              ),
-            ),
-            SizedBox(width: 10.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          activity.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.body.standardCopyWith(
-                            color: AppColors.textPrimary,
-                            fontSize: AppTypography.bodySmall,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        _formatDuration(activity.remainingDuration),
-                        style: AppTextStyles.caption.standardCopyWith(
-                          color: accent,
-                          fontSize: AppTypography.label,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    activity.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.textSecondary,
-                      fontSize: AppTypography.caption,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999.r),
-                    child: AppProgressBar(
-                      value: activity.progressRatio,
-                      minHeight: 6.h,
-                      backgroundColor: AppColors.background,
-                      valueColor: AlwaysStoppedAnimation<Color>(accent),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   IconData _activityIcon(String type) {
     switch (type) {
       case 'construction':
@@ -2583,6 +2365,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         return AppIcons.trendingUpRounded;
       case 'research':
         return AppIcons.scienceRounded;
+      case 'logistics':
+      case 'transfer':
+        return AppIcons.localShippingRounded;
       default:
         return AppIcons.pendingActionsRounded;
     }
@@ -2596,6 +2381,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         return AppColors.gold;
       case 'research':
         return AppColors.blue;
+      case 'logistics':
+      case 'transfer':
+        return AppColors.success;
       default:
         return AppColors.textSecondary;
     }
@@ -2927,7 +2715,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   String _notificationMiniLabel(PlayerNotificationModel item) {
-    if (item.kind == 'warning') return 'Uyari';
+    if (item.kind == 'warning') return 'Uyarı';
 
     switch (item.category) {
       case 'market_sale':
@@ -2935,7 +2723,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       case 'construction_completed':
         return 'İnşaat';
       case 'upgrade_completed':
-        return 'Yukseltme';
+        return 'Yükseltme';
       case 'transfer_completed':
         return 'Transfer';
       case 'arge_completed':

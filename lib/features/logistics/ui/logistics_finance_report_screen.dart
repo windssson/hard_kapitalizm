@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -10,26 +11,44 @@ import 'package:hard_kapitalizm/features/logistics/models/logistics_finance_entr
 class LogisticsFinanceReportScreen extends ConsumerWidget {
   const LogisticsFinanceReportScreen({super.key});
 
+  void _handleBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/logistics');
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entriesAsync = ref.watch(logisticsFinanceEntriesProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.transparent,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SecondaryTopBar(title: 'Lojistik Raporu'),
-            Expanded(
-              child: entriesAsync.when(
-                data: (entries) => _buildContent(entries),
-                loading: () => Center(
-                  child: AppLoadingIndicator(color: AppColors.gold),
-                ),
-                error: (error, stack) => _buildError(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleBack(context);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.transparent,
+        body: SafeArea(
+          child: Column(
+            children: [
+              SecondaryTopBar(
+                title: 'Lojistik Raporu',
+                onBackPressed: () => _handleBack(context),
               ),
-            ),
-          ],
+              Expanded(
+                child: entriesAsync.when(
+                  data: (entries) => _buildContent(entries),
+                  loading: () => Center(
+                    child: AppLoadingIndicator(color: AppColors.gold),
+                  ),
+                  error: (error, stack) => _buildError(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -326,7 +345,7 @@ class LogisticsFinanceReportScreen extends ConsumerWidget {
       'fuel_purchase' => 'Yakıt Gideri',
       'maintenance' => 'Bakım Gideri',
       'rental_income' => 'Kira Geliri',
-      _ => 'Kayit',
+      _ => 'Kayıt',
     };
   }
 

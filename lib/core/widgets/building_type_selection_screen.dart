@@ -527,7 +527,11 @@ class _BuildingTypeSelectionScreenState
           ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickQuickFinish);
         }
 
-        final String redirectRoute = kind == 'store' ? '/store' : '/${kind}s';
+        final String redirectRoute = widget.buildingKind == 'factory'
+            ? '/factories'
+            : widget.buildingKind == 'store'
+                ? '/store'
+                : '/${widget.buildingKind}s';
         context.go(redirectRoute);
       } else {
         if (mounted) {

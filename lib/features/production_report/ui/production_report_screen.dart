@@ -39,7 +39,7 @@ class ProductionReportScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Uretim Raporu'),
+            const SecondaryTopBar(title: 'Üretim Raporu'),
             Expanded(
               child: statsAsync.when(
                 loading: () => Center(
@@ -156,7 +156,7 @@ class ProductionReportScreen extends ConsumerWidget {
       children: [
         Expanded(
           child: _buildMetricCard(
-            'Toplam Uretim',
+            'Toplam Üretim',
             totalProduced.toString(),
             AppColors.gold,
           ),
@@ -545,7 +545,7 @@ class ProductionReportScreen extends ConsumerWidget {
       case 'mine':
         return 'Maden';
       default:
-        return 'Uretim Birimi';
+        return 'Üretim Birimi';
     }
   }
 

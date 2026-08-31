@@ -708,7 +708,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
                 ),
               ),
               SizedBox(height: 16.h),
-              Text('Hedef Depo Secin 🏢', style: AppTextStyles.h2),
+              Text('Hedef Depo Seçin 🏢', style: AppTextStyles.h2),
               SizedBox(height: 8.h),
               warehousesAsync.when(
                 loading: () =>

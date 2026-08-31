@@ -3085,7 +3085,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           ),
           SizedBox(height: 16.h),
           Text(
-            'Satis Noktasi Bulunamadi',
+            'Satış Noktası Bulunamadı',
             style: AppTextStyles.h2.standardCopyWith(fontSize: AppTypography.titleLarge),
           ),
           SizedBox(height: 8.h),

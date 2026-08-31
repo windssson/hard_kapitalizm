@@ -904,7 +904,7 @@ class _LogisticsManagementScreenState
               SizedBox(width: 10.w),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => context.go('/logistics/finance'),
+                  onPressed: () => context.push('/logistics/finance'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.gold,
                     padding: EdgeInsets.symmetric(vertical: 11.h),

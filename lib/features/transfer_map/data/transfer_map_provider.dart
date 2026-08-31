@@ -23,7 +23,9 @@ class BuyerTransferMapNotifier
     if (user == null) return const [];
 
     try {
-      final response = await supabase.rpc('get_buyer_transfer_map_items');
+      final response = await supabase
+          .rpc('get_buyer_transfer_map_items')
+          .timeout(const Duration(seconds: 15));
 
       return (response as List<dynamic>)
           .map(
@@ -43,6 +45,10 @@ class BuyerTransferMapNotifier
           message.contains('not found')) {
         return const [];
       }
+      debugPrint('[TransferMap] PostgrestException: ${e.message}');
+      rethrow;
+    } catch (e, st) {
+      debugPrint('[TransferMap] Unexpected error: $e\n$st');
       rethrow;
     }
   }
@@ -79,7 +85,9 @@ class BuyerTransferHistoryNotifier
     if (user == null) return const [];
 
     try {
-      final response = await supabase.rpc('get_buyer_transfer_history_items');
+      final response = await supabase
+          .rpc('get_buyer_transfer_history_items')
+          .timeout(const Duration(seconds: 15));
 
       return (response as List<dynamic>)
           .map(
@@ -95,6 +103,10 @@ class BuyerTransferHistoryNotifier
           message.contains('not found')) {
         return const [];
       }
+      debugPrint('[TransferHistory] PostgrestException: ${e.message}');
+      rethrow;
+    } catch (e, st) {
+      debugPrint('[TransferHistory] Unexpected error: $e\n$st');
       rethrow;
     }
   }

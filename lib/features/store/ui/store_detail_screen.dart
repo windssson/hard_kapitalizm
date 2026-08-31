@@ -301,7 +301,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       if (result.success != true && (result.message ?? '').trim().isNotEmpty) {
         AppSnackbar.show(
           context,
-          title: 'Satis Hesaplanamadi',
+          title: 'Satış Hesaplanamadı',
           message: result.message!,
           type: SnackbarType.error,
         );
@@ -374,7 +374,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Satis Ozeti',
+                            'Satış Özeti',
                             style: AppTextStyles.h2.standardCopyWith(
                               color: AppColors.white,
                               fontSize: AppTypography.titleLarge,
@@ -1473,7 +1473,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       _showError(
         context,
         _buildGuidedError(
-          'Satis teklifi hazirlanamadi.',
+          'Satış teklifi hazırlanamadı.',
           detail: quote['message']?.toString(),
           suggestion:
               'Mağaza deposunda veya transferlerinde bekleyen bir işlem varsa önce onu tamamla.',
@@ -4055,7 +4055,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             ),
           );
         } else {
-          _showSuccess(context, 'Satis fiyati kaydedildi.');
+          _showSuccess(context, 'Satış fiyatı kaydedildi.');
         }
         return;
       }
@@ -4063,7 +4063,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       _showError(
         context,
         _buildGuidedError(
-          'Satis fiyati kaydedilemedi.',
+          'Satış fiyatı kaydedilemedi.',
           detail: result['message']?.toString(),
           suggestion:
               'Geçerli bir fiyat girdiğinden emin ol ve rafı tekrar kaydet.',
@@ -4122,7 +4122,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Satis Fiyati',
+                                'Satış Fiyatı',
                                 style: AppTextStyles.h2.standardCopyWith(
                                   color: AppColors.textPrimary,
                                   fontSize: AppTypography.headline,

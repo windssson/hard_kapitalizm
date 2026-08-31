@@ -945,8 +945,8 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                                   SizedBox(width: 8.w),
                                   Text(
                                     slot.isActive
-                                        ? 'Uretimi Durdur'
-                                        : 'Uretime Basla',
+                                        ? 'Üretimi Durdur'
+                                        : 'Üretime Başla',
                                     style: AppTextStyles.body.standardCopyWith(
                                       color: AppColors.textPrimary,
                                       fontSize: AppTypography.bodyLarge,
@@ -1480,7 +1480,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                             ),
                           ),
                           Text(
-                            '${entry.value} ?',
+                            '${entry.value} ★',
                             style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.gold,
                               fontSize: AppTypography.title,
@@ -1611,7 +1611,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
         AppSnackbar.show(
           context,
           title: 'Hata',
-          message: result['message'] ?? 'Yukseltme baslatilamadi.',
+          message: result['message'] ?? 'Yükseltme başlatılamadı.',
           type: SnackbarType.error,
         );
       },
@@ -2855,7 +2855,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     await WarehouseSelectionSheet.show(
       context: context,
-      title: 'Kaynak Depo Sec',
+      title: 'Kaynak Depo Seç',
       options: options,
     );
   }
@@ -2984,7 +2984,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     });
     await WarehouseSelectionSheet.show(
       context: context,
-      title: 'Hedef Depo Sec',
+      title: 'Hedef Depo Seç',
       options: options,
     );
   }
@@ -3309,7 +3309,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Alinacak Hammaddeleri Sec',
+                    'Alınacak Hammaddeleri Seç',
                     style: AppTextStyles.h2.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: AppTypography.headline,
@@ -3787,7 +3787,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                               );
                             },
                       icon: const Icon(AppIcons.downloadRounded),
-                      label: const Text('Transferi Baslat'),
+                      label: const Text('Transferi Başlat'),
                     ),
                   ),
                 ],
@@ -4289,7 +4289,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Depoya Gonderilecek Stoklari Sec',
+                    'Depoya Gönderilecek Stokları Seç',
                     style: AppTextStyles.h2.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: AppTypography.headline,
@@ -4736,7 +4736,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                               );
                             },
                       icon: const Icon(AppIcons.localShippingRounded),
-                      label: const Text('Transferi Baslat'),
+                      label: const Text('Transferi Başlat'),
                     ),
                   ),
                 ],
@@ -5252,7 +5252,7 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: quote['message'] ?? 'Satis teklifi hazirlanamadi.',
+        message: quote['message'] ?? 'Satış teklifi hazırlanamadı.',
         type: SnackbarType.error,
       );
       return;

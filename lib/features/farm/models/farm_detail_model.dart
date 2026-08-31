@@ -288,8 +288,7 @@ class FarmDetailModel {
               (slot) =>
                   !slot.isEmpty &&
                   slot.productId == e.productId &&
-                  slot.qualityLevel == e.qualityLevel &&
-                  slot.brandId == e.brandId,
+                  slot.qualityLevel == e.qualityLevel,
             ),
           )
           .toList()

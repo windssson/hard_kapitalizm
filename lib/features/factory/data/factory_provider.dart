@@ -426,9 +426,7 @@ class FactoryActionNotifier {
           'p_name': name,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
-      // Player cash patch
-      _ref.read(mutationSyncServiceProvider).syncPlayer(result);
+      final result = _sync(response);
       // Construction provider: RPC sadece construction döner, listeyi de invalidate et
       _ref.invalidate(factoryConstructionProvider);
       return result;
@@ -452,12 +450,11 @@ class FactoryActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         // Construction tamamlandı: yeni fabrika listede görünmeli
         _ref.invalidate(factoryListProvider);
         _ref.invalidate(factoryConstructionProvider);
-        _ref.read(mutationSyncServiceProvider).syncPlayer(result);
       }
       return result;
     } catch (e) {
@@ -480,11 +477,10 @@ class FactoryActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         _ref.invalidate(factoryListProvider);
         _ref.invalidate(factoryConstructionProvider);
-        _ref.read(mutationSyncServiceProvider).syncPlayer(result);
       }
       return result;
     } catch (e) {
@@ -533,12 +529,11 @@ class FactoryActionNotifier {
           'p_entity_id': factoryId,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         // Upgrade başladı → activeFactoryUpgradeProvider patch yerine invalidate
         // (ayrı endpoint; upgrade id RPC'den döner ama BuildingUpgradeModel olarak parse gerekir)
         _ref.invalidate(activeFactoryUpgradeProvider(factoryId));
-        _ref.read(mutationSyncServiceProvider).syncPlayer(result);
       }
       return result;
     } catch (e) {
@@ -598,7 +593,6 @@ class FactoryActionNotifier {
           }
           _ref.invalidate(activeFactoryUpgradeProvider(entityId));
         }
-        _ref.read(mutationSyncServiceProvider).syncPlayer(result);
       }
       return result;
     } catch (e) {
@@ -655,11 +649,10 @@ class FactoryActionNotifier {
           'p_star_cost': starCost,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
+      final result = _sync(response);
       if (syncProviders) {
         // Boost başladı: boost provider invalidate (ayrı endpoint)
         _ref.invalidate(activeFactoryBoostProvider(factoryId));
-        _ref.read(mutationSyncServiceProvider).syncPlayer(result);
       }
       return result;
     } catch (e) {

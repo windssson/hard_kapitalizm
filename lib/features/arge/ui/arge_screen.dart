@@ -37,7 +37,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   bool _isCenterSubmitting = false;
 
   static const _unitFilters = [
-    ('TUMU', 'Tumu'),
+    ('TUMU', 'Tümü'),
     ('FABRIKA', 'Fabrika'),
     ('TARLA', 'Tarla'),
     ('CIFTLIK', 'Çiftlik'),
@@ -1397,7 +1397,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                     size: AppIconSizes.regular,
                   ),
                   label: Text(
-                    'Yukseltmeyi Baslat',
+                    'Yükseltmeyi Başlat',
                     style: AppTextStyles.body.standardCopyWith(
                       fontSize: AppTypography.bodyLarge,
                       fontWeight: FontWeight.bold,
@@ -1434,8 +1434,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           .setUpgrade(BuildingUpgradeModel.fromJson(result));
       AppSnackbar.show(
         context,
-        title: 'Yukseltme Basladi',
-        message: 'AR-GE merkezi icin yeni seviye calismasi baslatildi.',
+        title: 'Yükseltme Başladı',
+        message: 'AR-GE merkezi için yeni seviye çalışması başlatıldı.',
         type: SnackbarType.success,
       );
     } else {
@@ -1772,10 +1772,10 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
               children: [
                 _buildSetupRow(
                   'Kalan Süre',
-                  isDone ? 'Hazir' : _formatRemaining(remaining),
+                  isDone ? 'Hazır' : _formatRemaining(remaining),
                 ),
                 _buildSetupRow(
-                  'Bitis Zamani',
+                  'Bitiş Zamanı',
                   finishAt == null ? '-' : _formatDateTime(finishAt),
                 ),
                 _buildSetupRow(
@@ -1905,8 +1905,8 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       ref.invalidate(playerArgeConstructionProvider);
       AppSnackbar.show(
         context,
-        title: 'Kurulum Basladi',
-        message: 'AR-GE merkezinizin kurulumu baslatildi.',
+        title: 'Kurulum Başladı',
+        message: 'AR-GE merkezinizin kurulumu başlatıldı.',
         type: SnackbarType.success,
       );
     } else {

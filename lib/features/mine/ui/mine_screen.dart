@@ -309,7 +309,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
             _buildStatItem(
               AppIcons.categoryOutlined,
               AppColors.warning,
-              'Uretim',
+              'Üretim',
               assignedCount.toString(),
             ),
             SizedBox(width: 14.w),

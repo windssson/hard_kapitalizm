@@ -276,6 +276,10 @@ final appRouter = GoRouter(
       ],
     ),
     GoRoute(
+      path: '/factorys',
+      redirect: (context, state) => '/factories',
+    ),
+    GoRoute(
       path: '/mines',
       builder: (context, state) => const MineScreen(),
       routes: [

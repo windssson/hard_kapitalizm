@@ -175,7 +175,7 @@ class _BrandProductDesignScreenState
                             ),
                           ),
                           SizedBox(height: 16.h),
-                          _buildSectionTitle('Filigran Secimi'),
+                          _buildSectionTitle('Filigran Seçimi'),
                           SizedBox(height: 10.h),
                           SizedBox(
                             height: 90.h,

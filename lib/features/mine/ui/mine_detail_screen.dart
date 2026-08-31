@@ -302,7 +302,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       ],
                       SizedBox(height: 14.h),
                       _buildSectionHeader(
-                        'Uretim Hatti',
+                        'Üretim Hattı',
                         'Madende seçili kaynağı, stok durumunu ve depoya sevkleri buradan yönetebilirsin.',
                         icon: AppIcons.hardwareRounded,
                         color: AppColors.gold,
@@ -552,7 +552,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               SizedBox(width: 8.w),
               Expanded(
                 child: _buildActionButton(
-                  detail.mine.isActive ? 'Durdur' : 'Baslat',
+                  detail.mine.isActive ? 'Durdur' : 'Başlat',
                   detail.mine.isActive
                       ? AppIcons.stopCircleOutlined
                       : AppIcons.playCircleOutline,
@@ -781,7 +781,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
           child: FilledButton.icon(
             onPressed: () => _showProductDialog(context, ref, detail),
             icon: const Icon(AppIcons.categoryOutlined),
-            label: const Text('Kaynak Sec'),
+            label: const Text('Kaynak Seç'),
           ),
         ),
       );
@@ -933,8 +933,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                   SizedBox(width: 8.w),
                                   Text(
                                     detail.mine.isActive
-                                        ? 'Uretimi Durdur'
-                                        : 'Uretime Basla',
+                                        ? 'Üretimi Durdur'
+                                        : 'Üretime Başla',
                                     style: AppTextStyles.body.standardCopyWith(
                                       color: AppColors.textPrimary,
                                       fontSize: AppTypography.bodyLarge,
@@ -1527,7 +1527,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               ),
                               SizedBox(height: 4.h),
                               Text(
-                                'Uretim hizini 30 dakika boyunca yildiz harcamadan ikiye katla.',
+                                'Üretim hızını 30 dakika boyunca yıldız harcamadan ikiye katla.',
                                 style: AppTextStyles.caption.standardCopyWith(
                                   color: AppColors.textMuted,
                                   fontSize: AppTypography.bodySmall,
@@ -1847,14 +1847,14 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         title:
             product.urunAdi +
             (selectableProduct.hasPreferredBrand
-                ? ' (${_currentBrandName ?? 'Markali'})'
+                ? ' (${_currentBrandName ?? 'Markalı'})'
                 : ''),
         subtitle:
-            'Saatlik uretim: ${(product.uretimAdedi * (1.0 + (detail.mine.qualityLevel - 1) * 0.20) * _getCityProductBonus(detail.mine.cityId, product.kategori)).toInt()}'
+            'Saatlik üretim: ${(product.uretimAdedi * (1.0 + (detail.mine.qualityLevel - 1) * 0.20) * _getCityProductBonus(detail.mine.cityId, product.kategori)).toInt()}'
             '${_getCityProductBonus(detail.mine.cityId, product.kategori) > 1.0 ? " (x${_getCityProductBonus(detail.mine.cityId, product.kategori).toStringAsFixed(2)} Bölge)" : ""}',
         badgeText:
             'Maks Kalite: ${selectableProduct.maxQualityLevel}'
-            '${selectableProduct.hasPreferredBrand ? ' ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Marka Hazir' : ''}',
+            '${selectableProduct.hasPreferredBrand ? ' • Marka Hazır' : ''}',
         iconPath: product.urunIconu,
         trailingWidget: isSelling
             ? Container(
@@ -1887,7 +1887,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
 
     await ProductSelectionSheet.show(
       context: context,
-      title: 'Kaynak Sec',
+      title: 'Kaynak Seç',
       options: options,
     );
   }
@@ -2083,7 +2083,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     });
     await WarehouseSelectionSheet.show(
       context: context,
-      title: 'Hedef Depo Sec',
+      title: 'Hedef Depo Seç',
       options: options,
     );
   }
@@ -2415,7 +2415,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Depoya Gonderilecek Stoklari Sec',
+                    'Depoya Gönderilecek Stokları Seç',
                     style: AppTextStyles.h2.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: AppTypography.headline,
@@ -2952,7 +2952,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               );
                             },
                       icon: const Icon(AppIcons.localShippingRounded),
-                      label: const Text('Transferi Baslat'),
+                      label: const Text('Transferi Başlat'),
                     ),
                   ),
                 ],
@@ -3099,7 +3099,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: quote['message'] ?? 'Satis teklifi hazirlanamadi.',
+        message: quote['message'] ?? 'Satış teklifi hazırlanamadı.',
         type: SnackbarType.error,
       );
       return;

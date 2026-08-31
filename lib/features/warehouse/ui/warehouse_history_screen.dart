@@ -224,12 +224,12 @@ class _WarehouseHistoryScreenState
             spacing: 8.w,
             runSpacing: 8.h,
             children: [
-              _buildSummaryChip('Kayit', items.length.toString(), AppColors.gold),
-              _buildSummaryChip('Giris', incomingCount.toString(), AppColors.green),
-              _buildSummaryChip('Cikis', outgoingCount.toString(), AppColors.blue),
-              _buildSummaryChip('Satis', salesCount.toString(), AppColors.gold),
+              _buildSummaryChip('Kayıt', items.length.toString(), AppColors.gold),
+              _buildSummaryChip('Giriş', incomingCount.toString(), AppColors.green),
+              _buildSummaryChip('Çıkış', outgoingCount.toString(), AppColors.blue),
+              _buildSummaryChip('Satış', salesCount.toString(), AppColors.gold),
               _buildSummaryChip(
-                'Markali',
+                'Markalı',
                 brandedCount.toString(),
                 AppColors.gold,
               ),
@@ -400,10 +400,10 @@ class _WarehouseHistoryScreenState
             children: [
               _buildStatusChip(
                 item.isSale
-                    ? 'Satis'
+                    ? 'Satış'
                     : item.isIncoming
-                    ? 'Giris'
-                    : 'Cikis',
+                    ? 'Giriş'
+                    : 'Çıkış',
                 accentColor,
               ),
               _buildStatusChip(_statusLabel(item.status), _statusColor(item.status)),

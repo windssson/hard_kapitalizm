@@ -275,8 +275,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                         children: [
                           Text(
                             progress == 1.0
-                                ? 'Hazir!'
-                                : 'Sunucuya baglaniliyor...',
+                                ? 'Hazır!'
+                                : 'Sunucuya bağlanılıyor...',
                             style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.textMuted,
                             ),

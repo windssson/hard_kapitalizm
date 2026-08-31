@@ -115,7 +115,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                         'Bu sayfada marka logonu ve ana rengini yeniden kurgulayabilirsin.',
                       ),
                       SizedBox(height: 16.h),
-                      _buildSectionTitle('Logo Secimi'),
+                      _buildSectionTitle('Logo Seçimi'),
                       SizedBox(height: 10.h),
                       SizedBox(
                         height: 72.h,
@@ -172,7 +172,7 @@ class _BrandDesignScreenState extends ConsumerState<BrandDesignScreen> {
                         ),
                       ),
                       SizedBox(height: 20.h),
-                      _buildSectionTitle('Renk Secimi'),
+                      _buildSectionTitle('Renk Seçimi'),
                       SizedBox(height: 10.h),
                       Wrap(
                         spacing: 12.w,
