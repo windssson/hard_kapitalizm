@@ -310,14 +310,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: Column(
                   children: [
                     _buildCompanySummaryCard(),
-                    SizedBox(height: 8.h),
+                    SizedBox(height: 5.h),
                     _buildMissionHighlightCard(),
-                    SizedBox(height: 8.h),
+                    SizedBox(height: 5.h),
                     _buildModuleGrid(),
-                    SizedBox(height: 8.h),
+                    SizedBox(height: 5.h),
                     _buildOperationsSection(),
-
-                    SizedBox(height: 16.h),
+                    SizedBox(height: 6.h),
                   ],
                 ),
               ),
@@ -2108,17 +2107,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           return const SizedBox.shrink();
         }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _buildOngoingActivitiesCard(activities),
-            ),
-            SizedBox(width: 8.w),
-            Expanded(
-              child: _buildActiveProductionsCard(productions),
-            ),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _buildOngoingActivitiesCard(activities),
+              ),
+              SizedBox(width: 5.w),
+              Expanded(
+                child: _buildActiveProductionsCard(productions),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -2128,10 +2129,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Container(
       decoration: AppDecorations.premiumCard(
         AppColors.borderGold.withValues(alpha: 0.34),
-        12.r,
+        10.r,
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 10.h),
+        padding: EdgeInsets.fromLTRB(7.w, 6.h, 7.w, 6.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -2139,18 +2140,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(4.w),
+                  padding: EdgeInsets.all(3.w),
                   decoration: BoxDecoration(
                     color: AppColors.gold.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6.r),
+                    borderRadius: BorderRadius.circular(5.r),
                   ),
                   child: Icon(
                     AppIcons.pendingActionsRounded,
                     color: AppColors.gold,
-                    size: 13.sp,
+                    size: 12.sp,
                   ),
                 ),
-                SizedBox(width: 5.w),
+                SizedBox(width: 4.w),
                 Expanded(
                   child: Text(
                     'İŞLEMLER',
@@ -2158,19 +2159,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.gold,
-                      fontSize: 10.5.sp,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 0.3,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                  padding: EdgeInsets.symmetric(horizontal: 4.5.w, vertical: 1.h),
                   decoration: BoxDecoration(
                     color: activities.isNotEmpty
                         ? AppColors.gold.withValues(alpha: 0.18)
                         : AppColors.cardBgLight,
-                    borderRadius: BorderRadius.circular(8.r),
+                    borderRadius: BorderRadius.circular(6.r),
                   ),
                   child: Text(
                     '${activities.length}',
@@ -2178,36 +2179,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       color: activities.isNotEmpty
                           ? AppColors.goldLight
                           : AppColors.textMuted,
-                      fontSize: 9.5.sp,
+                      fontSize: 9.sp,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 5.h),
             if (activities.isEmpty)
-              Container(
-                height: 88.h,
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      AppIcons.checkCircleRounded,
-                      color: AppColors.textMuted.withValues(alpha: 0.35),
-                      size: 20.sp,
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          AppIcons.checkCircleRounded,
+                          color: AppColors.textMuted.withValues(alpha: 0.35),
+                          size: 13.sp,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          'İşlem Yok',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 9.5.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      'İşlem Yok',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               )
             else
@@ -2217,12 +2222,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ...activities.take(3).map(_buildCompactOngoingActivityRow),
                   if (activities.length > 3)
                     Padding(
-                      padding: EdgeInsets.only(top: 2.h),
+                      padding: EdgeInsets.only(top: 1.h),
                       child: Text(
                         '+${activities.length - 3} işlem daha',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 9.sp,
+                          fontSize: 8.5.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -2238,7 +2243,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget _buildCompactOngoingActivityRow(HomeOngoingActivity activity) {
     final accent = _activityColor(activity.type);
     return Padding(
-      padding: EdgeInsets.only(bottom: 6.h),
+      padding: EdgeInsets.only(bottom: 3.5.h),
       child: Material(
         color: AppColors.transparent,
         child: InkWell(
@@ -2249,15 +2254,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               context.push('/arge');
             }
           },
-          borderRadius: BorderRadius.circular(8.r),
+          borderRadius: BorderRadius.circular(6.r),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 5.h),
+            padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 3.5.h),
             decoration: BoxDecoration(
               color: AppColors.cardBgLight.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(6.r),
               border: Border.all(
                 color: accent.withValues(alpha: 0.2),
-                width: 0.8,
+                width: 0.7,
               ),
             ),
             child: Column(
@@ -2271,36 +2276,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       color: accent,
                       size: 11.sp,
                     ),
-                    SizedBox(width: 4.w),
+                    SizedBox(width: 3.5.w),
                     Expanded(
                       child: Text(
                         activity.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 10.sp,
+                          fontSize: 9.5.sp,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
                       ),
                     ),
-                    SizedBox(width: 4.w),
+                    SizedBox(width: 3.w),
                     Text(
                       _formatDuration(activity.remainingDuration),
                       style: TextStyle(
-                        fontSize: 9.sp,
+                        fontSize: 8.5.sp,
                         fontWeight: FontWeight.w800,
                         color: accent,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 4.h),
+                SizedBox(height: 2.5.h),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(999.r),
                   child: AppProgressBar(
                     value: activity.progressRatio,
-                    minHeight: 3.5.h,
+                    minHeight: 2.5.h,
                     backgroundColor: AppColors.background,
                     valueColor: AlwaysStoppedAnimation<Color>(accent),
                   ),
@@ -2317,10 +2322,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Container(
       decoration: AppDecorations.premiumCard(
         AppColors.borderGold.withValues(alpha: 0.34),
-        12.r,
+        10.r,
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 10.h),
+        padding: EdgeInsets.fromLTRB(7.w, 6.h, 7.w, 6.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -2328,18 +2333,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(4.w),
+                  padding: EdgeInsets.all(3.w),
                   decoration: BoxDecoration(
                     color: AppColors.gold.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6.r),
+                    borderRadius: BorderRadius.circular(5.r),
                   ),
                   child: Icon(
                     AppIcons.precisionManufacturingRounded,
                     color: AppColors.gold,
-                    size: 13.sp,
+                    size: 12.sp,
                   ),
                 ),
-                SizedBox(width: 5.w),
+                SizedBox(width: 4.w),
                 Expanded(
                   child: Text(
                     'ÜRETİMLER',
@@ -2347,19 +2352,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.gold,
-                      fontSize: 10.5.sp,
+                      fontSize: 10.sp,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 0.3,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                  padding: EdgeInsets.symmetric(horizontal: 4.5.w, vertical: 1.h),
                   decoration: BoxDecoration(
                     color: productions.isNotEmpty
                         ? AppColors.gold.withValues(alpha: 0.18)
                         : AppColors.cardBgLight,
-                    borderRadius: BorderRadius.circular(8.r),
+                    borderRadius: BorderRadius.circular(6.r),
                   ),
                   child: Text(
                     '${productions.length}',
@@ -2367,36 +2372,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       color: productions.isNotEmpty
                           ? AppColors.goldLight
                           : AppColors.textMuted,
-                      fontSize: 9.5.sp,
+                      fontSize: 9.sp,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 5.h),
             if (productions.isEmpty)
-              Container(
-                height: 88.h,
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      AppIcons.precisionManufacturingRounded,
-                      color: AppColors.textMuted.withValues(alpha: 0.35),
-                      size: 20.sp,
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          AppIcons.precisionManufacturingRounded,
+                          color: AppColors.textMuted.withValues(alpha: 0.35),
+                          size: 13.sp,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          'Üretim Yok',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 9.5.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      'Üretim Yok',
-                      style: TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               )
             else
@@ -2406,12 +2415,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ...productions.take(3).map(_buildCompactProductionItem),
                   if (productions.length > 3)
                     Padding(
-                      padding: EdgeInsets.only(top: 2.h),
+                      padding: EdgeInsets.only(top: 1.h),
                       child: Text(
                         '+${productions.length - 3} ürün daha',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 9.sp,
+                          fontSize: 8.5.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -2428,50 +2437,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final kindInfo = _productionKindInfo(production.ownerKind);
 
     return Padding(
-      padding: EdgeInsets.only(bottom: 6.h),
+      padding: EdgeInsets.only(bottom: 3.5.h),
       child: Material(
         color: AppColors.transparent,
         child: InkWell(
           onTap: () {
             context.go(kindInfo.route);
           },
-          borderRadius: BorderRadius.circular(8.r),
+          borderRadius: BorderRadius.circular(6.r),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+            padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 3.h),
             decoration: BoxDecoration(
               color: AppColors.cardBgLight.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(8.r),
+              borderRadius: BorderRadius.circular(6.r),
               border: Border.all(
                 color: kindInfo.color.withValues(alpha: 0.2),
-                width: 0.8,
+                width: 0.7,
               ),
             ),
             child: Row(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(5.r),
+                  borderRadius: BorderRadius.circular(4.r),
                   child: Container(
-                    width: 22.w,
-                    height: 22.w,
-                    padding: EdgeInsets.all(1.5.w),
+                    width: 20.w,
+                    height: 20.w,
+                    padding: EdgeInsets.all(1.w),
                     decoration: BoxDecoration(
                       color: AppColors.background,
-                      borderRadius: BorderRadius.circular(5.r),
+                      borderRadius: BorderRadius.circular(4.r),
                     ),
                     child: CachedAssetImage(
                       fileName: production.productIcon,
-                      width: 19.w,
-                      height: 19.w,
+                      width: 17.w,
+                      height: 17.w,
                       fit: BoxFit.contain,
                       errorWidget: Icon(
                         AppIcons.inventory2Rounded,
-                        size: 11.sp,
+                        size: 10.sp,
                         color: AppColors.textMuted,
                       ),
                     ),
                   ),
                 ),
-                SizedBox(width: 5.w),
+                SizedBox(width: 4.5.w),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2482,17 +2491,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 10.sp,
+                          fontSize: 9.5.sp,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      SizedBox(height: 1.5.h),
+                      SizedBox(height: 1.h),
                       Row(
                         children: [
                           Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: 3.w,
+                              horizontal: 2.5.w,
                               vertical: 0.5.h,
                             ),
                             decoration: BoxDecoration(
@@ -2502,18 +2511,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             child: Text(
                               kindInfo.label,
                               style: TextStyle(
-                                fontSize: 7.5.sp,
+                                fontSize: 7.sp,
                                 fontWeight: FontWeight.w700,
                                 color: kindInfo.color,
                               ),
                             ),
                           ),
                           if (production.qualityLevel > 1) ...[
-                            SizedBox(width: 3.w),
+                            SizedBox(width: 2.5.w),
                             Text(
                               'Q${production.qualityLevel}',
                               style: TextStyle(
-                                fontSize: 8.sp,
+                                fontSize: 7.5.sp,
                                 fontWeight: FontWeight.w800,
                                 color: AppColors.goldLight,
                               ),
@@ -2524,11 +2533,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ],
                   ),
                 ),
-                SizedBox(width: 3.w),
+                SizedBox(width: 2.5.w),
                 Text(
                   '${production.activeSlots} ${production.ownerKind == 'factory' ? 'Hat' : 'Slot'}',
                   style: TextStyle(
-                    fontSize: 8.5.sp,
+                    fontSize: 8.sp,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textSecondary,
                   ),
