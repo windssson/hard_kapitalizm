@@ -7,9 +7,11 @@ import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/consolidated_transfer_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
+import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 
 class ConsolidatedTransferSheet extends ConsumerStatefulWidget {
   final String? initialCityId;
@@ -808,15 +810,19 @@ class _ConsolidatedTransferSheetState
                                 ),
                                 Text(
                                   target.entityKind == 'warehouse'
-                                      ? 'Tüm Ürünler Kabul Edilir ✅'
+                                      ? (target.acceptedProductIds == null
+                                          ? 'Tüm Ürünler Kabul Edilir ✅'
+                                          : '${target.acceptedProductIds!.length} Özel Ürün Kabul Eder 🏬')
                                       : target.entityKind == 'factory'
-                                          ? 'Girdi Ürünleri Kabul Edilir 🏭'
-                                          : 'Mağaza Ürünleri Kabul Edilir 🏪',
+                                          ? 'Girdi Şartı: Q${target.minQualityLevel} 🏭'
+                                          : 'Mağaza Ürünleri (${target.acceptedProductIds?.length ?? 0}) 🏪',
                                   style: TextStyle(
                                     fontSize: 9.5.sp,
                                     color: target.entityKind == 'warehouse'
-                                        ? AppColors.green
-                                        : AppColors.gold,
+                                        ? (target.acceptedProductIds == null ? AppColors.green : AppColors.gold)
+                                        : target.entityKind == 'factory'
+                                            ? Colors.amber
+                                            : AppColors.gold,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -896,18 +902,25 @@ class _ConsolidatedTransferSheetState
         final totalSelectedQuantity = _computeTotalQuantity();
         final isOverCapacity = selectedVolume > _selectedTarget!.emptyCapacity;
 
-        // Ürünleri tesise göre grupla
+        final allProductsAsync = ref.watch(allProductsProvider);
+        final allProductsList = allProductsAsync.value ?? const <ProductModel>[];
+        final productMap = {for (final p in allProductsList) p.id.toUpperCase(): p};
+
+        // Ürünleri tesise göre grupla (kalite ve ürün türü kontrolüyle)
         final groupedCandidates = <String, List<ConsolidatedCandidateItemModel>>{};
         for (final item in candidates) {
-          final isAccepted = _selectedTarget!.acceptsAllProducts({item.productId});
-          if (_onlyAcceptedProducts && !isAccepted) {
-            continue; // Sadece uygun ürünler filtresi devredeyse gösterme
+          final isProductAccepted = _selectedTarget!.acceptsProduct(item.productId);
+          final isQualityAccepted = _selectedTarget!.acceptsQuality(item.productId, item.qualityLevel);
+          final canSelect = isProductAccepted && isQualityAccepted;
+
+          if (_onlyAcceptedProducts && !canSelect) {
+            continue; // Sadece uygun ürün & kalite filtresi devredeyse gösterme
           }
           final groupKey = '${item.sourceKindDisplay} • ${item.sourceName}';
           groupedCandidates.putIfAbsent(groupKey, () => []).add(item);
         }
 
-        final acceptedCount = candidates.where((c) => _selectedTarget!.acceptsAllProducts({c.productId})).length;
+        final compatibleCount = candidates.where((c) => _selectedTarget!.acceptsItem(productId: c.productId, qualityLevel: c.qualityLevel)).length;
         final totalCandidatesCount = candidates.length;
 
         return Column(
@@ -990,56 +1003,58 @@ class _ConsolidatedTransferSheetState
                       ),
                     ],
                   ),
-                  if (_selectedTarget!.entityKind != 'warehouse') ...[
-                    SizedBox(height: 6.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${_selectedTarget!.entityKindDisplay} için $acceptedCount/$totalCandidatesCount uygun ürün var',
-                          style: TextStyle(
-                            fontSize: 10.sp,
-                            color: AppColors.textMuted,
-                          ),
+                  SizedBox(height: 6.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${_selectedTarget!.entityKindDisplay} için $compatibleCount/$totalCandidatesCount uygun stok var',
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          color: compatibleCount > 0 ? AppColors.green : AppColors.red,
+                          fontWeight: FontWeight.w600,
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            AppHaptic.selection();
-                            setState(() => _onlyAcceptedProducts = !_onlyAcceptedProducts);
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                            decoration: BoxDecoration(
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          AppHaptic.selection();
+                          setState(() => _onlyAcceptedProducts = !_onlyAcceptedProducts);
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: _onlyAcceptedProducts
+                                ? AppColors.gold.withValues(alpha: 0.2)
+                                : AppColors.cardBg,
+                            borderRadius: BorderRadius.circular(4.r),
+                            border: Border.all(
                               color: _onlyAcceptedProducts
-                                  ? AppColors.gold.withValues(alpha: 0.2)
-                                  : AppColors.cardBg,
-                              borderRadius: BorderRadius.circular(4.r),
-                              border: Border.all(
-                                color: _onlyAcceptedProducts
-                                    ? AppColors.gold
-                                    : AppColors.textMuted,
-                              ),
+                                  ? AppColors.gold
+                                  : AppColors.textMuted,
                             ),
-                            child: Text(
-                              _onlyAcceptedProducts
-                                  ? 'Sadece Uygunları Göster ✅'
-                                  : 'Tüm Ürünleri Göster',
-                              style: TextStyle(
-                                fontSize: 9.sp,
-                                color: _onlyAcceptedProducts
-                                    ? AppColors.gold
-                                    : AppColors.textMuted,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          ),
+                          child: Text(
+                            _onlyAcceptedProducts
+                                ? 'Sadece Uygunları Göster ($compatibleCount) ✅'
+                                : 'Tüm Stokları Göster ($totalCandidatesCount)',
+                            style: TextStyle(
+                              fontSize: 9.sp,
+                              color: _onlyAcceptedProducts
+                                  ? AppColors.gold
+                                  : AppColors.textMuted,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
+
+            // Hedefin Kabul Ettiği Ürünler Paneli
+            _buildTargetAcceptedProductsBanner(_selectedTarget!, productMap),
 
             // Ürün Listesi
             Expanded(
@@ -1050,10 +1065,10 @@ class _ConsolidatedTransferSheetState
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.filter_alt_off_rounded, color: AppColors.textMuted, size: 36.sp),
+                            Icon(Icons.rule_folder_outlined, color: AppColors.gold, size: 36.sp),
                             SizedBox(height: 10.h),
                             Text(
-                              'Bu hedefe uygun ürün bulunamadı.',
+                              'Bu hedefe uygun ürün veya kalite bulunamadı.',
                               style: TextStyle(
                                 color: AppColors.textPrimary,
                                 fontWeight: FontWeight.bold,
@@ -1062,7 +1077,9 @@ class _ConsolidatedTransferSheetState
                             ),
                             SizedBox(height: 4.h),
                             Text(
-                              '${_selectedTarget!.name} (${_selectedTarget!.entityKindDisplay}) bu şehirdeki ürünleri kabul etmiyor.',
+                              _selectedTarget!.entityKind == 'factory'
+                                  ? '${_selectedTarget!.name} sadece Q${_selectedTarget!.minQualityLevel} kalitesinde girdi hammadde kabul eder. Bu şehirde uygun stok kalemi bulunamadı.'
+                                  : '${_selectedTarget!.name} (${_selectedTarget!.entityKindDisplay}) bu şehirdeki mevcut stokları kabul etmiyor.',
                               style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
                               textAlign: TextAlign.center,
                             ),
@@ -1107,168 +1124,240 @@ class _ConsolidatedTransferSheetState
                             ),
                             ...itemsInGroup.map((item) {
                               final currentQty = _selectedQuantities[item.itemId] ?? 0;
-                              final isAccepted = _selectedTarget!.acceptsAllProducts({item.productId});
+                              final isProductAccepted = _selectedTarget!.acceptsProduct(item.productId);
+                              final isQualityAccepted = _selectedTarget!.acceptsQuality(item.productId, item.qualityLevel);
+                              final reqQuality = _selectedTarget!.getRequiredQualityFor(item.productId);
+                              final canSelect = isProductAccepted && isQualityAccepted;
 
-                              return Opacity(
-                                opacity: isAccepted ? 1.0 : 0.45,
-                                child: Container(
-                                  margin: EdgeInsets.only(bottom: 8.h),
-                                  padding: EdgeInsets.all(10.w),
-                                  decoration: BoxDecoration(
-                                    color: currentQty > 0
-                                        ? AppColors.gold.withValues(alpha: 0.08)
-                                        : AppColors.cardBg,
-                                    borderRadius: BorderRadius.circular(12.r),
-                                    border: Border.all(
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: canSelect
+                                    ? null
+                                    : () {
+                                        AppHaptic.heavy();
+                                        if (!isProductAccepted) {
+                                          AppSnackbar.show(
+                                            context,
+                                            title: 'Ürün Uyumsuz',
+                                            message: '${_selectedTarget!.name} (${_selectedTarget!.entityKindDisplay}) ${item.productName} ürününü kabul etmiyor.',
+                                            type: SnackbarType.warning,
+                                          );
+                                        } else {
+                                          AppSnackbar.show(
+                                            context,
+                                            title: 'Kalite Uyuşmazlığı',
+                                            message: '${_selectedTarget!.name} fabrikası bu girdi için Q$reqQuality kalite bekliyor. Bu stok ise Q${item.qualityLevel} kalitededir.',
+                                            type: SnackbarType.warning,
+                                          );
+                                        }
+                                      },
+                                child: Opacity(
+                                  opacity: canSelect ? 1.0 : 0.45,
+                                  child: Container(
+                                    margin: EdgeInsets.only(bottom: 8.h),
+                                    padding: EdgeInsets.all(10.w),
+                                    decoration: BoxDecoration(
                                       color: currentQty > 0
-                                          ? AppColors.gold.withValues(alpha: 0.4)
-                                          : AppColors.borderGold.withValues(alpha: 0.15),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      SizedBox(
-                                        width: 38.w,
-                                        height: 38.w,
-                                        child: BrandedProductImage(
-                                          fileName: item.productIcon ?? '',
-                                          productId: item.productId,
-                                          brandId: item.brandId,
-                                        ),
+                                          ? AppColors.gold.withValues(alpha: 0.08)
+                                          : AppColors.cardBg,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      border: Border.all(
+                                        color: currentQty > 0
+                                            ? AppColors.gold.withValues(alpha: 0.4)
+                                            : canSelect
+                                                ? AppColors.borderGold.withValues(alpha: 0.15)
+                                                : AppColors.red.withValues(alpha: 0.2),
                                       ),
-                                      SizedBox(width: 10.w),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              item.productName,
-                                              style: TextStyle(
-                                                fontSize: 12.sp,
-                                                fontWeight: FontWeight.bold,
-                                                color: AppColors.textPrimary,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            SizedBox(height: 2.h),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  'Stok: ${item.availableQuantity} • Q${item.qualityLevel}',
-                                                  style: TextStyle(
-                                                    fontSize: 10.sp,
-                                                    color: AppColors.textMuted,
-                                                  ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(
+                                          width: 38.w,
+                                          height: 38.w,
+                                          child: BrandedProductImage(
+                                            fileName: item.productIcon ?? '',
+                                            productId: item.productId,
+                                            brandId: item.brandId,
+                                          ),
+                                        ),
+                                        SizedBox(width: 10.w),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item.productName,
+                                                style: TextStyle(
+                                                  fontSize: 12.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.textPrimary,
                                                 ),
-                                                if (item.brandName != 'Standart') ...[
-                                                  SizedBox(width: 6.w),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              SizedBox(height: 2.h),
+                                              Row(
+                                                children: [
                                                   Text(
-                                                    item.brandName,
+                                                    'Stok: ${item.availableQuantity} • Q${item.qualityLevel}',
                                                     style: TextStyle(
-                                                      fontSize: 9.5.sp,
-                                                      color: AppColors.gold,
+                                                      fontSize: 10.sp,
+                                                      color: AppColors.textMuted,
                                                     ),
                                                   ),
+                                                  if (item.brandName != 'Standart') ...[
+                                                    SizedBox(width: 6.w),
+                                                    Text(
+                                                      item.brandName,
+                                                      style: TextStyle(
+                                                        fontSize: 9.5.sp,
+                                                        color: AppColors.gold,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
-                                              ],
-                                            ),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  'Birim: ${item.birimHacim} m³',
-                                                  style: TextStyle(
-                                                    fontSize: 9.sp,
-                                                    color: AppColors.textMuted,
-                                                  ),
-                                                ),
-                                                if (!isAccepted) ...[
-                                                  SizedBox(width: 6.w),
+                                              ),
+                                              SizedBox(height: 2.h),
+                                              Row(
+                                                children: [
                                                   Text(
-                                                    '❌ Hedef Kabul Etmiyor',
+                                                    'Birim: ${item.birimHacim} m³',
                                                     style: TextStyle(
                                                       fontSize: 9.sp,
-                                                      color: AppColors.red,
-                                                      fontWeight: FontWeight.bold,
+                                                      color: AppColors.textMuted,
                                                     ),
                                                   ),
                                                 ],
+                                              ),
+                                              if (!isProductAccepted) ...[
+                                                SizedBox(height: 2.h),
+                                                Text(
+                                                  '❌ ${_selectedTarget!.entityKindDisplay} bu ürünü kabul etmiyor',
+                                                  style: TextStyle(
+                                                    fontSize: 9.sp,
+                                                    color: AppColors.red,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ] else if (!isQualityAccepted) ...[
+                                                SizedBox(height: 2.h),
+                                                Text(
+                                                  '⚠️ Kalite Uyuşmazlığı: Hedef Q$reqQuality şart koşuyor (Mevcut: Q${item.qualityLevel})',
+                                                  style: TextStyle(
+                                                    fontSize: 9.sp,
+                                                    color: Colors.amber,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ] else if (_selectedTarget!.entityKind == 'factory') ...[
+                                                SizedBox(height: 2.h),
+                                                Text(
+                                                  'Girdi Uyumlu (Q${item.qualityLevel}) ✅',
+                                                  style: TextStyle(
+                                                    fontSize: 9.sp,
+                                                    color: AppColors.green,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
                                               ],
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      // Adet Stepper
-                                      if (isAccepted)
-                                        Row(
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.remove_circle_outline),
-                                              iconSize: 20.sp,
-                                              color: currentQty > 0
-                                                  ? AppColors.gold
-                                                  : AppColors.textMuted,
-                                              onPressed: currentQty > 0
-                                                  ? () {
-                                                      AppHaptic.selection();
-                                                      setState(() {
-                                                        _selectedQuantities[item.itemId] =
-                                                            currentQty - 1;
-                                                      });
-                                                    }
-                                                  : null,
-                                            ),
-                                            Text(
-                                              '$currentQty',
-                                              style: TextStyle(
-                                                fontSize: 12.sp,
-                                                fontWeight: FontWeight.bold,
+                                        // Adet Stepper veya Uyumsuzluk Rozeti
+                                        if (canSelect)
+                                          Row(
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.remove_circle_outline),
+                                                iconSize: 20.sp,
                                                 color: currentQty > 0
                                                     ? AppColors.gold
                                                     : AppColors.textMuted,
+                                                onPressed: currentQty > 0
+                                                    ? () {
+                                                        AppHaptic.selection();
+                                                        setState(() {
+                                                          _selectedQuantities[item.itemId] =
+                                                              currentQty - 1;
+                                                        });
+                                                      }
+                                                    : null,
                                               ),
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.add_circle_outline),
-                                              iconSize: 20.sp,
-                                              color: currentQty < item.availableQuantity
-                                                  ? AppColors.gold
-                                                  : AppColors.textMuted,
-                                              onPressed: currentQty < item.availableQuantity
-                                                  ? () {
-                                                      AppHaptic.selection();
-                                                      setState(() {
-                                                        _selectedQuantities[item.itemId] =
-                                                            currentQty + 1;
-                                                      });
-                                                    }
-                                                  : null,
-                                            ),
-                                            TextButton(
-                                              style: TextButton.styleFrom(
-                                                padding: EdgeInsets.symmetric(horizontal: 6.w),
-                                                minimumSize: Size.zero,
-                                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                              ),
-                                              onPressed: () {
-                                                AppHaptic.selection();
-                                                setState(() {
-                                                  _selectedQuantities[item.itemId] =
-                                                      item.availableQuantity;
-                                                });
-                                              },
-                                              child: Text(
-                                                'Tümü',
+                                              Text(
+                                                '$currentQty',
                                                 style: TextStyle(
-                                                  fontSize: 10.sp,
-                                                  color: AppColors.gold,
+                                                  fontSize: 12.sp,
                                                   fontWeight: FontWeight.bold,
+                                                  color: currentQty > 0
+                                                      ? AppColors.gold
+                                                      : AppColors.textMuted,
                                                 ),
                                               ),
+                                              IconButton(
+                                                icon: const Icon(Icons.add_circle_outline),
+                                                iconSize: 20.sp,
+                                                color: currentQty < item.availableQuantity
+                                                    ? AppColors.gold
+                                                    : AppColors.textMuted,
+                                                onPressed: currentQty < item.availableQuantity
+                                                    ? () {
+                                                        AppHaptic.selection();
+                                                        setState(() {
+                                                          _selectedQuantities[item.itemId] =
+                                                              currentQty + 1;
+                                                        });
+                                                      }
+                                                    : null,
+                                              ),
+                                              TextButton(
+                                                style: TextButton.styleFrom(
+                                                  padding: EdgeInsets.symmetric(horizontal: 6.w),
+                                                  minimumSize: Size.zero,
+                                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                ),
+                                                onPressed: () {
+                                                  AppHaptic.selection();
+                                                  setState(() {
+                                                    _selectedQuantities[item.itemId] =
+                                                        item.availableQuantity;
+                                                  });
+                                                },
+                                                child: Text(
+                                                  'Tümü',
+                                                  style: TextStyle(
+                                                    fontSize: 10.sp,
+                                                    color: AppColors.gold,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        else
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 4.h),
+                                            decoration: BoxDecoration(
+                                              color: !isProductAccepted
+                                                  ? AppColors.red.withValues(alpha: 0.12)
+                                                  : Colors.amber.withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(6.r),
+                                              border: Border.all(
+                                                color: !isProductAccepted
+                                                    ? AppColors.red.withValues(alpha: 0.4)
+                                                    : Colors.amber.withValues(alpha: 0.4),
+                                              ),
                                             ),
-                                          ],
-                                        ),
-                                    ],
+                                            child: Text(
+                                              !isProductAccepted ? 'Kabul Edilmiyor' : 'Q$reqQuality Şartı',
+                                              style: TextStyle(
+                                                fontSize: 9.5.sp,
+                                                fontWeight: FontWeight.bold,
+                                                color: !isProductAccepted ? AppColors.red : Colors.amber,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -1356,6 +1445,179 @@ class _ConsolidatedTransferSheetState
       },
       loading: () => const Center(child: AppLoadingIndicator()),
       error: (e, _) => Center(child: Text('Hata: $e')),
+    );
+  }
+
+  Widget _buildTargetAcceptedProductsBanner(
+    ConsolidatedTargetModel target,
+    Map<String, ProductModel> productMap,
+  ) {
+    if (target.acceptedProductIds == null) {
+      return Container(
+        margin: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 6.h),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: AppColors.green.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: AppColors.green.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.all_inclusive_rounded, size: 14.sp, color: AppColors.green),
+            SizedBox(width: 6.w),
+            Expanded(
+              child: Text(
+                'Genel Depo: Tüm ürünler ve tüm kalite seviyeleri kabul edilir.',
+                style: TextStyle(
+                  fontSize: 10.5.sp,
+                  color: AppColors.green,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final acceptedList = target.acceptedProductIds!;
+    final isFactory = target.entityKind == 'factory';
+    final isWarehouse = target.entityKind == 'warehouse';
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 6.h),
+      padding: EdgeInsets.all(10.w),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isFactory
+                    ? Icons.precision_manufacturing_rounded
+                    : isWarehouse
+                        ? Icons.warehouse_rounded
+                        : Icons.storefront_rounded,
+                size: 14.sp,
+                color: AppColors.gold,
+              ),
+              SizedBox(width: 6.w),
+              Expanded(
+                child: Text(
+                  isFactory
+                      ? 'Hedef Fabrikanın Kabul Ettiği Hammaddeler:'
+                      : isWarehouse
+                          ? 'Hedef Özel Deponun Kabul Ettiği Ürünler:'
+                          : 'Hedef Mağazanın Sattığı Ürünler:',
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(width: 6.w),
+              if (isFactory)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4.r),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+                  ),
+                  child: Text(
+                    'Girdi Şartı: Q${target.minQualityLevel}',
+                    style: TextStyle(
+                      fontSize: 9.5.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  '${acceptedList.length} Ürün',
+                  style: TextStyle(
+                    fontSize: 10.sp,
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: acceptedList.map((productId) {
+                final prod = productMap[productId.toUpperCase()];
+                final name = prod?.urunAdi ?? productId;
+                final icon = prod?.urunIconu ?? '';
+                final reqQ = target.getRequiredQualityFor(productId);
+
+                return Container(
+                  margin: EdgeInsets.only(right: 6.w),
+                  padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBg,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (icon.isNotEmpty) ...[
+                        SizedBox(
+                          width: 18.w,
+                          height: 18.w,
+                          child: BrandedProductImage(
+                            fileName: icon,
+                            productId: productId,
+                          ),
+                        ),
+                        SizedBox(width: 5.w),
+                      ],
+                      Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 10.5.sp,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (isFactory) ...[
+                        SizedBox(width: 4.w),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(4.r),
+                          ),
+                          child: Text(
+                            'Q$reqQ',
+                            style: TextStyle(
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

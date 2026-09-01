@@ -19,6 +19,8 @@ class ConsolidatedTargetModel {
   final double usedCapacity;
   final double emptyCapacity;
   final List<String>? acceptedProductIds;
+  final Map<String, int>? acceptedProductQualities;
+  final int minQualityLevel;
 
   const ConsolidatedTargetModel({
     required this.id,
@@ -31,12 +33,43 @@ class ConsolidatedTargetModel {
     required this.usedCapacity,
     required this.emptyCapacity,
     this.acceptedProductIds,
+    this.acceptedProductQualities,
+    this.minQualityLevel = 1,
   });
 
+  bool acceptsProduct(String productId) {
+    if (acceptedProductIds == null) return true; // Genel depolar her ürünü kabul eder
+    final upper = productId.trim().toUpperCase();
+    return acceptedProductIds!.any((id) => id.trim().toUpperCase() == upper);
+  }
+
+  int getRequiredQualityFor(String productId) {
+    if (entityKind != 'factory') return 1;
+    final upper = productId.trim().toUpperCase();
+    if (acceptedProductQualities != null) {
+      for (final entry in acceptedProductQualities!.entries) {
+        if (entry.key.trim().toUpperCase() == upper) {
+          return entry.value;
+        }
+      }
+    }
+    return minQualityLevel;
+  }
+
+  bool acceptsQuality(String productId, int itemQuality) {
+    if (entityKind != 'factory') return true;
+    final req = getRequiredQualityFor(productId);
+    return itemQuality == req;
+  }
+
+  bool acceptsItem({required String productId, required int qualityLevel}) {
+    return acceptsProduct(productId) && acceptsQuality(productId, qualityLevel);
+  }
+
   bool acceptsAllProducts(Set<String> selectedProductIds) {
-    if (acceptedProductIds == null) return true; // Depolar her ürünü kabul eder
+    if (acceptedProductIds == null) return true;
     if (selectedProductIds.isEmpty) return true;
-    return selectedProductIds.every((id) => acceptedProductIds!.contains(id));
+    return selectedProductIds.every((id) => acceptsProduct(id));
   }
 
   factory ConsolidatedTargetModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +77,18 @@ class ConsolidatedTargetModel {
     List<String>? accepted;
     if (rawAccepted is List) {
       accepted = rawAccepted.map((e) => e.toString()).toList();
+    }
+
+    final rawQualities = json['accepted_product_qualities'];
+    Map<String, int>? qualities;
+    if (rawQualities is Map) {
+      qualities = {};
+      for (final entry in rawQualities.entries) {
+        final val = (entry.value as num?)?.toInt();
+        if (val != null) {
+          qualities[entry.key.toString()] = val;
+        }
+      }
     }
 
     return ConsolidatedTargetModel(
@@ -57,6 +102,8 @@ class ConsolidatedTargetModel {
       usedCapacity: (json['used_capacity'] as num?)?.toDouble() ?? 0.0,
       emptyCapacity: (json['empty_capacity'] as num?)?.toDouble() ?? 0.0,
       acceptedProductIds: accepted,
+      acceptedProductQualities: qualities,
+      minQualityLevel: (json['min_quality_level'] as num?)?.toInt() ?? 1,
     );
   }
 }
