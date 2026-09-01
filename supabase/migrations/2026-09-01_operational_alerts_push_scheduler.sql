@@ -1,7 +1,7 @@
 -- ==============================================================================
--- MIGRATION: Smart Cooldown-Protected Operational Alerts Push Notifications
--- Created: 2026-09-01
--- Description: Sends FCM push notifications for critical emergencies with anti-spam cooldown
+-- MIGRATION: Smart Cooldown-Protected Operational Alerts Push Notifications & Radar Update
+-- Updated: 2026-09-01
+-- Description: Adds farm and field raw material / feed shortages to the operational alert radar and push scheduler
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS public.player_alert_push_logs (
@@ -15,6 +15,452 @@ CREATE TABLE IF NOT EXISTS public.player_alert_push_logs (
 CREATE INDEX IF NOT EXISTS idx_player_alert_push_logs_lookup
   ON public.player_alert_push_logs (player_id, alert_key, last_sent_at);
 
+-- 1. OPERATIONAL RADAR RPC (WITH FARM & FIELD)
+CREATE OR REPLACE FUNCTION public.get_player_operational_alerts(p_player_id uuid DEFAULT NULL::uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_player_id uuid;
+  v_alerts jsonb := '[]'::jsonb;
+  v_count integer;
+  v_debt numeric;
+  v_limit numeric;
+BEGIN
+  v_player_id := coalesce(p_player_id, auth.uid());
+  IF v_player_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Yetkisiz erişim.');
+  END IF;
+
+  -- 1. VERGİ BLOKE VE LİMİT KONTROLÜ
+  SELECT coalesce(pt.tax_debt, 0), public.get_player_tax_limit(coalesce(p.level, 1))
+  INTO v_debt, v_limit
+  FROM public.players p
+  LEFT JOIN public.player_taxes pt ON pt.player_id = p.id
+  WHERE p.id = v_player_id;
+
+  IF v_debt > v_limit THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'tax_blocked',
+      'severity', 'critical',
+      'category', 'tax',
+      'title', 'Şirket İşlemleri Bloke!',
+      'description', 'Vergi borcunuz yasal limiti aştığı için şirket faaliyetleriniz durduruldu.',
+      'route', '/tax',
+      'count', 1
+    ));
+  ELSIF v_debt > (v_limit * 0.75) THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'tax_near_limit',
+      'severity', 'warning',
+      'category', 'tax',
+      'title', 'Vergi Borcu Kritik Seviyede',
+      'description', 'Vergi borcunuz yasal limitin %75''ine ulaştı. Kilitlenme riski var.',
+      'route', '/tax',
+      'count', 1
+    ));
+  END IF;
+
+  -- 2. BANKA KREDİ TEMERRÜT KONTROLÜ
+  SELECT count(*) INTO v_count
+  FROM public.player_loans
+  WHERE player_id = v_player_id
+    AND status = 'active'
+    AND next_installment_due_at < timezone('utc', now());
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'bank_loan_overdue',
+      'severity', 'critical',
+      'category', 'bank',
+      'title', 'Kredi Taksiti Gecikti!',
+      'description', v_count || ' adet gecikmiş kredi taksitiniz var. Temerrüt faizi işliyor.',
+      'route', '/bank',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 3. FABRİKA DURUMLARI
+  -- 3a. Hammadde yok (Üretim Durdu)
+  SELECT count(*) INTO v_count
+  FROM public.factories f
+  WHERE f.player_id = v_player_id
+    AND f.is_active = true
+    AND f.product_id IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM public.production_inventory pi
+      WHERE pi.owner_kind = 'factory'
+        AND pi.owner_id = f.id
+        AND pi.inventory_type = 'input'
+        AND (pi.quantity + coalesce(pi.pending_quantity, 0)) > 0
+    );
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'factory_no_input',
+      'severity', 'critical',
+      'category', 'factory',
+      'title', v_count || ' Fabrikada Hammadde Bitti!',
+      'description', 'Girdi stoğu tükendiği için üretim bantları tamamen durdu.',
+      'route', '/factory',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 3b. Çıkış deposu dolu (Üretim Kilitlendi)
+  SELECT count(*) INTO v_count
+  FROM public.factories f
+  WHERE f.player_id = v_player_id
+    AND f.is_active = true
+    AND f.output_capacity > 0
+    AND (
+      SELECT coalesce(sum(pi.quantity + coalesce(pi.pending_quantity, 0)), 0)
+      FROM public.production_inventory pi
+      WHERE pi.owner_kind = 'factory'
+        AND pi.owner_id = f.id
+        AND pi.inventory_type = 'output'
+    ) >= f.output_capacity;
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'factory_output_full',
+      'severity', 'critical',
+      'category', 'factory',
+      'title', v_count || ' Fabrikada Depo Doldu!',
+      'description', 'Çıkış ambarı %100 kapasiteye ulaştı, üretim yapılamıyor.',
+      'route', '/factory',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 3c. Ürün seçilmemiş (Atıl Tesis)
+  SELECT count(*) INTO v_count
+  FROM public.factories f
+  WHERE f.player_id = v_player_id
+    AND f.is_active = true
+    AND f.product_id IS NULL;
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'factory_idle',
+      'severity', 'warning',
+      'category', 'factory',
+      'title', v_count || ' Fabrikada Ürün Seçilmedi',
+      'description', 'Tesis aktif ancak üretim reçetesi atanmamış, boşta bekliyor.',
+      'route', '/factory',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 4. ÇİFTLİKLER (Farms)
+  -- 4a. Yem / Hammadde Yok (Üretim Durdu)
+  SELECT count(DISTINCT fa.id) INTO v_count
+  FROM public.farms fa
+  JOIN public.production_slots ps ON ps.owner_kind = 'farm' AND ps.owner_id = fa.id
+  JOIN public.products pr ON pr.id = ps.product_id
+  WHERE fa.player_id = v_player_id
+    AND fa.is_active = true
+    AND ps.is_active = true
+    AND ps.product_id IS NOT NULL
+    AND (pr.hammadde_1_id IS NOT NULL OR pr.hammadde_2_id IS NOT NULL OR pr.hammadde_3_id IS NOT NULL)
+    AND NOT EXISTS (
+      SELECT 1 FROM public.production_inventory pi
+      WHERE pi.owner_kind = 'farm'
+        AND pi.owner_id = fa.id
+        AND pi.inventory_type = 'input'
+        AND (pi.quantity + coalesce(pi.pending_quantity, 0)) > 0
+    );
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'farm_no_input',
+      'severity', 'critical',
+      'category', 'farm',
+      'title', v_count || ' Çiftlikte Yem Tükendi!',
+      'description', 'Hayvan yemi veya hammadde bittiği için çiftlik üretimi durdu.',
+      'route', '/farm',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 4b. Çıkış deposu dolu
+  SELECT count(*) INTO v_count
+  FROM public.farms fa
+  WHERE fa.player_id = v_player_id
+    AND fa.is_active = true
+    AND fa.output_capacity > 0
+    AND (
+      SELECT coalesce(sum(pi.quantity + coalesce(pi.pending_quantity, 0)), 0)
+      FROM public.production_inventory pi
+      WHERE pi.owner_kind = 'farm'
+        AND pi.owner_id = fa.id
+        AND pi.inventory_type = 'output'
+    ) >= fa.output_capacity;
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'farm_output_full',
+      'severity', 'critical',
+      'category', 'farm',
+      'title', v_count || ' Çiftlikte Depo Doldu!',
+      'description', 'Çiftlik ambarı %100 doldu, yeni üretim durduruldu.',
+      'route', '/farm',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 4c. Üretim seçilmemiş
+  SELECT count(*) INTO v_count
+  FROM public.farms fa
+  WHERE fa.player_id = v_player_id
+    AND fa.is_active = true
+    AND NOT EXISTS (
+      SELECT 1 FROM public.production_slots ps
+      WHERE ps.owner_kind = 'farm'
+        AND ps.owner_id = fa.id
+        AND ps.is_active = true
+        AND ps.product_id IS NOT NULL
+    );
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'farm_idle',
+      'severity', 'warning',
+      'category', 'farm',
+      'title', v_count || ' Çiftlikte Üretim Yok',
+      'description', 'Çiftlik aktif ancak yetiştirilecek ürün veya hayvan seçilmemiş.',
+      'route', '/farm',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 5. TARLALAR (Fields)
+  -- 5a. Tohum / Gübre Yok (Üretim Durdu)
+  SELECT count(DISTINCT fld.id) INTO v_count
+  FROM public.fields fld
+  JOIN public.production_slots ps ON ps.owner_kind = 'field' AND ps.owner_id = fld.id
+  JOIN public.products pr ON pr.id = ps.product_id
+  WHERE fld.player_id = v_player_id
+    AND fld.is_active = true
+    AND ps.is_active = true
+    AND ps.product_id IS NOT NULL
+    AND (pr.hammadde_1_id IS NOT NULL OR pr.hammadde_2_id IS NOT NULL OR pr.hammadde_3_id IS NOT NULL)
+    AND NOT EXISTS (
+      SELECT 1 FROM public.production_inventory pi
+      WHERE pi.owner_kind = 'field'
+        AND pi.owner_id = fld.id
+        AND pi.inventory_type = 'input'
+        AND (pi.quantity + coalesce(pi.pending_quantity, 0)) > 0
+    );
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'field_no_input',
+      'severity', 'critical',
+      'category', 'field',
+      'title', v_count || ' Tarlada Tohum/Gübre Tükendi!',
+      'description', 'Ekim için girdi stoğu tükendiği için üretim durdu.',
+      'route', '/field',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 5b. Çıkış deposu dolu
+  SELECT count(*) INTO v_count
+  FROM public.fields fld
+  WHERE fld.player_id = v_player_id
+    AND fld.is_active = true
+    AND fld.output_capacity > 0
+    AND (
+      SELECT coalesce(sum(pi.quantity + coalesce(pi.pending_quantity, 0)), 0)
+      FROM public.production_inventory pi
+      WHERE pi.owner_kind = 'field'
+        AND pi.owner_id = fld.id
+        AND pi.inventory_type = 'output'
+    ) >= fld.output_capacity;
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'field_output_full',
+      'severity', 'critical',
+      'category', 'field',
+      'title', v_count || ' Tarlada Depo Doldu!',
+      'description', 'Hasat ambarı %100 doldu, yeni hasat depolanamıyor.',
+      'route', '/field',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 5c. Ekim yapılmamış
+  SELECT count(*) INTO v_count
+  FROM public.fields fld
+  WHERE fld.player_id = v_player_id
+    AND fld.is_active = true
+    AND NOT EXISTS (
+      SELECT 1 FROM public.production_slots ps
+      WHERE ps.owner_kind = 'field'
+        AND ps.owner_id = fld.id
+        AND ps.is_active = true
+        AND ps.product_id IS NOT NULL
+    );
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'field_idle',
+      'severity', 'warning',
+      'category', 'field',
+      'title', v_count || ' Tarlada Ekim Yapılmadı',
+      'description', 'Tarla aktif ancak ekilecek mahsul seçilmemiş, boşta bekliyor.',
+      'route', '/field',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 6. MADENLER (Depo Dolu)
+  SELECT count(*) INTO v_count
+  FROM public.mines m
+  WHERE m.player_id = v_player_id
+    AND m.is_active = true
+    AND m.output_capacity > 0
+    AND (
+      SELECT coalesce(sum(pi.quantity + coalesce(pi.pending_quantity, 0)), 0)
+      FROM public.production_inventory pi
+      WHERE pi.owner_kind = 'mine'
+        AND pi.owner_id = m.id
+        AND pi.inventory_type = 'output'
+    ) >= m.output_capacity;
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'mine_output_full',
+      'severity', 'critical',
+      'category', 'mine',
+      'title', v_count || ' Madende Çıktı Deposu Doldu!',
+      'description', 'Maden cevher deposu tam kapasiteye ulaştı, kazı durdu.',
+      'route', '/mine',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 7. MAĞAZALAR
+  -- 7a. Tüm rafları boş mağazalar
+  SELECT count(*) INTO v_count
+  FROM public.stores s
+  WHERE s.player_id = v_player_id
+    AND s.is_active = true
+    AND NOT EXISTS (
+      SELECT 1 FROM public.store_slots ss
+      WHERE ss.store_id = s.id
+        AND ss.is_active = true
+        AND (ss.quantity + coalesce(ss.pending_quantity, 0)) > 0
+    );
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'store_out_of_stock',
+      'severity', 'critical',
+      'category', 'store',
+      'title', v_count || ' Mağazada Raflar Tamamen Boş!',
+      'description', 'Stok kalmadığı için satış yapılamıyor ve ciro kaybı yaşanıyor.',
+      'route', '/store',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 7b. Fiyatı belirlenmemiş aktif mağaza ürünleri
+  SELECT count(*) INTO v_count
+  FROM public.store_slots ss
+  JOIN public.stores s ON s.id = ss.store_id
+  WHERE s.player_id = v_player_id
+    AND s.is_active = true
+    AND ss.is_active = true
+    AND ss.product_id IS NOT NULL
+    AND (ss.price IS NULL OR ss.price <= 0);
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'store_unpriced_items',
+      'severity', 'warning',
+      'category', 'store',
+      'title', v_count || ' Mağaza Slotunda Fiyat Belirlenmedi',
+      'description', 'Raflara ürün yerleştirilmiş ancak satış fiyatı girilmemiş.',
+      'route', '/store',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 8. LOJİSTİK & FİLO
+  -- 8a. Yakıtı biten araçlar
+  SELECT count(*) INTO v_count
+  FROM public.logistics_vehicles lv
+  WHERE lv.player_id = v_player_id
+    AND coalesce(lv.status, '') != 'scrapped'
+    AND lv.current_fuel <= 0;
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'vehicle_no_fuel',
+      'severity', 'critical',
+      'category', 'logistics',
+      'title', v_count || ' Aracın Yakıtı Bitti!',
+      'description', 'Sevkiyat yapamaz durumda. Yakıt ikmali yapılması gerekiyor.',
+      'route', '/transfer-map',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 8b. Kondisyonu kritik araçlar (< %20)
+  SELECT count(*) INTO v_count
+  FROM public.logistics_vehicles lv
+  WHERE lv.player_id = v_player_id
+    AND coalesce(lv.status, '') != 'scrapped'
+    AND lv.condition < 20;
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'vehicle_maintenance_urgent',
+      'severity', 'warning',
+      'category', 'logistics',
+      'title', v_count || ' Araç Acil Bakım Bekliyor',
+      'description', 'Kondisyon %20''nin altına indi. Arıza ve kaza riski yüksek.',
+      'route', '/transfer-map',
+      'count', v_count
+    ));
+  END IF;
+
+  -- 9. İHALELER (Son 2 saat ve teslimat tamamlanmamış)
+  SELECT count(*) INTO v_count
+  FROM public.player_tenders pt
+  WHERE pt.player_id = v_player_id
+    AND pt.status = 'active'
+    AND pt.deadline_at <= (timezone('utc', now()) + interval '2 hours')
+    AND pt.delivered_quantity < pt.required_quantity;
+
+  IF v_count > 0 THEN
+    v_alerts := v_alerts || jsonb_build_array(jsonb_build_object(
+      'id', 'tender_deadline_urgent',
+      'severity', 'critical',
+      'category', 'tender',
+      'title', v_count || ' İhale Teslimatına Son 2 Saat!',
+      'description', 'Teslimat süresi dolmak üzere. Teminatın yanmaması için teslimatı tamamlayın.',
+      'route', '/tenders',
+      'count', v_count
+    ));
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'alerts', v_alerts,
+    'total_count', jsonb_array_length(v_alerts)
+  );
+END;
+$function$;
+
+GRANT EXECUTE ON FUNCTION public.get_player_operational_alerts(uuid) TO authenticated, service_role;
+
+-- 2. PUSH NOTIFICATION SCHEDULER (WITH FARM & FIELD)
 CREATE OR REPLACE FUNCTION public.process_operational_alerts_push_notifications()
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -139,7 +585,7 @@ BEGIN
     BEGIN
       PERFORM public.send_game_notification(
         v_rec.player_id,
-        '🏭 Üretim Durdu: Hammadde Yok!',
+        '🏭 Fabrikada Hammadde Bitti: Üretim Durdu!',
         v_rec.empty_count || ' fabrikanızda hammadde tükendiği için üretim bantları durdu. Yeni hammadde sevkiyatı planlayın.',
         'factory',
         '/factory',
@@ -158,7 +604,107 @@ BEGIN
     END;
   END LOOP;
 
-  -- 4. MAĞAZA RAFLARI BOŞALDI (Satış Durdu)
+  -- 4. ÇİFTLİK YEM / HAMMADDE BİTTİ (Üretim Durdu)
+  -- Cooldown: 8 saatte en fazla 1 kez
+  FOR v_rec IN
+    SELECT 
+      fa.player_id,
+      count(DISTINCT fa.id) AS empty_count
+    FROM public.farms fa
+    JOIN public.production_slots ps ON ps.owner_kind = 'farm' AND ps.owner_id = fa.id
+    JOIN public.products pr ON pr.id = ps.product_id
+    WHERE fa.is_active = true
+      AND ps.is_active = true
+      AND ps.product_id IS NOT NULL
+      AND (pr.hammadde_1_id IS NOT NULL OR pr.hammadde_2_id IS NOT NULL OR pr.hammadde_3_id IS NOT NULL)
+      AND NOT EXISTS (
+        SELECT 1 FROM public.production_inventory pi
+        WHERE pi.owner_kind = 'farm'
+          AND pi.owner_id = fa.id
+          AND pi.inventory_type = 'input'
+          AND (pi.quantity + coalesce(pi.pending_quantity, 0)) > 0
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM public.player_alert_push_logs l
+        WHERE l.player_id = fa.player_id
+          AND l.alert_key = 'farm_no_input'
+          AND l.last_sent_at > (v_now - interval '8 hours')
+      )
+    GROUP BY fa.player_id
+  LOOP
+    BEGIN
+      PERFORM public.send_game_notification(
+        v_rec.player_id,
+        '🐔 Çiftlikte Yem Bitti: Üretim Durdu!',
+        v_rec.empty_count || ' çiftliğinizde hayvan yemi tükendiği için üretim durdu. Yeni yem sevkiyatı yapın.',
+        'farm',
+        '/farm',
+        null,
+        true
+      );
+
+      INSERT INTO public.player_alert_push_logs (player_id, alert_key, last_sent_at)
+      VALUES (v_rec.player_id, 'farm_no_input', v_now)
+      ON CONFLICT (player_id, alert_key)
+      DO UPDATE SET last_sent_at = v_now;
+
+      v_sent_count := v_sent_count + 1;
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
+  END LOOP;
+
+  -- 5. TARLA TOHUM / GÜBRE BİTTİ (Üretim Durdu)
+  -- Cooldown: 8 saatte en fazla 1 kez
+  FOR v_rec IN
+    SELECT 
+      fld.player_id,
+      count(DISTINCT fld.id) AS empty_count
+    FROM public.fields fld
+    JOIN public.production_slots ps ON ps.owner_kind = 'field' AND ps.owner_id = fld.id
+    JOIN public.products pr ON pr.id = ps.product_id
+    WHERE fld.is_active = true
+      AND ps.is_active = true
+      AND ps.product_id IS NOT NULL
+      AND (pr.hammadde_1_id IS NOT NULL OR pr.hammadde_2_id IS NOT NULL OR pr.hammadde_3_id IS NOT NULL)
+      AND NOT EXISTS (
+        SELECT 1 FROM public.production_inventory pi
+        WHERE pi.owner_kind = 'field'
+          AND pi.owner_id = fld.id
+          AND pi.inventory_type = 'input'
+          AND (pi.quantity + coalesce(pi.pending_quantity, 0)) > 0
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM public.player_alert_push_logs l
+        WHERE l.player_id = fld.player_id
+          AND l.alert_key = 'field_no_input'
+          AND l.last_sent_at > (v_now - interval '8 hours')
+      )
+    GROUP BY fld.player_id
+  LOOP
+    BEGIN
+      PERFORM public.send_game_notification(
+        v_rec.player_id,
+        '🌾 Tarlada Girdi Bitti: Ekim Durdu!',
+        v_rec.empty_count || ' tarlanızda tohum veya gübre tükendiği için üretim durdu. Yeni girdi sevkiyatı planlayın.',
+        'field',
+        '/field',
+        null,
+        true
+      );
+
+      INSERT INTO public.player_alert_push_logs (player_id, alert_key, last_sent_at)
+      VALUES (v_rec.player_id, 'field_no_input', v_now)
+      ON CONFLICT (player_id, alert_key)
+      DO UPDATE SET last_sent_at = v_now;
+
+      v_sent_count := v_sent_count + 1;
+    EXCEPTION WHEN OTHERS THEN
+      NULL;
+    END;
+  END LOOP;
+
+  -- 6. MAĞAZA RAFLARI BOŞALDI (Satış Durdu)
   -- Cooldown: 8 saatte en fazla 1 kez
   FOR v_rec IN
     SELECT 
@@ -202,36 +748,28 @@ BEGIN
     END;
   END LOOP;
 
-  -- 5. TESİS ÇIKIŞ DEPOSU DOLDU (Maden veya Fabrika Ambarı Dolu - Üretim Kilitlendi)
+  -- 7. TESİS ÇIKIŞ DEPOSU DOLDU (Maden, Fabrika, Çiftlik veya Tarla Ambarı Dolu - Üretim Kilitlendi)
   -- Cooldown: 8 saatte en fazla 1 kez
   FOR v_rec IN
     SELECT 
       owner_player_id AS player_id,
       count(*) AS full_count
     FROM (
-      SELECT 
-        m.player_id AS owner_player_id,
-        m.id
-      FROM public.mines m
-      WHERE m.is_active = true
-        AND m.output_capacity > 0
-        AND (
-          SELECT coalesce(sum(quantity + coalesce(pending_quantity, 0)), 0)
-          FROM public.production_inventory pi
-          WHERE pi.owner_kind = 'mine' AND pi.owner_id = m.id AND pi.inventory_type = 'output'
-        ) >= m.output_capacity
+      SELECT m.player_id AS owner_player_id, m.id FROM public.mines m
+      WHERE m.is_active = true AND m.output_capacity > 0
+        AND (SELECT coalesce(sum(quantity + coalesce(pending_quantity, 0)), 0) FROM public.production_inventory pi WHERE pi.owner_kind = 'mine' AND pi.owner_id = m.id AND pi.inventory_type = 'output') >= m.output_capacity
       UNION ALL
-      SELECT 
-        f.player_id AS owner_player_id,
-        f.id
-      FROM public.factories f
-      WHERE f.is_active = true
-        AND f.output_capacity > 0
-        AND (
-          SELECT coalesce(sum(quantity + coalesce(pending_quantity, 0)), 0)
-          FROM public.production_inventory pi
-          WHERE pi.owner_kind = 'factory' AND pi.owner_id = f.id AND pi.inventory_type = 'output'
-        ) >= f.output_capacity
+      SELECT f.player_id AS owner_player_id, f.id FROM public.factories f
+      WHERE f.is_active = true AND f.output_capacity > 0
+        AND (SELECT coalesce(sum(quantity + coalesce(pending_quantity, 0)), 0) FROM public.production_inventory pi WHERE pi.owner_kind = 'factory' AND pi.owner_id = f.id AND pi.inventory_type = 'output') >= f.output_capacity
+      UNION ALL
+      SELECT fa.player_id AS owner_player_id, fa.id FROM public.farms fa
+      WHERE fa.is_active = true AND fa.output_capacity > 0
+        AND (SELECT coalesce(sum(quantity + coalesce(pending_quantity, 0)), 0) FROM public.production_inventory pi WHERE pi.owner_kind = 'farm' AND pi.owner_id = fa.id AND pi.inventory_type = 'output') >= fa.output_capacity
+      UNION ALL
+      SELECT fld.player_id AS owner_player_id, fld.id FROM public.fields fld
+      WHERE fld.is_active = true AND fld.output_capacity > 0
+        AND (SELECT coalesce(sum(quantity + coalesce(pending_quantity, 0)), 0) FROM public.production_inventory pi WHERE pi.owner_kind = 'field' AND pi.owner_id = fld.id AND pi.inventory_type = 'output') >= fld.output_capacity
     ) full_facilities
     WHERE NOT EXISTS (
       SELECT 1 FROM public.player_alert_push_logs l
@@ -272,10 +810,3 @@ END;
 $function$;
 
 GRANT EXECUTE ON FUNCTION public.process_operational_alerts_push_notifications() TO authenticated, service_role;
-
--- Schedule in pg_cron (runs every 30 minutes)
-SELECT cron.schedule(
-  'process_operational_alerts_push',
-  '*/30 * * * *',
-  'SELECT public.process_operational_alerts_push_notifications();'
-);
