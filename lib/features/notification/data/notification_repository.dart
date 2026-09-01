@@ -13,13 +13,16 @@ class NotificationRepository {
       if (user == null) return [];
 
       final response = await _supabase.rpc('get_player_operational_alerts');
+      List rawList = [];
       if (response is List) {
-        return response
-            .whereType<Map>()
-            .map((item) => OperationalAlertModel.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
+        rawList = response;
+      } else if (response is Map && response['alerts'] is List) {
+        rawList = response['alerts'] as List;
       }
-      return [];
+      return rawList
+          .whereType<Map>()
+          .map((item) => OperationalAlertModel.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
     } catch (e) {
       debugPrint('Operasyonel uyarılar alınırken hata: $e');
       return [];
