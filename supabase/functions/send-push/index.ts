@@ -92,6 +92,16 @@ serve(async (req) => {
           click_action: "FLUTTER_NOTIFICATION_CLICK",
           player_id: player_id || "",
         },
+        android: {
+          priority: "HIGH",
+          notification: {
+            channel_id: "high_importance_channel",
+            default_sound: true,
+            default_vibrate_timings: true,
+            notification_priority: "PRIORITY_HIGH",
+            visibility: "PUBLIC",
+          },
+        },
       },
     };
 

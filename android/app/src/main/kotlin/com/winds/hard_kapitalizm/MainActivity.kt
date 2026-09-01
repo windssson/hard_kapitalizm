@@ -16,6 +16,20 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "high_importance_channel"
+            val channelName = "Oyun Bildirimleri"
+            val channelDescription = "Hard Kapitalizm oyun ve pazar bildirimleri"
+            val importance = android.app.NotificationManager.IMPORTANCE_HIGH
+            val channel = android.app.NotificationChannel(channelId, channelName, importance).apply {
+                description = channelDescription
+                enableLights(true)
+                enableVibration(true)
+            }
+            val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+            notificationManager?.createNotificationChannel(channel)
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "vibrate" -> {

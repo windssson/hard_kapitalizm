@@ -38,12 +38,16 @@ class PushNotificationService {
 
       debugPrint('FCM Bildirim izni durumu: ${settings.authorizationStatus}');
 
-      // 3. Uygulama açıkken sistem bildirim çekmecesini sessiz tut
+      // 3. Ön plandayken de sistem bildiriminin gösterilmesine izin ver
       await messaging.setForegroundNotificationPresentationOptions(
-        alert: false,
+        alert: true,
         badge: true,
-        sound: false,
+        sound: true,
       );
+
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('Ön planda FCM bildirimi alındı: ${message.notification?.title}');
+      });
 
       // 4. Cihaz FCM Token'ını al ve Supabase'e kaydet
       final token = await messaging.getToken();
