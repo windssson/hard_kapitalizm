@@ -18,7 +18,7 @@ BEGIN
   END IF;
 
   WITH all_targets AS (
-    -- Depolar (Genel Depolar)
+    -- Depolar (Tüm Normal / Genel Depolar) -> Tüm ürünleri kabul eder (accepted_product_ids = null)
     SELECT
       w.id,
       w.name,
@@ -33,7 +33,8 @@ BEGIN
         JOIN public.products p ON p.id = ws.product_id
         WHERE ws.warehouse_id = w.id
       ), 0)::numeric AS used_capacity,
-      coalesce(w.reserved_capacity, 0)::numeric AS reserved_capacity
+      coalesce(w.reserved_capacity, 0)::numeric AS reserved_capacity,
+      NULL::text[] AS accepted_product_ids
     FROM public.warehouses w
     JOIN public.cities c ON c.id = w.city_id
     WHERE w.player_id = v_player_id
@@ -42,7 +43,7 @@ BEGIN
 
     UNION ALL
 
-    -- Fabrikalar (Girdi Deposu)
+    -- Fabrikalar (Girdi Deposu) -> Reçetesindeki girdi ürünlerini kabul eder
     SELECT
       f.id,
       f.name,
@@ -57,14 +58,19 @@ BEGIN
         JOIN public.products p ON p.id = pi.product_id
         WHERE pi.owner_kind = 'factory' AND pi.owner_id = f.id AND pi.inventory_type = 'input'
       ), 0)::numeric AS used_capacity,
-      0::numeric AS reserved_capacity
+      0::numeric AS reserved_capacity,
+      coalesce((
+        SELECT array_agg(DISTINCT pi.product_id)
+        FROM public.production_inventory pi
+        WHERE pi.owner_kind = 'factory' AND pi.owner_id = f.id AND pi.inventory_type = 'input'
+      ), ARRAY[]::text[]) AS accepted_product_ids
     FROM public.factories f
     JOIN public.cities c ON c.id = f.city_id
     WHERE f.player_id = v_player_id
 
     UNION ALL
 
-    -- Mağazalar (Mağaza Deposu)
+    -- Mağazalar (Mağaza Deposu) -> Mağaza türünün kabul ettiği ürünleri kabul eder
     SELECT
       s.id,
       s.name,
@@ -79,9 +85,11 @@ BEGIN
         JOIN public.products p ON p.id = ws.product_id
         WHERE ws.warehouse_id = w.id
       ), 0)::numeric AS used_capacity,
-      coalesce(w.reserved_capacity, 0)::numeric AS reserved_capacity
+      coalesce(w.reserved_capacity, 0)::numeric AS reserved_capacity,
+      string_to_array(st.accepted_product_ids, ',') AS accepted_product_ids
     FROM public.stores s
     JOIN public.cities c ON c.id = s.city_id
+    JOIN public.store_types st ON st.id = s.store_type_id
     JOIN public.warehouses w ON w.store_id = s.id AND w.warehouse_kind = 'store' AND w.is_active = true
     WHERE s.player_id = v_player_id
   )
@@ -95,9 +103,10 @@ BEGIN
       'city_name', t.city_name,
       'total_capacity', t.total_capacity,
       'used_capacity', t.used_capacity,
-      'empty_capacity', greatest(0, round(t.total_capacity - t.used_capacity - t.reserved_capacity, 2))
+      'empty_capacity', greatest(0, round(t.total_capacity - t.used_capacity - t.reserved_capacity, 2)),
+      'accepted_product_ids', t.accepted_product_ids
     )
-    ORDER BY t.entity_kind, t.name
+    ORDER BY t.city_name, t.entity_kind, t.name
   ), '[]'::jsonb)
   INTO v_targets
   FROM all_targets t;
@@ -196,8 +205,8 @@ $$;
 -- 3. Seçilen Şehirdeki Konsolide Transfer Adayı Ürünleri Listele
 CREATE OR REPLACE FUNCTION public.get_city_consolidated_transfer_candidates(
   p_source_city_id uuid,
-  p_target_entity_kind text,
-  p_target_entity_id uuid
+  p_target_entity_kind text DEFAULT NULL::text,
+  p_target_entity_id uuid DEFAULT NULL::uuid
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -213,22 +222,20 @@ BEGIN
     RAISE EXCEPTION 'Oturum acilmamis.';
   END IF;
 
-  -- Hedef tesisin kabul ettiği ürünleri belirle
-  IF p_target_entity_kind = 'factory' THEN
-    -- Fabrika yalnızca reçetesindeki girdi (input) ürünleri kabul eder
+  -- Hedef tesis belirtildiyse kabul ettiği ürünleri belirle
+  IF p_target_entity_kind = 'factory' AND p_target_entity_id IS NOT NULL THEN
     SELECT array_agg(DISTINCT pi.product_id)
     INTO v_accepted_product_ids
     FROM public.production_inventory pi
     WHERE pi.owner_kind = 'factory' AND pi.owner_id = p_target_entity_id AND pi.inventory_type = 'input';
-  ELSIF p_target_entity_kind = 'store' THEN
-    -- Mağaza yalnızca store_type'ındaki kabul edilen ürünleri kabul eder
+  ELSIF p_target_entity_kind = 'store' AND p_target_entity_id IS NOT NULL THEN
     SELECT string_to_array(st.accepted_product_ids, ',')
     INTO v_accepted_product_ids
     FROM public.stores s
     JOIN public.store_types st ON st.id = s.store_type_id
     WHERE s.id = p_target_entity_id;
   END IF;
-  -- Depo ('warehouse') ise v_accepted_product_ids null kalır, yani TÜM ürünleri kabul eder.
+  -- Depo ('warehouse') ise veya hedef belirtilmediyse (NULL) tüm ürünler döner.
 
   WITH city_products AS (
     -- 1. Depolardaki Ürünler

@@ -17,6 +17,7 @@ class ConsolidatedTargetModel {
   final double totalCapacity;
   final double usedCapacity;
   final double emptyCapacity;
+  final List<String>? acceptedProductIds;
 
   const ConsolidatedTargetModel({
     required this.id,
@@ -28,9 +29,22 @@ class ConsolidatedTargetModel {
     required this.totalCapacity,
     required this.usedCapacity,
     required this.emptyCapacity,
+    this.acceptedProductIds,
   });
 
+  bool acceptsAllProducts(Set<String> selectedProductIds) {
+    if (acceptedProductIds == null) return true; // Depolar her ürünü kabul eder
+    if (selectedProductIds.isEmpty) return true;
+    return selectedProductIds.every((id) => acceptedProductIds!.contains(id));
+  }
+
   factory ConsolidatedTargetModel.fromJson(Map<String, dynamic> json) {
+    final rawAccepted = json['accepted_product_ids'];
+    List<String>? accepted;
+    if (rawAccepted is List) {
+      accepted = rawAccepted.map((e) => e.toString()).toList();
+    }
+
     return ConsolidatedTargetModel(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
@@ -41,6 +55,7 @@ class ConsolidatedTargetModel {
       totalCapacity: (json['total_capacity'] as num?)?.toDouble() ?? 0.0,
       usedCapacity: (json['used_capacity'] as num?)?.toDouble() ?? 0.0,
       emptyCapacity: (json['empty_capacity'] as num?)?.toDouble() ?? 0.0,
+      acceptedProductIds: accepted,
     );
   }
 }
@@ -151,41 +166,14 @@ final consolidatedTransferSourceCitiesProvider =
       .toList();
 });
 
-class ConsolidatedCandidatesParams {
-  final String sourceCityId;
-  final String targetEntityKind;
-  final String targetEntityId;
-
-  const ConsolidatedCandidatesParams({
-    required this.sourceCityId,
-    required this.targetEntityKind,
-    required this.targetEntityId,
-  });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ConsolidatedCandidatesParams &&
-          runtimeType == other.runtimeType &&
-          sourceCityId == other.sourceCityId &&
-          targetEntityKind == other.targetEntityKind &&
-          targetEntityId == other.targetEntityId;
-
-  @override
-  int get hashCode =>
-      sourceCityId.hashCode ^ targetEntityKind.hashCode ^ targetEntityId.hashCode;
-}
-
-final consolidatedTransferCandidatesProvider = FutureProvider.autoDispose
-    .family<List<ConsolidatedCandidateItemModel>, ConsolidatedCandidatesParams>(
-  (ref, params) async {
+final consolidatedTransferCityCandidatesProvider = FutureProvider.autoDispose
+    .family<List<ConsolidatedCandidateItemModel>, String>(
+  (ref, sourceCityId) async {
     final supabase = Supabase.instance.client;
     final response = await supabase.rpc(
       'get_city_consolidated_transfer_candidates',
       params: {
-        'p_source_city_id': params.sourceCityId,
-        'p_target_entity_kind': params.targetEntityKind,
-        'p_target_entity_id': params.targetEntityId,
+        'p_source_city_id': sourceCityId,
       },
     );
     final list = response as List<dynamic>? ?? const [];

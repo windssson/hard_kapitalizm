@@ -1250,7 +1250,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
       _HomeModuleCardData(
         title: 'Tarlalar',
-        image: 'tarladeneme.webp',
+        image: 'tarla.webp',
         accentColor: AppColors.green,
         primaryLabel: 'Aktif',
         primaryValue:
@@ -1465,19 +1465,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         final alertedModules = _collectAlertedModules(dashboard);
         final opAlerts = ref.watch(operationalAlertsProvider).value ?? [];
         for (final alert in opAlerts) {
-          if (alert.route == '/farms' || alert.id.startsWith('field_') || alert.category == 'field') {
+          if (alert.route == '/farms' ||
+              alert.id.startsWith('field_') ||
+              alert.category == 'field') {
             alertedModules.add('farms');
-          } else if (alert.route == '/fields' || alert.id.startsWith('farm_') || alert.category == 'farm') {
+          } else if (alert.route == '/fields' ||
+              alert.id.startsWith('farm_') ||
+              alert.category == 'farm') {
             alertedModules.add('fields');
           } else if (alert.route == '/mines' || alert.category == 'mine') {
             alertedModules.add('mines');
-          } else if (alert.route == '/factories' || alert.category == 'factory') {
+          } else if (alert.route == '/factories' ||
+              alert.category == 'factory') {
             alertedModules.add('factories');
           } else if (alert.route == '/store' || alert.category == 'store') {
             alertedModules.add('stores');
-          } else if (alert.route == '/warehouses' || alert.category == 'warehouse') {
+          } else if (alert.route == '/warehouses' ||
+              alert.category == 'warehouse') {
             alertedModules.add('warehouses');
-          } else if (alert.route == '/transfer-map' || alert.category == 'logistics') {
+          } else if (alert.route == '/transfer-map' ||
+              alert.category == 'logistics') {
             alertedModules.add('logistics');
           } else if (alert.route == '/tenders' || alert.category == 'tender') {
             alertedModules.add('tenders');
@@ -2089,10 +2096,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: const Color(0xFFFF3D57),
-        border: Border.all(
-          color: Colors.white,
-          width: 1.2,
-        ),
+        border: Border.all(color: Colors.white, width: 1.2),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFFF3D57).withValues(alpha: 0.6),
@@ -2116,8 +2120,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-
-
   Widget _buildOperationsSection() {
     return Consumer(
       builder: (context, ref, child) {
@@ -2135,13 +2137,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: _buildOngoingActivitiesCard(activities),
-              ),
+              Expanded(child: _buildOngoingActivitiesCard(activities)),
               SizedBox(width: 5.w),
-              Expanded(
-                child: _buildActiveProductionsCard(productions),
-              ),
+              Expanded(child: _buildActiveProductionsCard(productions)),
             ],
           ),
         );
@@ -2190,7 +2188,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 4.5.w, vertical: 1.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 4.5.w,
+                    vertical: 1.h,
+                  ),
                   decoration: BoxDecoration(
                     color: activities.isNotEmpty
                         ? AppColors.gold.withValues(alpha: 0.18)
@@ -2383,7 +2384,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 4.5.w, vertical: 1.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 4.5.w,
+                    vertical: 1.h,
+                  ),
                   decoration: BoxDecoration(
                     color: productions.isNotEmpty
                         ? AppColors.gold.withValues(alpha: 0.18)

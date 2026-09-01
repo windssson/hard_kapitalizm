@@ -30,16 +30,19 @@ class ConsolidatedTransferSheet extends ConsumerStatefulWidget {
 
 class _ConsolidatedTransferSheetState
     extends ConsumerState<ConsolidatedTransferSheet> {
-  int _currentStep = 0; // 0: Hedef, 1: Şehir, 2: Ürünler, 3: Araç/Onay
+  // 0: Kaynak Şehir, 1: Ürün Seçimi, 2: Hedef Seçimi, 3: Araç/Onay
+  int _currentStep = 0;
 
-  ConsolidatedTargetModel? _selectedTarget;
   ConsolidatedSourceCityModel? _selectedCity;
-  String _targetFilter = 'all'; // 'all', 'warehouse', 'factory', 'store'
+  ConsolidatedTargetModel? _selectedTarget;
 
   // itemId -> selected quantity
   final Map<String, int> _selectedQuantities = {};
 
-  // Step 4 Vehicle Options
+  // Step 3 Hedef Filtresi
+  String _targetFilter = 'all'; // 'all', 'warehouse', 'factory', 'store'
+
+  // Step 4 Araç Seçenekleri
   bool _isLoadingVehicles = false;
   List<MarketTransferVehicleOptionModel> _vehicleOptions = [];
   MarketTransferVehicleOptionModel? _selectedVehicle;
@@ -66,9 +69,22 @@ class _ConsolidatedTransferSheetState
     return total;
   }
 
+  Set<String> _computeSelectedProductIds(
+    List<ConsolidatedCandidateItemModel> candidates,
+  ) {
+    final ids = <String>{};
+    for (final item in candidates) {
+      final qty = _selectedQuantities[item.itemId] ?? 0;
+      if (qty > 0) {
+        ids.add(item.productId);
+      }
+    }
+    return ids;
+  }
+
   Future<void> _loadVehicles(double totalVolume) async {
     if (_selectedCity == null || _selectedTarget == null) return;
-    if (_selectedCity!.cityId == _selectedTarget!.cityId) return; // Same city!
+    if (_selectedCity!.cityId == _selectedTarget!.cityId) return; // Aynı şehir
 
     setState(() {
       _isLoadingVehicles = true;
@@ -165,7 +181,7 @@ class _ConsolidatedTransferSheetState
 
       if (res['success'] == true) {
         AppHaptic.medium();
-        // Refresh transfer map
+        // Lojistik ve transfer verilerini yenile
         ref.invalidate(buyerTransferMapProvider);
         ref.invalidate(consolidatedTransferTargetsProvider);
         ref.invalidate(consolidatedTransferSourceCitiesProvider);
@@ -265,12 +281,12 @@ class _ConsolidatedTransferSheetState
                 ),
                 Text(
                   _currentStep == 0
-                      ? 'Adım 1: Hedef Tesisi Seçin'
+                      ? 'Adım 1: Kaynak Şehri Seçin'
                       : _currentStep == 1
-                          ? 'Adım 2: Kaynak Şehri Seçin'
+                          ? 'Adım 2: Gönderilecek Ürünleri Seçin'
                           : _currentStep == 2
-                              ? 'Adım 3: Ürünleri Toplayın'
-                              : 'Adım 4: Araç & Gönderim',
+                              ? 'Adım 3: Hedef Tesisi Seçin'
+                              : 'Adım 4: Araç & Gönderim Onayı',
                   style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.gold,
                     fontSize: AppTypography.bodySmall,
@@ -293,11 +309,11 @@ class _ConsolidatedTransferSheetState
       padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
       child: Row(
         children: [
-          _buildStepChip(0, 'Hedef'),
+          _buildStepChip(0, 'Nereden?'),
           _buildStepDivider(0),
-          _buildStepChip(1, 'Şehir'),
+          _buildStepChip(1, 'Ürünler'),
           _buildStepDivider(1),
-          _buildStepChip(2, 'Ürünler'),
+          _buildStepChip(2, 'Nereye?'),
           _buildStepDivider(2),
           _buildStepChip(3, 'Sevkiyat'),
         ],
@@ -379,11 +395,11 @@ class _ConsolidatedTransferSheetState
   Widget _buildCurrentStepContent() {
     switch (_currentStep) {
       case 0:
-        return _buildStep1TargetSelection();
+        return _buildStep1SourceCitySelection();
       case 1:
-        return _buildStep2SourceCitySelection();
+        return _buildStep2ProductsSelection();
       case 2:
-        return _buildStep3ProductsSelection();
+        return _buildStep3TargetSelection();
       case 3:
         return _buildStep4VehicleAndConfirm();
       default:
@@ -392,268 +408,34 @@ class _ConsolidatedTransferSheetState
   }
 
   // ==========================================================================
-  // ADIM 1: HEDEF TESİS SEÇİMİ
+  // ADIM 1: KAYNAK ŞEHİR SEÇİMİ (Nereden Çıkacak?)
   // ==========================================================================
-  Widget _buildStep1TargetSelection() {
-    final targetsAsync = ref.watch(consolidatedTransferTargetsProvider);
-
-    return targetsAsync.when(
-      data: (targets) {
-        if (targets.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.warning_amber_rounded, color: AppColors.gold, size: 40.sp),
-                SizedBox(height: 12.h),
-                Text(
-                  'Kullanılabilir Hedef Tesis Bulunamadı',
-                  style: AppTextStyles.title,
-                ),
-                SizedBox(height: 6.h),
-                Text(
-                  'Ürün kabul edecek aktif bir depo, fabrika veya mağazanız bulunmuyor.',
-                  style: AppTextStyles.caption,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        }
-
-        final filteredTargets = _targetFilter == 'all'
-            ? targets
-            : targets.where((t) => t.entityKind == _targetFilter).toList();
-
-        final warehouseCount =
-            targets.where((t) => t.entityKind == 'warehouse').length;
-        final factoryCount =
-            targets.where((t) => t.entityKind == 'factory').length;
-        final storeCount =
-            targets.where((t) => t.entityKind == 'store').length;
-
-        return Column(
-          children: [
-            // Kategori Filtre Butonları
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
-              child: Row(
-                children: [
-                  _buildFilterChip('all', 'Hepsi (${targets.length})'),
-                  SizedBox(width: 8.w),
-                  _buildFilterChip('warehouse', '🏬 Depolar ($warehouseCount)'),
-                  SizedBox(width: 8.w),
-                  _buildFilterChip('factory', '🏭 Fabrikalar ($factoryCount)'),
-                  SizedBox(width: 8.w),
-                  _buildFilterChip('store', '🏪 Mağazalar ($storeCount)'),
-                ],
-              ),
-            ),
-            Expanded(
-              child: filteredTargets.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Bu kategoride hedef tesis bulunamadı.',
-                        style: AppTextStyles.caption,
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 24.h),
-                      itemCount: filteredTargets.length,
-                      itemBuilder: (context, index) {
-                        final target = filteredTargets[index];
-                        final isSelected = _selectedTarget?.id == target.id;
-                        final fullnessRatio = target.totalCapacity > 0
-                            ? (target.usedCapacity / target.totalCapacity)
-                                .clamp(0.0, 1.0)
-                            : 0.0;
-
-                        return GestureDetector(
-                          onTap: () {
-                            AppHaptic.selection();
-                            setState(() {
-                              _selectedTarget = target;
-                              _currentStep = 1; // Otomatik sonraki adıma geç
-                            });
-                          },
-                          child: Container(
-                            margin: EdgeInsets.only(bottom: 12.h),
-                            padding: EdgeInsets.all(14.w),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.gold.withValues(alpha: 0.12)
-                                  : AppColors.cardBgLight,
-                              borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.gold
-                                    : AppColors.borderGold.withValues(alpha: 0.2),
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 8.w,
-                                        vertical: 3.h,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _getKindBadgeColor(target.entityKind),
-                                        borderRadius: BorderRadius.circular(6.r),
-                                      ),
-                                      child: Text(
-                                        target.entityKindDisplay,
-                                        style: TextStyle(
-                                          fontSize: 10.sp,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 8.w),
-                                    Expanded(
-                                      child: Text(
-                                        target.name,
-                                        style: AppTextStyles.body.standardCopyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Icon(
-                                      Icons.location_on_outlined,
-                                      size: 13.sp,
-                                      color: AppColors.gold,
-                                    ),
-                                    Text(
-                                      target.cityName,
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        color: AppColors.gold,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 10.h),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Boş Kapasite: ${target.emptyCapacity.toStringAsFixed(1)} m³',
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        color: target.emptyCapacity > 0
-                                            ? AppColors.green
-                                            : AppColors.red,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Toplam: ${target.totalCapacity.toStringAsFixed(0)} m³',
-                                      style: TextStyle(
-                                        fontSize: 10.5.sp,
-                                        color: AppColors.textMuted,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 6.h),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(4.r),
-                                  child: LinearProgressIndicator(
-                                    value: fullnessRatio,
-                                    minHeight: 6.h,
-                                    backgroundColor: AppColors.borderGold
-                                        .withValues(alpha: 0.15),
-                                    valueColor: AlwaysStoppedAnimation(
-                                      fullnessRatio > 0.9
-                                          ? AppColors.red
-                                          : AppColors.gold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        );
-      },
-      loading: () => const Center(child: AppLoadingIndicator()),
-      error: (e, _) => Center(child: Text('Hata: $e')),
-    );
-  }
-
-  Widget _buildFilterChip(String key, String label) {
-    final isSelected = _targetFilter == key;
-    return GestureDetector(
-      onTap: () {
-        AppHaptic.selection();
-        setState(() => _targetFilter = key);
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.gold.withValues(alpha: 0.2)
-              : AppColors.cardBgLight,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.gold
-                : AppColors.borderGold.withValues(alpha: 0.25),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11.sp,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? AppColors.gold : AppColors.textMuted,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _getKindBadgeColor(String kind) {
-    switch (kind) {
-      case 'factory':
-        return Colors.deepOrange.shade700;
-      case 'store':
-        return Colors.purple.shade700;
-      case 'farm':
-        return Colors.green.shade700;
-      default:
-        return Colors.blue.shade700;
-    }
-  }
-
-  // ==========================================================================
-  // ADIM 2: KAYNAK ŞEHİR SEÇİMİ
-  // ==========================================================================
-  Widget _buildStep2SourceCitySelection() {
+  Widget _buildStep1SourceCitySelection() {
     final citiesAsync = ref.watch(consolidatedTransferSourceCitiesProvider);
 
     return citiesAsync.when(
       data: (cities) {
         if (cities.isEmpty) {
           return Center(
-            child: Text(
-              'Stok bulunan hiçbir tesisiniz yok.',
-              style: AppTextStyles.body,
+            child: Padding(
+              padding: EdgeInsets.all(24.w),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inventory_2_outlined, color: AppColors.gold, size: 40.sp),
+                  SizedBox(height: 12.h),
+                  Text(
+                    'Stok Bulunan Şehir Yok',
+                    style: AppTextStyles.title,
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    'Depo, maden, tarla veya fabrikalarınızda aktarılacak ürün stoğu bulunmuyor.',
+                    style: AppTextStyles.caption,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -664,7 +446,6 @@ class _ConsolidatedTransferSheetState
           itemBuilder: (context, index) {
             final city = cities[index];
             final isSelected = _selectedCity?.cityId == city.cityId;
-            final isSameCity = _selectedTarget?.cityId == city.cityId;
 
             return GestureDetector(
               onTap: () {
@@ -672,7 +453,8 @@ class _ConsolidatedTransferSheetState
                 setState(() {
                   _selectedCity = city;
                   _selectedQuantities.clear();
-                  _currentStep = 2; // Ürün seçimine geç
+                  _selectedTarget = null;
+                  _currentStep = 1; // Ürün seçimine geç
                 });
               },
               child: Container(
@@ -693,7 +475,7 @@ class _ConsolidatedTransferSheetState
                 child: Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.all(10.w),
+                      padding: EdgeInsets.all(12.w),
                       decoration: BoxDecoration(
                         color: AppColors.gold.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
@@ -701,52 +483,45 @@ class _ConsolidatedTransferSheetState
                       child: Icon(
                         Icons.location_city_rounded,
                         color: AppColors.gold,
-                        size: 20.sp,
+                        size: 22.sp,
                       ),
                     ),
-                    SizedBox(width: 12.w),
+                    SizedBox(width: 14.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                city.cityName,
-                                style: AppTextStyles.title.standardCopyWith(
-                                  fontSize: AppTypography.title,
-                                ),
-                              ),
-                              if (isSameCity) ...[
-                                SizedBox(width: 8.w),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 6.w,
-                                    vertical: 2.h,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.green.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(4.r),
-                                    border: Border.all(color: AppColors.green),
-                                  ),
-                                  child: Text(
-                                    'Hedef Şehir (Şehir İçi)',
-                                    style: TextStyle(
-                                      fontSize: 9.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.green,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
+                          Text(
+                            city.cityName,
+                            style: AppTextStyles.title.standardCopyWith(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           SizedBox(height: 4.h),
-                          Text(
-                            '${city.facilityCount} İşletme • Toplam ${city.totalStock} Stok',
-                            style: AppTextStyles.caption.standardCopyWith(
-                              color: AppColors.textMuted,
-                            ),
+                          Row(
+                            children: [
+                              Icon(Icons.business_rounded, size: 13.sp, color: AppColors.textMuted),
+                              SizedBox(width: 4.w),
+                              Text(
+                                '${city.facilityCount} İşletme / Depo',
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              Text(' • ', style: TextStyle(color: AppColors.textMuted)),
+                              Icon(Icons.layers_rounded, size: 13.sp, color: AppColors.gold),
+                              SizedBox(width: 4.w),
+                              Text(
+                                '${city.totalStock} Adet Stok',
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.gold,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -754,7 +529,7 @@ class _ConsolidatedTransferSheetState
                     Icon(
                       Icons.arrow_forward_ios_rounded,
                       size: 14.sp,
-                      color: AppColors.textMuted,
+                      color: AppColors.gold,
                     ),
                   ],
                 ),
@@ -769,21 +544,15 @@ class _ConsolidatedTransferSheetState
   }
 
   // ==========================================================================
-  // ADIM 3: ÜRÜN TOPLAMA & KAPASİTE KİLİDİ
+  // ADIM 2: ÜRÜN TOPLAMA (Neleri Göndereceksin?)
   // ==========================================================================
-  Widget _buildStep3ProductsSelection() {
-    if (_selectedCity == null || _selectedTarget == null) {
+  Widget _buildStep2ProductsSelection() {
+    if (_selectedCity == null) {
       return const SizedBox.shrink();
     }
 
-    final params = ConsolidatedCandidatesParams(
-      sourceCityId: _selectedCity!.cityId,
-      targetEntityKind: _selectedTarget!.entityKind,
-      targetEntityId: _selectedTarget!.id,
-    );
-
     final candidatesAsync = ref.watch(
-      consolidatedTransferCandidatesProvider(params),
+      consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId),
     );
 
     return candidatesAsync.when(
@@ -798,12 +567,12 @@ class _ConsolidatedTransferSheetState
                   Icon(Icons.inventory_2_outlined, color: AppColors.gold, size: 40.sp),
                   SizedBox(height: 12.h),
                   Text(
-                    'Uygun Ürün Bulunamadı',
+                    'Bu Şehirde Stok Bulunamadı',
                     style: AppTextStyles.title,
                   ),
                   SizedBox(height: 6.h),
                   Text(
-                    '${_selectedCity!.cityName} şehrindeki tesislerinizde, ${_selectedTarget!.name} tesisinin kabul edebileceği stok bulunmuyor.',
+                    '${_selectedCity!.cityName} şehrindeki tesislerde aktarılabilir ürün kalmamış.',
                     style: AppTextStyles.caption,
                     textAlign: TextAlign.center,
                   ),
@@ -814,11 +583,9 @@ class _ConsolidatedTransferSheetState
         }
 
         final selectedVolume = _computeSelectedVolume(candidates);
-        final emptyCapacity = _selectedTarget!.emptyCapacity;
-        final isCapacityExceeded = selectedVolume > emptyCapacity;
         final totalSelectedQuantity = _computeTotalQuantity();
 
-        // Ürünleri işletme bazında grupla
+        // Ürünleri tesise göre grupla
         final groupedCandidates = <String, List<ConsolidatedCandidateItemModel>>{};
         for (final item in candidates) {
           final groupKey = '${item.sourceKindDisplay} • ${item.sourceName}';
@@ -827,9 +594,9 @@ class _ConsolidatedTransferSheetState
 
         return Column(
           children: [
-            // Canlı Kapasite Barı (Sticky)
+            // Canlı Özet Barı
             Container(
-              padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 12.h),
+              padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 10.h),
               decoration: BoxDecoration(
                 color: AppColors.cardBgLight,
                 border: Border(
@@ -838,57 +605,39 @@ class _ConsolidatedTransferSheetState
                   ),
                 ),
               ),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Icon(Icons.location_city_rounded, color: AppColors.gold, size: 16.sp),
+                      SizedBox(width: 6.w),
                       Text(
-                        'Hedef Kapasite Doluluğu:',
+                        _selectedCity!.cityName,
                         style: TextStyle(
-                          fontSize: 11.sp,
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${selectedVolume.toStringAsFixed(1)} / ${emptyCapacity.toStringAsFixed(1)} m³',
-                        style: TextStyle(
-                          fontSize: 11.sp,
+                          fontSize: 13.sp,
                           fontWeight: FontWeight.bold,
-                          color: isCapacityExceeded
-                              ? AppColors.red
-                              : AppColors.gold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 6.h),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4.r),
-                    child: LinearProgressIndicator(
-                      value: emptyCapacity > 0
-                          ? (selectedVolume / emptyCapacity).clamp(0.0, 1.0)
-                          : 0.0,
-                      minHeight: 6.h,
-                      backgroundColor: AppColors.borderGold.withValues(alpha: 0.15),
-                      valueColor: AlwaysStoppedAnimation(
-                        isCapacityExceeded ? AppColors.red : AppColors.gold,
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      'Seçilen: $totalSelectedQuantity Adet • ${selectedVolume.toStringAsFixed(1)} m³',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.gold,
                       ),
                     ),
                   ),
-                  if (isCapacityExceeded)
-                    Padding(
-                      padding: EdgeInsets.only(top: 4.h),
-                      child: Text(
-                        'Hedefin boş kapasitesi aşıldı! Lütfen miktarı azaltın.',
-                        style: TextStyle(
-                          color: AppColors.red,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -896,7 +645,7 @@ class _ConsolidatedTransferSheetState
             // Ürün Listesi
             Expanded(
               child: ListView.builder(
-                padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 80.h),
+                padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 80.h),
                 itemCount: groupedCandidates.length,
                 itemBuilder: (context, groupIndex) {
                   final groupKey = groupedCandidates.keys.elementAt(groupIndex);
@@ -942,8 +691,8 @@ class _ConsolidatedTransferSheetState
                           child: Row(
                             children: [
                               SizedBox(
-                                width: 44.w,
-                                height: 44.w,
+                                width: 42.w,
+                                height: 42.w,
                                 child: BrandedProductImage(
                                   fileName: item.productIcon ?? '',
                                   productId: item.productId,
@@ -995,7 +744,7 @@ class _ConsolidatedTransferSheetState
                                   ],
                                 ),
                               ),
-                              // Adet Seçim Butonları
+                              // Adet Stepper
                               Row(
                                 children: [
                                   IconButton(
@@ -1074,7 +823,7 @@ class _ConsolidatedTransferSheetState
               ),
             ),
 
-            // Devam Et Butonu
+            // Hedef Seçimine İlerle Butonu
             Container(
               padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 16.h),
               decoration: BoxDecoration(
@@ -1096,15 +845,14 @@ class _ConsolidatedTransferSheetState
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                   ),
-                  onPressed: totalSelectedQuantity > 0 && !isCapacityExceeded
+                  onPressed: totalSelectedQuantity > 0
                       ? () {
                           AppHaptic.light();
-                          _loadVehicles(selectedVolume);
-                          setState(() => _currentStep = 3);
+                          setState(() => _currentStep = 2);
                         }
                       : null,
                   child: Text(
-                    'İlerle ($totalSelectedQuantity Adet • ${selectedVolume.toStringAsFixed(1)} m³)',
+                    'Hedef Seçimine İlerle ($totalSelectedQuantity Adet • ${selectedVolume.toStringAsFixed(1)} m³)',
                     style: TextStyle(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.bold,
@@ -1123,19 +871,349 @@ class _ConsolidatedTransferSheetState
   }
 
   // ==========================================================================
-  // ADIM 4: ARAÇ & GÖNDERİM ONAYI
+  // ADIM 3: AKILLI HEDEF TESİS SEÇİMİ (Nereye Gidecek?)
+  // ==========================================================================
+  Widget _buildStep3TargetSelection() {
+    final targetsAsync = ref.watch(consolidatedTransferTargetsProvider);
+    final candidates = ref
+            .read(consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId))
+            .value ??
+        [];
+    final selectedVolume = _computeSelectedVolume(candidates);
+    final selectedProductIds = _computeSelectedProductIds(candidates);
+
+    return targetsAsync.when(
+      data: (targets) {
+        if (targets.isEmpty) {
+          return Center(
+            child: Text(
+              'Aktif bir hedef tesisiniz bulunmuyor.',
+              style: AppTextStyles.body,
+            ),
+          );
+        }
+
+        final filteredTargets = _targetFilter == 'all'
+            ? targets
+            : targets.where((t) => t.entityKind == _targetFilter).toList();
+
+        final warehouseCount =
+            targets.where((t) => t.entityKind == 'warehouse').length;
+        final factoryCount =
+            targets.where((t) => t.entityKind == 'factory').length;
+        final storeCount =
+            targets.where((t) => t.entityKind == 'store').length;
+
+        return Column(
+          children: [
+            // Yük Bilgi Rozeti
+            Container(
+              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 6.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Taşınacak Yük Hacmi:',
+                    style: TextStyle(fontSize: 11.sp, color: AppColors.textMuted),
+                  ),
+                  Text(
+                    '${selectedVolume.toStringAsFixed(1)} m³',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.gold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Kategori Filtre Butonları
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+              child: Row(
+                children: [
+                  _buildFilterChip('all', 'Hepsi (${targets.length})'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('warehouse', '🏬 Depolar ($warehouseCount)'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('factory', '🏭 Fabrikalar ($factoryCount)'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('store', '🏪 Mağazalar ($storeCount)'),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 24.h),
+                itemCount: filteredTargets.length,
+                itemBuilder: (context, index) {
+                  final target = filteredTargets[index];
+                  final isSelected = _selectedTarget?.id == target.id;
+                  final isSameCity = _selectedCity?.cityId == target.cityId;
+                  final acceptsProducts =
+                      target.acceptsAllProducts(selectedProductIds);
+                  final hasEnoughCapacity = target.emptyCapacity >= selectedVolume;
+                  final canSelect = acceptsProducts && hasEnoughCapacity;
+
+                  final fullnessRatio = target.totalCapacity > 0
+                      ? (target.usedCapacity / target.totalCapacity).clamp(0.0, 1.0)
+                      : 0.0;
+
+                  return GestureDetector(
+                    onTap: canSelect
+                        ? () {
+                            AppHaptic.selection();
+                            setState(() {
+                              _selectedTarget = target;
+                              _loadVehicles(selectedVolume);
+                              _currentStep = 3; // Sevkiyat adımına geç
+                            });
+                          }
+                        : () {
+                            AppHaptic.heavy();
+                            if (!acceptsProducts) {
+                              AppSnackbar.show(
+                                context,
+                                title: 'Ürün Uyuşmazlığı',
+                                message:
+                                    '${target.name} seçtiğiniz ürünleri kabul etmiyor.',
+                                type: SnackbarType.warning,
+                              );
+                            } else if (!hasEnoughCapacity) {
+                              AppSnackbar.show(
+                                context,
+                                title: 'Kapasite Yetersiz',
+                                message:
+                                    '${target.name} tesisinde yeterli boş alan yok. Gerekli: ${selectedVolume.toStringAsFixed(1)} m³, Boş: ${target.emptyCapacity.toStringAsFixed(1)} m³',
+                                type: SnackbarType.warning,
+                              );
+                            }
+                          },
+                    child: Opacity(
+                      opacity: canSelect ? 1.0 : 0.45,
+                      child: Container(
+                        margin: EdgeInsets.only(bottom: 12.h),
+                        padding: EdgeInsets.all(14.w),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.gold.withValues(alpha: 0.12)
+                              : AppColors.cardBgLight,
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.gold
+                                : isSameCity
+                                    ? AppColors.green.withValues(alpha: 0.5)
+                                    : AppColors.borderGold.withValues(alpha: 0.2),
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w,
+                                    vertical: 3.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getKindBadgeColor(target.entityKind),
+                                    borderRadius: BorderRadius.circular(6.r),
+                                  ),
+                                  child: Text(
+                                    target.entityKindDisplay,
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 8.w),
+                                Expanded(
+                                  child: Text(
+                                    target.name,
+                                    style: AppTextStyles.body.standardCopyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isSameCity) ...[
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6.w,
+                                      vertical: 2.h,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.green.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4.r),
+                                      border: Border.all(color: AppColors.green),
+                                    ),
+                                    child: Text(
+                                      '🟢 Şehir İçi',
+                                      style: TextStyle(
+                                        fontSize: 9.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.green,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 6.w),
+                                ],
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 13.sp,
+                                  color: AppColors.gold,
+                                ),
+                                Text(
+                                  target.cityName,
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: AppColors.gold,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10.h),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Boş Kapasite: ${target.emptyCapacity.toStringAsFixed(1)} m³',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: hasEnoughCapacity
+                                        ? AppColors.green
+                                        : AppColors.red,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (!acceptsProducts)
+                                  Text(
+                                    'Ürün Kabul Etmiyor',
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      color: AppColors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                else if (!hasEnoughCapacity)
+                                  Text(
+                                    'Kapasite Yetersiz',
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      color: AppColors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    'Kabul Ediyor ✅',
+                                    style: TextStyle(
+                                      fontSize: 10.sp,
+                                      color: AppColors.green,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            SizedBox(height: 6.h),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4.r),
+                              child: LinearProgressIndicator(
+                                value: fullnessRatio,
+                                minHeight: 6.h,
+                                backgroundColor:
+                                    AppColors.borderGold.withValues(alpha: 0.15),
+                                valueColor: AlwaysStoppedAnimation(
+                                  fullnessRatio > 0.9
+                                      ? AppColors.red
+                                      : AppColors.gold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: AppLoadingIndicator()),
+      error: (e, _) => Center(child: Text('Hata: $e')),
+    );
+  }
+
+  Widget _buildFilterChip(String key, String label) {
+    final isSelected = _targetFilter == key;
+    return GestureDetector(
+      onTap: () {
+        AppHaptic.selection();
+        setState(() => _targetFilter = key);
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.gold.withValues(alpha: 0.2)
+              : AppColors.cardBgLight,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.gold
+                : AppColors.borderGold.withValues(alpha: 0.25),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? AppColors.gold : AppColors.textMuted,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getKindBadgeColor(String kind) {
+    switch (kind) {
+      case 'factory':
+        return Colors.deepOrange.shade700;
+      case 'store':
+        return Colors.purple.shade700;
+      case 'farm':
+        return Colors.green.shade700;
+      default:
+        return Colors.blue.shade700;
+    }
+  }
+
+  // ==========================================================================
+  // ADIM 4: ARAÇ & GÖNDERİM ONAYI (Sevkiyat)
   // ==========================================================================
   Widget _buildStep4VehicleAndConfirm() {
     if (_selectedCity == null || _selectedTarget == null) {
       return const SizedBox.shrink();
     }
 
-    final params = ConsolidatedCandidatesParams(
-      sourceCityId: _selectedCity!.cityId,
-      targetEntityKind: _selectedTarget!.entityKind,
-      targetEntityId: _selectedTarget!.id,
-    );
-    final candidates = ref.read(consolidatedTransferCandidatesProvider(params)).value ?? [];
+    final candidates = ref
+            .read(consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId))
+            .value ??
+        [];
     final selectedVolume = _computeSelectedVolume(candidates);
     final totalQuantity = _computeTotalQuantity();
     final isSameCity = _selectedCity!.cityId == _selectedTarget!.cityId;
