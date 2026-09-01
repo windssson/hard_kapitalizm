@@ -8,6 +8,7 @@ import 'package:hard_kapitalizm/core/ads/rewarded_ad_action_flow.dart';
 import 'package:hard_kapitalizm/core/ads/transfer_finish_rewarded_ad_service.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -23,6 +24,7 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_screen.dart';
+import 'package:hard_kapitalizm/features/transfer_map/ui/widgets/consolidated_transfer_sheet.dart';
 import 'package:city_picker_from_map/city_picker_from_map.dart';
 // ignore: implementation_imports
 import 'package:city_picker_from_map/src/parser.dart';
@@ -798,6 +800,21 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     final historyAsync = ref.watch(buyerTransferHistoryProvider);
     return Scaffold(
       backgroundColor: AppColors.transparent,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          AppHaptic.medium();
+          ConsolidatedTransferSheet.show(context);
+        },
+        backgroundColor: AppColors.gold,
+        icon: Icon(AppIcons.localShipping, color: AppColors.textOnAccent),
+        label: Text(
+          'Transfer Başlat',
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textOnAccent,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       bottomNavigationBar: AppBottomNav(
         selectedIndex: _selectedIndex,
         onItemSelected: _onNavSelected,
