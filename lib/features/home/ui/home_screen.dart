@@ -1463,6 +1463,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           }
         }
         final alertedModules = _collectAlertedModules(dashboard);
+        final opAlerts = ref.watch(operationalAlertsProvider).value ?? [];
+        for (final alert in opAlerts) {
+          if (alert.route == '/farms' || alert.id.startsWith('field_') || alert.category == 'field') {
+            alertedModules.add('farms');
+          } else if (alert.route == '/fields' || alert.id.startsWith('farm_') || alert.category == 'farm') {
+            alertedModules.add('fields');
+          } else if (alert.route == '/mines' || alert.category == 'mine') {
+            alertedModules.add('mines');
+          } else if (alert.route == '/factories' || alert.category == 'factory') {
+            alertedModules.add('factories');
+          } else if (alert.route == '/store' || alert.category == 'store') {
+            alertedModules.add('stores');
+          } else if (alert.route == '/warehouses' || alert.category == 'warehouse') {
+            alertedModules.add('warehouses');
+          } else if (alert.route == '/transfer-map' || alert.category == 'logistics') {
+            alertedModules.add('logistics');
+          } else if (alert.route == '/tenders' || alert.category == 'tender') {
+            alertedModules.add('tenders');
+          }
+        }
 
         final taxDebt = ref.watch(taxDebtProvider).value ?? 0.0;
 
@@ -1657,8 +1677,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     if (module.hasAlert && !isLocked)
                       Positioned(
-                        top: 6.h,
-                        right: 6.w,
+                        top: 4.h,
+                        left: 4.w,
                         child: _buildModuleAlertBadge(),
                       ),
                   ],
@@ -2064,29 +2084,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildModuleAlertBadge() {
     return Container(
-      width: 18.w,
-      height: 18.w,
+      width: 17.w,
+      height: 17.w,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.red,
+        color: const Color(0xFFFF3D57),
         border: Border.all(
-          color: AppColors.gold.withValues(alpha: 0.75),
-          width: 1,
+          color: Colors.white,
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.red.withValues(alpha: 0.35),
-            blurRadius: 8.r,
-            offset: Offset(0, 2.h),
+            color: const Color(0xFFFF3D57).withValues(alpha: 0.6),
+            blurRadius: 6.r,
+            spreadRadius: 0.5,
+            offset: Offset(0, 1.h),
           ),
         ],
       ),
       child: Center(
         child: Text(
           '!',
-          style: AppTextStyles.caption.standardCopyWith(
-            color: AppColors.textPrimary,
-            fontSize: AppTypography.label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 11.sp,
             fontWeight: FontWeight.w900,
             height: 1,
           ),
