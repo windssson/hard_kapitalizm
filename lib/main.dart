@@ -290,6 +290,22 @@ final appRouter = GoRouter(
       redirect: (context, state) => '/factories',
     ),
     GoRoute(
+      path: '/factory',
+      redirect: (context, state) => '/factories',
+    ),
+    GoRoute(
+      path: '/field',
+      redirect: (context, state) => '/fields',
+    ),
+    GoRoute(
+      path: '/farm',
+      redirect: (context, state) => '/farms',
+    ),
+    GoRoute(
+      path: '/mine',
+      redirect: (context, state) => '/mines',
+    ),
+    GoRoute(
       path: '/mines',
       builder: (context, state) => const MineScreen(),
       routes: [

@@ -1254,17 +1254,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         accentColor: AppColors.green,
         primaryLabel: 'Aktif',
         primaryValue:
-            '${modules?.farms.activeCount ?? 0}/${modules?.farms.count ?? 0}',
+            '${modules?.fields.activeCount ?? 0}/${modules?.fields.count ?? 0}',
         secondaryLabel: 'Doluluk',
-        secondaryValue: _formatRatio(modules?.farms.productionRatio ?? 0),
-        badgeText: (modules?.farms.warningCount ?? 0) > 0
-            ? '${modules!.farms.warningCount} uyarı'
-            : (modules?.farms.count ?? 0) > 0
+        secondaryValue: _formatRatio(modules?.fields.productionRatio ?? 0),
+        badgeText: (modules?.fields.warningCount ?? 0) > 0
+            ? '${modules!.fields.warningCount} uyarı'
+            : (modules?.fields.count ?? 0) > 0
             ? 'Hasat'
             : 'Boş',
         hasAlert:
-            alertedModules.contains('farms') ||
-            (modules?.farms.warningCount ?? 0) > 0,
+            alertedModules.contains('fields') ||
+            (modules?.fields.warningCount ?? 0) > 0,
         requiredLevel: 2,
       ),
       _HomeModuleCardData(
@@ -1289,17 +1289,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         accentColor: AppColors.green,
         primaryLabel: 'Aktif',
         primaryValue:
-            '${modules?.fields.activeCount ?? 0}/${modules?.fields.count ?? 0}',
+            '${modules?.farms.activeCount ?? 0}/${modules?.farms.count ?? 0}',
         secondaryLabel: 'Doluluk',
-        secondaryValue: _formatRatio(modules?.fields.productionRatio ?? 0),
-        badgeText: (modules?.fields.warningCount ?? 0) > 0
-            ? '${modules!.fields.warningCount} uyarı'
-            : (modules?.fields.count ?? 0) > 0
+        secondaryValue: _formatRatio(modules?.farms.productionRatio ?? 0),
+        badgeText: (modules?.farms.warningCount ?? 0) > 0
+            ? '${modules!.farms.warningCount} uyarı'
+            : (modules?.farms.count ?? 0) > 0
             ? 'Çalışıyor'
             : 'Boş',
         hasAlert:
-            alertedModules.contains('fields') ||
-            (modules?.fields.warningCount ?? 0) > 0,
+            alertedModules.contains('farms') ||
+            (modules?.farms.warningCount ?? 0) > 0,
         requiredLevel: 4,
       ),
       _HomeModuleCardData(
@@ -1771,11 +1771,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         context.go('/warehouses');
         return;
       case 'Tarlalar':
-        context.go('/farms');
+        context.go('/fields');
         return;
       case 'Çiftlikler':
       case 'Ciftlikler':
-        context.go('/fields');
+        context.go('/farms');
         return;
       case 'Fabrikalar':
         context.go('/factories');
