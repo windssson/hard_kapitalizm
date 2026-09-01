@@ -48,6 +48,7 @@ import 'package:hard_kapitalizm/features/bank/ui/bank_screen.dart';
 import 'package:hard_kapitalizm/features/achievement/ui/achievement_screen.dart';
 import 'package:hard_kapitalizm/features/leaderboard/ui/leaderboard_screen.dart';
 import 'package:hard_kapitalizm/features/cash_flow/ui/cash_flow_screen.dart';
+import 'package:hard_kapitalizm/features/notification/ui/notifications_screen.dart';
 import 'package:hard_kapitalizm/features/production_report/ui/production_report_screen.dart';
 import 'package:hard_kapitalizm/features/tender/ui/tender_center_screen.dart';
 import 'package:hard_kapitalizm/features/tender/ui/tender_detail_screen.dart';
@@ -95,6 +96,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/missions',
       builder: (context, state) => const MissionScreen(),
+    ),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationsScreen(),
     ),
 
     GoRoute(

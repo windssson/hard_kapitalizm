@@ -11,6 +11,8 @@ import 'package:hard_kapitalizm/core/widgets/animated_count_text.dart';
 import 'package:hard_kapitalizm/features/auth/data/auth_identity_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
+import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
+import 'package:hard_kapitalizm/core/widgets/in_game_notification_banner.dart';
 
 class AppTopBar extends ConsumerWidget {
   const AppTopBar({super.key});
@@ -21,7 +23,18 @@ class AppTopBar extends ConsumerWidget {
     final authIdentity = ref.watch(authIdentityProvider).value;
     final missionDashboard = ref.watch(playerMissionDashboardProvider).value;
     final claimableMissionCount = missionDashboard?.claimableCount ?? 0;
+    final unreadNotificationCount = ref.watch(unreadNotificationCountProvider);
     final progress = (player?.expProgressRatio ?? 0).clamp(0.0, 1.0);
+
+    // Canlı oyun içi bildirim dinleyicisi
+    ref.listen(inGameNotificationStreamProvider, (_, next) {
+      if (next.hasValue && next.value != null) {
+        InGameNotificationBanner.show(context, next.value!);
+      }
+    });
+
+    // Realtime servisini başlat
+    ref.read(notificationRealtimeServiceProvider).startListening();
 
     return Container(
       margin: EdgeInsets.fromLTRB(6.w, 8.h, 6.w, 6.h),
@@ -57,7 +70,13 @@ class AppTopBar extends ConsumerWidget {
                         compact: compact,
                       ),
                     ),
-                    SizedBox(width: compact ? 4.w : 6.w),
+                    SizedBox(width: compact ? 3.w : 5.w),
+                    _buildNotificationAction(
+                      context: context,
+                      unreadCount: unreadNotificationCount,
+                      compact: compact,
+                    ),
+                    SizedBox(width: compact ? 3.w : 4.w),
                     _buildMissionAction(
                       context: context,
                       claimableMissionCount: claimableMissionCount,
@@ -368,6 +387,84 @@ class AppTopBar extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildNotificationAction({
+    required BuildContext context,
+    required int unreadCount,
+    required bool compact,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        InkWell(
+          onTap: () => context.push('/notifications'),
+          borderRadius: BorderRadius.circular(compact ? 12.r : 14.r),
+          child: Container(
+            width: compact ? 36.w : 40.w,
+            height: compact ? 50.h : 56.h,
+            decoration: AppDecorations.card(),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  AppIcons.notificationsActiveRounded,
+                  color: unreadCount > 0 ? AppColors.gold : AppColors.textSecondary,
+                  size: compact ? AppIconSizes.regular : AppIconSizes.medium,
+                ),
+                if (!compact) ...[
+                  SizedBox(height: 2.h),
+                  Text(
+                    'Bildirim',
+                    style: AppTextStyles.caption.standardCopyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: AppTypography.micro,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            right: -3.w,
+            top: -5.h,
+            child: Container(
+              constraints: BoxConstraints(
+                minWidth: compact ? 17.w : 19.w,
+                minHeight: compact ? 17.w : 19.w,
+              ),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 3.w : 4.w,
+                vertical: 2.h,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.red,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.textPrimary, width: 1.2.w),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.red.withValues(alpha: 0.35),
+                    blurRadius: 8.r,
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                unreadCount > 99 ? '99+' : unreadCount.toString(),
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textOnAccent,
+                  fontSize: compact ? 7.5.sp : 8.sp,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
