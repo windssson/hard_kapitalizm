@@ -65,6 +65,14 @@ class InGameNotificationBanner {
       case 'mine':
         context.push('/mine');
         break;
+      case 'tender':
+        context.push('/tenders');
+        break;
+      case 'arge':
+      case 'research':
+        context.push('/arge');
+        break;
+      case 'construction':
       case 'building_upgrade':
       case 'upgrade':
         context.push('/home');

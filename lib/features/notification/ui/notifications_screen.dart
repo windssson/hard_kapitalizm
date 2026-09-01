@@ -417,9 +417,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       case 'farm':
         context.push('/agriculture');
         break;
-      case 'mine':
-        context.push('/mine');
+      case 'tender':
+        context.push('/tenders');
         break;
+      case 'arge':
+      case 'research':
+        context.push('/arge');
+        break;
+      case 'construction':
       case 'building_upgrade':
       case 'upgrade':
         context.push('/home');

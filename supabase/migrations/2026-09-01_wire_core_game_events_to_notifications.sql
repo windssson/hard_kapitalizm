@@ -4,6 +4,10 @@
 -- 1. complete_logistics_transfer_internal -> Lojistik/Sevkiyat varış bildirimi
 -- 2. complete_building_upgrade -> Bina yükseltme tamamlanma bildirimi
 -- 3. start_multi_market_transfer -> Pazar satışı gerçekleştiğinde satıcıya anlık bildirim
+-- 4. complete_building_construction -> Yeni bina inşaatı tamamlanma bildirimi
+-- 5. complete_arge_research -> Ar-Ge teknoloji/kalite araştırması tamamlanma bildirimi
+-- 6. complete_player_tender -> İhale görevi başarıyla tamamlanma bildirimi
+-- 7. ensure_open_tenders -> Teklifli ihale kazanılma bildirimi
 -- =========================================================================================
 
 -- 1. Sevkiyat / Lojistik Tamamlanma Bildirimi
@@ -695,6 +699,591 @@ begin
     'success', true, 'transfer_id', v_transfer_id, 'mode', v_mode, 'item_count', v_item_count, 'total_quantity', v_total_quantity,
     'reserved_capacity_amount', v_total_volume, 'transport_cost', v_transport_cost, 'finish_at', v_finish_at,
     'changed', jsonb_build_object('player', public.get_player_profile(v_player_id))
+  );
+end;
+$function$;
+
+-- 4. Yeni Bina İnşaatı Tamamlanma Bildirimi
+CREATE OR REPLACE FUNCTION public.complete_building_construction(p_player_id uuid, p_construction_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_now timestamptz := timezone('utc', now());
+  v_construction public.building_constructions%rowtype;
+  v_created_id uuid;
+  v_exp_result jsonb;
+  v_building_display_name text;
+begin
+  select *
+  into v_construction
+  from public.building_constructions
+  where id = p_construction_id
+    and player_id = p_player_id
+  for update;
+
+  if not found then
+    raise exception 'Insaat kaydi bulunamadi.';
+  end if;
+
+  if v_construction.status <> 'in_progress' then
+    raise exception 'Bu insaat tamamlanabilir durumda degil.';
+  end if;
+
+  if v_construction.finish_at > v_now then
+    raise exception 'Insaat henuz bitmedi.';
+  end if;
+
+  v_building_display_name := coalesce(v_construction.params->>'name', 'Yeni Tesis');
+
+  if v_construction.building_kind = 'store' then
+    insert into public.stores (
+      player_id,
+      store_type_id,
+      city_id,
+      name,
+      level,
+      current_slot_count,
+      max_slot_count,
+      slot_capacity,
+      is_active
+    )
+    values (
+      p_player_id,
+      (v_construction.params->>'store_type_id')::uuid,
+      (v_construction.params->>'city_id')::uuid,
+      v_construction.params->>'name',
+      coalesce((v_construction.params->>'level')::integer, 1),
+      coalesce((v_construction.params->>'current_slot_count')::integer, 0),
+      coalesce((v_construction.params->>'max_slot_count')::integer, 0),
+      coalesce((v_construction.params->>'slot_capacity')::integer, 0),
+      true
+    )
+    returning id into v_created_id;
+  elsif v_construction.building_kind = 'warehouse' then
+    insert into public.warehouses (
+      player_id,
+      city_id,
+      name,
+      level,
+      capacity,
+      reserved_capacity,
+      warehouse_kind,
+      store_id,
+      is_active
+    )
+    values (
+      p_player_id,
+      (v_construction.params->>'city_id')::uuid,
+      v_construction.params->>'name',
+      coalesce((v_construction.params->>'level')::integer, 1),
+      coalesce((v_construction.params->>'capacity')::numeric, 0),
+      0,
+      coalesce(v_construction.params->>'warehouse_kind', 'general'),
+      nullif(v_construction.params->>'store_id', '')::uuid,
+      true
+    )
+    returning id into v_created_id;
+  elsif v_construction.building_kind = 'factory' then
+    insert into public.factories (
+      player_id,
+      factory_type_id,
+      city_id,
+      name,
+      level,
+      product_id,
+      quality_level,
+      input_capacity,
+      output_capacity,
+      is_active
+    )
+    values (
+      p_player_id,
+      (v_construction.params->>'factory_type_id')::uuid,
+      (v_construction.params->>'city_id')::uuid,
+      v_construction.params->>'name',
+      coalesce((v_construction.params->>'level')::integer, 1),
+      null,
+      coalesce((v_construction.params->>'quality_level')::integer, 0),
+      coalesce((v_construction.params->>'input_capacity')::integer, 0),
+      coalesce((v_construction.params->>'output_capacity')::integer, 0),
+      true
+    )
+    returning id into v_created_id;
+  elsif v_construction.building_kind = 'field' then
+    insert into public.fields (
+      player_id,
+      field_type_id,
+      city_id,
+      name,
+      level,
+      current_slot_count,
+      max_slot_count,
+      input_capacity,
+      output_capacity,
+      is_active
+    )
+    values (
+      p_player_id,
+      (v_construction.params->>'field_type_id')::uuid,
+      (v_construction.params->>'city_id')::uuid,
+      v_construction.params->>'name',
+      coalesce((v_construction.params->>'level')::integer, 1),
+      coalesce((v_construction.params->>'current_slot_count')::integer, 0),
+      coalesce((v_construction.params->>'max_slot_count')::integer, 0),
+      coalesce((v_construction.params->>'input_capacity')::integer, 0),
+      coalesce((v_construction.params->>'output_capacity')::integer, 0),
+      true
+    )
+    returning id into v_created_id;
+  elsif v_construction.building_kind = 'farm' then
+    insert into public.farms (
+      player_id,
+      farm_type_id,
+      city_id,
+      name,
+      level,
+      current_slot_count,
+      max_slot_count,
+      input_capacity,
+      output_capacity,
+      is_active
+    )
+    values (
+      p_player_id,
+      (v_construction.params->>'farm_type_id')::uuid,
+      (v_construction.params->>'city_id')::uuid,
+      v_construction.params->>'name',
+      coalesce((v_construction.params->>'level')::integer, 1),
+      coalesce((v_construction.params->>'current_slot_count')::integer, 0),
+      coalesce((v_construction.params->>'max_slot_count')::integer, 0),
+      coalesce((v_construction.params->>'input_capacity')::integer, 0),
+      coalesce((v_construction.params->>'output_capacity')::integer, 0),
+      true
+    )
+    returning id into v_created_id;
+  elsif v_construction.building_kind = 'mine' then
+    insert into public.mines (
+      player_id,
+      mine_type_id,
+      city_id,
+      name,
+      level,
+      product_id,
+      quality_level,
+      output_capacity,
+      boost_multiplier,
+      is_active
+    )
+    values (
+      p_player_id,
+      (v_construction.params->>'mine_type_id')::uuid,
+      (v_construction.params->>'city_id')::uuid,
+      v_construction.params->>'name',
+      coalesce((v_construction.params->>'level')::integer, 1),
+      null,
+      coalesce((v_construction.params->>'quality_level')::integer, 0),
+      coalesce((v_construction.params->>'output_capacity')::integer, 0),
+      coalesce((v_construction.params->>'boost_multiplier')::numeric, 1.00),
+      true
+    )
+    returning id into v_created_id;
+  elsif v_construction.building_kind = 'logistics_company' then
+    insert into public.logistics_companies (
+      player_id,
+      city_id,
+      name,
+      level,
+      current_vehicle_count,
+      max_vehicle_count,
+      fuel_capacity,
+      current_fuel,
+      fuel_cost,
+      is_active
+    )
+    values (
+      p_player_id,
+      (v_construction.params->>'city_id')::uuid,
+      v_construction.params->>'name',
+      coalesce((v_construction.params->>'level')::integer, 1),
+      coalesce((v_construction.params->>'current_vehicle_count')::integer, 0),
+      coalesce((v_construction.params->>'max_vehicle_count')::integer, 0),
+      coalesce((v_construction.params->>'fuel_capacity')::integer, 0),
+      coalesce((v_construction.params->>'current_fuel')::integer, 0),
+      coalesce((v_construction.params->>'fuel_cost')::numeric, 0),
+      true
+    )
+    returning id into v_created_id;
+  elsif v_construction.building_kind = 'arge_center' then
+    insert into public.arge_centers (
+      player_id,
+      name,
+      level,
+      max_concurrent_researches,
+      duration_reduction_pct,
+      is_active
+    )
+    values (
+      p_player_id,
+      coalesce(v_construction.params->>'name', 'AR-GE Merkezi'),
+      coalesce((v_construction.params->>'level')::integer, 1),
+      coalesce((v_construction.params->>'max_concurrent_researches')::integer, 1),
+      coalesce((v_construction.params->>'duration_reduction_pct')::numeric, 0),
+      true
+    )
+    returning id into v_created_id;
+  else
+    raise exception 'Gecersiz building_kind: %', v_construction.building_kind;
+  end if;
+
+  update public.building_constructions
+  set
+    status = 'complete',
+    completed_at = v_now
+  where id = p_construction_id;
+
+  v_exp_result := public.grant_player_experience(
+    p_player_id,
+    public.calculate_experience_reward(
+      'building_construction_completed',
+      jsonb_build_object('building_kind', v_construction.building_kind)
+    ),
+    'building_construction_completed',
+    jsonb_build_object(
+      'construction_id', p_construction_id,
+      'building_kind', v_construction.building_kind,
+      'created_id', v_created_id
+    )
+  );
+
+  -- İnşaat Tamamlanma Bildirimi (Oyun İçi + Push)
+  PERFORM public.send_game_notification(
+    p_player_id,
+    'İnşaat Tamamlandı!',
+    v_building_display_name || ' inşaatı tamamlandı ve hizmete açıldı.',
+    'building',
+    'construction',
+    v_created_id,
+    true
+  );
+
+  return jsonb_build_object(
+    'success', true,
+    'construction_id', p_construction_id,
+    'building_kind', v_construction.building_kind,
+    'created_id', v_created_id,
+    'status', 'complete',
+    'completed_at', v_now,
+    'experience', v_exp_result,
+    'changed', jsonb_build_object(
+      'player', public.get_player_profile(p_player_id)
+    )
+  );
+end;
+$function$;
+
+-- 5. Ar-Ge Araştırması Tamamlanma Bildirimi
+CREATE OR REPLACE FUNCTION public.complete_arge_research(p_research_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_research arge_researches%rowtype;
+  v_now timestamptz := timezone('utc', now());
+  v_exp_result jsonb;
+begin
+  select * into v_research
+  from arge_researches
+  where id = p_research_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('success', false, 'message', 'Arastirma bulunamadi.');
+  end if;
+
+  if v_research.status <> 'in_progress' then
+    return jsonb_build_object('success', false, 'message', 'Bu arastirma zaten tamamlanmis.');
+  end if;
+
+  if v_research.finish_at > v_now then
+    return jsonb_build_object('success', false, 'message', 'Arastirma henuz tamamlanmadi.');
+  end if;
+
+  insert into player_product_quality_levels (player_id, product_id, max_quality_level, created_at, updated_at)
+  values (v_research.player_id, v_research.product_id, v_research.target_quality, v_now, v_now)
+  on conflict (player_id, product_id) do update
+    set max_quality_level = excluded.max_quality_level, updated_at = v_now;
+
+  update arge_researches
+  set status = 'completed', completed_at = v_now
+  where id = p_research_id;
+
+  v_exp_result := public.grant_player_experience(
+    v_research.player_id,
+    public.calculate_experience_reward(
+      'arge_research_completed',
+      jsonb_build_object(
+        'product_id', v_research.product_id,
+        'target_quality', v_research.target_quality
+      )
+    ),
+    'arge_research_completed',
+    jsonb_build_object(
+      'research_id', p_research_id,
+      'product_id', v_research.product_id,
+      'product_name', v_research.product_name,
+      'target_quality', v_research.target_quality
+    )
+  );
+
+  -- Ar-Ge Araştırma Bildirimi (Oyun İçi + Push)
+  PERFORM public.send_game_notification(
+    v_research.player_id,
+    'Ar-Ge Tamamlandı!',
+    v_research.product_name || ' ürünü Kalite Seviyesi ' || v_research.target_quality::text || ' araştırması başarıyla bitti.',
+    'research',
+    'arge',
+    p_research_id,
+    true
+  );
+
+  return jsonb_build_object(
+    'success', true,
+    'product_id', v_research.product_id,
+    'product_name', v_research.product_name,
+    'new_quality_level', v_research.target_quality,
+    'experience', v_exp_result,
+    'changed', jsonb_build_object(
+      'player', public.get_player_profile(v_research.player_id)
+    )
+  );
+end;
+$function$;
+
+-- 6. İhale Görevi Teslimatı Tamamlanma Bildirimi
+CREATE OR REPLACE FUNCTION public.complete_player_tender(p_player_tender_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_player_tender public.player_tenders%rowtype;
+  v_player_cash numeric := 0;
+  v_payout numeric := 0;
+  v_tender_title text := 'Ihale';
+  v_tender_exp integer := 0;
+begin
+  select *
+  into v_player_tender
+  from public.player_tenders
+  where id = p_player_tender_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('success', false, 'message', 'Oyuncu ihalesi bulunamadi.');
+  end if;
+
+  if v_player_tender.status <> 'active' then
+    return jsonb_build_object('success', false, 'message', 'Ihale aktif degil.');
+  end if;
+
+  if v_player_tender.delivered_quantity < v_player_tender.required_quantity then
+    return jsonb_build_object('success', false, 'message', 'Teslim miktari henuz yeterli degil.');
+  end if;
+
+  select cash
+  into v_player_cash
+  from public.players
+  where id = v_player_tender.player_id
+  for update;
+
+  select coalesce(t.title, 'Ihale')
+  into v_tender_title
+  from public.tenders t
+  where t.id = v_player_tender.tender_id;
+
+  v_payout := v_player_tender.reward_cash + v_player_tender.bond_paid;
+
+  update public.player_tenders
+  set status = 'completed',
+      completed_at = timezone('utc'::text, now()),
+      updated_at = timezone('utc'::text, now())
+  where id = v_player_tender.id;
+
+  update public.players
+  set cash = cash + v_payout
+  where id = v_player_tender.player_id;
+
+  perform public.log_player_cash_change(
+    v_player_tender.player_id,
+    v_player_tender.reward_cash,
+    v_player_cash,
+    'tender_reward_paid',
+    format('Ihale odulu kazanildi. Tender: %s', v_player_tender.tender_id),
+    v_player_tender.id,
+    'player_tender'
+  );
+
+  perform public.log_player_cash_change(
+    v_player_tender.player_id,
+    v_player_tender.bond_paid,
+    v_player_cash + v_player_tender.reward_cash,
+    'tender_bond_refunded',
+    format('Ihale teminati iade edildi. Tender: %s', v_player_tender.tender_id),
+    v_player_tender.id,
+    'player_tender'
+  );
+
+  v_tender_exp := greatest(200, least(1500, 200 + floor(v_player_tender.reward_cash / 10000)::integer + floor(v_player_tender.required_quantity / 10)::integer));
+  perform public.grant_player_experience(
+    v_player_tender.player_id,
+    v_tender_exp,
+    'tender_completed',
+    jsonb_build_object(
+      'tender_id', v_player_tender.tender_id,
+      'player_tender_id', v_player_tender.id,
+      'reward_cash', v_player_tender.reward_cash,
+      'required_quantity', v_player_tender.required_quantity
+    )
+  );
+
+  -- İhale Tamamlanma Bildirimi (Oyun İçi + Push)
+  PERFORM public.send_game_notification(
+    v_player_tender.player_id,
+    'İhale Teslimatı Tamamlandı!',
+    v_tender_title || ' ihalesi başarıyla tamamlandı. Kazanç: ' || round(v_payout, 0)::text || ' TL',
+    'trade',
+    'tender',
+    v_player_tender.id,
+    true
+  );
+
+  return jsonb_build_object(
+    'success', true,
+    'player_tender_id', v_player_tender.id,
+    'status', 'completed',
+    'payout', v_payout,
+    'exp_gained', v_tender_exp,
+    'message', 'Ihale tamamlandi.'
+  );
+end;
+$function$;
+
+-- 7. Teklif Usulü İhale Kazanma Bildirimi
+CREATE OR REPLACE FUNCTION public.ensure_open_tenders()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_now timestamptz := timezone('utc'::text, now());
+  v_expired_count integer := 0;
+  v_closed_count integer := 0;
+  v_tender public.tenders%rowtype;
+  v_winning_bid public.tender_bids%rowtype;
+  v_losing_bid public.tender_bids%rowtype;
+  v_player_tender_id uuid;
+  v_deadline_at timestamptz;
+  v_player_cash numeric;
+begin
+  for v_tender in
+    select * from public.tenders
+    where status = 'open' and accept_until <= v_now
+    order by accept_until asc
+    for update
+  loop
+    if v_tender.award_type = 'first_claim' then
+      update public.tenders
+      set status = 'expired', updated_at = v_now
+      where id = v_tender.id;
+      v_expired_count := v_expired_count + 1;
+      continue;
+    end if;
+
+    select * into v_winning_bid
+    from public.tender_bids tb
+    where tb.tender_id = v_tender.id
+      and tb.status = 'active'
+    order by tb.bid_amount asc, tb.submitted_at asc, tb.created_at asc
+    limit 1
+    for update;
+
+    if not found then
+      update public.tenders
+      set status = 'expired', updated_at = v_now
+      where id = v_tender.id;
+      v_expired_count := v_expired_count + 1;
+      continue;
+    end if;
+
+    v_deadline_at := v_now + make_interval(mins => v_tender.delivery_duration_minutes);
+
+    insert into public.player_tenders (
+      player_id, tender_id, accepted_at, deadline_at, bond_paid, required_quantity,
+      delivered_quantity, reward_cash, product_id, quality_level, city_id, status
+    )
+    values (
+      v_winning_bid.player_id, v_tender.id, v_now, v_deadline_at, v_winning_bid.bond_paid,
+      v_tender.required_quantity, 0, v_winning_bid.bid_amount, v_tender.product_id,
+      v_tender.quality_level, v_tender.city_id, 'active'
+    )
+    returning id into v_player_tender_id;
+
+    update public.tender_bids
+    set status = 'won', resolved_at = v_now, updated_at = v_now
+    where id = v_winning_bid.id;
+
+    update public.tenders
+    set status = 'closed', updated_at = v_now
+    where id = v_tender.id;
+
+    -- İhale Kazanma Bildirimi (Oyun İçi + Push)
+    PERFORM public.send_game_notification(
+      v_winning_bid.player_id,
+      'İhaleyi Kazandınız!',
+      coalesce(v_tender.title, 'İhale') || ' sözleşmesi size verildi. Teklif bedeli: ' || round(v_winning_bid.bid_amount, 0)::text || ' TL',
+      'trade',
+      'tender',
+      v_player_tender_id,
+      true
+    );
+
+    for v_losing_bid in
+      select * from public.tender_bids tb
+      where tb.tender_id = v_tender.id
+        and tb.status = 'active'
+        and tb.id <> v_winning_bid.id
+      for update
+    loop
+      select cash into v_player_cash from public.players where id = v_losing_bid.player_id for update;
+      update public.players set cash = cash + v_losing_bid.bond_paid where id = v_losing_bid.player_id;
+      update public.tender_bids
+      set status = 'lost', resolved_at = v_now, updated_at = v_now
+      where id = v_losing_bid.id;
+      perform public.log_player_cash_change(
+        v_losing_bid.player_id,
+        v_losing_bid.bond_paid,
+        v_player_cash,
+        'tender_bid_bond_refunded',
+        format('Ihale teklif teminati iade edildi. Tender: %s', v_tender.id),
+        v_losing_bid.id,
+        'tender_bid'
+      );
+    end loop;
+
+    v_closed_count := v_closed_count + 1;
+  end loop;
+
+  return jsonb_build_object(
+    'success', true,
+    'expired_count', v_expired_count,
+    'closed_count', v_closed_count
   );
 end;
 $function$;
