@@ -109,10 +109,12 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   Offset? _calloutCityPos;
   TransferMapItemModel? _calloutTransfer;
   Offset? _calloutTransferPos;
+  int _cityCalloutTab = 0; // 0: Tümü, 1: İşletmeler, 2: Stoklar
 
   void _openCityCallout(PlayerFacilityCityModel city, Offset svgPos) {
     AppHaptic.medium();
     setState(() {
+      _cityCalloutTab = 0;
       _calloutCity = city;
       _calloutCityPos = svgPos;
       _calloutTransfer = null;
@@ -1868,8 +1870,8 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       _transformationController.value,
       svgPos,
     );
-    final calloutWidth = math.min(310.w, mapWidth - 20.w);
-    final calloutHeight = math.min(270.h, mapHeight - 24.h);
+    final calloutWidth = math.min(320.w, mapWidth - 16.w);
+    final calloutHeight = math.min(300.h, mapHeight - 16.h);
 
     double left = cardPos.dx + 14.w;
     if (left + calloutWidth > mapWidth - 8.w) {
@@ -1918,11 +1920,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
-                padding: EdgeInsets.fromLTRB(12.w, 10.h, 6.w, 8.h),
+                padding: EdgeInsets.fromLTRB(12.w, 10.h, 6.w, 6.h),
                 child: Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.all(6.w),
+                      padding: EdgeInsets.all(5.w),
                       decoration: BoxDecoration(
                         color: AppColors.gold.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
@@ -1933,7 +1935,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                       child: Icon(
                         Icons.location_on,
                         color: AppColors.gold,
-                        size: 15.sp,
+                        size: 14.sp,
                       ),
                     ),
                     SizedBox(width: 8.w),
@@ -1942,7 +1944,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${city.cityName} İşletmeleri',
+                            city.cityName,
                             style: AppTextStyles.h2.standardCopyWith(
                               color: AppColors.gold,
                               fontSize: 13.sp,
@@ -1953,10 +1955,10 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                           ),
                           SizedBox(height: 1.h),
                           Text(
-                            '${city.facilityCount} Tesis • ${AppMoney.full(city.totalCityStock, withSymbol: false)} Stok',
+                            '${city.facilityCount} İşletme • ${AppMoney.full(city.totalCityStock, withSymbol: false)} Toplam Stok',
                             style: AppTextStyles.caption.standardCopyWith(
                               color: AppColors.textSecondary,
-                              fontSize: 9.5.sp,
+                              fontSize: 9.sp,
                             ),
                           ),
                         ],
@@ -1977,91 +1979,171 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                   ],
                 ),
               ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildCalloutTabChip(
+                        title: 'Tümü',
+                        isSelected: _cityCalloutTab == 0,
+                        onTap: () => setState(() => _cityCalloutTab = 0),
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                    Expanded(
+                      child: _buildCalloutTabChip(
+                        title: 'İşletmeler (${city.facilities.length})',
+                        isSelected: _cityCalloutTab == 1,
+                        onTap: () => setState(() => _cityCalloutTab = 1),
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                    Expanded(
+                      child: _buildCalloutTabChip(
+                        title: 'Stoklar',
+                        isSelected: _cityCalloutTab == 2,
+                        onTap: () => setState(() => _cityCalloutTab = 2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Divider(
                 height: 1,
-                color: AppColors.borderGold.withValues(alpha: 0.3),
+                color: AppColors.borderGold.withValues(alpha: 0.25),
               ),
               Expanded(
-                child: ListView.separated(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-                  itemCount: city.facilities.length,
-                  separatorBuilder: (context, _) => SizedBox(height: 6.h),
-                  itemBuilder: (context, index) {
-                    final fac = city.facilities[index];
-                    final visual = _getFacilityKindVisual(fac.kind);
-                    final icon = visual.$1;
-                    final color = visual.$2;
-                    return Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBgLight.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(10.r),
-                        border: Border.all(
-                          color: color.withValues(alpha: 0.25),
+                child: ListView(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                  children: [
+                    if (_cityCalloutTab == 0 || _cityCalloutTab == 1) ...[
+                      Padding(
+                        padding: EdgeInsets.only(bottom: 4.h, left: 2.w),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.business_outlined,
+                              size: 11.sp,
+                              color: AppColors.gold,
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              'İŞLETMELER (${city.facilities.length})',
+                              style: TextStyle(
+                                fontSize: 8.sp,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.gold,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 28.w,
-                            height: 28.w,
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8.r),
+                      for (final fac in city.facilities)
+                        _buildCalloutFacilityRow(fac),
+                      if (_cityCalloutTab == 0) SizedBox(height: 6.h),
+                    ],
+                    if (_cityCalloutTab == 0 || _cityCalloutTab == 2) ...[
+                      Padding(
+                        padding: EdgeInsets.only(bottom: 4.h, left: 2.w),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 11.sp,
+                              color: AppColors.gold,
                             ),
-                            child: Icon(icon, color: color, size: 15.sp),
-                          ),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        fac.name,
-                                        style: TextStyle(
-                                          color: AppColors.textPrimary,
-                                          fontSize: 10.5.sp,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Text(
-                                      fac.kindDisplay,
-                                      style: TextStyle(
-                                        color: color,
-                                        fontSize: 7.5.sp,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 2.h),
-                                Text(
-                                  'Stok: ${AppMoney.full(fac.totalStock, withSymbol: false)} / Kap: ${AppMoney.full(fac.totalCapacity, withSymbol: false)}',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 8.5.sp,
-                                  ),
-                                ),
-                              ],
+                            SizedBox(width: 4.w),
+                            Text(
+                              'ŞEHİRDEKİ STOKLAR',
+                              style: TextStyle(
+                                fontSize: 8.sp,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.gold,
+                                letterSpacing: 0.4,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    );
-                  },
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final candidatesAsync = ref.watch(
+                            consolidatedTransferCityCandidatesProvider(
+                              city.cityId,
+                            ),
+                          );
+                          return candidatesAsync.when(
+                            data: (items) {
+                              if (items.isEmpty) {
+                                return Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w,
+                                    vertical: 8.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cardBgLight.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        size: 12.sp,
+                                        color: AppColors.textMuted,
+                                      ),
+                                      SizedBox(width: 6.w),
+                                      Expanded(
+                                        child: Text(
+                                          'Bu şehirde hazır ürün stoğu bulunmuyor.',
+                                          style: TextStyle(
+                                            fontSize: 8.5.sp,
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                              return Column(
+                                children: [
+                                  for (final item in items)
+                                    _buildCalloutStockRow(item),
+                                ],
+                              );
+                            },
+                            loading: () => Container(
+                              padding: EdgeInsets.all(8.h),
+                              child: const Center(
+                                child: AppLoadingIndicator.compact(),
+                              ),
+                            ),
+                            error: (_, _) => Container(
+                              padding: EdgeInsets.all(6.h),
+                              child: Text(
+                                'Stok bilgisi alınamadı.',
+                                style: TextStyle(
+                                  fontSize: 8.5.sp,
+                                  color: AppColors.red,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ],
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(10.w, 4.h, 10.w, 10.h),
+                padding: EdgeInsets.fromLTRB(10.w, 4.h, 10.w, 8.h),
                 child: SizedBox(
                   width: double.infinity,
-                  height: 36.h,
+                  height: 34.h,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.gold,
@@ -2071,11 +2153,11 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         borderRadius: BorderRadius.circular(10.r),
                       ),
                     ),
-                    icon: Icon(AppIcons.localShipping, size: 15.sp),
+                    icon: Icon(AppIcons.localShipping, size: 14.sp),
                     label: Text(
                       '${city.cityName} Şehrinden Sevkiyat Yap',
                       style: TextStyle(
-                        fontSize: 10.5.sp,
+                        fontSize: 10.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -2093,6 +2175,190 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCalloutTabChip({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: EdgeInsets.symmetric(vertical: 4.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.gold.withValues(alpha: 0.22)
+              : AppColors.cardBgLight.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(6.r),
+          border: Border.all(
+            color: isSelected ? AppColors.gold : Colors.white10,
+            width: isSelected ? 1 : 0.6,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? AppColors.gold : AppColors.textMuted,
+            fontSize: 8.5.sp,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalloutFacilityRow(PlayerFacilityItemModel fac) {
+    final visual = _getFacilityKindVisual(fac.kind);
+    final icon = visual.$1;
+    final color = visual.$2;
+    return Container(
+      margin: EdgeInsets.only(bottom: 3.5.h),
+      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.5.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(
+          color: color.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 20.w,
+            height: 20.w,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(5.r),
+            ),
+            child: Icon(icon, color: color, size: 12.sp),
+          ),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    fac.name,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 9.5.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(width: 4.w),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                  child: Text(
+                    fac.kindDisplay,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 7.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Text(
+            '${AppMoney.full(fac.totalStock, withSymbol: false)} / ${AppMoney.full(fac.totalCapacity, withSymbol: false)}',
+            style: TextStyle(
+              color: AppColors.gold,
+              fontSize: 8.5.sp,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalloutStockRow(ConsolidatedCandidateItemModel item) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 3.5.h),
+      padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.5.h),
+      decoration: BoxDecoration(
+        color: AppColors.cardBgLight.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(
+          color: AppColors.borderGold.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 20.w,
+            height: 20.w,
+            child: BrandedProductImage(
+              fileName: item.productIcon ?? '',
+              productId: item.productId,
+              brandId: item.brandId,
+            ),
+          ),
+          SizedBox(width: 6.w),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    item.productName,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 9.5.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(width: 4.w),
+                Text(
+                  item.sourceName,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 7.5.sp,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(5.r),
+              border: Border.all(
+                color: AppColors.gold.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Text(
+              '${AppMoney.full(item.availableQuantity, withSymbol: false)} Adet',
+              style: TextStyle(
+                color: AppColors.gold,
+                fontSize: 8.sp,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
