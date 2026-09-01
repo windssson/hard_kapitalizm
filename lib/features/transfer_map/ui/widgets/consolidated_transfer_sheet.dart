@@ -12,14 +12,28 @@ import 'package:hard_kapitalizm/features/transfer_map/data/consolidated_transfer
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 
 class ConsolidatedTransferSheet extends ConsumerStatefulWidget {
-  const ConsolidatedTransferSheet({super.key});
+  final String? initialCityId;
+  final String? initialCityName;
 
-  static Future<void> show(BuildContext context) {
+  const ConsolidatedTransferSheet({
+    super.key,
+    this.initialCityId,
+    this.initialCityName,
+  });
+
+  static Future<void> show(
+    BuildContext context, {
+    String? initialCityId,
+    String? initialCityName,
+  }) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const ConsolidatedTransferSheet(),
+      builder: (_) => ConsolidatedTransferSheet(
+        initialCityId: initialCityId,
+        initialCityName: initialCityName,
+      ),
     );
   }
 
@@ -35,6 +49,20 @@ class _ConsolidatedTransferSheetState
 
   ConsolidatedSourceCityModel? _selectedCity;
   ConsolidatedTargetModel? _selectedTarget;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialCityId != null && widget.initialCityName != null) {
+      _selectedCity = ConsolidatedSourceCityModel(
+        cityId: widget.initialCityId!,
+        cityName: widget.initialCityName!,
+        facilityCount: 1,
+        totalStock: 0,
+      );
+      _currentStep = 1;
+    }
+  }
 
   // itemId -> selected quantity
   final Map<String, int> _selectedQuantities = {};

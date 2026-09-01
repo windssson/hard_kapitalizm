@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
+import 'package:hard_kapitalizm/features/transfer_map/models/player_facility_city_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ============================================================================
@@ -71,10 +72,10 @@ class ConsolidatedSourceCityModel {
   const ConsolidatedSourceCityModel({
     required this.cityId,
     required this.cityName,
-    required this.facilityCount,
-    required this.totalStock,
-    required this.mapPositionX,
-    required this.mapPositionY,
+    this.facilityCount = 0,
+    this.totalStock = 0,
+    this.mapPositionX = 0.5,
+    this.mapPositionY = 0.5,
   });
 
   factory ConsolidatedSourceCityModel.fromJson(Map<String, dynamic> json) {
@@ -233,3 +234,15 @@ class ConsolidatedTransferAction {
     );
   }
 }
+
+final playerFacilityCitiesProvider =
+    FutureProvider.autoDispose<List<PlayerFacilityCityModel>>((ref) async {
+  final supabase = Supabase.instance.client;
+  final response = await supabase.rpc('get_player_facility_cities_summary');
+  final map = response as Map<String, dynamic>? ?? {};
+  final list = map['cities'] as List<dynamic>? ?? const [];
+  return list
+      .map((e) => PlayerFacilityCityModel.fromJson(Map<String, dynamic>.from(e as Map)))
+      .toList();
+});
+

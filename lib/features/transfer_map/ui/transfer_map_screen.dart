@@ -25,6 +25,8 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_screen.dart';
 import 'package:hard_kapitalizm/features/transfer_map/ui/widgets/consolidated_transfer_sheet.dart';
+import 'package:hard_kapitalizm/features/transfer_map/data/consolidated_transfer_provider.dart';
+import 'package:hard_kapitalizm/features/transfer_map/models/player_facility_city_model.dart';
 import 'package:city_picker_from_map/city_picker_from_map.dart';
 // ignore: implementation_imports
 import 'package:city_picker_from_map/src/parser.dart';
@@ -798,6 +800,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   Widget build(BuildContext context) {
     final transfersAsync = ref.watch(buyerTransferMapProvider);
     final historyAsync = ref.watch(buyerTransferHistoryProvider);
+    final facilityCitiesAsync = ref.watch(playerFacilityCitiesProvider);
+    final facilityCities = facilityCitiesAsync.value ?? const [];
+
     return Scaffold(
       backgroundColor: AppColors.transparent,
       floatingActionButton: FloatingActionButton.extended(
@@ -853,99 +858,99 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                           onRefresh: () async {
                             await ref.read(buyerTransferMapProvider.notifier).refresh();
                             await ref.read(buyerTransferHistoryProvider.notifier).refresh();
+                            ref.invalidate(playerFacilityCitiesProvider);
                           },
-                          child: transfers.isEmpty
-                              ? ListView(
-                                  physics:
-                                      const AlwaysScrollableScrollPhysics(),
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w,
+                          child: CustomScrollView(
+                            controller: _activeScrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: [
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    12.w,
+                                    4.h,
+                                    12.w,
+                                    0,
                                   ),
-                                  children: [
-                                    SizedBox(height: 6.h),
-                                    _buildFleetStatusBanner(),
-                                    SizedBox(height: 80.h),
-                                    _buildEmptyState(),
-                                  ],
-                                )
-                              : CustomScrollView(
-                                  controller: _activeScrollController,
-                                  physics:
-                                      const AlwaysScrollableScrollPhysics(),
-                                  slivers: [
-                                    SliverToBoxAdapter(
-                                      child: Padding(
-                                        padding: EdgeInsets.fromLTRB(
-                                          12.w,
-                                          4.h,
-                                          12.w,
-                                          0,
-                                        ),
-                                        child: _buildFleetStatusBanner(),
-                                      ),
-                                    ),
-                                    if (dueCount > 0)
-                                      SliverToBoxAdapter(
-                                        child: Padding(
-                                          padding: EdgeInsets.fromLTRB(
-                                            12.w,
-                                            8.h,
-                                            12.w,
-                                            0,
-                                          ),
-                                          child: _buildDueTransfersBanner(
-                                            dueCount,
-                                          ),
-                                        ),
-                                      ),
-                                    SliverToBoxAdapter(
-                                      child: Padding(
-                                        padding: EdgeInsets.fromLTRB(
-                                          12.w,
-                                          8.h,
-                                          12.w,
-                                          0,
-                                        ),
-                                        child: RepaintBoundary(
-                                          child: _buildMapCard(
-                                            transfers,
-                                            selectedTransferId:
-                                                selectedTransfer?.id ??
-                                                _selectedTransferId,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    SliverPadding(
-                                      padding: EdgeInsets.fromLTRB(
-                                        12.w,
-                                        16.h,
-                                        12.w,
-                                        24.h,
-                                      ),
-                                      sliver: SliverList(
-                                        delegate: SliverChildBuilderDelegate((
-                                          context,
-                                          index,
-                                        ) {
-                                          final transfer = transfers[index];
-                                          return KeyedSubtree(
-                                            key: _cardKeyFor(transfer.id),
-                                            child: RepaintBoundary(
-                                              child: _buildTransferSummaryCard(
-                                                transfer,
-                                                isSelected:
-                                                    transfer.id ==
-                                                    (selectedTransfer?.id ??
-                                                        _selectedTransferId),
-                                              ),
-                                            ),
-                                          );
-                                        }, childCount: transfers.length),
-                                      ),
-                                    ),
-                                  ],
+                                  child: _buildFleetStatusBanner(),
                                 ),
+                              ),
+                              if (dueCount > 0)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      12.w,
+                                      8.h,
+                                      12.w,
+                                      0,
+                                    ),
+                                    child: _buildDueTransfersBanner(
+                                      dueCount,
+                                    ),
+                                  ),
+                                ),
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    12.w,
+                                    8.h,
+                                    12.w,
+                                    0,
+                                  ),
+                                  child: RepaintBoundary(
+                                    child: _buildMapCard(
+                                      transfers,
+                                      selectedTransferId:
+                                          selectedTransfer?.id ??
+                                          _selectedTransferId,
+                                      facilityCities: facilityCities,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (transfers.isEmpty)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      12.w,
+                                      14.h,
+                                      12.w,
+                                      24.h,
+                                    ),
+                                    child: _buildIdleLogisticsCard(facilityCities),
+                                  ),
+                                )
+                              else
+                                SliverPadding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    12.w,
+                                    16.h,
+                                    12.w,
+                                    24.h,
+                                  ),
+                                  sliver: SliverList(
+                                    delegate: SliverChildBuilderDelegate((
+                                      context,
+                                      index,
+                                    ) {
+                                      final transfer = transfers[index];
+                                      return KeyedSubtree(
+                                        key: _cardKeyFor(transfer.id),
+                                        child: RepaintBoundary(
+                                          child: _buildTransferSummaryCard(
+                                            transfer,
+                                            isSelected:
+                                                transfer.id ==
+                                                (selectedTransfer?.id ??
+                                                    _selectedTransferId),
+                                          ),
+                                        ),
+                                      );
+                                    }, childCount: transfers.length),
+                                  ),
+                                ),
+                            ],
+                          ),
                         );
                       },
                       loading: () => Center(
@@ -1338,6 +1343,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   Widget _buildMapCard(
     List<TransferMapItemModel> transfers, {
     String? selectedTransferId,
+    List<PlayerFacilityCityModel> facilityCities = const [],
   }) {
     if (_isLoadingMap) {
       return Container(
@@ -1449,18 +1455,21 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                     final mapHeight =
                         280.h; // Türkiye haritası daha geniş görünüm alanı
 
-                    Offset project(TransferMapCityModel cityModel) {
+                    Offset projectCityName(String cityName) {
                       if (_cityList.isEmpty) return Offset.zero;
                       final matched = _cityList.cast<City?>().firstWhere(
                         (c) =>
                             c != null &&
                             _normalizeString(c.title) ==
-                                _normalizeString(cityModel.name),
+                                _normalizeString(cityName),
                         orElse: () => null,
                       );
                       if (matched == null) return Offset.zero;
                       return matched.path.getBounds().center;
                     }
+
+                    Offset project(TransferMapCityModel cityModel) =>
+                        projectCityName(cityModel.name);
 
                     final childWidth = SizeController.instance.mapSize.width;
                     final childHeight = SizeController.instance.mapSize.height;
@@ -1497,31 +1506,73 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                           child: SizedBox(
                             width: childWidth,
                             height: childHeight,
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Positioned.fill(
-                                  child: CustomPaint(
-                                    painter:
-                                        _TurkeyTransferMapBackgroundPainter(
-                                          cities: _cityList,
-                                          transfers: transfers,
-                                          selectedTransferId:
-                                              selectedTransferId,
-                                          normalizeFn: _normalizeString,
-                                        ),
-                                  ),
-                                ),
-                                Positioned.fill(
-                                  child: CustomPaint(
-                                    painter: _TransferMapPainter(
-                                      transfers: transfers,
-                                      projector: project,
-                                      selectedTransferId: selectedTransferId,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.translucent,
+                              onTapUp: (details) {
+                                final localPos = details.localPosition;
+                                for (final city in _cityList) {
+                                  if (city.path.contains(localPos)) {
+                                    for (final fc in facilityCities) {
+                                      if (_normalizeString(fc.cityName) ==
+                                          _normalizeString(city.title)) {
+                                        _showCityFacilitiesSheet(fc);
+                                        return;
+                                      }
+                                    }
+                                    break;
+                                  }
+                                }
+                              },
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Positioned.fill(
+                                    child: CustomPaint(
+                                      painter:
+                                          _TurkeyTransferMapBackgroundPainter(
+                                            cities: _cityList,
+                                            transfers: transfers,
+                                            selectedTransferId:
+                                                selectedTransferId,
+                                            facilityCities: facilityCities,
+                                            normalizeFn: _normalizeString,
+                                          ),
                                     ),
                                   ),
-                                ),
-                                ...uniqueCities.map((city) {
+                                  Positioned.fill(
+                                    child: CustomPaint(
+                                      painter: _TransferMapPainter(
+                                        transfers: transfers,
+                                        projector: project,
+                                        selectedTransferId: selectedTransferId,
+                                      ),
+                                    ),
+                                  ),
+                                  // İşletmesi olan şehirler için rozetler / pinler
+                                  for (final fc in facilityCities)
+                                    Builder(
+                                      builder: (context) {
+                                        final position =
+                                            projectCityName(fc.cityName);
+                                        if (position == Offset.zero) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return _buildFacilityCityMarker(
+                                          fc,
+                                          position,
+                                        );
+                                      },
+                                    ),
+                                  // İşletme olmayan diğer transfer şehirleri
+                                  ...uniqueCities
+                                      .where(
+                                        (c) => !facilityCities.any(
+                                          (fc) =>
+                                              _normalizeString(fc.cityName) ==
+                                              _normalizeString(c.name),
+                                        ),
+                                      )
+                                      .map((city) {
                                   final position = project(city);
                                   if (position == Offset.zero) {
                                     return const SizedBox.shrink();
@@ -1663,6 +1714,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                   ),
                                 ),
                               ],
+                              ),
                             ),
                           ),
                         ),
@@ -1674,6 +1726,497 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFacilityCityMarker(
+    PlayerFacilityCityModel fc,
+    Offset position,
+  ) {
+    const markerWidth = 84.0;
+    return Positioned(
+      left: position.dx - markerWidth / 2,
+      top: position.dy - 16.h,
+      width: markerWidth,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _showCityFacilitiesSheet(fc),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.5.h),
+              decoration: BoxDecoration(
+                color: AppColors.cardBg.withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(
+                  color: AppColors.gold,
+                  width: 1.2.w,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.gold.withValues(alpha: 0.35),
+                    blurRadius: 8.r,
+                    offset: Offset(0, 2.h),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    blurRadius: 6.r,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    color: AppColors.gold,
+                    size: 11.sp,
+                  ),
+                  SizedBox(width: 2.w),
+                  Flexible(
+                    child: Text(
+                      fc.cityName,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 8.5.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(width: 3.w),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(6.r),
+                    ),
+                    child: Text(
+                      '${fc.facilityCount}',
+                      style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 7.5.sp,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            CustomPaint(
+              size: Size(8.w, 4.h),
+              painter: _TrianglePointerPainter(color: AppColors.gold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showCityFacilitiesSheet(PlayerFacilityCityModel city) async {
+    AppHaptic.medium();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * 0.72,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            border: Border.all(
+              color: AppColors.borderGold.withValues(alpha: 0.35),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.7),
+                blurRadius: 24.r,
+                offset: Offset(0, -6.h),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36.w,
+                  height: 4.h,
+                  margin: EdgeInsets.only(top: 10.h, bottom: 6.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.textMuted.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 12.h),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.location_on,
+                        color: AppColors.gold,
+                        size: 20.sp,
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${city.cityName} İşletmeleri',
+                            style: AppTextStyles.h2.standardCopyWith(
+                              color: AppColors.gold,
+                              fontSize: 16.sp,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            '${city.facilityCount} Tesis • Toplam ${AppMoney.full(city.totalCityStock, withSymbol: false)} Adet Stok',
+                            style: AppTextStyles.caption.standardCopyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 10.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: AppColors.textMuted, size: 20.sp),
+                      onPressed: () => Navigator.pop(sheetContext),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: AppColors.borderGold.withValues(alpha: 0.3)),
+              Flexible(
+                child: ListView.separated(
+                  padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 12.h),
+                  itemCount: city.facilities.length,
+                  separatorBuilder: (context, _) => SizedBox(height: 8.h),
+                  itemBuilder: (context, index) {
+                    final fac = city.facilities[index];
+                    final visual = _getFacilityKindVisual(fac.kind);
+                    final icon = visual.$1;
+                    final color = visual.$2;
+                    return Container(
+                      padding: EdgeInsets.all(10.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBgLight.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 38.w,
+                            height: 38.w,
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10.r),
+                              border: Border.all(
+                                color: color.withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Icon(icon, color: color, size: 20.sp),
+                          ),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        fac.name,
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 6.w,
+                                        vertical: 2.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: color.withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(6.r),
+                                      ),
+                                      child: Text(
+                                        fac.kindDisplay,
+                                        style: TextStyle(
+                                          color: color,
+                                          fontSize: 8.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  'Stok: ${AppMoney.full(fac.totalStock, withSymbol: false)} / Kapasite: ${AppMoney.full(fac.totalCapacity, withSymbol: false)}',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 9.5.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 44.h,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.gold,
+                      foregroundColor: AppColors.textOnAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                    ),
+                    icon: Icon(AppIcons.localShipping, size: 18.sp),
+                    label: Text(
+                      '${city.cityName} Şehrinden Sevkiyat Yap',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      ConsolidatedTransferSheet.show(
+                        context,
+                        initialCityId: city.cityId,
+                        initialCityName: city.cityName,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  (IconData, Color) _getFacilityKindVisual(String kind) {
+    switch (kind.toLowerCase()) {
+      case 'warehouse':
+        return (AppIcons.inventory2Outlined, AppColors.gold);
+      case 'factory':
+        return (Icons.precision_manufacturing_outlined, Colors.blueAccent);
+      case 'farm':
+        return (Icons.grass_outlined, AppColors.green);
+      case 'field':
+        return (Icons.pets_outlined, Colors.orangeAccent);
+      case 'mine':
+        return (Icons.terrain_outlined, Colors.purpleAccent);
+      case 'store':
+        return (AppIcons.storefrontOutlined, Colors.tealAccent);
+      default:
+        return (Icons.business_outlined, AppColors.gold);
+    }
+  }
+
+  Widget _buildIdleLogisticsCard(List<PlayerFacilityCityModel> facilityCities) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(
+          color: AppColors.borderGold.withValues(alpha: 0.3),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.45),
+            blurRadius: 14.r,
+            offset: Offset(0, 6.h),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(
+                    color: AppColors.gold.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Icon(
+                  AppIcons.localShippingOutlined,
+                  color: AppColors.gold,
+                  size: 22.sp,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Yolda Aktif Sevkiyat Yok',
+                      style: AppTextStyles.h2.standardCopyWith(
+                        color: AppColors.gold,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Haritada altın rengiyle parlayan şehirlerinize dokunarak tesislerinizi inceleyebilir veya sevkiyat başlatabilirsiniz.',
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 10.sp,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (facilityCities.isNotEmpty) ...[
+            SizedBox(height: 14.h),
+            Text(
+              'İŞLETME OLAN ŞEHİRLERİNİZ',
+              style: TextStyle(
+                fontSize: 8.5.sp,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textMuted,
+                letterSpacing: 0.8,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: [
+                for (final fc in facilityCities)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(10.r),
+                    onTap: () => _showCityFacilitiesSheet(fc),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBgLight,
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(
+                          color: AppColors.gold.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            color: AppColors.gold,
+                            size: 12.sp,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            fc.cityName,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 10.5.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 5.w,
+                              vertical: 1.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.gold.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Text(
+                              '${fc.facilityCount} Tesis',
+                              style: TextStyle(
+                                color: AppColors.gold,
+                                fontSize: 8.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          SizedBox(height: 14.h),
+          SizedBox(
+            width: double.infinity,
+            height: 42.h,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                foregroundColor: AppColors.textOnAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              icon: Icon(AppIcons.localShipping, size: 18.sp),
+              label: Text(
+                'Toplu Transfer Başlat',
+                style: TextStyle(
+                  fontSize: 11.5.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: () {
+                AppHaptic.medium();
+                ConsolidatedTransferSheet.show(context);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1996,55 +2539,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(32.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: AppFx.panelWash(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(20.w),
-            decoration: BoxDecoration(
-              color: AppFx.softOverlay(0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              AppIcons.routeOutlined,
-              color: AppColors.gold.withValues(alpha: 0.5),
-              size: AppIconSizes.hero,
-            ),
-          ),
-          SizedBox(height: 20.h),
-          Text(
-            'Aktif Transfer Yok',
-            style: AppTextStyles.h2.standardCopyWith(
-              fontSize: AppTypography.headline,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            'Marketten satın aldığınız ürünler yola çıktığında veya bir satışa gönderdiğinizde burada canlı olarak takip edebilirsiniz.',
-            style: AppTextStyles.body.standardCopyWith(
-              color: AppColors.textMuted,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildHistoryEmptyState() {
     return Container(
@@ -2649,12 +3143,14 @@ class _TurkeyTransferMapBackgroundPainter extends CustomPainter {
   final List<City> cities;
   final List<TransferMapItemModel> transfers;
   final String? selectedTransferId;
+  final List<PlayerFacilityCityModel> facilityCities;
   final String Function(String) normalizeFn;
 
   _TurkeyTransferMapBackgroundPainter({
     required this.cities,
     required this.transfers,
     this.selectedTransferId,
+    this.facilityCities = const [],
     required this.normalizeFn,
   });
 
@@ -2662,7 +3158,7 @@ class _TurkeyTransferMapBackgroundPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     // Border and Fill paints
     final strokePaint = Paint()
-      ..color = AppColors.white.withValues(alpha: 0.35)
+      ..color = AppColors.white.withValues(alpha: 0.25)
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
@@ -2676,8 +3172,18 @@ class _TurkeyTransferMapBackgroundPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final selectedFillPaint = Paint()
-      ..color = AppColors.gold.withValues(alpha: 0.4)
+      ..color = AppColors.gold.withValues(alpha: 0.45)
       ..style = PaintingStyle.fill;
+
+    // Facility cities paint (cities owned by the player)
+    final facilityFillPaint = Paint()
+      ..color = AppColors.gold.withValues(alpha: 0.25)
+      ..style = PaintingStyle.fill;
+
+    final facilityStrokePaint = Paint()
+      ..color = AppColors.gold.withValues(alpha: 0.8)
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke;
 
     // Collect all city names involved in transfers
     final activeCityNames = <String>{};
@@ -2695,20 +3201,30 @@ class _TurkeyTransferMapBackgroundPainter extends CustomPainter {
       }
     }
 
+    final facilityCityNames = <String>{
+      for (final fc in facilityCities) normalizeFn(fc.cityName),
+    };
+
     for (final city in cities) {
       final cityTitleNormalized = normalizeFn(city.title);
       Paint fillPaint = defaultFillPaint;
+      final isFacilityCity = facilityCityNames.contains(cityTitleNormalized);
 
       if (cityTitleNormalized == selectedSellerCityName ||
           cityTitleNormalized == selectedBuyerCityName) {
         fillPaint = selectedFillPaint;
       } else if (activeCityNames.contains(cityTitleNormalized)) {
         fillPaint = activeFillPaint;
+      } else if (isFacilityCity) {
+        fillPaint = facilityFillPaint;
       }
 
       canvas.drawPath(city.path, fillPaint);
-      canvas.drawPath(city.path, strokePaint);
-
+      if (isFacilityCity) {
+        canvas.drawPath(city.path, facilityStrokePaint);
+      } else {
+        canvas.drawPath(city.path, strokePaint);
+      }
     }
   }
 
@@ -2718,8 +3234,30 @@ class _TurkeyTransferMapBackgroundPainter extends CustomPainter {
   ) {
     return oldDelegate.cities != cities ||
         oldDelegate.transfers != transfers ||
-        oldDelegate.selectedTransferId != selectedTransferId;
+        oldDelegate.selectedTransferId != selectedTransferId ||
+        oldDelegate.facilityCities != facilityCities;
   }
+}
+
+class _TrianglePointerPainter extends CustomPainter {
+  final Color color;
+  const _TrianglePointerPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _NestedTransferItemsList extends ConsumerWidget {
