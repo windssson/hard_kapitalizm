@@ -44,11 +44,12 @@ class ConsolidatedTransferSheet extends ConsumerStatefulWidget {
 
 class _ConsolidatedTransferSheetState
     extends ConsumerState<ConsolidatedTransferSheet> {
-  // 0: Kaynak Şehir, 1: Ürün Seçimi, 2: Hedef Seçimi, 3: Araç/Onay
+  // 0: Kaynak Şehir, 1: Hedef Tesis, 2: Ürün Seçimi, 3: Araç/Onay
   int _currentStep = 0;
 
   ConsolidatedSourceCityModel? _selectedCity;
   ConsolidatedTargetModel? _selectedTarget;
+  bool _onlyAcceptedProducts = true;
 
   @override
   void initState() {
@@ -60,7 +61,7 @@ class _ConsolidatedTransferSheetState
         facilityCount: 1,
         totalStock: 0,
       );
-      _currentStep = 1;
+      _currentStep = 1; // Şehir zaten belli olduğu için doğrudan Hedef Tesis seçimine geç
     }
   }
 
@@ -97,18 +98,6 @@ class _ConsolidatedTransferSheetState
     return total;
   }
 
-  Set<String> _computeSelectedProductIds(
-    List<ConsolidatedCandidateItemModel> candidates,
-  ) {
-    final ids = <String>{};
-    for (final item in candidates) {
-      final qty = _selectedQuantities[item.itemId] ?? 0;
-      if (qty > 0) {
-        ids.add(item.productId);
-      }
-    }
-    return ids;
-  }
 
   Future<void> _loadVehicles(double totalVolume) async {
     if (_selectedCity == null || _selectedTarget == null) return;
@@ -311,9 +300,9 @@ class _ConsolidatedTransferSheetState
                   _currentStep == 0
                       ? 'Adım 1: Kaynak Şehri Seçin'
                       : _currentStep == 1
-                          ? 'Adım 2: Gönderilecek Ürünleri Seçin'
+                          ? 'Adım 2: Hedef Tesisi Seçin'
                           : _currentStep == 2
-                              ? 'Adım 3: Hedef Tesisi Seçin'
+                              ? 'Adım 3: Gönderilecek Ürünleri Seçin'
                               : 'Adım 4: Araç & Gönderim Onayı',
                   style: AppTextStyles.caption.standardCopyWith(
                     color: AppColors.gold,
@@ -339,9 +328,9 @@ class _ConsolidatedTransferSheetState
         children: [
           _buildStepChip(0, 'Nereden?'),
           _buildStepDivider(0),
-          _buildStepChip(1, 'Ürünler'),
+          _buildStepChip(1, 'Nereye?'),
           _buildStepDivider(1),
-          _buildStepChip(2, 'Nereye?'),
+          _buildStepChip(2, 'Ürünler'),
           _buildStepDivider(2),
           _buildStepChip(3, 'Sevkiyat'),
         ],
@@ -425,9 +414,9 @@ class _ConsolidatedTransferSheetState
       case 0:
         return _buildStep1SourceCitySelection();
       case 1:
-        return _buildStep2ProductsSelection();
+        return _buildStep2TargetSelection();
       case 2:
-        return _buildStep3TargetSelection();
+        return _buildStep3ProductsSelection();
       case 3:
         return _buildStep4VehicleAndConfirm();
       default:
@@ -450,17 +439,16 @@ class _ConsolidatedTransferSheetState
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.inventory_2_outlined, color: AppColors.gold, size: 40.sp),
+                  Icon(Icons.location_off_rounded, color: AppColors.gold, size: 40.sp),
                   SizedBox(height: 12.h),
                   Text(
-                    'Stok Bulunan Şehir Yok',
+                    'Aktif Kaynak Şehir Bulunamadı',
                     style: AppTextStyles.title,
                   ),
                   SizedBox(height: 6.h),
                   Text(
-                    'Depo, maden, tarla veya fabrikalarınızda aktarılacak ürün stoğu bulunmuyor.',
+                    'Stoğu veya işletmesi olan bir şehriniz bulunmuyor.',
                     style: AppTextStyles.caption,
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -482,7 +470,7 @@ class _ConsolidatedTransferSheetState
                   _selectedCity = city;
                   _selectedQuantities.clear();
                   _selectedTarget = null;
-                  _currentStep = 1; // Ürün seçimine geç
+                  _currentStep = 1; // Hedef tesis seçimine geç
                 });
               },
               child: Container(
@@ -572,10 +560,304 @@ class _ConsolidatedTransferSheetState
   }
 
   // ==========================================================================
-  // ADIM 2: ÜRÜN TOPLAMA (Neleri Göndereceksin?)
+  // ADIM 2: HEDEF TESİS SEÇİMİ (Nereye Gidecek?)
   // ==========================================================================
-  Widget _buildStep2ProductsSelection() {
-    if (_selectedCity == null) {
+  Widget _buildStep2TargetSelection() {
+    if (_selectedCity == null) return const SizedBox.shrink();
+    final targetsAsync = ref.watch(consolidatedTransferTargetsProvider);
+
+    return targetsAsync.when(
+      data: (targets) {
+        if (targets.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.w),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.business_outlined, color: AppColors.gold, size: 40.sp),
+                  SizedBox(height: 12.h),
+                  Text(
+                    'Aktif Bir Hedef Tesis Bulunamadı',
+                    style: AppTextStyles.title,
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    'Sevkiyat yapabileceğiniz aktif bir depo, fabrika veya mağazanız bulunmuyor.',
+                    style: AppTextStyles.caption,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final filteredTargets = _targetFilter == 'all'
+            ? targets
+            : targets.where((t) => t.entityKind == _targetFilter).toList();
+
+        final warehouseCount =
+            targets.where((t) => t.entityKind == 'warehouse').length;
+        final factoryCount =
+            targets.where((t) => t.entityKind == 'factory').length;
+        final storeCount =
+            targets.where((t) => t.entityKind == 'store').length;
+
+        return Column(
+          children: [
+            // Kaynak Şehir Bilgi Barı
+            Container(
+              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 8.h),
+              decoration: BoxDecoration(
+                color: AppColors.cardBgLight,
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppColors.borderGold.withValues(alpha: 0.2),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.location_city_rounded, color: AppColors.gold, size: 16.sp),
+                  SizedBox(width: 6.w),
+                  Expanded(
+                    child: Text(
+                      'Kaynak: ${_selectedCity!.cityName} ➔ Hedef Tesisi Seçin',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => setState(() => _currentStep = 0),
+                    child: Text(
+                      'Değiştir',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: AppColors.gold,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Kategori Filtre Butonları
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              child: Row(
+                children: [
+                  _buildFilterChip('all', 'Hepsi (${targets.length})'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('warehouse', '🏬 Depolar ($warehouseCount)'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('factory', '🏭 Fabrikalar ($factoryCount)'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('store', '🏪 Mağazalar ($storeCount)'),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 24.h),
+                itemCount: filteredTargets.length,
+                itemBuilder: (context, index) {
+                  final target = filteredTargets[index];
+                  final isSelected = _selectedTarget?.id == target.id;
+                  final isSameCity = _selectedCity?.cityId == target.cityId;
+                  final hasEmptyCapacity = target.emptyCapacity > 0;
+                  final canSelect = hasEmptyCapacity;
+
+                  final fullnessRatio = target.totalCapacity > 0
+                      ? (target.usedCapacity / target.totalCapacity).clamp(0.0, 1.0)
+                      : 0.0;
+
+                  return GestureDetector(
+                    onTap: canSelect
+                        ? () {
+                            AppHaptic.selection();
+                            setState(() {
+                              _selectedTarget = target;
+                              _selectedQuantities.clear();
+                              _currentStep = 2; // Ürün seçimine geç
+                            });
+                          }
+                        : () {
+                            AppHaptic.heavy();
+                            AppSnackbar.show(
+                              context,
+                              title: 'Kapasite Dolu',
+                              message: '${target.name} tesisinde boş alan bulunmuyor.',
+                              type: SnackbarType.warning,
+                            );
+                          },
+                    child: Opacity(
+                      opacity: canSelect ? 1.0 : 0.45,
+                      child: Container(
+                        margin: EdgeInsets.only(bottom: 10.h),
+                        padding: EdgeInsets.all(12.w),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.gold.withValues(alpha: 0.12)
+                              : AppColors.cardBgLight,
+                          borderRadius: BorderRadius.circular(14.r),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.gold
+                                : isSameCity
+                                    ? AppColors.green.withValues(alpha: 0.5)
+                                    : AppColors.borderGold.withValues(alpha: 0.2),
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 7.w,
+                                    vertical: 3.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _getKindBadgeColor(target.entityKind),
+                                    borderRadius: BorderRadius.circular(6.r),
+                                  ),
+                                  child: Text(
+                                    target.entityKindDisplay,
+                                    style: TextStyle(
+                                      fontSize: 9.5.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 8.w),
+                                Expanded(
+                                  child: Text(
+                                    target.name,
+                                    style: AppTextStyles.body.standardCopyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                      fontSize: 13.sp,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isSameCity) ...[
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6.w,
+                                      vertical: 2.h,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.green.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4.r),
+                                      border: Border.all(color: AppColors.green),
+                                    ),
+                                    child: Text(
+                                      '🟢 Şehir İçi',
+                                      style: TextStyle(
+                                        fontSize: 8.5.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.green,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 6.w),
+                                ],
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 13.sp,
+                                  color: AppColors.gold,
+                                ),
+                                SizedBox(width: 2.w),
+                                Text(
+                                  target.cityName,
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: AppColors.gold,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8.h),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Boş Kapasite: ${target.emptyCapacity.toStringAsFixed(1)} m³',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: hasEmptyCapacity
+                                        ? AppColors.green
+                                        : AppColors.red,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  target.entityKind == 'warehouse'
+                                      ? 'Tüm Ürünler Kabul Edilir ✅'
+                                      : target.entityKind == 'factory'
+                                          ? 'Girdi Ürünleri Kabul Edilir 🏭'
+                                          : 'Mağaza Ürünleri Kabul Edilir 🏪',
+                                  style: TextStyle(
+                                    fontSize: 9.5.sp,
+                                    color: target.entityKind == 'warehouse'
+                                        ? AppColors.green
+                                        : AppColors.gold,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6.h),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4.r),
+                              child: LinearProgressIndicator(
+                                value: fullnessRatio,
+                                minHeight: 5.h,
+                                backgroundColor:
+                                    AppColors.borderGold.withValues(alpha: 0.15),
+                                valueColor: AlwaysStoppedAnimation(
+                                  fullnessRatio > 0.9
+                                      ? AppColors.red
+                                      : AppColors.gold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: AppLoadingIndicator()),
+      error: (e, _) => Center(child: Text('Hata: $e')),
+    );
+  }
+
+  // ==========================================================================
+  // ADIM 3: ÜRÜN SEÇİMİ (Ne Taşınacak?)
+  // ==========================================================================
+  Widget _buildStep3ProductsSelection() {
+    if (_selectedCity == null || _selectedTarget == null) {
       return const SizedBox.shrink();
     }
 
@@ -612,19 +894,27 @@ class _ConsolidatedTransferSheetState
 
         final selectedVolume = _computeSelectedVolume(candidates);
         final totalSelectedQuantity = _computeTotalQuantity();
+        final isOverCapacity = selectedVolume > _selectedTarget!.emptyCapacity;
 
         // Ürünleri tesise göre grupla
         final groupedCandidates = <String, List<ConsolidatedCandidateItemModel>>{};
         for (final item in candidates) {
+          final isAccepted = _selectedTarget!.acceptsAllProducts({item.productId});
+          if (_onlyAcceptedProducts && !isAccepted) {
+            continue; // Sadece uygun ürünler filtresi devredeyse gösterme
+          }
           final groupKey = '${item.sourceKindDisplay} • ${item.sourceName}';
           groupedCandidates.putIfAbsent(groupKey, () => []).add(item);
         }
 
+        final acceptedCount = candidates.where((c) => _selectedTarget!.acceptsAllProducts({c.productId})).length;
+        final totalCandidatesCount = candidates.length;
+
         return Column(
           children: [
-            // Canlı Özet Barı
+            // Canlı Güzergah & Hedef Kapasite Barı
             Container(
-              padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 10.h),
+              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 8.h),
               decoration: BoxDecoration(
                 color: AppColors.cardBgLight,
                 border: Border(
@@ -633,227 +923,393 @@ class _ConsolidatedTransferSheetState
                   ),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.location_city_rounded, color: AppColors.gold, size: 16.sp),
-                      SizedBox(width: 6.w),
-                      Text(
-                        _selectedCity!.cityName,
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                      Icon(Icons.arrow_right_alt_rounded, color: AppColors.gold, size: 18.sp),
+                      SizedBox(width: 4.w),
+                      Expanded(
+                        child: Text(
+                          '${_selectedCity!.cityName} ➔ ${_selectedTarget!.name} (${_selectedTarget!.cityName})',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => setState(() => _currentStep = 1),
+                        child: Text(
+                          'Hedefi Değiştir',
+                          style: TextStyle(
+                            fontSize: 10.5.sp,
+                            color: AppColors.gold,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(
-                      'Seçilen: $totalSelectedQuantity Adet • ${selectedVolume.toStringAsFixed(1)} m³',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.gold,
+                  SizedBox(height: 6.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Hedef Boş Alanı: ${_selectedTarget!.emptyCapacity.toStringAsFixed(1)} m³',
+                        style: TextStyle(
+                          fontSize: 10.5.sp,
+                          color: isOverCapacity ? AppColors.red : AppColors.green,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                        decoration: BoxDecoration(
+                          color: isOverCapacity
+                              ? AppColors.red.withValues(alpha: 0.15)
+                              : AppColors.gold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6.r),
+                          border: Border.all(
+                            color: isOverCapacity
+                                ? AppColors.red
+                                : AppColors.gold.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          'Seçilen: $totalSelectedQuantity Adet • ${selectedVolume.toStringAsFixed(1)} m³',
+                          style: TextStyle(
+                            fontSize: 10.5.sp,
+                            fontWeight: FontWeight.bold,
+                            color: isOverCapacity ? AppColors.red : AppColors.gold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  if (_selectedTarget!.entityKind != 'warehouse') ...[
+                    SizedBox(height: 6.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${_selectedTarget!.entityKindDisplay} için $acceptedCount/$totalCandidatesCount uygun ürün var',
+                          style: TextStyle(
+                            fontSize: 10.sp,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            AppHaptic.selection();
+                            setState(() => _onlyAcceptedProducts = !_onlyAcceptedProducts);
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                            decoration: BoxDecoration(
+                              color: _onlyAcceptedProducts
+                                  ? AppColors.gold.withValues(alpha: 0.2)
+                                  : AppColors.cardBg,
+                              borderRadius: BorderRadius.circular(4.r),
+                              border: Border.all(
+                                color: _onlyAcceptedProducts
+                                    ? AppColors.gold
+                                    : AppColors.textMuted,
+                              ),
+                            ),
+                            child: Text(
+                              _onlyAcceptedProducts
+                                  ? 'Sadece Uygunları Göster ✅'
+                                  : 'Tüm Ürünleri Göster',
+                              style: TextStyle(
+                                fontSize: 9.sp,
+                                color: _onlyAcceptedProducts
+                                    ? AppColors.gold
+                                    : AppColors.textMuted,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
 
             // Ürün Listesi
             Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 80.h),
-                itemCount: groupedCandidates.length,
-                itemBuilder: (context, groupIndex) {
-                  final groupKey = groupedCandidates.keys.elementAt(groupIndex);
-                  final itemsInGroup = groupedCandidates[groupKey]!;
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.h),
-                        child: Row(
+              child: groupedCandidates.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.w),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.business_rounded, size: 14.sp, color: AppColors.gold),
-                            SizedBox(width: 6.w),
+                            Icon(Icons.filter_alt_off_rounded, color: AppColors.textMuted, size: 36.sp),
+                            SizedBox(height: 10.h),
                             Text(
-                              groupKey,
+                              'Bu hedefe uygun ürün bulunamadı.',
                               style: TextStyle(
-                                fontSize: 12.sp,
+                                color: AppColors.textPrimary,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.gold,
+                                fontSize: 13.sp,
                               ),
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              '${_selectedTarget!.name} (${_selectedTarget!.entityKindDisplay}) bu şehirdeki ürünleri kabul etmiyor.',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 11.sp),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: 12.h),
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: AppColors.gold),
+                              ),
+                              onPressed: () => setState(() => _currentStep = 1),
+                              child: Text('Farklı Bir Hedef Seç', style: TextStyle(color: AppColors.gold)),
                             ),
                           ],
                         ),
                       ),
-                      ...itemsInGroup.map((item) {
-                        final currentQty = _selectedQuantities[item.itemId] ?? 0;
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
+                      itemCount: groupedCandidates.length,
+                      itemBuilder: (context, groupIndex) {
+                        final groupKey = groupedCandidates.keys.elementAt(groupIndex);
+                        final itemsInGroup = groupedCandidates[groupKey]!;
 
-                        return Container(
-                          margin: EdgeInsets.only(bottom: 8.h),
-                          padding: EdgeInsets.all(10.w),
-                          decoration: BoxDecoration(
-                            color: currentQty > 0
-                                ? AppColors.gold.withValues(alpha: 0.08)
-                                : AppColors.cardBg,
-                            borderRadius: BorderRadius.circular(12.r),
-                            border: Border.all(
-                              color: currentQty > 0
-                                  ? AppColors.gold.withValues(alpha: 0.4)
-                                  : AppColors.borderGold.withValues(alpha: 0.15),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 42.w,
-                                height: 42.w,
-                                child: BrandedProductImage(
-                                  fileName: item.productIcon ?? '',
-                                  productId: item.productId,
-                                  brandId: item.brandId,
-                                ),
-                              ),
-                              SizedBox(width: 10.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.productName,
-                                      style: TextStyle(
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    SizedBox(height: 2.h),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          'Stok: ${item.availableQuantity} • Q${item.qualityLevel}',
-                                          style: TextStyle(
-                                            fontSize: 10.sp,
-                                            color: AppColors.textMuted,
-                                          ),
-                                        ),
-                                        if (item.brandName != 'Standart') ...[
-                                          SizedBox(width: 6.w),
-                                          Text(
-                                            item.brandName,
-                                            style: TextStyle(
-                                              fontSize: 9.5.sp,
-                                              color: AppColors.gold,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    Text(
-                                      'Birim Hacim: ${item.birimHacim} m³',
-                                      style: TextStyle(
-                                        fontSize: 9.5.sp,
-                                        color: AppColors.textMuted,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Adet Stepper
-                              Row(
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.symmetric(vertical: 6.h),
+                              child: Row(
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline),
-                                    iconSize: 22.sp,
-                                    color: currentQty > 0
-                                        ? AppColors.gold
-                                        : AppColors.textMuted,
-                                    onPressed: currentQty > 0
-                                        ? () {
-                                            AppHaptic.selection();
-                                            setState(() {
-                                              _selectedQuantities[item.itemId] =
-                                                  currentQty - 1;
-                                            });
-                                          }
-                                        : null,
-                                  ),
+                                  Icon(Icons.business_rounded, size: 13.sp, color: AppColors.gold),
+                                  SizedBox(width: 6.w),
                                   Text(
-                                    '$currentQty',
+                                    groupKey,
                                     style: TextStyle(
-                                      fontSize: 13.sp,
+                                      fontSize: 11.5.sp,
                                       fontWeight: FontWeight.bold,
-                                      color: currentQty > 0
-                                          ? AppColors.gold
-                                          : AppColors.textMuted,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle_outline),
-                                    iconSize: 22.sp,
-                                    color: currentQty < item.availableQuantity
-                                        ? AppColors.gold
-                                        : AppColors.textMuted,
-                                    onPressed: currentQty < item.availableQuantity
-                                        ? () {
-                                            AppHaptic.selection();
-                                            setState(() {
-                                              _selectedQuantities[item.itemId] =
-                                                  currentQty + 1;
-                                            });
-                                          }
-                                        : null,
-                                  ),
-                                  TextButton(
-                                    style: TextButton.styleFrom(
-                                      padding: EdgeInsets.symmetric(horizontal: 6.w),
-                                      minimumSize: Size.zero,
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                    onPressed: () {
-                                      AppHaptic.selection();
-                                      setState(() {
-                                        _selectedQuantities[item.itemId] =
-                                            item.availableQuantity;
-                                      });
-                                    },
-                                    child: Text(
-                                      'Tümü',
-                                      style: TextStyle(
-                                        fontSize: 10.sp,
-                                        color: AppColors.gold,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      color: AppColors.gold,
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
+                            ),
+                            ...itemsInGroup.map((item) {
+                              final currentQty = _selectedQuantities[item.itemId] ?? 0;
+                              final isAccepted = _selectedTarget!.acceptsAllProducts({item.productId});
+
+                              return Opacity(
+                                opacity: isAccepted ? 1.0 : 0.45,
+                                child: Container(
+                                  margin: EdgeInsets.only(bottom: 8.h),
+                                  padding: EdgeInsets.all(10.w),
+                                  decoration: BoxDecoration(
+                                    color: currentQty > 0
+                                        ? AppColors.gold.withValues(alpha: 0.08)
+                                        : AppColors.cardBg,
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    border: Border.all(
+                                      color: currentQty > 0
+                                          ? AppColors.gold.withValues(alpha: 0.4)
+                                          : AppColors.borderGold.withValues(alpha: 0.15),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 38.w,
+                                        height: 38.w,
+                                        child: BrandedProductImage(
+                                          fileName: item.productIcon ?? '',
+                                          productId: item.productId,
+                                          brandId: item.brandId,
+                                        ),
+                                      ),
+                                      SizedBox(width: 10.w),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item.productName,
+                                              style: TextStyle(
+                                                fontSize: 12.sp,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.textPrimary,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            SizedBox(height: 2.h),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'Stok: ${item.availableQuantity} • Q${item.qualityLevel}',
+                                                  style: TextStyle(
+                                                    fontSize: 10.sp,
+                                                    color: AppColors.textMuted,
+                                                  ),
+                                                ),
+                                                if (item.brandName != 'Standart') ...[
+                                                  SizedBox(width: 6.w),
+                                                  Text(
+                                                    item.brandName,
+                                                    style: TextStyle(
+                                                      fontSize: 9.5.sp,
+                                                      color: AppColors.gold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'Birim: ${item.birimHacim} m³',
+                                                  style: TextStyle(
+                                                    fontSize: 9.sp,
+                                                    color: AppColors.textMuted,
+                                                  ),
+                                                ),
+                                                if (!isAccepted) ...[
+                                                  SizedBox(width: 6.w),
+                                                  Text(
+                                                    '❌ Hedef Kabul Etmiyor',
+                                                    style: TextStyle(
+                                                      fontSize: 9.sp,
+                                                      color: AppColors.red,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Adet Stepper
+                                      if (isAccepted)
+                                        Row(
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.remove_circle_outline),
+                                              iconSize: 20.sp,
+                                              color: currentQty > 0
+                                                  ? AppColors.gold
+                                                  : AppColors.textMuted,
+                                              onPressed: currentQty > 0
+                                                  ? () {
+                                                      AppHaptic.selection();
+                                                      setState(() {
+                                                        _selectedQuantities[item.itemId] =
+                                                            currentQty - 1;
+                                                      });
+                                                    }
+                                                  : null,
+                                            ),
+                                            Text(
+                                              '$currentQty',
+                                              style: TextStyle(
+                                                fontSize: 12.sp,
+                                                fontWeight: FontWeight.bold,
+                                                color: currentQty > 0
+                                                    ? AppColors.gold
+                                                    : AppColors.textMuted,
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.add_circle_outline),
+                                              iconSize: 20.sp,
+                                              color: currentQty < item.availableQuantity
+                                                  ? AppColors.gold
+                                                  : AppColors.textMuted,
+                                              onPressed: currentQty < item.availableQuantity
+                                                  ? () {
+                                                      AppHaptic.selection();
+                                                      setState(() {
+                                                        _selectedQuantities[item.itemId] =
+                                                            currentQty + 1;
+                                                      });
+                                                    }
+                                                  : null,
+                                            ),
+                                            TextButton(
+                                              style: TextButton.styleFrom(
+                                                padding: EdgeInsets.symmetric(horizontal: 6.w),
+                                                minimumSize: Size.zero,
+                                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              ),
+                                              onPressed: () {
+                                                AppHaptic.selection();
+                                                setState(() {
+                                                  _selectedQuantities[item.itemId] =
+                                                      item.availableQuantity;
+                                                });
+                                              },
+                                              child: Text(
+                                                'Tümü',
+                                                style: TextStyle(
+                                                  fontSize: 10.sp,
+                                                  color: AppColors.gold,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
                         );
-                      }),
-                    ],
-                  );
-                },
-              ),
+                      },
+                    ),
             ),
 
-            // Hedef Seçimine İlerle Butonu
+            // Kapasite Aşım Uyarısı
+            if (isOverCapacity)
+              Container(
+                margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 8.h),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: AppColors.red.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: AppColors.red.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: AppColors.red, size: 16.sp),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: Text(
+                        'Hedef tesis kapasitesi aşılıyor! (Maksimum Boş Alan: ${_selectedTarget!.emptyCapacity.toStringAsFixed(1)} m³)',
+                        style: TextStyle(
+                          color: AppColors.red,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // İlerle Butonu
             Container(
-              padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 16.h),
+              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
               decoration: BoxDecoration(
                 color: AppColors.cardBgLight,
                 border: Border(
@@ -873,308 +1329,26 @@ class _ConsolidatedTransferSheetState
                       borderRadius: BorderRadius.circular(12.r),
                     ),
                   ),
-                  onPressed: totalSelectedQuantity > 0
+                  onPressed: (totalSelectedQuantity > 0 && !isOverCapacity)
                       ? () {
                           AppHaptic.light();
-                          setState(() => _currentStep = 2);
+                          _loadVehicles(selectedVolume);
+                          setState(() => _currentStep = 3);
                         }
                       : null,
                   child: Text(
-                    'Hedef Seçimine İlerle ($totalSelectedQuantity Adet • ${selectedVolume.toStringAsFixed(1)} m³)',
+                    totalSelectedQuantity == 0
+                        ? 'En Az Bir Ürün Seçin'
+                        : isOverCapacity
+                            ? 'Kapasite Aşımı (${selectedVolume.toStringAsFixed(1)} / ${_selectedTarget!.emptyCapacity.toStringAsFixed(1)} m³)'
+                            : 'Araç & Sevkiyat Seçimine İlerle ($totalSelectedQuantity Adet • ${selectedVolume.toStringAsFixed(1)} m³)',
                     style: TextStyle(
-                      fontSize: 13.sp,
+                      fontSize: 12.5.sp,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textOnAccent,
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const Center(child: AppLoadingIndicator()),
-      error: (e, _) => Center(child: Text('Hata: $e')),
-    );
-  }
-
-  // ==========================================================================
-  // ADIM 3: AKILLI HEDEF TESİS SEÇİMİ (Nereye Gidecek?)
-  // ==========================================================================
-  Widget _buildStep3TargetSelection() {
-    final targetsAsync = ref.watch(consolidatedTransferTargetsProvider);
-    final candidates = ref
-            .read(consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId))
-            .value ??
-        [];
-    final selectedVolume = _computeSelectedVolume(candidates);
-    final selectedProductIds = _computeSelectedProductIds(candidates);
-
-    return targetsAsync.when(
-      data: (targets) {
-        if (targets.isEmpty) {
-          return Center(
-            child: Text(
-              'Aktif bir hedef tesisiniz bulunmuyor.',
-              style: AppTextStyles.body,
-            ),
-          );
-        }
-
-        final filteredTargets = _targetFilter == 'all'
-            ? targets
-            : targets.where((t) => t.entityKind == _targetFilter).toList();
-
-        final warehouseCount =
-            targets.where((t) => t.entityKind == 'warehouse').length;
-        final factoryCount =
-            targets.where((t) => t.entityKind == 'factory').length;
-        final storeCount =
-            targets.where((t) => t.entityKind == 'store').length;
-
-        return Column(
-          children: [
-            // Yük Bilgi Rozeti
-            Container(
-              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 6.h),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Taşınacak Yük Hacmi:',
-                    style: TextStyle(fontSize: 11.sp, color: AppColors.textMuted),
-                  ),
-                  Text(
-                    '${selectedVolume.toStringAsFixed(1)} m³',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.gold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Kategori Filtre Butonları
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-              child: Row(
-                children: [
-                  _buildFilterChip('all', 'Hepsi (${targets.length})'),
-                  SizedBox(width: 8.w),
-                  _buildFilterChip('warehouse', '🏬 Depolar ($warehouseCount)'),
-                  SizedBox(width: 8.w),
-                  _buildFilterChip('factory', '🏭 Fabrikalar ($factoryCount)'),
-                  SizedBox(width: 8.w),
-                  _buildFilterChip('store', '🏪 Mağazalar ($storeCount)'),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 24.h),
-                itemCount: filteredTargets.length,
-                itemBuilder: (context, index) {
-                  final target = filteredTargets[index];
-                  final isSelected = _selectedTarget?.id == target.id;
-                  final isSameCity = _selectedCity?.cityId == target.cityId;
-                  final acceptsProducts =
-                      target.acceptsAllProducts(selectedProductIds);
-                  final hasEnoughCapacity = target.emptyCapacity >= selectedVolume;
-                  final canSelect = acceptsProducts && hasEnoughCapacity;
-
-                  final fullnessRatio = target.totalCapacity > 0
-                      ? (target.usedCapacity / target.totalCapacity).clamp(0.0, 1.0)
-                      : 0.0;
-
-                  return GestureDetector(
-                    onTap: canSelect
-                        ? () {
-                            AppHaptic.selection();
-                            setState(() {
-                              _selectedTarget = target;
-                              _loadVehicles(selectedVolume);
-                              _currentStep = 3; // Sevkiyat adımına geç
-                            });
-                          }
-                        : () {
-                            AppHaptic.heavy();
-                            if (!acceptsProducts) {
-                              AppSnackbar.show(
-                                context,
-                                title: 'Ürün Uyuşmazlığı',
-                                message:
-                                    '${target.name} seçtiğiniz ürünleri kabul etmiyor.',
-                                type: SnackbarType.warning,
-                              );
-                            } else if (!hasEnoughCapacity) {
-                              AppSnackbar.show(
-                                context,
-                                title: 'Kapasite Yetersiz',
-                                message:
-                                    '${target.name} tesisinde yeterli boş alan yok. Gerekli: ${selectedVolume.toStringAsFixed(1)} m³, Boş: ${target.emptyCapacity.toStringAsFixed(1)} m³',
-                                type: SnackbarType.warning,
-                              );
-                            }
-                          },
-                    child: Opacity(
-                      opacity: canSelect ? 1.0 : 0.45,
-                      child: Container(
-                        margin: EdgeInsets.only(bottom: 12.h),
-                        padding: EdgeInsets.all(14.w),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.gold.withValues(alpha: 0.12)
-                              : AppColors.cardBgLight,
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.gold
-                                : isSameCity
-                                    ? AppColors.green.withValues(alpha: 0.5)
-                                    : AppColors.borderGold.withValues(alpha: 0.2),
-                            width: isSelected ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 8.w,
-                                    vertical: 3.h,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _getKindBadgeColor(target.entityKind),
-                                    borderRadius: BorderRadius.circular(6.r),
-                                  ),
-                                  child: Text(
-                                    target.entityKindDisplay,
-                                    style: TextStyle(
-                                      fontSize: 10.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 8.w),
-                                Expanded(
-                                  child: Text(
-                                    target.name,
-                                    style: AppTextStyles.body.standardCopyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (isSameCity) ...[
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 6.w,
-                                      vertical: 2.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.green.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(4.r),
-                                      border: Border.all(color: AppColors.green),
-                                    ),
-                                    child: Text(
-                                      '🟢 Şehir İçi',
-                                      style: TextStyle(
-                                        fontSize: 9.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.green,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 6.w),
-                                ],
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  size: 13.sp,
-                                  color: AppColors.gold,
-                                ),
-                                Text(
-                                  target.cityName,
-                                  style: TextStyle(
-                                    fontSize: 11.sp,
-                                    color: AppColors.gold,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10.h),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Boş Kapasite: ${target.emptyCapacity.toStringAsFixed(1)} m³',
-                                  style: TextStyle(
-                                    fontSize: 11.sp,
-                                    color: hasEnoughCapacity
-                                        ? AppColors.green
-                                        : AppColors.red,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                if (!acceptsProducts)
-                                  Text(
-                                    'Ürün Kabul Etmiyor',
-                                    style: TextStyle(
-                                      fontSize: 10.sp,
-                                      color: AppColors.red,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )
-                                else if (!hasEnoughCapacity)
-                                  Text(
-                                    'Kapasite Yetersiz',
-                                    style: TextStyle(
-                                      fontSize: 10.sp,
-                                      color: AppColors.red,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )
-                                else
-                                  Text(
-                                    'Kabul Ediyor ✅',
-                                    style: TextStyle(
-                                      fontSize: 10.sp,
-                                      color: AppColors.green,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            SizedBox(height: 6.h),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4.r),
-                              child: LinearProgressIndicator(
-                                value: fullnessRatio,
-                                minHeight: 6.h,
-                                backgroundColor:
-                                    AppColors.borderGold.withValues(alpha: 0.15),
-                                valueColor: AlwaysStoppedAnimation(
-                                  fullnessRatio > 0.9
-                                      ? AppColors.red
-                                      : AppColors.gold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
               ),
             ),
           ],
