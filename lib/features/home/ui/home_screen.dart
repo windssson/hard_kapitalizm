@@ -314,7 +314,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   children: [
                     _buildCompanySummaryCard(),
                     const OperationsRadarBanner(),
-                    SizedBox(height: 5.h),
+                    SizedBox(height: 3.h),
                     _buildModuleGrid(),
                     SizedBox(height: 5.h),
                     _buildOperationsSection(),

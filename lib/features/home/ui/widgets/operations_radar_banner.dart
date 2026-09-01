@@ -26,8 +26,8 @@ class OperationsRadarBanner extends ConsumerWidget {
 
   Widget _buildAllCleanCard(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+      margin: EdgeInsets.symmetric(horizontal: 0, vertical: 3.h),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: const Color(0xFF00E676).withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14.r),
@@ -39,7 +39,7 @@ class OperationsRadarBanner extends ConsumerWidget {
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(6.w),
+            padding: EdgeInsets.all(5.w),
             decoration: BoxDecoration(
               color: const Color(0xFF00E676).withValues(alpha: 0.15),
               shape: BoxShape.circle,
@@ -47,10 +47,10 @@ class OperationsRadarBanner extends ConsumerWidget {
             child: Icon(
               Icons.verified_rounded,
               color: const Color(0xFF00E676),
-              size: 18.sp,
+              size: 16.sp,
             ),
           ),
-          SizedBox(width: 10.w),
+          SizedBox(width: 8.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,23 +60,23 @@ class OperationsRadarBanner extends ConsumerWidget {
                   'Operasyon Radarı: Kusursuz',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 12.sp,
+                    fontSize: 11.5.sp,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 2.h),
+                SizedBox(height: 1.h),
                 Text(
                   'Tüm tesisler, filo ve mağazalar aktif ve sorunsuz çalışıyor.',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.65),
-                    fontSize: 10.sp,
+                    fontSize: 9.5.sp,
                   ),
                 ),
               ],
             ),
           ),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
             decoration: BoxDecoration(
               color: const Color(0xFF00E676).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8.r),
@@ -85,7 +85,7 @@ class OperationsRadarBanner extends ConsumerWidget {
               '0 Risk',
               style: TextStyle(
                 color: const Color(0xFF00E676),
-                fontSize: 10.sp,
+                fontSize: 9.5.sp,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -103,7 +103,7 @@ class OperationsRadarBanner extends ConsumerWidget {
     final primaryColor = hasCritical ? const Color(0xFFFF3D57) : const Color(0xFFFFB800);
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      margin: EdgeInsets.symmetric(horizontal: 0, vertical: 3.h),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -113,16 +113,16 @@ class OperationsRadarBanner extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(14.r),
         border: Border.all(
           color: primaryColor.withValues(alpha: 0.4),
-          width: 1.2,
+          width: 1.1,
         ),
         boxShadow: [
           BoxShadow(
             color: primaryColor.withValues(alpha: 0.12),
-            blurRadius: 16,
-            spreadRadius: 1,
+            blurRadius: 12,
+            spreadRadius: 0.5,
           ),
         ],
       ),
@@ -131,11 +131,11 @@ class OperationsRadarBanner extends ConsumerWidget {
         children: [
           // Header
           Padding(
-            padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 8.h),
+            padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 6.h),
             child: Row(
               children: [
                 Container(
-                  padding: EdgeInsets.all(6.w),
+                  padding: EdgeInsets.all(5.w),
                   decoration: BoxDecoration(
                     color: primaryColor.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
@@ -143,7 +143,7 @@ class OperationsRadarBanner extends ConsumerWidget {
                   child: Icon(
                     hasCritical ? Icons.error_outline_rounded : Icons.warning_amber_rounded,
                     color: primaryColor,
-                    size: 18.sp,
+                    size: 16.sp,
                   ),
                 ),
                 SizedBox(width: 8.w),
@@ -155,17 +155,17 @@ class OperationsRadarBanner extends ConsumerWidget {
                         'Şirket Operasyon Radarı',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 13.sp,
+                          fontSize: 12.sp,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 0.3,
+                          letterSpacing: 0.2,
                         ),
                       ),
-                      SizedBox(height: 2.h),
+                      SizedBox(height: 1.h),
                       Text(
                         '${criticals.length} Kritik Risk • ${warnings.length} Dikkat Gerektiren',
                         style: TextStyle(
                           color: primaryColor,
-                          fontSize: 10.sp,
+                          fontSize: 9.5.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -175,7 +175,7 @@ class OperationsRadarBanner extends ConsumerWidget {
                 GestureDetector(
                   onTap: () => context.push('/notifications'),
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.5.h),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8.r),
@@ -186,16 +186,16 @@ class OperationsRadarBanner extends ConsumerWidget {
                         Text(
                           'Detaylar',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 10.sp,
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 9.5.sp,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         SizedBox(width: 2.w),
                         Icon(
                           Icons.arrow_forward_ios_rounded,
-                          color: Colors.white.withValues(alpha: 0.8),
-                          size: 9.sp,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          size: 8.5.sp,
                         ),
                       ],
                     ),
@@ -207,19 +207,19 @@ class OperationsRadarBanner extends ConsumerWidget {
 
           // Horizontal scrollable alert cards
           SizedBox(
-            height: 96.h,
+            height: 82.h,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 4.h),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 2.h),
               itemCount: alerts.length,
-              separatorBuilder: (_, _) => SizedBox(width: 10.w),
+              separatorBuilder: (_, _) => SizedBox(width: 8.w),
               itemBuilder: (context, index) {
                 final alert = alerts[index];
                 return _buildAlertCard(context, alert);
               },
             ),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 6.h),
         ],
       ),
     );
@@ -232,13 +232,13 @@ class OperationsRadarBanner extends ConsumerWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => context.push(alert.route),
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(10.r),
         child: Container(
-          width: 260.w,
-          padding: EdgeInsets.all(10.w),
+          width: 250.w,
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
           decoration: BoxDecoration(
             color: const Color(0xFF1E232E).withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(12.r),
+            borderRadius: BorderRadius.circular(10.r),
             border: Border.all(
               color: alertColor.withValues(alpha: 0.35),
               width: 1,
@@ -250,14 +250,14 @@ class OperationsRadarBanner extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Icon(alert.icon, color: alertColor, size: 16.sp),
+                  Icon(alert.icon, color: alertColor, size: 15.sp),
                   SizedBox(width: 6.w),
                   Expanded(
                     child: Text(
                       alert.title,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 11.sp,
+                        fontSize: 10.5.sp,
                         fontWeight: FontWeight.w700,
                       ),
                       maxLines: 1,
@@ -270,8 +270,8 @@ class OperationsRadarBanner extends ConsumerWidget {
                 alert.description,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.65),
-                  fontSize: 9.5.sp,
-                  height: 1.2,
+                  fontSize: 9.sp,
+                  height: 1.15,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -283,15 +283,15 @@ class OperationsRadarBanner extends ConsumerWidget {
                     'Müdahale Et',
                     style: TextStyle(
                       color: alertColor,
-                      fontSize: 9.5.sp,
+                      fontSize: 9.sp,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(width: 4.w),
+                  SizedBox(width: 3.w),
                   Icon(
                     Icons.arrow_forward_rounded,
                     color: alertColor,
-                    size: 11.sp,
+                    size: 10.sp,
                   ),
                 ],
               ),
