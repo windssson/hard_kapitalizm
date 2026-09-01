@@ -362,6 +362,7 @@ class HomeActiveProduction {
   final String ownerKind;
   final int qualityLevel;
   final int activeSlots;
+  final double hourlyRate;
 
   const HomeActiveProduction({
     required this.productId,
@@ -370,6 +371,7 @@ class HomeActiveProduction {
     required this.ownerKind,
     required this.qualityLevel,
     required this.activeSlots,
+    this.hourlyRate = 0.0,
   });
 
   factory HomeActiveProduction.fromJson(Map<String, dynamic> json) {
@@ -380,6 +382,16 @@ class HomeActiveProduction {
       ownerKind: (json['owner_kind'] ?? '').toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 1,
       activeSlots: (json['active_slots'] as num?)?.toInt() ?? 0,
+      hourlyRate: (json['hourly_rate'] as num?)?.toDouble() ?? 0.0,
     );
+  }
+
+  String get formattedHourlyRate {
+    if (hourlyRate >= 1000) {
+      return '${(hourlyRate / 1000).toStringAsFixed(1)}k';
+    }
+    return hourlyRate >= 10 || hourlyRate % 1 == 0
+        ? hourlyRate.toInt().toString()
+        : hourlyRate.toStringAsFixed(1);
   }
 }

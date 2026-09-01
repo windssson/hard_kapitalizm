@@ -311,8 +311,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   children: [
                     _buildCompanySummaryCard(),
                     SizedBox(height: 5.h),
-                    _buildMissionHighlightCard(),
-                    SizedBox(height: 5.h),
                     _buildModuleGrid(),
                     SizedBox(height: 5.h),
                     _buildOperationsSection(),
@@ -789,6 +787,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return '${AppMoney.compact(value)} / saat';
   }
 
+  // ignore: unused_element
   Widget _buildMissionHighlightCard() {
     return Consumer(
       builder: (context, ref, child) {
@@ -2534,13 +2533,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
                 SizedBox(width: 2.5.w),
-                Text(
-                  '${production.activeSlots} ${production.ownerKind == 'factory' ? 'Hat' : 'Slot'}',
-                  style: TextStyle(
-                    fontSize: 8.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textSecondary,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${production.formattedHourlyRate}/sa',
+                      style: TextStyle(
+                        fontSize: 8.5.sp,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.green,
+                      ),
+                    ),
+                    Text(
+                      '${production.activeSlots} ${production.ownerKind == 'factory' ? 'Hat' : 'Slot'}',
+                      style: TextStyle(
+                        fontSize: 7.sp,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
