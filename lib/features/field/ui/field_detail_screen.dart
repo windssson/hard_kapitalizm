@@ -2082,10 +2082,12 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       }
     }
 
-    final totalPending = inventories.fold<double>(
-      0,
-      (sum, inventory) => sum + inventory.pendingQuantity,
-    );
+    final totalPending = isInput
+        ? inventories.fold<double>(
+            0,
+            (sum, inventory) => sum + inventory.pendingQuantity,
+          )
+        : 0.0;
     if (totalPending > 0) {
       segments.add((amount: totalPending, color: AppColors.goldDark));
     }
