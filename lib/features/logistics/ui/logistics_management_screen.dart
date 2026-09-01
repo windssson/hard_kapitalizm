@@ -25,7 +25,8 @@ import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_type
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_route_selection_screen.dart';
 
 class LogisticsManagementScreen extends ConsumerStatefulWidget {
-  const LogisticsManagementScreen({super.key});
+  final bool isEmbedded;
+  const LogisticsManagementScreen({super.key, this.isEmbedded = false});
 
   @override
   ConsumerState<LogisticsManagementScreen> createState() =>
@@ -487,82 +488,86 @@ class _LogisticsManagementScreenState
     final companyAsync = ref.watch(playerLogisticsCompanyProvider);
     final constructionAsync = ref.watch(playerLogisticsConstructionProvider);
 
+    final body = companyAsync.when(
+      data: (company) => constructionAsync.when(
+        data: (construction) => Consumer(
+          builder: (context, ref, _) {
+            final vehiclesAsync = ref.watch(
+              logisticsVehicleListProvider,
+            );
+            final vehicleTypesAsync = ref.watch(
+              logisticsVehicleTypesProvider,
+            );
+            final citiesAsync = ref.watch(activeCitiesProvider);
+            final playerAsync = ref.watch(playerProvider);
+            final performanceAsync = ref.watch(
+              logisticsVehiclePerformanceProvider,
+            );
+            final financeSummaryAsync = ref.watch(
+              logisticsFinanceSummaryProvider,
+            );
+
+            return playerAsync.when(
+              data: (player) => vehicleTypesAsync.when(
+                data: (vehicleTypes) => citiesAsync.when(
+                  data: (cities) => performanceAsync.when(
+                    data: (performanceByVehicle) =>
+                        vehiclesAsync.when(
+                          data: (vehicles) => _buildContent(
+                            context: context,
+                            company: company,
+                            construction: construction,
+                            vehicles: vehicles,
+                            vehicleTypes: vehicleTypes,
+                            cities: cities,
+                            performanceByVehicle:
+                                performanceByVehicle,
+                            financeSummary:
+                                financeSummaryAsync.asData?.value,
+                            playerCash: player?.cash ?? 0,
+                          ),
+                          loading: _buildLoading,
+                          error: (error, stack) =>
+                              _buildError('Araçlar yüklenemedi.'),
+                        ),
+                    loading: _buildLoading,
+                    error: (error, stack) =>
+                        _buildError('Performans verisi yüklenemedi.'),
+                  ),
+                  loading: _buildLoading,
+                  error: (error, stack) =>
+                      _buildError('Şehirler yüklenemedi.'),
+                ),
+                loading: _buildLoading,
+                error: (error, stack) =>
+                    _buildError('Araç tipleri yüklenemedi.'),
+              ),
+              loading: _buildLoading,
+              error: (error, stack) =>
+                  _buildError('Oyuncu verisi yüklenemedi.'),
+            );
+          },
+        ),
+        loading: _buildLoading,
+        error: (error, stack) =>
+            _buildError('İnşaat durumu okunamadı.'),
+      ),
+      loading: _buildLoading,
+      error: (error, stack) =>
+          _buildError('Firma verisi yüklenemedi.'),
+    );
+
+    if (widget.isEmbedded) {
+      return body;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
             const SecondaryTopBar(title: 'Lojistik Yönetimi'),
-            Expanded(
-              child: companyAsync.when(
-                data: (company) => constructionAsync.when(
-                  data: (construction) => Consumer(
-                    builder: (context, ref, _) {
-                      final vehiclesAsync = ref.watch(
-                        logisticsVehicleListProvider,
-                      );
-                      final vehicleTypesAsync = ref.watch(
-                        logisticsVehicleTypesProvider,
-                      );
-                      final citiesAsync = ref.watch(activeCitiesProvider);
-                      final playerAsync = ref.watch(playerProvider);
-                      final performanceAsync = ref.watch(
-                        logisticsVehiclePerformanceProvider,
-                      );
-                      final financeSummaryAsync = ref.watch(
-                        logisticsFinanceSummaryProvider,
-                      );
-
-                      return playerAsync.when(
-                        data: (player) => vehicleTypesAsync.when(
-                          data: (vehicleTypes) => citiesAsync.when(
-                            data: (cities) => performanceAsync.when(
-                              data: (performanceByVehicle) =>
-                                  vehiclesAsync.when(
-                                    data: (vehicles) => _buildContent(
-                                      context: context,
-                                      company: company,
-                                      construction: construction,
-                                      vehicles: vehicles,
-                                      vehicleTypes: vehicleTypes,
-                                      cities: cities,
-                                      performanceByVehicle:
-                                          performanceByVehicle,
-                                      financeSummary:
-                                          financeSummaryAsync.asData?.value,
-                                      playerCash: player?.cash ?? 0,
-                                    ),
-                                    loading: _buildLoading,
-                                    error: (error, stack) =>
-                                        _buildError('Araçlar yüklenemedi.'),
-                                  ),
-                              loading: _buildLoading,
-                              error: (error, stack) =>
-                                  _buildError('Performans verisi yüklenemedi.'),
-                            ),
-                            loading: _buildLoading,
-                            error: (error, stack) =>
-                                _buildError('Şehirler yüklenemedi.'),
-                          ),
-                          loading: _buildLoading,
-                          error: (error, stack) =>
-                              _buildError('Araç tipleri yüklenemedi.'),
-                        ),
-                        loading: _buildLoading,
-                        error: (error, stack) =>
-                            _buildError('Oyuncu verisi yüklenemedi.'),
-                      );
-                    },
-                  ),
-                  loading: _buildLoading,
-                  error: (error, stack) =>
-                      _buildError('İnşaat durumu okunamadı.'),
-                ),
-                loading: _buildLoading,
-                error: (error, stack) =>
-                    _buildError('Firma verisi yüklenemedi.'),
-              ),
-            ),
+            Expanded(child: body),
           ],
         ),
       ),

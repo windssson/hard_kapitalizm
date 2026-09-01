@@ -34,7 +34,6 @@ import 'package:hard_kapitalizm/features/company/ui/company_screen.dart';
 import 'package:hard_kapitalizm/features/company/ui/brand_design_screen.dart';
 import 'package:hard_kapitalizm/features/company/ui/brand_product_design_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_finance_report_screen.dart';
-import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_screen.dart';
 import 'package:hard_kapitalizm/features/logistics/ui/logistics_setup_screen.dart';
 import 'package:hard_kapitalizm/features/transfer_map/ui/transfer_map_screen.dart';
 import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_screen.dart';
@@ -135,7 +134,15 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/transfer-map',
-      builder: (context, state) => const TransferMapScreen(),
+      builder: (context, state) {
+        final tabParam = state.uri.queryParameters['tab'];
+        final initialTab = tabParam == 'fleet'
+            ? 1
+            : tabParam == 'history'
+                ? 2
+                : 0;
+        return TransferMapScreen(initialTab: initialTab);
+      },
     ),
     GoRoute(
       path: '/store',
@@ -336,7 +343,7 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/logistics',
-      builder: (context, state) => const LogisticsManagementScreen(),
+      builder: (context, state) => const TransferMapScreen(initialTab: 1),
     ),
     GoRoute(
       path: '/logistics/finance',

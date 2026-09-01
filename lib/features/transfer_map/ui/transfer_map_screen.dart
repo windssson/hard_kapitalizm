@@ -21,6 +21,8 @@ import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart'
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
+import 'package:hard_kapitalizm/features/logistics/ui/logistics_management_screen.dart';
 import 'package:city_picker_from_map/city_picker_from_map.dart';
 // ignore: implementation_imports
 import 'package:city_picker_from_map/src/parser.dart';
@@ -28,7 +30,8 @@ import 'package:city_picker_from_map/src/parser.dart';
 import 'package:city_picker_from_map/src/size_controller.dart';
 
 class TransferMapScreen extends ConsumerStatefulWidget {
-  const TransferMapScreen({super.key});
+  final int initialTab;
+  const TransferMapScreen({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<TransferMapScreen> createState() => _TransferMapScreenState();
@@ -76,11 +79,22 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedTab = widget.initialTab;
     _transformationController = TransformationController();
     _loadCityList();
   }
 
-  int _selectedTab = 0;
+  @override
+  void didUpdateWidget(TransferMapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTab != widget.initialTab) {
+      setState(() {
+        _selectedTab = widget.initialTab;
+      });
+    }
+  }
+
+  late int _selectedTab;
   String? _selectedTransferId;
   String? _expandedHistoryId;
   final ScrollController _activeScrollController = ScrollController();
@@ -791,7 +805,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Transfer Haritasi'),
+            const SecondaryTopBar(title: 'Lojistik'),
             Padding(
               padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 6.h),
               child: _buildModeSelector(),
@@ -831,7 +845,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                     horizontal: 16.w,
                                   ),
                                   children: [
-                                    SizedBox(height: 120.h),
+                                    SizedBox(height: 6.h),
+                                    _buildFleetStatusBanner(),
+                                    SizedBox(height: 80.h),
                                     _buildEmptyState(),
                                   ],
                                 )
@@ -840,6 +856,17 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                                   physics:
                                       const AlwaysScrollableScrollPhysics(),
                                   slivers: [
+                                    SliverToBoxAdapter(
+                                      child: Padding(
+                                        padding: EdgeInsets.fromLTRB(
+                                          12.w,
+                                          4.h,
+                                          12.w,
+                                          0,
+                                        ),
+                                        child: _buildFleetStatusBanner(),
+                                      ),
+                                    ),
                                     if (dueCount > 0)
                                       SliverToBoxAdapter(
                                         child: Padding(
@@ -916,7 +943,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         ),
                       ),
                     )
-                  : historyAsync.when(
+                  : _selectedTab == 1
+                      ? const LogisticsManagementScreen(isEmbedded: true)
+                      : historyAsync.when(
                       data: (history) {
                         final sortedHistory = [...history]
                           ..sort((a, b) {
@@ -977,6 +1006,140 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFleetStatusBanner() {
+    final vehiclesAsync = ref.watch(logisticsVehicleListProvider);
+    return vehiclesAsync.maybeWhen(
+      data: (vehicles) {
+        if (vehicles.isEmpty) return const SizedBox.shrink();
+        final inTransit = vehicles.where((v) => v.status == 'in_transit').length;
+        final idle = vehicles.where((v) => v.status != 'in_transit' && v.status != 'scrapped').length;
+        final lowFuel = vehicles.where((v) => v.currentFuel < (v.fuelCapacity * 0.25)).length;
+        final needsRepair = vehicles.where((v) => v.condition < 40).length;
+
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedTab = 1;
+            });
+          },
+          child: Container(
+            margin: EdgeInsets.only(bottom: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
+            decoration: BoxDecoration(
+              color: AppColors.cardBg.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: AppColors.borderGold.withValues(alpha: 0.28),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.gold.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(5.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    AppIcons.localShipping,
+                    size: 13.sp,
+                    color: AppColors.gold,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Text(
+                        '🚚 $inTransit Yolda',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 10.5.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        '🟢 $idle Garajda',
+                        style: TextStyle(
+                          color: AppColors.green,
+                          fontSize: 10.5.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (lowFuel > 0)
+                        Text(
+                          '⛽ $lowFuel Yakıt Az',
+                          style: TextStyle(
+                            color: AppColors.warning,
+                            fontSize: 10.5.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      else if (needsRepair > 0)
+                        Text(
+                          '🔧 $needsRepair Bakım',
+                          style: TextStyle(
+                            color: AppColors.red,
+                            fontSize: 10.5.sp,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      else
+                        Text(
+                          '⚡ Filo Hazır',
+                          style: TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 10.5.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 4.w),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6.r),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Filom',
+                        style: TextStyle(
+                          color: AppColors.gold,
+                          fontSize: 9.5.sp,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SizedBox(width: 2.w),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 8.sp,
+                        color: AppColors.gold,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
     );
   }
 
@@ -1043,6 +1206,7 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
   }
 
   Widget _buildModeSelector() {
+    final vehicles = ref.watch(logisticsVehicleListProvider).value ?? [];
     return Container(
       padding: EdgeInsets.all(4.w),
       decoration: BoxDecoration(
@@ -1062,15 +1226,23 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
           Expanded(
             child: _buildModeButton(
               index: 0,
-              label: 'Aktif',
+              label: 'Harita',
               icon: AppIcons.route,
             ),
           ),
-          SizedBox(width: 6.w),
+          SizedBox(width: 4.w),
           Expanded(
             child: _buildModeButton(
               index: 1,
-              label: 'Gecmis',
+              label: vehicles.isNotEmpty ? 'Filom (${vehicles.length})' : 'Filom',
+              icon: AppIcons.localShipping,
+            ),
+          ),
+          SizedBox(width: 4.w),
+          Expanded(
+            child: _buildModeButton(
+              index: 2,
+              label: 'Geçmiş',
               icon: AppIcons.history,
             ),
           ),

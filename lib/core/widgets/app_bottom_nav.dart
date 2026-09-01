@@ -32,7 +32,7 @@ class AppBottomNav extends ConsumerWidget {
           children: [
             _buildNavItem(context, ref, 0, AppIcons.home, 'Ana Sayfa'),
             _buildNavItem(context, ref, 1, AppIcons.chatBubbleRounded, 'Sohbet'),
-            _buildNavItem(context, ref, 2, AppIcons.map, 'Harita'),
+            _buildNavItem(context, ref, 2, AppIcons.logistics, 'Lojistik'),
             _buildNavItem(context, ref, 3, AppIcons.storefront, 'Pazar'),
             _buildNavItem(context, ref, 4, AppIcons.person, 'Profil'),
           ],
