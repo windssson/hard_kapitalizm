@@ -70,6 +70,9 @@ class _ConsolidatedTransferSheetState
   // itemId -> selected quantity
   final Map<String, int> _selectedQuantities = {};
 
+  // itemId -> ConsolidatedCandidateItemModel
+  final Map<String, ConsolidatedCandidateItemModel> _candidatesMap = {};
+
   // Step 3 Hedef Filtresi
   String _targetFilter = 'all'; // 'all', 'warehouse', 'factory', 'store'
 
@@ -81,11 +84,27 @@ class _ConsolidatedTransferSheetState
 
   bool _isSubmitting = false;
 
-  double _computeSelectedVolume(List<ConsolidatedCandidateItemModel> candidates) {
+  ConsolidatedCandidateItemModel? _findCandidate(
+    String itemId, [
+    List<ConsolidatedCandidateItemModel>? fallbackList,
+  ]) {
+    final cached = _candidatesMap[itemId];
+    if (cached != null) return cached;
+    if (fallbackList != null) {
+      for (final item in fallbackList) {
+        if (item.itemId == itemId) return item;
+      }
+    }
+    return null;
+  }
+
+  double _computeSelectedVolume([List<ConsolidatedCandidateItemModel>? candidates]) {
     double vol = 0;
-    for (final item in candidates) {
-      final qty = _selectedQuantities[item.itemId] ?? 0;
-      if (qty > 0) {
+    for (final entry in _selectedQuantities.entries) {
+      final qty = entry.value;
+      if (qty <= 0) continue;
+      final item = _findCandidate(entry.key, candidates);
+      if (item != null) {
         vol += qty * item.birimHacim;
       }
     }
@@ -157,9 +176,11 @@ class _ConsolidatedTransferSheetState
     }
 
     final itemsPayload = <Map<String, dynamic>>[];
-    for (final item in candidates) {
-      final qty = _selectedQuantities[item.itemId] ?? 0;
-      if (qty > 0) {
+    for (final entry in _selectedQuantities.entries) {
+      final qty = entry.value;
+      if (qty <= 0) continue;
+      final item = _findCandidate(entry.key, candidates);
+      if (item != null) {
         itemsPayload.add({
           'source_kind': item.sourceKind,
           'source_id': item.sourceId,
@@ -204,6 +225,7 @@ class _ConsolidatedTransferSheetState
         ref.invalidate(buyerTransferMapProvider);
         ref.invalidate(consolidatedTransferTargetsProvider);
         ref.invalidate(consolidatedTransferSourceCitiesProvider);
+        ref.invalidate(consolidatedTransferCityCandidatesProvider);
 
         Navigator.pop(context);
         AppSnackbar.show(
@@ -236,6 +258,17 @@ class _ConsolidatedTransferSheetState
 
   @override
   Widget build(BuildContext context) {
+    if (_selectedCity != null) {
+      final candidatesAsync = ref.watch(
+        consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId),
+      );
+      if (candidatesAsync.hasValue && candidatesAsync.value != null) {
+        for (final item in candidatesAsync.value!) {
+          _candidatesMap[item.itemId] = item;
+        }
+      }
+    }
+
     return Container(
       height: 0.90.sh,
       decoration: BoxDecoration(
@@ -1739,10 +1772,10 @@ class _ConsolidatedTransferSheetState
       return const SizedBox.shrink();
     }
 
-    final candidates = ref
-            .read(consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId))
-            .value ??
-        [];
+    final candidatesAsync = ref.watch(
+      consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId),
+    );
+    final candidates = candidatesAsync.value ?? _candidatesMap.values.toList();
     final selectedVolume = _computeSelectedVolume(candidates);
     final totalQuantity = _computeTotalQuantity();
     final isSameCity = _selectedCity!.cityId == _selectedTarget!.cityId;

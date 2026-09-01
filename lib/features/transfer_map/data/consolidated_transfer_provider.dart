@@ -217,7 +217,7 @@ final consolidatedTransferSourceCitiesProvider =
       .toList();
 });
 
-final consolidatedTransferCityCandidatesProvider = FutureProvider.autoDispose
+final consolidatedTransferCityCandidatesProvider = FutureProvider
     .family<List<ConsolidatedCandidateItemModel>, String>(
   (ref, sourceCityId) async {
     final supabase = Supabase.instance.client;
