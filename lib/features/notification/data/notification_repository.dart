@@ -2,9 +2,29 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/notification/models/game_notification_model.dart';
+import 'package:hard_kapitalizm/features/notification/models/operational_alert_model.dart';
 
 class NotificationRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
+
+  Future<List<OperationalAlertModel>> fetchOperationalAlerts() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return [];
+
+      final response = await _supabase.rpc('get_player_operational_alerts');
+      if (response is List) {
+        return response
+            .whereType<Map>()
+            .map((item) => OperationalAlertModel.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Operasyonel uyarılar alınırken hata: $e');
+      return [];
+    }
+  }
 
   Future<List<GameNotification>> fetchNotifications({
     int limit = 30,

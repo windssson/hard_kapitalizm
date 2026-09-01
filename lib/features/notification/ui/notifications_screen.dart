@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 import 'package:hard_kapitalizm/features/notification/models/game_notification_model.dart';
+import 'package:hard_kapitalizm/features/notification/models/operational_alert_model.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -16,6 +17,7 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final ScrollController _scrollController = ScrollController();
+  int _selectedTab = 0; // 0: Bildirimler, 1: Şirket Uyarıları
 
   @override
   void initState() {
@@ -41,6 +43,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final state = ref.watch(notificationsProvider);
     final unreadCount = ref.watch(unreadNotificationCountProvider);
     final selectedCategory = ref.watch(notificationCategoryFilterProvider);
+    final alertsAsync = ref.watch(operationalAlertsProvider);
+    final alertsCount = alertsAsync.value?.length ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -48,52 +52,421 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         child: Column(
           children: [
             _buildHeader(context, unreadCount),
-            _buildCategoryFilter(selectedCategory),
-            Expanded(
-              child: RefreshIndicator(
-                color: AppColors.gold,
-                backgroundColor: AppColors.cardBg,
-                onRefresh: () async {
-                  await ref.read(notificationsProvider.notifier).loadInitial();
-                  await ref
-                      .read(unreadNotificationCountProvider.notifier)
-                      .refresh();
-                },
-                child: state.isLoading && state.items.isEmpty
-                    ? Center(
-                        child: CircularProgressIndicator(color: AppColors.gold),
-                      )
-                    : state.items.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.separated(
-                            controller: _scrollController,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 8.h,
-                            ),
-                            itemCount: state.items.length + (state.hasMore ? 1 : 0),
-                            separatorBuilder: (context, index) =>
-                                SizedBox(height: 6.h),
-                            itemBuilder: (context, index) {
-                              if (index >= state.items.length) {
-                                return Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.w),
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.gold,
+            _buildTopTabs(unreadCount, alertsCount),
+            if (_selectedTab == 0) ...[
+              _buildCategoryFilter(selectedCategory),
+              Expanded(
+                child: RefreshIndicator(
+                  color: AppColors.gold,
+                  backgroundColor: AppColors.cardBg,
+                  onRefresh: () async {
+                    await ref.read(notificationsProvider.notifier).loadInitial();
+                    await ref
+                        .read(unreadNotificationCountProvider.notifier)
+                        .refresh();
+                  },
+                  child: state.isLoading && state.items.isEmpty
+                      ? Center(
+                          child: CircularProgressIndicator(color: AppColors.gold),
+                        )
+                      : state.items.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.separated(
+                              controller: _scrollController,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 8.h,
+                              ),
+                              itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                              separatorBuilder: (context, index) =>
+                                  SizedBox(height: 6.h),
+                              itemBuilder: (context, index) {
+                                if (index >= state.items.length) {
+                                  return Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(12.w),
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.gold,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              }
-                              final item = state.items[index];
-                              return _buildNotificationCard(context, item);
-                            },
+                                  );
+                                }
+                                final item = state.items[index];
+                                return _buildNotificationCard(context, item);
+                              },
+                            ),
+                ),
+              ),
+            ] else ...[
+              _buildAlertsView(alertsAsync),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopTabs(int unreadCount, int alertsCount) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedTab = 0),
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: _selectedTab == 0
+                      ? AppColors.gold.withValues(alpha: 0.15)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: _selectedTab == 0
+                      ? Border.all(color: AppColors.gold.withValues(alpha: 0.5))
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.notifications_rounded,
+                      size: 14.sp,
+                      color: _selectedTab == 0
+                          ? AppColors.gold
+                          : AppColors.textSecondary,
+                    ),
+                    SizedBox(width: 6.w),
+                    Text(
+                      'Bildirimler',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight:
+                            _selectedTab == 0 ? FontWeight.w800 : FontWeight.w600,
+                        color: _selectedTab == 0
+                            ? Colors.white
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    if (unreadCount > 0) ...[
+                      SizedBox(width: 5.w),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 5.w,
+                          vertical: 1.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.red,
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Text(
+                          unreadCount.toString(),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8.sp,
+                            fontWeight: FontWeight.w900,
                           ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 4.w),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedTab = 1),
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: _selectedTab == 1
+                      ? (alertsCount > 0
+                          ? const Color(0xFFFF3D57).withValues(alpha: 0.18)
+                          : AppColors.gold.withValues(alpha: 0.15))
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10.r),
+                  border: _selectedTab == 1
+                      ? Border.all(
+                          color: (alertsCount > 0
+                                  ? const Color(0xFFFF3D57)
+                                  : AppColors.gold)
+                              .withValues(alpha: 0.6),
+                        )
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      alertsCount > 0
+                          ? Icons.warning_amber_rounded
+                          : Icons.verified_rounded,
+                      size: 14.sp,
+                      color: _selectedTab == 1
+                          ? (alertsCount > 0
+                              ? const Color(0xFFFF3D57)
+                              : const Color(0xFF00E676))
+                          : AppColors.textSecondary,
+                    ),
+                    SizedBox(width: 6.w),
+                    Text(
+                      'Şirket Uyarıları',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight:
+                            _selectedTab == 1 ? FontWeight.w800 : FontWeight.w600,
+                        color: _selectedTab == 1
+                            ? Colors.white
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    if (alertsCount > 0) ...[
+                      SizedBox(width: 5.w),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 5.w,
+                          vertical: 1.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF3D57),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
+                        child: Text(
+                          alertsCount.toString(),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8.sp,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlertsView(AsyncValue<List<OperationalAlertModel>> alertsAsync) {
+    return Expanded(
+      child: RefreshIndicator(
+        color: AppColors.gold,
+        backgroundColor: AppColors.cardBg,
+        onRefresh: () async {
+          await ref.read(operationalAlertsProvider.notifier).refresh();
+        },
+        child: alertsAsync.when(
+          data: (alerts) {
+            if (alerts.isEmpty) {
+              return _buildCleanAlertsState();
+            }
+            return ListView.separated(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              itemCount: alerts.length,
+              separatorBuilder: (_, _) => SizedBox(height: 10.h),
+              itemBuilder: (context, index) {
+                final alert = alerts[index];
+                return _buildFullAlertCard(context, alert);
+              },
+            );
+          },
+          loading: () => Center(
+            child: CircularProgressIndicator(color: AppColors.gold),
+          ),
+          error: (e, _) => Center(
+            child: Text(
+              'Uyarılar yüklenemedi: $e',
+              style: TextStyle(color: AppColors.red, fontSize: 11.sp),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFullAlertCard(BuildContext context, OperationalAlertModel alert) {
+    final alertColor = alert.color;
+    final isCritical = alert.severity == AlertSeverity.critical;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(
+          color: alertColor.withValues(alpha: isCritical ? 0.6 : 0.35),
+          width: isCritical ? 1.2 : 1,
+        ),
+        boxShadow: [
+          if (isCritical)
+            BoxShadow(
+              color: alertColor.withValues(alpha: 0.12),
+              blurRadius: 12,
+              spreadRadius: 1,
+            ),
+        ],
+      ),
+      padding: EdgeInsets.all(12.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(7.w),
+                decoration: BoxDecoration(
+                  color: alertColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(alert.icon, color: alertColor, size: 18.sp),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6.w,
+                            vertical: 2.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: alertColor.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(6.r),
+                          ),
+                          child: Text(
+                            isCritical ? 'KRİTİK RİSK' : 'UYARI',
+                            style: TextStyle(
+                              color: alertColor,
+                              fontSize: 8.5.sp,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ),
+                        if (alert.count > 1) ...[
+                          SizedBox(width: 6.w),
+                          Text(
+                            '${alert.count} Tesis/Birim',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 9.sp,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    SizedBox(height: 3.h),
+                    Text(
+                      alert.title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            alert.description,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.75),
+              fontSize: 10.5.sp,
+              height: 1.3,
+            ),
+          ),
+          SizedBox(height: 10.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => context.push(alert.route),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: alertColor.withValues(alpha: 0.18),
+                  foregroundColor: alertColor,
+                  elevation: 0,
+                  side: BorderSide(color: alertColor.withValues(alpha: 0.5)),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                ),
+                icon: Icon(Icons.arrow_forward_rounded, size: 13.sp),
+                label: Text(
+                  'Hemen Müdahale Et',
+                  style: TextStyle(
+                    fontSize: 10.5.sp,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCleanAlertsState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(20.w),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00E676).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_circle_rounded,
+                size: 56.sp,
+                color: const Color(0xFF00E676),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              'Tüm Operasyonlar Kusursuz',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Şirketinizde aktif bir hammadde darboğazı, vergi cezası veya kapasite tıkanıklığı bulunmuyor.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11.sp,
+                height: 1.4,
               ),
             ),
           ],

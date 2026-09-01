@@ -25,6 +25,8 @@ import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
+import 'package:hard_kapitalizm/features/home/ui/widgets/operations_radar_banner.dart';
+import 'package:hard_kapitalizm/features/notification/data/notification_provider.dart';
 
 class _HomeModuleCardData {
   final String title;
@@ -283,6 +285,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     ref.invalidate(homeDashboardProvider);
     ref.invalidate(playerMissionDashboardProvider);
     ref.invalidate(taxDebtProvider);
+    ref.invalidate(operationalAlertsProvider);
   }
 
   @override
@@ -310,6 +313,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 child: Column(
                   children: [
                     _buildCompanySummaryCard(),
+                    const OperationsRadarBanner(),
                     SizedBox(height: 5.h),
                     _buildModuleGrid(),
                     SizedBox(height: 5.h),

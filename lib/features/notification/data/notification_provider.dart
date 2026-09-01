@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/features/notification/data/notification_repository.dart';
 import 'package:hard_kapitalizm/features/notification/models/game_notification_model.dart';
+import 'package:hard_kapitalizm/features/notification/models/operational_alert_model.dart';
 
 // Stream controller for live in-game toast alerts
 final inGameNotificationStreamController =
@@ -240,3 +241,25 @@ class NotificationRealtimeService {
     _channel = null;
   }
 }
+
+// 5. Operational alerts notifier & provider
+class OperationalAlertsNotifier extends AsyncNotifier<List<OperationalAlertModel>> {
+  @override
+  Future<List<OperationalAlertModel>> build() async {
+    final repo = ref.read(notificationRepositoryProvider);
+    return await repo.fetchOperationalAlerts();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final repo = ref.read(notificationRepositoryProvider);
+      return await repo.fetchOperationalAlerts();
+    });
+  }
+}
+
+final operationalAlertsProvider =
+    AsyncNotifierProvider<OperationalAlertsNotifier, List<OperationalAlertModel>>(
+        OperationalAlertsNotifier.new);
+
