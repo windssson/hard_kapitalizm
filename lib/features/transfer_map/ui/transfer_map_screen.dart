@@ -844,21 +844,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          AppHaptic.medium();
-          ConsolidatedTransferSheet.show(context);
-        },
-        backgroundColor: AppColors.gold,
-        icon: Icon(AppIcons.localShipping, color: AppColors.textOnAccent),
-        label: Text(
-          'Transfer Başlat',
-          style: AppTextStyles.body.standardCopyWith(
-            color: AppColors.textOnAccent,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
       bottomNavigationBar: AppBottomNav(
         selectedIndex: _selectedIndex,
         onItemSelected: _onNavSelected,
