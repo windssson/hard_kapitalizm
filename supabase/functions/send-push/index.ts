@@ -95,7 +95,8 @@ serve(async (req) => {
         android: {
           priority: "HIGH",
           notification: {
-            channel_id: "high_importance_channel",
+            channel_id: "fcm_fallback_notification_channel",
+            icon: "ic_launcher",
             default_sound: true,
             default_vibrate_timings: true,
             notification_priority: "PRIORITY_HIGH",
