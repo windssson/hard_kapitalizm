@@ -1420,7 +1420,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Set<String> _collectAlertedModules(HomeDashboardModel? dashboard) {
-    if (dashboard == null) return const <String>{};
+    if (dashboard == null) return <String>{};
 
     final alertedModules = <String>{};
     final m = dashboard.modules;
@@ -1462,7 +1462,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             }
           }
         }
-        final alertedModules = _collectAlertedModules(dashboard);
+        final alertedModules = <String>{..._collectAlertedModules(dashboard)};
         final opAlerts = ref.watch(operationalAlertsProvider).value ?? [];
         for (final alert in opAlerts) {
           if (alert.route == '/farms' ||
