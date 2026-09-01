@@ -43,10 +43,13 @@ class ConsolidatedTargetModel {
     return acceptedProductIds!.any((id) => id.trim().toUpperCase() == upper);
   }
 
+  bool get isProductionUnit =>
+      entityKind == 'factory' || entityKind == 'farm' || entityKind == 'field';
+
   int getRequiredQualityFor(String productId) {
-    if (entityKind != 'factory') return 1;
-    final upper = productId.trim().toUpperCase();
+    if (!isProductionUnit) return 1;
     if (acceptedProductQualities != null) {
+      final upper = productId.trim().toUpperCase();
       for (final entry in acceptedProductQualities!.entries) {
         if (entry.key.trim().toUpperCase() == upper) {
           return entry.value;
@@ -57,7 +60,7 @@ class ConsolidatedTargetModel {
   }
 
   bool acceptsQuality(String productId, int itemQuality) {
-    if (entityKind != 'factory') return true;
+    if (!isProductionUnit) return true;
     final req = getRequiredQualityFor(productId);
     return itemQuality == req;
   }

@@ -603,6 +603,10 @@ class _ConsolidatedTransferSheetState
             targets.where((t) => t.entityKind == 'warehouse').length;
         final factoryCount =
             targets.where((t) => t.entityKind == 'factory').length;
+        final farmCount =
+            targets.where((t) => t.entityKind == 'farm').length;
+        final fieldCount =
+            targets.where((t) => t.entityKind == 'field').length;
         final storeCount =
             targets.where((t) => t.entityKind == 'store').length;
 
@@ -661,6 +665,10 @@ class _ConsolidatedTransferSheetState
                   _buildFilterChip('warehouse', '🏬 Depolar ($warehouseCount)'),
                   SizedBox(width: 8.w),
                   _buildFilterChip('factory', '🏭 Fabrikalar ($factoryCount)'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('farm', '🌾 Tarlalar ($farmCount)'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('field', '🐄 Çiftlikler ($fieldCount)'),
                   SizedBox(width: 8.w),
                   _buildFilterChip('store', '🏪 Mağazalar ($storeCount)'),
                 ],
@@ -815,14 +823,26 @@ class _ConsolidatedTransferSheetState
                                           : '${target.acceptedProductIds!.length} Özel Ürün Kabul Eder 🏬')
                                       : target.entityKind == 'factory'
                                           ? 'Girdi Şartı: Q${target.minQualityLevel} 🏭'
-                                          : 'Mağaza Ürünleri (${target.acceptedProductIds?.length ?? 0}) 🏪',
+                                          : target.entityKind == 'farm'
+                                              ? (target.acceptedProductIds == null || target.acceptedProductIds!.isEmpty
+                                                  ? 'Tarla Girdisi Bulunmuyor 🌾'
+                                                  : 'Girdi Şartı: Q${target.minQualityLevel} 🌾')
+                                              : target.entityKind == 'field'
+                                                  ? (target.acceptedProductIds == null || target.acceptedProductIds!.isEmpty
+                                                      ? 'Yem/Girdi Bulunmuyor 🐄'
+                                                      : 'Yem Şartı: Q${target.minQualityLevel} 🐄')
+                                                  : 'Mağaza Ürünleri (${target.acceptedProductIds?.length ?? 0}) 🏪',
                                   style: TextStyle(
                                     fontSize: 9.5.sp,
                                     color: target.entityKind == 'warehouse'
                                         ? (target.acceptedProductIds == null ? AppColors.green : AppColors.gold)
                                         : target.entityKind == 'factory'
                                             ? Colors.amber
-                                            : AppColors.gold,
+                                            : target.entityKind == 'farm'
+                                                ? Colors.greenAccent
+                                                : target.entityKind == 'field'
+                                                    ? Colors.tealAccent
+                                                    : AppColors.gold,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1249,7 +1269,7 @@ class _ConsolidatedTransferSheetState
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
-                                              ] else if (_selectedTarget!.entityKind == 'factory') ...[
+                                              ] else if (_selectedTarget!.isProductionUnit) ...[
                                                 SizedBox(height: 2.h),
                                                 Text(
                                                   'Girdi Uyumlu (Q${item.qualityLevel}) ✅',
@@ -1480,9 +1500,44 @@ class _ConsolidatedTransferSheetState
       );
     }
 
-    final acceptedList = target.acceptedProductIds!;
+    final acceptedList = target.acceptedProductIds ?? const [];
     final isFactory = target.entityKind == 'factory';
+    final isFarm = target.entityKind == 'farm';
+    final isField = target.entityKind == 'field';
     final isWarehouse = target.entityKind == 'warehouse';
+    final isProductionUnit = target.isProductionUnit;
+
+    if (acceptedList.isEmpty) {
+      return Container(
+        margin: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 6.h),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: AppColors.cardBgLight,
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline_rounded, size: 15.sp, color: AppColors.gold),
+            SizedBox(width: 8.w),
+            Expanded(
+              child: Text(
+                isFarm
+                    ? 'Bu tarlada henüz ekili ürün veya aktif hammadde/gübre girdisi bulunmuyor.'
+                    : isField
+                        ? 'Bu çiftlikte henüz aktif hayvan veya yem girdisi bulunmuyor.'
+                        : 'Bu tesiste tanımlı kabul edilen ürün bulunmuyor.',
+                style: TextStyle(
+                  fontSize: 10.5.sp,
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       margin: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 6.h),
@@ -1500,9 +1555,13 @@ class _ConsolidatedTransferSheetState
               Icon(
                 isFactory
                     ? Icons.precision_manufacturing_rounded
-                    : isWarehouse
-                        ? Icons.warehouse_rounded
-                        : Icons.storefront_rounded,
+                    : isFarm
+                        ? Icons.agriculture_rounded
+                        : isField
+                            ? Icons.pets_rounded
+                            : isWarehouse
+                                ? Icons.warehouse_rounded
+                                : Icons.storefront_rounded,
                 size: 14.sp,
                 color: AppColors.gold,
               ),
@@ -1511,9 +1570,13 @@ class _ConsolidatedTransferSheetState
                 child: Text(
                   isFactory
                       ? 'Hedef Fabrikanın Kabul Ettiği Hammaddeler:'
-                      : isWarehouse
-                          ? 'Hedef Özel Deponun Kabul Ettiği Ürünler:'
-                          : 'Hedef Mağazanın Sattığı Ürünler:',
+                      : isFarm
+                          ? 'Hedef Tarlanın Kabul Ettiği Girdiler:'
+                          : isField
+                              ? 'Hedef Çiftliğin Kabul Ettiği Yem & Girdiler:'
+                              : isWarehouse
+                                  ? 'Hedef Özel Deponun Kabul Ettiği Ürünler:'
+                                  : 'Hedef Mağazanın Sattığı Ürünler:',
                   style: TextStyle(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.bold,
@@ -1524,7 +1587,7 @@ class _ConsolidatedTransferSheetState
                 ),
               ),
               SizedBox(width: 6.w),
-              if (isFactory)
+              if (isProductionUnit)
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                   decoration: BoxDecoration(
@@ -1592,7 +1655,7 @@ class _ConsolidatedTransferSheetState
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      if (isFactory) ...[
+                      if (isProductionUnit) ...[
                         SizedBox(width: 4.w),
                         Container(
                           padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
@@ -1661,6 +1724,8 @@ class _ConsolidatedTransferSheetState
         return Colors.purple.shade700;
       case 'farm':
         return Colors.green.shade700;
+      case 'field':
+        return Colors.teal.shade700;
       default:
         return Colors.blue.shade700;
     }
