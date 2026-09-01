@@ -38,7 +38,7 @@ BEGIN
     JOIN public.cities c ON c.id = w.city_id
     WHERE w.player_id = v_player_id
       AND w.is_active = true
-      AND w.warehouse_kind = 'general'
+      AND (w.warehouse_kind = 'normal' OR w.warehouse_kind = 'general' OR w.store_id IS NULL)
 
     UNION ALL
 
@@ -123,11 +123,11 @@ BEGIN
   END IF;
 
   WITH city_entities AS (
-    -- Depolar
+    -- Depolar (Tüm aktif depolar)
     SELECT w.city_id, 'warehouse' as kind, w.id as entity_id,
            coalesce((SELECT sum(ws.quantity) FROM public.warehouse_slots ws WHERE ws.warehouse_id = w.id AND ws.quantity > 0), 0) as stock
     FROM public.warehouses w
-    WHERE w.player_id = v_player_id AND w.is_active = true AND w.warehouse_kind = 'general'
+    WHERE w.player_id = v_player_id AND w.is_active = true
 
     UNION ALL
 
@@ -254,7 +254,6 @@ BEGIN
     WHERE w.player_id = v_player_id
       AND w.city_id = p_source_city_id
       AND w.is_active = true
-      AND w.warehouse_kind = 'general'
       AND ws.quantity > 0
       AND (v_accepted_product_ids IS NULL OR ws.product_id = ANY(v_accepted_product_ids))
 

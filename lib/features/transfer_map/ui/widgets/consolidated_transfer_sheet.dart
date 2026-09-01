@@ -34,6 +34,7 @@ class _ConsolidatedTransferSheetState
 
   ConsolidatedTargetModel? _selectedTarget;
   ConsolidatedSourceCityModel? _selectedCity;
+  String _targetFilter = 'all'; // 'all', 'warehouse', 'factory', 'store'
 
   // itemId -> selected quantity
   final Map<String, int> _selectedQuantities = {};
@@ -420,133 +421,210 @@ class _ConsolidatedTransferSheetState
           );
         }
 
-        return ListView.builder(
-          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
-          itemCount: targets.length,
-          itemBuilder: (context, index) {
-            final target = targets[index];
-            final isSelected = _selectedTarget?.id == target.id;
-            final fullnessRatio = target.totalCapacity > 0
-                ? (target.usedCapacity / target.totalCapacity).clamp(0.0, 1.0)
-                : 0.0;
+        final filteredTargets = _targetFilter == 'all'
+            ? targets
+            : targets.where((t) => t.entityKind == _targetFilter).toList();
 
-            return GestureDetector(
-              onTap: () {
-                AppHaptic.selection();
-                setState(() {
-                  _selectedTarget = target;
-                  _currentStep = 1; // Otomatik sonraki adıma geç
-                });
-              },
-              child: Container(
-                margin: EdgeInsets.only(bottom: 12.h),
-                padding: EdgeInsets.all(14.w),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.gold.withValues(alpha: 0.12)
-                      : AppColors.cardBgLight,
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColors.gold
-                        : AppColors.borderGold.withValues(alpha: 0.2),
-                    width: isSelected ? 1.5 : 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8.w,
-                            vertical: 3.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getKindBadgeColor(target.entityKind),
-                            borderRadius: BorderRadius.circular(6.r),
-                          ),
-                          child: Text(
-                            target.entityKindDisplay,
-                            style: TextStyle(
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        Expanded(
-                          child: Text(
-                            target.name,
-                            style: AppTextStyles.body.standardCopyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 13.sp,
-                          color: AppColors.gold,
-                        ),
-                        Text(
-                          target.cityName,
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Boş Kapasite: ${target.emptyCapacity.toStringAsFixed(1)} m³',
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            color: target.emptyCapacity > 0
-                                ? AppColors.green
-                                : AppColors.red,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          'Toplam: ${target.totalCapacity.toStringAsFixed(0)} m³',
-                          style: TextStyle(
-                            fontSize: 10.5.sp,
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 6.h),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4.r),
-                      child: LinearProgressIndicator(
-                        value: fullnessRatio,
-                        minHeight: 6.h,
-                        backgroundColor: AppColors.borderGold.withValues(alpha: 0.15),
-                        valueColor: AlwaysStoppedAnimation(
-                          fullnessRatio > 0.9 ? AppColors.red : AppColors.gold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+        final warehouseCount =
+            targets.where((t) => t.entityKind == 'warehouse').length;
+        final factoryCount =
+            targets.where((t) => t.entityKind == 'factory').length;
+        final storeCount =
+            targets.where((t) => t.entityKind == 'store').length;
+
+        return Column(
+          children: [
+            // Kategori Filtre Butonları
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+              child: Row(
+                children: [
+                  _buildFilterChip('all', 'Hepsi (${targets.length})'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('warehouse', '🏬 Depolar ($warehouseCount)'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('factory', '🏭 Fabrikalar ($factoryCount)'),
+                  SizedBox(width: 8.w),
+                  _buildFilterChip('store', '🏪 Mağazalar ($storeCount)'),
+                ],
               ),
-            );
-          },
+            ),
+            Expanded(
+              child: filteredTargets.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Bu kategoride hedef tesis bulunamadı.',
+                        style: AppTextStyles.caption,
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 24.h),
+                      itemCount: filteredTargets.length,
+                      itemBuilder: (context, index) {
+                        final target = filteredTargets[index];
+                        final isSelected = _selectedTarget?.id == target.id;
+                        final fullnessRatio = target.totalCapacity > 0
+                            ? (target.usedCapacity / target.totalCapacity)
+                                .clamp(0.0, 1.0)
+                            : 0.0;
+
+                        return GestureDetector(
+                          onTap: () {
+                            AppHaptic.selection();
+                            setState(() {
+                              _selectedTarget = target;
+                              _currentStep = 1; // Otomatik sonraki adıma geç
+                            });
+                          },
+                          child: Container(
+                            margin: EdgeInsets.only(bottom: 12.h),
+                            padding: EdgeInsets.all(14.w),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.gold.withValues(alpha: 0.12)
+                                  : AppColors.cardBgLight,
+                              borderRadius: BorderRadius.circular(16.r),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.gold
+                                    : AppColors.borderGold.withValues(alpha: 0.2),
+                                width: isSelected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8.w,
+                                        vertical: 3.h,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getKindBadgeColor(target.entityKind),
+                                        borderRadius: BorderRadius.circular(6.r),
+                                      ),
+                                      child: Text(
+                                        target.entityKindDisplay,
+                                        style: TextStyle(
+                                          fontSize: 10.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Expanded(
+                                      child: Text(
+                                        target.name,
+                                        style: AppTextStyles.body.standardCopyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.location_on_outlined,
+                                      size: 13.sp,
+                                      color: AppColors.gold,
+                                    ),
+                                    Text(
+                                      target.cityName,
+                                      style: TextStyle(
+                                        fontSize: 11.sp,
+                                        color: AppColors.gold,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 10.h),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Boş Kapasite: ${target.emptyCapacity.toStringAsFixed(1)} m³',
+                                      style: TextStyle(
+                                        fontSize: 11.sp,
+                                        color: target.emptyCapacity > 0
+                                            ? AppColors.green
+                                            : AppColors.red,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Toplam: ${target.totalCapacity.toStringAsFixed(0)} m³',
+                                      style: TextStyle(
+                                        fontSize: 10.5.sp,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 6.h),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4.r),
+                                  child: LinearProgressIndicator(
+                                    value: fullnessRatio,
+                                    minHeight: 6.h,
+                                    backgroundColor: AppColors.borderGold
+                                        .withValues(alpha: 0.15),
+                                    valueColor: AlwaysStoppedAnimation(
+                                      fullnessRatio > 0.9
+                                          ? AppColors.red
+                                          : AppColors.gold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
       loading: () => const Center(child: AppLoadingIndicator()),
       error: (e, _) => Center(child: Text('Hata: $e')),
+    );
+  }
+
+  Widget _buildFilterChip(String key, String label) {
+    final isSelected = _targetFilter == key;
+    return GestureDetector(
+      onTap: () {
+        AppHaptic.selection();
+        setState(() => _targetFilter = key);
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.gold.withValues(alpha: 0.2)
+              : AppColors.cardBgLight,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.gold
+                : AppColors.borderGold.withValues(alpha: 0.25),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? AppColors.gold : AppColors.textMuted,
+          ),
+        ),
+      ),
     );
   }
 
