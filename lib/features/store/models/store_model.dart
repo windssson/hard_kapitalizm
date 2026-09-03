@@ -8,6 +8,7 @@ class StoreTypeModel {
   final int cost;
   final int requiredLevel;
   final int constructionTimeMinutes;
+  final String? warehouseTypeId;
 
   StoreTypeModel({
     required this.id,
@@ -17,6 +18,7 @@ class StoreTypeModel {
     this.cost = 0,
     this.requiredLevel = 1,
     this.constructionTimeMinutes = 30,
+    this.warehouseTypeId,
   });
 
   factory StoreTypeModel.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,7 @@ class StoreTypeModel {
       requiredLevel: (json['required_level'] as num?)?.toInt() ?? 1,
       constructionTimeMinutes:
           (json['construction_time_minutes'] as num?)?.toInt() ?? 30,
+      warehouseTypeId: json['warehouse_type_id']?.toString(),
     );
   }
 
@@ -45,6 +48,7 @@ class StoreTypeModel {
     'cost': cost,
     'required_level': requiredLevel,
     'construction_time_minutes': constructionTimeMinutes,
+    'warehouse_type_id': warehouseTypeId,
   };
 
   StoreTypeModel copyWith({
@@ -55,6 +59,7 @@ class StoreTypeModel {
     int? cost,
     int? requiredLevel,
     int? constructionTimeMinutes,
+    String? warehouseTypeId,
   }) {
     return StoreTypeModel(
       id: id ?? this.id,
@@ -65,6 +70,7 @@ class StoreTypeModel {
       requiredLevel: requiredLevel ?? this.requiredLevel,
       constructionTimeMinutes:
           constructionTimeMinutes ?? this.constructionTimeMinutes,
+      warehouseTypeId: warehouseTypeId ?? this.warehouseTypeId,
     );
   }
 }

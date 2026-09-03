@@ -1,6 +1,6 @@
 -- ============================================================================
 -- HARD KAPITALIZM - POSTGRESQL DATABASE SCHEMA DUMP
--- Generated At: 2026-09-02 02:23:53
+-- Generated At: 2026-09-03 15:49:37
 -- Supabase Project: lpiixtfxldhoyyppavyn (kapitalizm)
 -- Total Tables: 64
 -- Total Functions/RPCs: 259
@@ -1133,6 +1133,7 @@ CREATE TABLE IF NOT EXISTS public.store_types (
     construction_time_minutes integer,
     max_slot_count integer,
     slot_capacity integer,
+    warehouse_type_id uuid,
     CONSTRAINT store_types_pkey PRIMARY KEY (id)
 );
 
@@ -1587,6 +1588,9 @@ ALTER TABLE public.store_slots ADD CONSTRAINT store_slots_product_id_fkey FOREIG
 
 ALTER TABLE public.store_slots DROP CONSTRAINT IF EXISTS store_slots_store_id_fkey;
 ALTER TABLE public.store_slots ADD CONSTRAINT store_slots_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+
+ALTER TABLE public.store_types DROP CONSTRAINT IF EXISTS store_types_warehouse_type_id_fkey;
+ALTER TABLE public.store_types ADD CONSTRAINT store_types_warehouse_type_id_fkey FOREIGN KEY (warehouse_type_id) REFERENCES warehouse_types(id);
 
 ALTER TABLE public.stores DROP CONSTRAINT IF EXISTS stores_city_id_fkey;
 ALTER TABLE public.stores ADD CONSTRAINT stores_city_id_fkey FOREIGN KEY (city_id) REFERENCES cities(id);
@@ -5315,11 +5319,13 @@ CREATE OR REPLACE FUNCTION public.complete_building_construction(p_player_id uui
  SET search_path TO 'public'
 AS $function$
 declare
-  v_now timestamptz := timezone('utc', now());
+  v_now timestamptz := timezone('utc'::text, now());
   v_construction public.building_constructions%rowtype;
   v_created_id uuid;
-  v_exp_result jsonb;
   v_building_display_name text;
+  v_exp_result jsonb;
+  v_store_warehouse_type_id uuid;
+  v_store_warehouse_capacity numeric;
 begin
   select *
   into v_construction
@@ -5366,9 +5372,50 @@ begin
       true
     )
     returning id into v_created_id;
+
+    -- Magazaya bagli ayni sehirde ozel magaza deposu olustur
+    select 
+      coalesce(st.warehouse_type_id, wt.id),
+      coalesce(wt.base_capacity, 100)
+    into v_store_warehouse_type_id, v_store_warehouse_capacity
+    from public.store_types st
+    left join public.warehouse_types wt on wt.id = st.warehouse_type_id
+      or wt.accepted_product_ids = st.accepted_product_ids
+      or wt.name ilike '%' || st.name || '%'
+    where st.id = (v_construction.params->>'store_type_id')::uuid
+    limit 1;
+
+    if v_store_warehouse_type_id is not null then
+      insert into public.warehouses (
+        player_id,
+        warehouse_type_id,
+        city_id,
+        name,
+        level,
+        capacity,
+        reserved_capacity,
+        warehouse_kind,
+        store_id,
+        is_active
+      )
+      values (
+        p_player_id,
+        v_store_warehouse_type_id,
+        (v_construction.params->>'city_id')::uuid,
+        coalesce(v_construction.params->>'name', 'Mağaza') || ' Deposu',
+        1,
+        coalesce(v_store_warehouse_capacity, 100),
+        0,
+        'store',
+        v_created_id,
+        true
+      );
+    end if;
+
   elsif v_construction.building_kind = 'warehouse' then
     insert into public.warehouses (
       player_id,
+      warehouse_type_id,
       city_id,
       name,
       level,
@@ -5380,6 +5427,7 @@ begin
     )
     values (
       p_player_id,
+      nullif(v_construction.params->>'warehouse_type_id', '')::uuid,
       (v_construction.params->>'city_id')::uuid,
       v_construction.params->>'name',
       coalesce((v_construction.params->>'level')::integer, 1),
@@ -5562,7 +5610,7 @@ begin
     )
   );
 
-  -- İnşaat Tamamlanma Bildirimi (Oyun İçi + Push)
+  -- Insaat Tamamlanma Bildirimi (Oyun Ici + Push)
   PERFORM public.send_game_notification(
     p_player_id,
     'İnşaat Tamamlandı!',
@@ -22381,9 +22429,19 @@ begin
 
   if p_building_kind = 'store' then
     select coalesce(cost, 0), coalesce(required_level, 1), coalesce(construction_time_minutes, 0),
-      jsonb_build_object('store_type_id', id, 'city_id', p_city_id, 'name', v_clean_name, 'cost', coalesce(cost, 0),
-        'required_level', coalesce(required_level, 1), 'construction_time_minutes', coalesce(construction_time_minutes, 0),
-        'level', 1, 'current_slot_count', 0, 'max_slot_count', coalesce(max_slot_count, 0), 'slot_capacity', coalesce(slot_capacity, 0))
+      jsonb_build_object(
+        'store_type_id', id,
+        'warehouse_type_id', warehouse_type_id,
+        'city_id', p_city_id,
+        'name', v_clean_name,
+        'cost', coalesce(cost, 0),
+        'required_level', coalesce(required_level, 1),
+        'construction_time_minutes', coalesce(construction_time_minutes, 0),
+        'level', 1,
+        'current_slot_count', 0,
+        'max_slot_count', coalesce(max_slot_count, 0),
+        'slot_capacity', coalesce(slot_capacity, 0)
+      )
     into v_cost, v_required_level, v_construction_time_minutes, v_params
     from public.store_types where id = p_type_id;
   elsif p_building_kind = 'warehouse' then
