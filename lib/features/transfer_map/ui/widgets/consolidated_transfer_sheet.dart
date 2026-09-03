@@ -510,13 +510,13 @@ class _ConsolidatedTransferSheetState
                 });
               },
               child: Container(
-                margin: EdgeInsets.only(bottom: 12.h),
-                padding: EdgeInsets.all(14.w),
+                margin: EdgeInsets.only(bottom: 10.h),
+                padding: EdgeInsets.all(10.w),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.gold.withValues(alpha: 0.12)
                       : AppColors.cardBgLight,
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(14.r),
                   border: Border.all(
                     color: isSelected
                         ? AppColors.gold
@@ -526,62 +526,87 @@ class _ConsolidatedTransferSheetState
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(12.w),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.location_city_rounded,
-                        color: AppColors.gold,
-                        size: 22.sp,
-                      ),
+                    _build2TierBadge(
+                      label: 'Şehir',
+                      icon: Icons.location_city_rounded,
+                      color: AppColors.gold,
                     ),
-                    SizedBox(width: 14.w),
+                    SizedBox(width: 10.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            city.cityName,
-                            style: AppTextStyles.title.standardCopyWith(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 4.h),
                           Row(
                             children: [
-                              Icon(Icons.business_rounded, size: 13.sp, color: AppColors.textMuted),
-                              SizedBox(width: 4.w),
-                              Text(
-                                '${city.facilityCount} İşletme / Depo',
-                                style: TextStyle(
-                                  fontSize: 11.sp,
-                                  color: AppColors.textMuted,
+                              Expanded(
+                                child: Text(
+                                  city.cityName,
+                                  style: AppTextStyles.body.standardCopyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary,
+                                    fontSize: 13.5.sp,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              Text(' • ', style: TextStyle(color: AppColors.textMuted)),
-                              Icon(Icons.layers_rounded, size: 13.sp, color: AppColors.gold),
-                              SizedBox(width: 4.w),
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: 13.sp,
+                                color: AppColors.gold,
+                              ),
+                              SizedBox(width: 2.w),
                               Text(
-                                '${city.totalStock} Adet Stok',
+                                '${city.facilityCount} Tesis',
                                 style: TextStyle(
                                   fontSize: 11.sp,
-                                  fontWeight: FontWeight.bold,
                                   color: AppColors.gold,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
                           ),
+                          SizedBox(height: 4.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Toplam Stok: ${city.totalStock} Adet',
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: AppColors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                                decoration: BoxDecoration(
+                                  color: AppColors.gold.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(4.r),
+                                ),
+                                child: Text(
+                                  'Kaynak Seç ➔',
+                                  style: TextStyle(
+                                    fontSize: 9.5.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.gold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 6.h),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4.r),
+                            child: LinearProgressIndicator(
+                              value: 1.0,
+                              minHeight: 3.5.h,
+                              backgroundColor: Colors.white.withValues(alpha: 0.08),
+                              valueColor: AlwaysStoppedAnimation(AppColors.gold),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 14.sp,
-                      color: AppColors.gold,
                     ),
                   ],
                 ),
@@ -675,12 +700,27 @@ class _ConsolidatedTransferSheetState
                   ),
                   InkWell(
                     onTap: () => setState(() => _currentStep = 0),
-                    child: Text(
-                      'Değiştir',
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        color: AppColors.gold,
-                        fontWeight: FontWeight.bold,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6.r),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_rounded, color: AppColors.gold, size: 11.sp),
+                          SizedBox(width: 3.w),
+                          Text(
+                            'Değiştir',
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -688,23 +728,23 @@ class _ConsolidatedTransferSheetState
               ),
             ),
 
-            // Kategori Filtre Butonları
+            // Kategori Filtre Butonları (İkonlu & Renkli)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
               child: Row(
                 children: [
-                  _buildFilterChip('all', 'Tümü (${targets.length})'),
+                  _buildFilterChipWithIcon('all', 'Hepsi (${targets.length})', Icons.grid_view_rounded, AppColors.gold),
                   SizedBox(width: 8.w),
-                  _buildFilterChip('warehouse', 'Depolar ($warehouseCount)'),
+                  _buildFilterChipWithIcon('warehouse', 'Depolar ($warehouseCount)', Icons.warehouse_rounded, const Color(0xFF2196F3)),
                   SizedBox(width: 8.w),
-                  _buildFilterChip('factory', 'Fabrikalar ($factoryCount)'),
+                  _buildFilterChipWithIcon('factory', 'Fabrikalar ($factoryCount)', Icons.factory_rounded, const Color(0xFFF44336)),
                   SizedBox(width: 8.w),
-                  _buildFilterChip('farm', 'Tarlalar ($farmCount)'),
+                  _buildFilterChipWithIcon('farm', 'Tarlalar ($farmCount)', Icons.eco_rounded, const Color(0xFF8BC34A)),
                   SizedBox(width: 8.w),
-                  _buildFilterChip('field', 'Çiftlikler ($fieldCount)'),
+                  _buildFilterChipWithIcon('field', 'Çiftlikler ($fieldCount)', Icons.agriculture_rounded, const Color(0xFF4CAF50)),
                   SizedBox(width: 8.w),
-                  _buildFilterChip('store', 'Mağazalar ($storeCount)'),
+                  _buildFilterChipWithIcon('store', 'Mağazalar ($storeCount)', Icons.storefront_rounded, const Color(0xFF9C27B0)),
                 ],
               ),
             ),
@@ -720,9 +760,13 @@ class _ConsolidatedTransferSheetState
                   final hasEmptyCapacity = target.emptyCapacity > 0;
                   final canSelect = hasEmptyCapacity;
 
-                  final fullnessRatio = target.totalCapacity > 0
-                      ? (target.usedCapacity / target.totalCapacity).clamp(0.0, 1.0)
+                  final freeRatio = target.totalCapacity > 0
+                      ? (target.emptyCapacity / target.totalCapacity).clamp(0.0, 1.0)
                       : 0.0;
+
+                  final unitColor = _getKindColor(target.entityKind);
+                  final unitIcon = _getKindIcon(target.entityKind);
+                  final unitLabel = _getKindLabel(target.entityKind);
 
                   return GestureDetector(
                     onTap: canSelect
@@ -747,7 +791,7 @@ class _ConsolidatedTransferSheetState
                       opacity: canSelect ? 1.0 : 0.45,
                       child: Container(
                         margin: EdgeInsets.only(bottom: 10.h),
-                        padding: EdgeInsets.all(12.w),
+                        padding: EdgeInsets.all(10.w),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppColors.gold.withValues(alpha: 0.12)
@@ -757,146 +801,136 @@ class _ConsolidatedTransferSheetState
                             color: isSelected
                                 ? AppColors.gold
                                 : isSameCity
-                                    ? AppColors.green.withValues(alpha: 0.5)
-                                    : AppColors.borderGold.withValues(alpha: 0.2),
+                                    ? AppColors.green.withValues(alpha: 0.4)
+                                    : AppColors.borderGold.withValues(alpha: 0.15),
                             width: isSelected ? 1.5 : 1,
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 7.w,
-                                    vertical: 3.h,
+                            // Sol 2 Katmanlı Rozet (Label + İkon)
+                            _build2TierBadge(
+                              label: unitLabel,
+                              icon: unitIcon,
+                              color: unitColor,
+                            ),
+                            SizedBox(width: 10.w),
+
+                            // Sağ İçerik
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Satır 1: İsim + Şehir İçi + Konum
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          target.name,
+                                          style: AppTextStyles.body.standardCopyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                            fontSize: 13.sp,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (isSameCity) ...[
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 5.w,
+                                            vertical: 2.h,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.green.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(4.r),
+                                            border: Border.all(
+                                              color: AppColors.green.withValues(alpha: 0.5),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.business_rounded, size: 10.sp, color: AppColors.green),
+                                              SizedBox(width: 2.w),
+                                              Text(
+                                                'Şehir İçi',
+                                                style: TextStyle(
+                                                  fontSize: 8.5.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.green,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        SizedBox(width: 5.w),
+                                      ],
+                                      Icon(
+                                        Icons.location_on_outlined,
+                                        size: 13.sp,
+                                        color: AppColors.gold,
+                                      ),
+                                      SizedBox(width: 2.w),
+                                      Text(
+                                        target.cityName,
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color: AppColors.gold,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: _getKindBadgeColor(target.entityKind),
-                                    borderRadius: BorderRadius.circular(6.r),
+                                  SizedBox(height: 5.h),
+
+                                  // Satır 2: Boş Kapasite + Kabul Şartı
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      RichText(
+                                        text: TextSpan(
+                                          children: [
+                                            TextSpan(
+                                              text: 'Boş Kapasite: ',
+                                              style: TextStyle(
+                                                fontSize: 10.5.sp,
+                                                color: AppColors.textMuted,
+                                              ),
+                                            ),
+                                            TextSpan(
+                                              text: '${target.emptyCapacity.toStringAsFixed(1)} m³',
+                                              style: TextStyle(
+                                                fontSize: 11.sp,
+                                                color: hasEmptyCapacity
+                                                    ? const Color(0xFF00E676)
+                                                    : AppColors.red,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      _buildRequirementBadge(target),
+                                    ],
                                   ),
-                                  child: Text(
-                                    target.entityKindDisplay,
-                                    style: TextStyle(
-                                      fontSize: 9.5.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 8.w),
-                                Expanded(
-                                  child: Text(
-                                    target.name,
-                                    style: AppTextStyles.body.standardCopyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
-                                      fontSize: 13.sp,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (isSameCity) ...[
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 6.w,
-                                      vertical: 2.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.green.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(4.r),
-                                      border: Border.all(color: AppColors.green),
-                                    ),
-                                    child: Text(
-                                      '🟢 Şehir İçi',
-                                      style: TextStyle(
-                                        fontSize: 8.5.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.green,
+                                  SizedBox(height: 6.h),
+
+                                  // Satır 3: Renkli İlerleme Çubuğu (Zarif & Arkası Soluk)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4.r),
+                                    child: LinearProgressIndicator(
+                                      value: freeRatio,
+                                      minHeight: 3.5.h,
+                                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                                      valueColor: AlwaysStoppedAnimation(
+                                        hasEmptyCapacity ? unitColor : AppColors.red,
                                       ),
                                     ),
                                   ),
-                                  SizedBox(width: 6.w),
                                 ],
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  size: 13.sp,
-                                  color: AppColors.gold,
-                                ),
-                                SizedBox(width: 2.w),
-                                Text(
-                                  target.cityName,
-                                  style: TextStyle(
-                                    fontSize: 11.sp,
-                                    color: AppColors.gold,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 8.h),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Boş: ${target.emptyCapacity.toStringAsFixed(1)} m³',
-                                  style: TextStyle(
-                                    fontSize: 11.sp,
-                                    color: hasEmptyCapacity
-                                        ? AppColors.green
-                                        : AppColors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                                  decoration: BoxDecoration(
-                                    color: (target.entityKind == 'warehouse'
-                                            ? (target.acceptedProductIds == null ? AppColors.green : AppColors.gold)
-                                            : target.isProductionUnit
-                                                ? Colors.amber
-                                                : AppColors.gold)
-                                        .withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(4.r),
-                                  ),
-                                  child: Text(
-                                    target.entityKind == 'warehouse'
-                                        ? (target.acceptedProductIds == null
-                                            ? 'Genel Depo'
-                                            : 'Özel Depo (${target.acceptedProductIds!.length})')
-                                        : target.isProductionUnit
-                                            ? (target.acceptedProductIds == null || target.acceptedProductIds!.isEmpty
-                                                ? 'Girdi Yok'
-                                                : 'Q${target.minQualityLevel} Girdi')
-                                            : 'Mağaza (${target.acceptedProductIds?.length ?? 0})',
-                                    style: TextStyle(
-                                      fontSize: 9.5.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: target.entityKind == 'warehouse'
-                                          ? (target.acceptedProductIds == null ? AppColors.green : AppColors.gold)
-                                          : target.isProductionUnit
-                                              ? Colors.amber
-                                              : AppColors.gold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 6.h),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4.r),
-                              child: LinearProgressIndicator(
-                                value: fullnessRatio,
-                                minHeight: 5.h,
-                                backgroundColor:
-                                    AppColors.borderGold.withValues(alpha: 0.15),
-                                valueColor: AlwaysStoppedAnimation(
-                                  fullnessRatio > 0.9
-                                      ? AppColors.red
-                                      : AppColors.gold,
-                                ),
                               ),
                             ),
                           ],
@@ -1215,26 +1249,25 @@ class _ConsolidatedTransferSheetState
                                     decoration: BoxDecoration(
                                       color: currentQty > 0
                                           ? AppColors.gold.withValues(alpha: 0.08)
-                                          : AppColors.cardBg,
-                                      borderRadius: BorderRadius.circular(12.r),
+                                          : AppColors.cardBgLight,
+                                      borderRadius: BorderRadius.circular(14.r),
                                       border: Border.all(
                                         color: currentQty > 0
-                                            ? AppColors.gold.withValues(alpha: 0.4)
+                                            ? AppColors.gold.withValues(alpha: 0.6)
                                             : canSelect
                                                 ? AppColors.borderGold.withValues(alpha: 0.15)
-                                                : AppColors.red.withValues(alpha: 0.2),
+                                                : AppColors.red.withValues(alpha: 0.25),
+                                        width: currentQty > 0 ? 1.5 : 1,
                                       ),
                                     ),
                                     child: Row(
                                       children: [
-                                        SizedBox(
-                                          width: 38.w,
-                                          height: 38.w,
-                                          child: BrandedProductImage(
-                                            fileName: item.productIcon ?? '',
-                                            productId: item.productId,
-                                            brandId: item.brandId,
-                                          ),
+                                        // Sol Ürün Görseli & Kalite Rozeti
+                                        _buildProduct2TierBadge(
+                                          iconFileName: item.productIcon ?? '',
+                                          productId: item.productId,
+                                          brandId: item.brandId,
+                                          qualityLevel: item.qualityLevel,
                                         ),
                                         SizedBox(width: 10.w),
                                         Expanded(
@@ -1247,31 +1280,12 @@ class _ConsolidatedTransferSheetState
                                                     child: Text(
                                                       item.productName,
                                                       style: TextStyle(
-                                                        fontSize: 12.sp,
+                                                        fontSize: 12.5.sp,
                                                         fontWeight: FontWeight.bold,
                                                         color: AppColors.textPrimary,
                                                       ),
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                  SizedBox(width: 4.w),
-                                                  Container(
-                                                    padding: EdgeInsets.symmetric(
-                                                      horizontal: 4.w,
-                                                      vertical: 1.h,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: AppColors.gold.withValues(alpha: 0.15),
-                                                      borderRadius: BorderRadius.circular(4.r),
-                                                    ),
-                                                    child: Text(
-                                                      'Q${item.qualityLevel}',
-                                                      style: TextStyle(
-                                                        fontSize: 9.sp,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: AppColors.gold,
-                                                      ),
                                                     ),
                                                   ),
                                                 ],
@@ -1292,10 +1306,13 @@ class _ConsolidatedTransferSheetState
                                         // Adet Stepper veya Uyumsuzluk Rozeti
                                         if (canSelect)
                                           Row(
+                                            mainAxisSize: MainAxisSize.min,
                                             children: [
                                               IconButton(
                                                 icon: const Icon(Icons.remove_circle_outline),
                                                 iconSize: 20.sp,
+                                                padding: EdgeInsets.zero,
+                                                constraints: BoxConstraints(minWidth: 28.w, minHeight: 28.h),
                                                 color: currentQty > 0
                                                     ? AppColors.gold
                                                     : AppColors.textMuted,
@@ -1309,19 +1326,25 @@ class _ConsolidatedTransferSheetState
                                                       }
                                                     : null,
                                               ),
-                                              Text(
-                                                '$currentQty',
-                                                style: TextStyle(
-                                                  fontSize: 12.sp,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: currentQty > 0
-                                                      ? AppColors.gold
-                                                      : AppColors.textMuted,
+                                              Container(
+                                                constraints: BoxConstraints(minWidth: 24.w),
+                                                alignment: Alignment.center,
+                                                child: Text(
+                                                  '$currentQty',
+                                                  style: TextStyle(
+                                                    fontSize: 12.sp,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: currentQty > 0
+                                                        ? AppColors.gold
+                                                        : AppColors.textMuted,
+                                                  ),
                                                 ),
                                               ),
                                               IconButton(
                                                 icon: const Icon(Icons.add_circle_outline),
                                                 iconSize: 20.sp,
+                                                padding: EdgeInsets.zero,
+                                                constraints: BoxConstraints(minWidth: 28.w, minHeight: 28.h),
                                                 color: currentQty < item.availableQuantity
                                                     ? AppColors.gold
                                                     : AppColors.textMuted,
@@ -1335,11 +1358,16 @@ class _ConsolidatedTransferSheetState
                                                       }
                                                     : null,
                                               ),
+                                              SizedBox(width: 2.w),
                                               TextButton(
                                                 style: TextButton.styleFrom(
-                                                  padding: EdgeInsets.symmetric(horizontal: 6.w),
+                                                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                                                   minimumSize: Size.zero,
                                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  backgroundColor: AppColors.gold.withValues(alpha: 0.12),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(4.r),
+                                                  ),
                                                 ),
                                                 onPressed: () {
                                                   AppHaptic.selection();
@@ -1351,7 +1379,7 @@ class _ConsolidatedTransferSheetState
                                                 child: Text(
                                                   'Tümü',
                                                   style: TextStyle(
-                                                    fontSize: 10.sp,
+                                                    fontSize: 9.5.sp,
                                                     color: AppColors.gold,
                                                     fontWeight: FontWeight.bold,
                                                   ),
@@ -1692,53 +1720,6 @@ class _ConsolidatedTransferSheetState
     );
   }
 
-  Widget _buildFilterChip(String key, String label) {
-    final isSelected = _targetFilter == key;
-    return GestureDetector(
-      onTap: () {
-        AppHaptic.selection();
-        setState(() => _targetFilter = key);
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.gold.withValues(alpha: 0.2)
-              : AppColors.cardBgLight,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.gold
-                : AppColors.borderGold.withValues(alpha: 0.25),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11.sp,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? AppColors.gold : AppColors.textMuted,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _getKindBadgeColor(String kind) {
-    switch (kind) {
-      case 'factory':
-        return Colors.deepOrange.shade700;
-      case 'store':
-        return Colors.purple.shade700;
-      case 'farm':
-        return Colors.green.shade700;
-      case 'field':
-        return Colors.teal.shade700;
-      default:
-        return Colors.blue.shade700;
-    }
-  }
-
   // ==========================================================================
   // ADIM 4: ARAÇ & GÖNDERİM ONAYI (Sevkiyat)
   // ==========================================================================
@@ -1897,6 +1878,7 @@ class _ConsolidatedTransferSheetState
             ..._vehicleOptions.map((v) {
               final isSelected = _selectedVehicle?.vehicleId == v.vehicleId;
               final canSelect = v.canSelect;
+              final vehicleColor = _getVehicleColor(v.vehicleName);
 
               return GestureDetector(
                 onTap: canSelect
@@ -1906,26 +1888,27 @@ class _ConsolidatedTransferSheetState
                       }
                     : null,
                 child: Container(
-                  margin: EdgeInsets.only(bottom: 8.h),
-                  padding: EdgeInsets.all(12.w),
+                  margin: EdgeInsets.only(bottom: 10.h),
+                  padding: EdgeInsets.all(10.w),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.gold.withValues(alpha: 0.12)
                         : AppColors.cardBgLight,
-                    borderRadius: BorderRadius.circular(12.r),
+                    borderRadius: BorderRadius.circular(14.r),
                     border: Border.all(
                       color: isSelected
                           ? AppColors.gold
-                          : AppColors.borderGold.withValues(alpha: 0.2),
+                          : AppColors.borderGold.withValues(alpha: 0.15),
                       width: isSelected ? 1.5 : 1,
                     ),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        AppIcons.localShipping,
-                        color: isSelected ? AppColors.gold : AppColors.textMuted,
-                        size: 22.sp,
+                      // Sol Araç 2 Katmanlı Rozet
+                      _build2TierBadge(
+                        label: v.isRental ? 'Kiralık' : 'Filo',
+                        icon: _getVehicleIcon(v.vehicleName),
+                        color: vehicleColor,
                       ),
                       SizedBox(width: 10.w),
                       Expanded(
@@ -1934,77 +1917,63 @@ class _ConsolidatedTransferSheetState
                           children: [
                             Row(
                               children: [
+                                Expanded(
+                                  child: Text(
+                                    v.vehicleName,
+                                    style: TextStyle(
+                                      fontSize: 12.5.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: canSelect
+                                          ? AppColors.textPrimary
+                                          : AppColors.textMuted,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                                 Text(
-                                  v.vehicleName,
+                                  AppMoney.compact(v.transportCost),
                                   style: TextStyle(
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.bold,
-                                    color: canSelect
-                                        ? AppColors.textPrimary
-                                        : AppColors.textMuted,
+                                    color: AppColors.gold,
                                   ),
                                 ),
-                                if (v.isRental) ...[
-                                  SizedBox(width: 6.w),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 4.w,
-                                      vertical: 2.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(4.r),
-                                    ),
-                                    child: Text(
-                                      'Kiralık',
-                                      style: TextStyle(
-                                        fontSize: 9.sp,
-                                        color: Colors.blue,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
-                            SizedBox(height: 2.h),
-                            Text(
-                              'Kapasite: ${v.capacity} m³ • Hız: ${v.speedKmh} km/h • Süre: ${(v.estimatedDurationSeconds / 60).ceil()} dk',
-                              style: TextStyle(
-                                fontSize: 10.sp,
-                                color: AppColors.textMuted,
-                              ),
+                            SizedBox(height: 3.h),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Kapasite: ${v.capacity} m³ • ${(v.estimatedDurationSeconds / 60).ceil()} dk',
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                                Text(
+                                  '${v.distanceKm.toStringAsFixed(0)} km',
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
                             ),
-                            if (!canSelect && v.disabledReason != null)
+                            if (!canSelect && v.disabledReason != null) ...[
+                              SizedBox(height: 2.h),
                               Text(
                                 v.disabledReason!,
                                 style: TextStyle(
                                   fontSize: 9.5.sp,
                                   color: AppColors.red,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
+                            ],
                           ],
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            AppMoney.compact(v.transportCost),
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.gold,
-                            ),
-                          ),
-                          Text(
-                            '${v.distanceKm.toStringAsFixed(0)} km',
-                            style: TextStyle(
-                              fontSize: 10.sp,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
@@ -2048,6 +2017,322 @@ class _ConsolidatedTransferSheetState
         ),
       ],
     );
+  }
+
+  // ==========================================================================
+  // ORTAK YARDIMCI BİLEŞENLER (Tasarım Standartları)
+  // ==========================================================================
+
+  Widget _buildFilterChipWithIcon(String key, String label, IconData icon, Color color) {
+    final isSelected = _targetFilter == key;
+    return GestureDetector(
+      onTap: () {
+        AppHaptic.selection();
+        setState(() => _targetFilter = key);
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.gold.withValues(alpha: 0.18)
+              : AppColors.cardBgLight,
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.gold
+                : AppColors.borderGold.withValues(alpha: 0.18),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13.sp,
+              color: isSelected ? AppColors.gold : color,
+            ),
+            SizedBox(width: 5.w),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.5.sp,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? AppColors.gold : AppColors.textMuted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 2 Katmanlı Rozet (Üstte Başlık Etiketi, Altta İkon)
+  Widget _build2TierBadge({
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      width: 48.w,
+      height: 48.w,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 2.h),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(9.r)),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 8.5.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: Icon(icon, size: 20.sp, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Ürün İçin 2 Katmanlı Rozet (Üstte Kalite, Ortada Ürün Görseli)
+  Widget _buildProduct2TierBadge({
+    required String iconFileName,
+    required String productId,
+    required String brandId,
+    required int qualityLevel,
+  }) {
+    final qualityColor = qualityLevel >= 3
+        ? const Color(0xFF9C27B0)
+        : qualityLevel == 2
+            ? const Color(0xFF2196F3)
+            : AppColors.gold;
+
+    return Container(
+      width: 48.w,
+      height: 48.w,
+      decoration: BoxDecoration(
+        color: AppColors.cardBg,
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: qualityColor.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 1.5.h),
+            decoration: BoxDecoration(
+              color: qualityColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(9.r)),
+            ),
+            child: Text(
+              'Q$qualityLevel',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 8.5.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: SizedBox(
+                width: 26.w,
+                height: 26.w,
+                child: BrandedProductImage(
+                  fileName: iconFileName,
+                  productId: productId,
+                  brandId: brandId,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Şart ve Durum Rozeti (Tüm Ürünler Kabul Edilir ✅ / Girdi Şartı: Q2 ⚗️)
+  Widget _buildRequirementBadge(ConsolidatedTargetModel target) {
+    if (target.entityKind == 'warehouse') {
+      if (target.acceptedProductIds == null) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Tüm Ürünler Kabul Edilir',
+              style: TextStyle(fontSize: 9.5.sp, color: AppColors.textMuted),
+            ),
+            SizedBox(width: 3.w),
+            const Icon(Icons.check_box_rounded, size: 12, color: Color(0xFF00E676)),
+          ],
+        );
+      } else {
+        return Text(
+          'Özel Depo (${target.acceptedProductIds!.length}) 📦',
+          style: TextStyle(
+            fontSize: 9.5.sp,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF2196F3),
+          ),
+        );
+      }
+    } else if (target.entityKind == 'factory') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Girdi Şartı: ',
+            style: TextStyle(fontSize: 9.5.sp, color: AppColors.textMuted),
+          ),
+          Text(
+            'Q${target.minQualityLevel}',
+            style: TextStyle(
+              fontSize: 9.5.sp,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(width: 3.w),
+          Icon(Icons.science_rounded, size: 12.sp, color: const Color(0xFFF44336)),
+        ],
+      );
+    } else if (target.entityKind == 'farm') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Girdi Şartı: ',
+            style: TextStyle(fontSize: 9.5.sp, color: AppColors.textMuted),
+          ),
+          Text(
+            'Q${target.minQualityLevel}',
+            style: TextStyle(
+              fontSize: 9.5.sp,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(width: 3.w),
+          Icon(Icons.eco_rounded, size: 12.sp, color: const Color(0xFF8BC34A)),
+        ],
+      );
+    } else if (target.entityKind == 'field') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Yem Şartı: ',
+            style: TextStyle(fontSize: 9.5.sp, color: AppColors.textMuted),
+          ),
+          Text(
+            'Q${target.minQualityLevel}',
+            style: TextStyle(
+              fontSize: 9.5.sp,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(width: 3.w),
+          Icon(Icons.pets_rounded, size: 12.sp, color: const Color(0xFF4CAF50)),
+        ],
+      );
+    } else {
+      return Text(
+        'Mağaza Ürünleri 🛍️',
+        style: TextStyle(
+          fontSize: 9.5.sp,
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFF9C27B0),
+        ),
+      );
+    }
+  }
+
+  Color _getKindColor(String kind) {
+    switch (kind) {
+      case 'factory':
+        return const Color(0xFFF44336); // Mercan Kırmızı
+      case 'store':
+        return const Color(0xFF9C27B0); // Mor
+      case 'farm':
+        return const Color(0xFF8BC34A); // Açık Yeşil (Tarla)
+      case 'field':
+        return const Color(0xFF4CAF50); // Zümrüt Yeşili (Çiftlik)
+      default:
+        return const Color(0xFF2196F3); // Mavi (Depo)
+    }
+  }
+
+  IconData _getKindIcon(String kind) {
+    switch (kind) {
+      case 'factory':
+        return Icons.factory_rounded;
+      case 'store':
+        return Icons.storefront_rounded;
+      case 'farm':
+        return Icons.eco_rounded;
+      case 'field':
+        return Icons.agriculture_rounded;
+      default:
+        return Icons.warehouse_rounded;
+    }
+  }
+
+  String _getKindLabel(String kind) {
+    switch (kind) {
+      case 'factory':
+        return 'Fabrika';
+      case 'store':
+        return 'Mağaza';
+      case 'farm':
+        return 'Tarla';
+      case 'field':
+        return 'Çiftlik';
+      default:
+        return 'Depo';
+    }
+  }
+
+  Color _getVehicleColor(String vehicleName) {
+    final lower = vehicleName.toLowerCase();
+    if (lower.contains('uçak') || lower.contains('hava')) {
+      return const Color(0xFF9C27B0);
+    } else if (lower.contains('tren') || lower.contains('ray')) {
+      return const Color(0xFFFF9800);
+    } else if (lower.contains('tır') || lower.contains('kamyon')) {
+      return const Color(0xFF2196F3);
+    }
+    return AppColors.gold;
+  }
+
+  IconData _getVehicleIcon(String vehicleName) {
+    final lower = vehicleName.toLowerCase();
+    if (lower.contains('uçak') || lower.contains('hava')) {
+      return Icons.flight_rounded;
+    } else if (lower.contains('tren') || lower.contains('ray')) {
+      return Icons.train_rounded;
+    } else if (lower.contains('tır') || lower.contains('çekici')) {
+      return Icons.local_shipping_rounded;
+    }
+    return Icons.fire_truck_rounded;
   }
 
   Widget _buildSummaryMiniStat(String title, String value) {
