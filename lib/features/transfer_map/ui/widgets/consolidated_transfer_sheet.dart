@@ -1262,7 +1262,7 @@ class _ConsolidatedTransferSheetState
                                     ),
                                     child: Row(
                                       children: [
-                                        // Sol Ürün Görseli & Kalite Rozeti
+                                        // Sol Ürün Görseli & 5 Yıldızlı Kalite Rozeti
                                         _buildProduct2TierBadge(
                                           iconFileName: item.productIcon ?? '',
                                           productId: item.productId,
@@ -1287,6 +1287,24 @@ class _ConsolidatedTransferSheetState
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
                                                     ),
+                                                  ),
+                                                  SizedBox(width: 5.w),
+                                                  // 5 Yıldızlı Kalite Sistemi
+                                                  Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: List.generate(5, (index) {
+                                                      final filled = index < item.qualityLevel;
+                                                      return Padding(
+                                                        padding: EdgeInsets.only(right: 1.w),
+                                                        child: Icon(
+                                                          filled ? AppIcons.starRounded : AppIcons.starBorderRounded,
+                                                          size: 11.sp,
+                                                          color: filled
+                                                              ? AppColors.gold
+                                                              : Colors.white.withValues(alpha: 0.2),
+                                                        ),
+                                                      );
+                                                    }),
                                                   ),
                                                 ],
                                               ),
@@ -1402,7 +1420,7 @@ class _ConsolidatedTransferSheetState
                                               ),
                                             ),
                                             child: Text(
-                                              !isProductAccepted ? 'Uyumsuz' : 'Q$reqQuality Şartı',
+                                              !isProductAccepted ? 'Uyumsuz' : '$reqQuality⭐ Şartı',
                                               style: TextStyle(
                                                 fontSize: 9.sp,
                                                 fontWeight: FontWeight.bold,
@@ -1626,18 +1644,31 @@ class _ConsolidatedTransferSheetState
                   ),
                   if (isProductionUnit) ...[
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.5.h),
+                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.18),
+                        color: Colors.amber.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4.r),
                       ),
-                      child: Text(
-                        'Q${target.minQualityLevel} Şartı',
-                        style: TextStyle(
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.amber,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Şart: ',
+                            style: TextStyle(
+                              fontSize: 9.sp,
+                              color: Colors.amber,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          ...List.generate(5, (i) {
+                            final filled = i < target.minQualityLevel;
+                            return Icon(
+                              filled ? AppIcons.starRounded : AppIcons.starBorderRounded,
+                              size: 8.5.sp,
+                              color: filled ? AppColors.gold : Colors.white.withValues(alpha: 0.2),
+                            );
+                          }),
+                        ],
                       ),
                     ),
                     SizedBox(width: 6.w),
@@ -1700,7 +1731,7 @@ class _ConsolidatedTransferSheetState
                           if (isProductionUnit) ...[
                             SizedBox(width: 4.w),
                             Text(
-                              'Q$reqQ',
+                              '$reqQ⭐',
                               style: TextStyle(
                                 fontSize: 8.5.sp,
                                 fontWeight: FontWeight.bold,
@@ -2111,7 +2142,7 @@ class _ConsolidatedTransferSheetState
     );
   }
 
-  // Ürün İçin 2 Katmanlı Rozet (Üstte Kalite, Ortada Ürün Görseli)
+  // Ürün İçin 2 Katmanlı Rozet (Üstte 5 Yıldızlı Kalite, Ortada Ürün Görseli)
   Widget _buildProduct2TierBadge({
     required String iconFileName,
     required String productId,
@@ -2136,19 +2167,24 @@ class _ConsolidatedTransferSheetState
         children: [
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 1.5.h),
+            padding: EdgeInsets.symmetric(vertical: 2.h),
             decoration: BoxDecoration(
-              color: qualityColor,
+              color: qualityColor.withValues(alpha: 0.25),
               borderRadius: BorderRadius.vertical(top: Radius.circular(9.r)),
             ),
-            child: Text(
-              'Q$qualityLevel',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 8.5.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) {
+                final filled = i < qualityLevel;
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 0.4.w),
+                  child: Icon(
+                    filled ? AppIcons.starRounded : AppIcons.starBorderRounded,
+                    size: 7.sp,
+                    color: filled ? AppColors.gold : Colors.white.withValues(alpha: 0.2),
+                  ),
+                );
+              }),
             ),
           ),
           Expanded(
@@ -2169,7 +2205,7 @@ class _ConsolidatedTransferSheetState
     );
   }
 
-  // Şart ve Durum Rozeti (Tüm Ürünler Kabul Edilir ✅ / Girdi Şartı: Q2 ⚗️)
+  // Şart ve Durum Rozeti (Hedef Tesis Seçim Sayfası)
   Widget _buildRequirementBadge(ConsolidatedTargetModel target) {
     if (target.entityKind == 'warehouse') {
       if (target.acceptedProductIds == null) {
@@ -2199,16 +2235,8 @@ class _ConsolidatedTransferSheetState
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Girdi Şartı: ',
+            'Girdi Hammaddeleri',
             style: TextStyle(fontSize: 9.5.sp, color: AppColors.textMuted),
-          ),
-          Text(
-            'Q${target.minQualityLevel}',
-            style: TextStyle(
-              fontSize: 9.5.sp,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
           ),
           SizedBox(width: 3.w),
           Icon(Icons.science_rounded, size: 12.sp, color: const Color(0xFFF44336)),
@@ -2219,16 +2247,8 @@ class _ConsolidatedTransferSheetState
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Girdi Şartı: ',
+            'Tarla Girdileri',
             style: TextStyle(fontSize: 9.5.sp, color: AppColors.textMuted),
-          ),
-          Text(
-            'Q${target.minQualityLevel}',
-            style: TextStyle(
-              fontSize: 9.5.sp,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
           ),
           SizedBox(width: 3.w),
           Icon(Icons.eco_rounded, size: 12.sp, color: const Color(0xFF8BC34A)),
@@ -2239,16 +2259,8 @@ class _ConsolidatedTransferSheetState
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Yem Şartı: ',
+            'Yem & Girdiler',
             style: TextStyle(fontSize: 9.5.sp, color: AppColors.textMuted),
-          ),
-          Text(
-            'Q${target.minQualityLevel}',
-            style: TextStyle(
-              fontSize: 9.5.sp,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
           ),
           SizedBox(width: 3.w),
           Icon(Icons.pets_rounded, size: 12.sp, color: const Color(0xFF4CAF50)),
