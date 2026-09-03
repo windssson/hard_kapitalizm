@@ -1,6 +1,6 @@
 -- ============================================================================
 -- HARD KAPITALIZM - POSTGRESQL DATABASE SCHEMA DUMP
--- Generated At: 2026-09-03 15:49:37
+-- Generated At: 2026-09-03 20:36:52
 -- Supabase Project: lpiixtfxldhoyyppavyn (kapitalizm)
 -- Total Tables: 64
 -- Total Functions/RPCs: 259
